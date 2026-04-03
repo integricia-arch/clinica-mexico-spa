@@ -147,9 +147,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
             <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted transition-colors cursor-pointer">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                AR
+                {initials}
               </div>
-              <span className="hidden sm:block text-sm font-medium">Dra. Ramírez</span>
+              <span className="hidden sm:block text-sm font-medium">{user?.email?.split("@")[0]}</span>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
           </div>
