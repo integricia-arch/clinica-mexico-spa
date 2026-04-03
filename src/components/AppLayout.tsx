@@ -32,8 +32,18 @@ const navItems = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, roles, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const visibleNav = navItems.filter((item) => {
+    if (!item.roles) return true;
+    return item.roles.some((r) => roles.includes(r as any));
+  });
+
+  const initials = user?.email?.substring(0, 2).toUpperCase() || "??";
+
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
