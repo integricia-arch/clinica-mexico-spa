@@ -2,7 +2,8 @@ import { type LucideIcon } from "lucide-react";
 
 interface StatCardProps {
   title: string;
-  value: string;
+  value: string | number;
+  variant?: "default" | "warning" | "destructive" | "success";
   change?: string;
   changeType?: "positive" | "negative" | "neutral";
   icon: LucideIcon;
