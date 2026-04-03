@@ -108,16 +108,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="border-t border-sidebar-border p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-primary text-sm font-semibold">
-              AR
+              {initials}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-sidebar-accent-foreground">
-                Dra. Ana Ramírez
+                {user?.email || "Usuario"}
               </p>
               <p className="truncate text-xs text-sidebar-foreground/60">
-                Administrador
+                {roles[0] === "admin" ? "Administrador" : roles[0] === "receptionist" ? "Recepción" : roles[0] === "doctor" ? "Médico" : roles[0] === "nurse" ? "Enfermería" : roles[0] === "patient" ? "Paciente" : "Sin rol"}
               </p>
             </div>
+            <button
+              onClick={() => { signOut(); navigate("/login"); }}
+              className="text-sidebar-foreground hover:text-sidebar-accent-foreground"
+              title="Cerrar sesión"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </aside>
