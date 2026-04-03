@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -13,16 +13,22 @@ import {
   Heart,
   Bell,
   ChevronDown,
+  LogOut,
+  CalendarPlus,
+  Headset,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Panel principal" },
+  { to: "/recepcion", icon: Headset, label: "Recepción", roles: ["admin", "receptionist"] },
   { to: "/pacientes", icon: Users, label: "Pacientes" },
   { to: "/agenda", icon: CalendarDays, label: "Agenda" },
+  { to: "/nueva-cita", icon: CalendarPlus, label: "Nueva cita" },
   { to: "/facturacion", icon: Receipt, label: "Facturación" },
   { to: "/expedientes", icon: FileText, label: "Expedientes" },
   { to: "/farmacia", icon: Pill, label: "Farmacia" },
-  { to: "/configuracion", icon: Settings, label: "Configuración" },
+  { to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin"] },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
