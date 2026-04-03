@@ -14,16 +14,404 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      appointment_resources: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          descripcion: string | null
+          id: string
+          tipo_recurso: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          tipo_recurso: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          tipo_recurso?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_resources_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          doctor_id: string
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          motivo_consulta: string | null
+          notas: string | null
+          patient_id: string
+          room_id: string | null
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          doctor_id: string
+          fecha_fin: string
+          fecha_inicio: string
+          id?: string
+          motivo_consulta?: string | null
+          notas?: string | null
+          patient_id: string
+          room_id?: string | null
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          doctor_id?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          motivo_consulta?: string | null
+          notas?: string | null
+          patient_id?: string
+          room_id?: string | null
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          accion: Database["public"]["Enums"]["audit_action"]
+          created_at: string
+          datos_anteriores: Json | null
+          datos_nuevos: Json | null
+          id: string
+          ip_address: string | null
+          registro_id: string | null
+          tabla: string
+          user_id: string | null
+        }
+        Insert: {
+          accion: Database["public"]["Enums"]["audit_action"]
+          created_at?: string
+          datos_anteriores?: Json | null
+          datos_nuevos?: Json | null
+          id?: string
+          ip_address?: string | null
+          registro_id?: string | null
+          tabla: string
+          user_id?: string | null
+        }
+        Update: {
+          accion?: Database["public"]["Enums"]["audit_action"]
+          created_at?: string
+          datos_anteriores?: Json | null
+          datos_nuevos?: Json | null
+          id?: string
+          ip_address?: string | null
+          registro_id?: string | null
+          tabla?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      doctors: {
+        Row: {
+          activo: boolean
+          apellidos: string
+          cedula_profesional: string | null
+          created_at: string
+          duracion_cita_min: number
+          especialidad: string
+          horario_fin: string
+          horario_inicio: string
+          id: string
+          nombre: string
+          telefono: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activo?: boolean
+          apellidos: string
+          cedula_profesional?: string | null
+          created_at?: string
+          duracion_cita_min?: number
+          especialidad: string
+          horario_fin?: string
+          horario_inicio?: string
+          id?: string
+          nombre: string
+          telefono?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activo?: boolean
+          apellidos?: string
+          cedula_profesional?: string | null
+          created_at?: string
+          duracion_cita_min?: number
+          especialidad?: string
+          horario_fin?: string
+          horario_inicio?: string
+          id?: string
+          nombre?: string
+          telefono?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      patients: {
+        Row: {
+          activo: boolean
+          alergias: string | null
+          apellidos: string
+          codigo_postal: string | null
+          colonia: string | null
+          contacto_emergencia_nombre: string | null
+          contacto_emergencia_telefono: string | null
+          created_at: string
+          curp: string | null
+          direccion: string | null
+          email: string | null
+          estado: string | null
+          fecha_nacimiento: string | null
+          id: string
+          municipio: string | null
+          nombre: string
+          notas: string | null
+          rfc: string | null
+          sexo: string | null
+          telefono: string | null
+          tipo_sangre: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          activo?: boolean
+          alergias?: string | null
+          apellidos: string
+          codigo_postal?: string | null
+          colonia?: string | null
+          contacto_emergencia_nombre?: string | null
+          contacto_emergencia_telefono?: string | null
+          created_at?: string
+          curp?: string | null
+          direccion?: string | null
+          email?: string | null
+          estado?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          municipio?: string | null
+          nombre: string
+          notas?: string | null
+          rfc?: string | null
+          sexo?: string | null
+          telefono?: string | null
+          tipo_sangre?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          activo?: boolean
+          alergias?: string | null
+          apellidos?: string
+          codigo_postal?: string | null
+          colonia?: string | null
+          contacto_emergencia_nombre?: string | null
+          contacto_emergencia_telefono?: string | null
+          created_at?: string
+          curp?: string | null
+          direccion?: string | null
+          email?: string | null
+          estado?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          municipio?: string | null
+          nombre?: string
+          notas?: string | null
+          rfc?: string | null
+          sexo?: string | null
+          telefono?: string | null
+          tipo_sangre?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      reminders: {
+        Row: {
+          appointment_id: string
+          canal: Database["public"]["Enums"]["reminder_channel"]
+          created_at: string
+          enviado_en: string | null
+          estado: Database["public"]["Enums"]["reminder_status"]
+          id: string
+          intentos: number
+          mensaje: string | null
+          programado_para: string
+        }
+        Insert: {
+          appointment_id: string
+          canal?: Database["public"]["Enums"]["reminder_channel"]
+          created_at?: string
+          enviado_en?: string | null
+          estado?: Database["public"]["Enums"]["reminder_status"]
+          id?: string
+          intentos?: number
+          mensaje?: string | null
+          programado_para: string
+        }
+        Update: {
+          appointment_id?: string
+          canal?: Database["public"]["Enums"]["reminder_channel"]
+          created_at?: string
+          enviado_en?: string | null
+          estado?: Database["public"]["Enums"]["reminder_status"]
+          id?: string
+          intentos?: number
+          mensaje?: string | null
+          programado_para?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          activo: boolean
+          capacidad: number
+          created_at: string
+          equipamiento: string | null
+          id: string
+          nombre: string
+          piso: string | null
+        }
+        Insert: {
+          activo?: boolean
+          capacidad?: number
+          created_at?: string
+          equipamiento?: string | null
+          id?: string
+          nombre: string
+          piso?: string | null
+        }
+        Update: {
+          activo?: boolean
+          capacidad?: number
+          created_at?: string
+          equipamiento?: string | null
+          id?: string
+          nombre?: string
+          piso?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_appointment_participant: {
+        Args: { _appointment_id: string }
+        Returns: boolean
+      }
+      log_audit: {
+        Args: {
+          _accion: Database["public"]["Enums"]["audit_action"]
+          _datos_anteriores?: Json
+          _datos_nuevos?: Json
+          _registro_id: string
+          _tabla: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "receptionist" | "doctor" | "nurse" | "patient"
+      appointment_status:
+        | "solicitada"
+        | "tentativa"
+        | "pendiente_formulario"
+        | "confirmada"
+        | "recordatorio_enviado"
+        | "confirmada_paciente"
+        | "confirmada_medico"
+        | "cancelada"
+        | "liberada"
+      audit_action: "crear" | "actualizar" | "cancelar"
+      reminder_channel: "whatsapp" | "sms" | "email"
+      reminder_status: "pendiente" | "enviado" | "fallido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +538,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "receptionist", "doctor", "nurse", "patient"],
+      appointment_status: [
+        "solicitada",
+        "tentativa",
+        "pendiente_formulario",
+        "confirmada",
+        "recordatorio_enviado",
+        "confirmada_paciente",
+        "confirmada_medico",
+        "cancelada",
+        "liberada",
+      ],
+      audit_action: ["crear", "actualizar", "cancelar"],
+      reminder_channel: ["whatsapp", "sms", "email"],
+      reminder_status: ["pendiente", "enviado", "fallido"],
+    },
   },
 } as const

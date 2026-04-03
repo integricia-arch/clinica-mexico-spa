@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -13,21 +13,37 @@ import {
   Heart,
   Bell,
   ChevronDown,
+  LogOut,
+  CalendarPlus,
+  Headset,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Panel principal" },
+  { to: "/recepcion", icon: Headset, label: "Recepción", roles: ["admin", "receptionist"] },
   { to: "/pacientes", icon: Users, label: "Pacientes" },
   { to: "/agenda", icon: CalendarDays, label: "Agenda" },
+  { to: "/nueva-cita", icon: CalendarPlus, label: "Nueva cita" },
   { to: "/facturacion", icon: Receipt, label: "Facturación" },
   { to: "/expedientes", icon: FileText, label: "Expedientes" },
   { to: "/farmacia", icon: Pill, label: "Farmacia" },
-  { to: "/configuracion", icon: Settings, label: "Configuración" },
+  { to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin"] },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, roles, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const visibleNav = navItems.filter((item) => {
+    if (!item.roles) return true;
+    return item.roles.some((r) => roles.includes(r as any));
+  });
+
+  const initials = user?.email?.substring(0, 2).toUpperCase() || "??";
+
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -68,7 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const isActive = location.pathname === item.to;
             return (
               <NavLink
@@ -92,16 +108,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="border-t border-sidebar-border p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-primary text-sm font-semibold">
-              AR
+              {initials}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-sidebar-accent-foreground">
-                Dra. Ana Ramírez
+                {user?.email || "Usuario"}
               </p>
               <p className="truncate text-xs text-sidebar-foreground/60">
-                Administrador
+                {roles[0] === "admin" ? "Administrador" : roles[0] === "receptionist" ? "Recepción" : roles[0] === "doctor" ? "Médico" : roles[0] === "nurse" ? "Enfermería" : roles[0] === "patient" ? "Paciente" : "Sin rol"}
               </p>
             </div>
+            <button
+              onClick={() => { signOut(); navigate("/login"); }}
+              className="text-sidebar-foreground hover:text-sidebar-accent-foreground"
+              title="Cerrar sesión"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </aside>
@@ -124,9 +147,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
             <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted transition-colors cursor-pointer">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                AR
+                {initials}
               </div>
-              <span className="hidden sm:block text-sm font-medium">Dra. Ramírez</span>
+              <span className="hidden sm:block text-sm font-medium">{user?.email?.split("@")[0]}</span>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
           </div>
