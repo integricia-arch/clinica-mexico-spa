@@ -134,13 +134,7 @@ export default function Login() {
                 required
                 minLength={6}
               />
-              {isSignUp && (
-                <p className="text-xs text-muted-foreground">
-                  Usa al menos 6 caracteres. Evita contraseñas comunes (como
-                  "123456" o "password"); rechazamos contraseñas que aparecen en
-                  filtraciones públicas conocidas.
-                </p>
-              )}
+              {isSignUp && <PasswordStrengthMeter password={password} />}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               <LogIn className="mr-2 h-4 w-4" />
