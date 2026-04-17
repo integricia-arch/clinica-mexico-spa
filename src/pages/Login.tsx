@@ -15,6 +15,48 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const translateAuthError = (err: any): { title: string; description: string } => {
+    const code = err?.code || err?.error_code;
+    const reasons: string[] = err?.weak_password?.reasons || [];
+    const msg: string = err?.message || "";
+
+    if (code === "weak_password" || reasons.includes("pwned") || /pwned|known to be weak/i.test(msg)) {
+      return {
+        title: "Contraseña insegura",
+        description:
+          "Esta contraseña aparece en filtraciones públicas conocidas. Elige una distinta, idealmente con al menos 10 caracteres, mayúsculas, números y símbolos.",
+      };
+    }
+    if (code === "user_already_exists" || /already registered|already exists/i.test(msg)) {
+      return {
+        title: "Cuenta existente",
+        description: "Ya existe una cuenta con este correo. Intenta iniciar sesión.",
+      };
+    }
+    if (code === "invalid_credentials" || /invalid login/i.test(msg)) {
+      return {
+        title: "Credenciales inválidas",
+        description: "Correo o contraseña incorrectos. Verifica e inténtalo de nuevo.",
+      };
+    }
+    if (/password.*(short|length|characters)|at least \d+ characters/i.test(msg)) {
+      return {
+        title: "Contraseña muy corta",
+        description: "La contraseña debe tener al menos 6 caracteres.",
+      };
+    }
+    if (/email.*invalid|invalid.*email/i.test(msg)) {
+      return {
+        title: "Correo inválido",
+        description: "Ingresa un correo electrónico válido.",
+      };
+    }
+    return {
+      title: "Error",
+      description: msg || "Ocurrió un error inesperado. Inténtalo de nuevo.",
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -37,10 +79,11 @@ export default function Login() {
         navigate("/");
       }
     } catch (err: any) {
+      const { title, description } = translateAuthError(err);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: err.message || "Ocurrió un error inesperado",
+        title,
+        description,
       });
     } finally {
       setLoading(false);
@@ -90,6 +133,13 @@ export default function Login() {
                 required
                 minLength={6}
               />
+              {isSignUp && (
+                <p className="text-xs text-muted-foreground">
+                  Usa al menos 6 caracteres. Evita contraseñas comunes (como
+                  "123456" o "password"); rechazamos contraseñas que aparecen en
+                  filtraciones públicas conocidas.
+                </p>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               <LogIn className="mr-2 h-4 w-4" />
