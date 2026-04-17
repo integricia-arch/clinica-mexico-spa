@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -133,13 +134,7 @@ export default function Login() {
                 required
                 minLength={6}
               />
-              {isSignUp && (
-                <p className="text-xs text-muted-foreground">
-                  Usa al menos 6 caracteres. Evita contraseñas comunes (como
-                  "123456" o "password"); rechazamos contraseñas que aparecen en
-                  filtraciones públicas conocidas.
-                </p>
-              )}
+              {isSignUp && <PasswordStrengthMeter password={password} />}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               <LogIn className="mr-2 h-4 w-4" />
