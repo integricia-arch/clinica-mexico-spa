@@ -1,0 +1,1 @@
+DELETE FROM public.audit_logs WHERE id = '7b2784ec-7a06-4330-b8f9-b2f7613e633a';
