@@ -98,6 +98,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -234,6 +241,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "expedientes_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "expedientes_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -288,6 +302,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_consulta_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
           {
@@ -474,7 +495,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      doctors_public: {
+        Row: {
+          activo: boolean | null
+          apellidos: string | null
+          duracion_cita_min: number | null
+          especialidad: string | null
+          horario_fin: string | null
+          horario_inicio: string | null
+          id: string | null
+          nombre: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          apellidos?: string | null
+          duracion_cita_min?: number | null
+          especialidad?: string | null
+          horario_fin?: string | null
+          horario_inicio?: string | null
+          id?: string | null
+          nombre?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          apellidos?: string | null
+          duracion_cita_min?: number | null
+          especialidad?: string | null
+          horario_fin?: string | null
+          horario_inicio?: string | null
+          id?: string | null
+          nombre?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
