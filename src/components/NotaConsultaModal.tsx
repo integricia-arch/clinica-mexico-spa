@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { restInsert, restUpdate } from "@/lib/restClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -64,26 +64,14 @@ export default function NotaConsultaModal({ open, onClose, expedienteId, doctorI
     };
 
     try {
+      let saved: any;
       if (isEdit) {
-        const { data, error } = await supabase
-          .from("notas_consulta")
-          .update(payload)
-          .eq("id", nota.id)
-          .select("*, doctors(nombre, apellidos)")
-          .single();
-        if (error) throw error;
-        toast({ title: "Nota actualizada" });
-        onSaved(data);
+        saved = await restUpdate("notas_consulta", nota.id, payload);
       } else {
-        const { data, error } = await supabase
-          .from("notas_consulta")
-          .insert(payload)
-          .select("*, doctors(nombre, apellidos)")
-          .single();
-        if (error) throw error;
-        toast({ title: "Nota guardada" });
-        onSaved(data);
+        saved = await restInsert("notas_consulta", payload);
       }
+      toast({ title: isEdit ? "Nota actualizada" : "Nota guardada" });
+      onSaved({ ...saved, doctors: { nombre: "", apellidos: "" } });
       onClose();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error", description: err.message });
@@ -98,7 +86,6 @@ export default function NotaConsultaModal({ open, onClose, expedienteId, doctorI
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar nota de consulta" : "Nueva nota de consulta"}</DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <Label>Fecha y hora de consulta</Label>
@@ -106,26 +93,30 @@ export default function NotaConsultaModal({ open, onClose, expedienteId, doctorI
           </div>
           <div className="space-y-1.5">
             <Label>Diagnóstico principal</Label>
-            <Input value={form.diagnostico_principal} onChange={set("diagnostico_principal")} placeholder="Ej: Hipertensión arterial, Z00.0..." />
+            <Input value={form.diagnostico_principal} onChange={set("diagnostico_principal")}
+              placeholder="Ej: Hipertensión arterial, Z00.0..." />
           </div>
           <div className="space-y-1.5">
             <Label className="text-primary font-semibold">S — Subjetivo (motivo de consulta)</Label>
-            <Textarea value={form.subjetivo} onChange={set("subjetivo")} placeholder="Lo que refiere el paciente..." rows={3} />
+            <Textarea value={form.subjetivo} onChange={set("subjetivo")}
+              placeholder="Lo que refiere el paciente..." rows={3} />
           </div>
           <div className="space-y-1.5">
             <Label className="text-blue-600 font-semibold">O — Objetivo (exploración física)</Label>
-            <Textarea value={form.objetivo} onChange={set("objetivo")} placeholder="Signos vitales, hallazgos físicos..." rows={3} />
+            <Textarea value={form.objetivo} onChange={set("objetivo")}
+              placeholder="Signos vitales, hallazgos físicos..." rows={3} />
           </div>
           <div className="space-y-1.5">
             <Label className="text-orange-600 font-semibold">A — Análisis (diagnóstico)</Label>
-            <Textarea value={form.analisis} onChange={set("analisis")} placeholder="Interpretación clínica..." rows={3} />
+            <Textarea value={form.analisis} onChange={set("analisis")}
+              placeholder="Interpretación clínica..." rows={3} />
           </div>
           <div className="space-y-1.5">
             <Label className="text-green-600 font-semibold">P — Plan (tratamiento)</Label>
-            <Textarea value={form.plan} onChange={set("plan")} placeholder="Medicamentos, indicaciones, seguimiento..." rows={3} />
+            <Textarea value={form.plan} onChange={set("plan")}
+              placeholder="Medicamentos, indicaciones, seguimiento..." rows={3} />
           </div>
         </div>
-
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={loading}>

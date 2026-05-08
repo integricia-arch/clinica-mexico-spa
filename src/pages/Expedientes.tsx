@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { restSelect, restInsert } from "@/lib/restClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ const TIPO_LABELS: Record<string, string> = {
 };
 
 export default function Expedientes() {
-  const { user, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const { toast } = useToast();
   const canWrite = hasRole("admin") || hasRole("doctor");
 
@@ -30,8 +31,6 @@ export default function Expedientes() {
   const [notaSelected, setNotaSelected] = useState<any | null>(null);
   const [currentExpId, setCurrentExpId] = useState<string>("");
   const [currentDoctorId, setCurrentDoctorId] = useState<string>("");
-
-  // Nuevo expediente modal
   const [newExpModal, setNewExpModal] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -42,33 +41,35 @@ export default function Expedientes() {
 
   async function loadExpedientes() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("expedientes")
-      .select("*, patients(nombre, apellidos, tipo_sangre, alergias), doctors(nombre, apellidos, especialidad)")
-      .eq("activo", true)
-      .order("updated_at", { ascending: false });
-    if (error) toast({ variant: "destructive", title: "Error", description: error.message });
-    setExpedientes(data ?? []);
+    try {
+      const data = await restSelect(
+        "expedientes",
+        "select=*,patients(nombre,apellidos,tipo_sangre,alergias),doctors(nombre,apellidos,especialidad)&activo=eq.true&order=updated_at.desc"
+      );
+      setExpedientes(data ?? []);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    }
     setLoading(false);
   }
 
   async function loadNotas(expId: string) {
     if (notas[expId]) return;
-    const { data } = await supabase
-      .from("notas_consulta")
-      .select("*, doctors(nombre, apellidos)")
-      .eq("expediente_id", expId)
-      .order("fecha_consulta", { ascending: false });
-    setNotas((n) => ({ ...n, [expId]: data ?? [] }));
+    try {
+      const data = await restSelect(
+        "notas_consulta",
+        `select=*,doctors(nombre,apellidos)&expediente_id=eq.${expId}&order=fecha_consulta.desc`
+      );
+      setNotas((n) => ({ ...n, [expId]: data ?? [] }));
+    } catch {
+      setNotas((n) => ({ ...n, [expId]: [] }));
+    }
   }
 
   function toggleExpand(expId: string) {
-    if (expanded === expId) {
-      setExpanded(null);
-    } else {
-      setExpanded(expId);
-      loadNotas(expId);
-    }
+    if (expanded === expId) { setExpanded(null); return; }
+    setExpanded(expId);
+    loadNotas(expId);
   }
 
   async function openNewExpModal() {
@@ -88,20 +89,23 @@ export default function Expedientes() {
       return;
     }
     setSaving(true);
-    const { data, error } = await supabase
-      .from("expedientes")
-      .insert({ patient_id: newExpForm.patient_id, doctor_id: newExpForm.doctor_id, tipo: newExpForm.tipo as any })
-      .select("*, patients(nombre, apellidos, tipo_sangre, alergias), doctors(nombre, apellidos, especialidad)")
-      .single();
-    setSaving(false);
-    if (error) {
-      const msg = error.code === "23505" ? "Este paciente ya tiene un expediente" : error.message;
+    try {
+      const exp = await restInsert("expedientes", {
+        patient_id: newExpForm.patient_id,
+        doctor_id: newExpForm.doctor_id,
+        tipo: newExpForm.tipo,
+      });
+      // Enriquecer con datos relacionados
+      const patient = patients.find((p) => p.id === newExpForm.patient_id);
+      const doctor = doctors.find((d) => d.id === newExpForm.doctor_id);
+      setExpedientes((e) => [{ ...exp, patients: patient, doctors: doctor }, ...e]);
+      setNewExpModal(false);
+      toast({ title: "Expediente creado" });
+    } catch (e: any) {
+      const msg = e.message?.includes("23505") ? "Este paciente ya tiene un expediente" : e.message;
       toast({ variant: "destructive", title: "Error", description: msg });
-      return;
     }
-    setExpedientes((e) => [data, ...e]);
-    setNewExpModal(false);
-    toast({ title: "Expediente creado" });
+    setSaving(false);
   }
 
   function openNota(expId: string, doctorId: string, nota?: any) {
@@ -115,19 +119,15 @@ export default function Expedientes() {
     setNotas((prev) => {
       const list = prev[currentExpId] ?? [];
       const idx = list.findIndex((x) => x.id === n.id);
-      if (idx >= 0) {
-        const next = [...list]; next[idx] = n; return { ...prev, [currentExpId]: next };
-      }
+      if (idx >= 0) { const next = [...list]; next[idx] = n; return { ...prev, [currentExpId]: next }; }
       return { ...prev, [currentExpId]: [n, ...list] };
     });
-    // bump expediente updated_at visually
     setExpedientes((e) => e.map((x) => x.id === currentExpId ? { ...x, updated_at: new Date().toISOString() } : x));
   }
 
   const filtered = expedientes.filter((e) => {
     const term = search.toLowerCase();
-    const nombre = `${e.patients?.nombre} ${e.patients?.apellidos}`.toLowerCase();
-    return nombre.includes(term);
+    return `${e.patients?.nombre} ${e.patients?.apellidos}`.toLowerCase().includes(term);
   });
 
   return (
@@ -139,8 +139,7 @@ export default function Expedientes() {
         </div>
         {canWrite && (
           <Button onClick={openNewExpModal}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo expediente
+            <Plus className="mr-2 h-4 w-4" />Nuevo expediente
           </Button>
         )}
       </div>
@@ -164,11 +163,8 @@ export default function Expedientes() {
         <div className="space-y-3">
           {filtered.map((exp) => (
             <div key={exp.id} className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
-              {/* Header fila */}
-              <div
-                className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => toggleExpand(exp.id)}
-              >
+              <div className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => toggleExpand(exp.id)}>
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
                   {exp.patients?.nombre?.[0]}{exp.patients?.apellidos?.[0]}
                 </div>
@@ -193,10 +189,11 @@ export default function Expedientes() {
                 <p className="hidden lg:block text-xs text-muted-foreground whitespace-nowrap">
                   {format(new Date(exp.updated_at), "dd/MM/yyyy", { locale: es })}
                 </p>
-                {expanded === exp.id ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+                {expanded === exp.id
+                  ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                  : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
               </div>
 
-              {/* Panel expandido */}
               {expanded === exp.id && (
                 <div className="border-t border-border px-5 py-4 space-y-4 bg-muted/20">
                   {exp.patients?.alergias && (
@@ -204,17 +201,14 @@ export default function Expedientes() {
                       ⚠ Alergias: {exp.patients.alergias}
                     </div>
                   )}
-
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-foreground">Notas de consulta (SOAP)</p>
                     {canWrite && (
                       <Button size="sm" variant="outline" onClick={() => openNota(exp.id, exp.doctor_id)}>
-                        <Stethoscope className="mr-1.5 h-3.5 w-3.5" />
-                        Nueva nota
+                        <Stethoscope className="mr-1.5 h-3.5 w-3.5" />Nueva nota
                       </Button>
                     )}
                   </div>
-
                   {!notas[exp.id] ? (
                     <p className="text-xs text-muted-foreground">Cargando...</p>
                   ) : notas[exp.id].length === 0 ? (
@@ -263,7 +257,6 @@ export default function Expedientes() {
         </div>
       )}
 
-      {/* Modal nuevo expediente */}
       <Dialog open={newExpModal} onOpenChange={(v) => !v && setNewExpModal(false)}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Nuevo expediente</DialogTitle></DialogHeader>
@@ -273,9 +266,7 @@ export default function Expedientes() {
               <Select value={newExpForm.patient_id} onValueChange={(v) => setNewExpForm((f) => ({ ...f, patient_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
                 <SelectContent>
-                  {patients.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.apellidos}, {p.nombre}</SelectItem>
-                  ))}
+                  {patients.map((p) => <SelectItem key={p.id} value={p.id}>{p.apellidos}, {p.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -284,9 +275,7 @@ export default function Expedientes() {
               <Select value={newExpForm.doctor_id} onValueChange={(v) => setNewExpForm((f) => ({ ...f, doctor_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
                 <SelectContent>
-                  {doctors.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>Dr(a). {d.nombre} {d.apellidos}</SelectItem>
-                  ))}
+                  {doctors.map((d) => <SelectItem key={d.id} value={d.id}>Dr(a). {d.nombre} {d.apellidos}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -295,9 +284,7 @@ export default function Expedientes() {
               <Select value={newExpForm.tipo} onValueChange={(v) => setNewExpForm((f) => ({ ...f, tipo: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(TIPO_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
+                  {Object.entries(TIPO_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
