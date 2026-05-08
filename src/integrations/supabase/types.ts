@@ -197,6 +197,108 @@ export type Database = {
         }
         Relationships: []
       }
+      expedientes: {
+        Row: {
+          activo: boolean
+          created_at: string
+          doctor_id: string
+          id: string
+          patient_id: string
+          tipo: Database["public"]["Enums"]["expediente_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          doctor_id: string
+          id?: string
+          patient_id: string
+          tipo?: Database["public"]["Enums"]["expediente_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          patient_id?: string
+          tipo?: Database["public"]["Enums"]["expediente_tipo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expedientes_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expedientes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notas_consulta: {
+        Row: {
+          analisis: string | null
+          created_at: string
+          diagnostico_principal: string | null
+          doctor_id: string
+          expediente_id: string
+          fecha_consulta: string
+          id: string
+          objetivo: string | null
+          plan: string | null
+          subjetivo: string | null
+          updated_at: string
+        }
+        Insert: {
+          analisis?: string | null
+          created_at?: string
+          diagnostico_principal?: string | null
+          doctor_id: string
+          expediente_id: string
+          fecha_consulta?: string
+          id?: string
+          objetivo?: string | null
+          plan?: string | null
+          subjetivo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analisis?: string | null
+          created_at?: string
+          diagnostico_principal?: string | null
+          doctor_id?: string
+          expediente_id?: string
+          fecha_consulta?: string
+          id?: string
+          objetivo?: string | null
+          plan?: string | null
+          subjetivo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notas_consulta_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_consulta_expediente_id_fkey"
+            columns: ["expediente_id"]
+            isOneToOne: false
+            referencedRelation: "expedientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           activo: boolean
@@ -410,6 +512,12 @@ export type Database = {
         | "cancelada"
         | "liberada"
       audit_action: "crear" | "actualizar" | "cancelar"
+      expediente_tipo:
+        | "primera_vez"
+        | "seguimiento"
+        | "urgencia"
+        | "cirugia"
+        | "cronico"
       reminder_channel: "whatsapp" | "sms" | "email"
       reminder_status: "pendiente" | "enviado" | "fallido"
     }
@@ -552,6 +660,13 @@ export const Constants = {
         "liberada",
       ],
       audit_action: ["crear", "actualizar", "cancelar"],
+      expediente_tipo: [
+        "primera_vez",
+        "seguimiento",
+        "urgencia",
+        "cirugia",
+        "cronico",
+      ],
       reminder_channel: ["whatsapp", "sms", "email"],
       reminder_status: ["pendiente", "enviado", "fallido"],
     },
