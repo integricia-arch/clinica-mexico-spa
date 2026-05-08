@@ -38,16 +38,16 @@ const App = () => (
                 <ProtectedRoute>
                   <AppLayout>
                     <Routes>
-                      <Route path="/" element={<AdminDashboard />} />
-                      <Route path="/pacientes" element={<PacientesLista />} />
-                      <Route path="/agenda" element={<AgendaMedico />} />
-                      <Route path="/nueva-cita" element={<NuevaCita />} />
+                      <Route path="/" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
+                      <Route path="/pacientes" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><PacientesLista /></ProtectedRoute>} />
+                      <Route path="/agenda" element={<ProtectedRoute allowedRoles={["admin","doctor","receptionist","nurse"]}><AgendaMedico /></ProtectedRoute>} />
+                      <Route path="/nueva-cita" element={<ProtectedRoute allowedRoles={["admin","receptionist","patient"]}><NuevaCita /></ProtectedRoute>} />
                       <Route path="/cita/:id" element={<DetalleCita />} />
-                      <Route path="/recepcion" element={<RecepcionDashboard />} />
-                      <Route path="/facturacion" element={<Facturacion />} />
-                      <Route path="/expedientes" element={<Expedientes />} />
-                      <Route path="/farmacia" element={<Farmacia />} />
-                      <Route path="/configuracion" element={<Configuracion />} />
+                      <Route path="/recepcion" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><RecepcionDashboard /></ProtectedRoute>} />
+                      <Route path="/facturacion" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Facturacion /></ProtectedRoute>} />
+                      <Route path="/expedientes" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Expedientes /></ProtectedRoute>} />
+                      <Route path="/farmacia" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Farmacia /></ProtectedRoute>} />
+                      <Route path="/configuracion" element={<ProtectedRoute allowedRoles={["admin"]}><Configuracion /></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
