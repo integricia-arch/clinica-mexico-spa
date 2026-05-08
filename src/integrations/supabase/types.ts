@@ -662,10 +662,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_appointment_participant: {
-        Args: { _appointment_id: string }
-        Returns: boolean
-      }
       log_audit: {
         Args: {
           _accion: Database["public"]["Enums"]["audit_action"]
