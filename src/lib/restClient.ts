@@ -1,37 +1,42 @@
 /**
- * Cliente REST directo para tablas no registradas en el schema cache de Supabase.
- * Úsalo cuando el cliente tipado lanza "Could not find the table in the schema cache".
+ * Cliente REST directo — bypasea el schema cache de Supabase.
+ * Lee URL y key del cliente ya inicializado para funcionar en producción.
  */
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+import { supabase } from "@/integrations/supabase/client";
 
-async function getAuthHeader(): Promise<Record<string, string>> {
-  // Importar supabase aquí para evitar dependencia circular
-  const { supabase } = await import("@/integrations/supabase/client");
+function getSupabaseConfig() {
+  // Acceder a la URL desde el cliente ya inicializado
+  const url = (supabase as any).supabaseUrl as string;
+  const key = (supabase as any).supabaseKey as string;
+  return { url, key };
+}
+
+async function getHeaders(): Promise<Record<string, string>> {
+  const { key } = getSupabaseConfig();
   const { data: { session } } = await supabase.auth.getSession();
-  const headers: Record<string, string> = {
-    "apikey": SUPABASE_KEY,
+  return {
+    "apikey": key,
     "Content-Type": "application/json",
     "Prefer": "return=representation",
+    ...(session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {}),
   };
-  if (session?.access_token) {
-    headers["Authorization"] = `Bearer ${session.access_token}`;
-  }
-  return headers;
+}
+
+function buildUrl(table: string, query = "") {
+  const { url } = getSupabaseConfig();
+  return `${url}/rest/v1/${table}${query ? `?${query}` : ""}`;
 }
 
 export async function restSelect(table: string, query = "") {
-  const headers = await getAuthHeader();
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query ? `?${query}` : ""}`, {
-    headers,
-  });
+  const headers = await getHeaders();
+  const res = await fetch(buildUrl(table, query), { headers });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 export async function restInsert(table: string, body: object) {
-  const headers = await getAuthHeader();
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+  const headers = await getHeaders();
+  const res = await fetch(buildUrl(table), {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -42,8 +47,8 @@ export async function restInsert(table: string, body: object) {
 }
 
 export async function restUpdate(table: string, id: string, body: object) {
-  const headers = await getAuthHeader();
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+  const headers = await getHeaders();
+  const res = await fetch(buildUrl(table, `id=eq.${id}`), {
     method: "PATCH",
     headers,
     body: JSON.stringify(body),
