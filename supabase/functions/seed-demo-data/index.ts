@@ -275,22 +275,13 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({
-        message: "Datos demo creados exitosamente",
-        credenciales: {
-          admin: "admin@clinicamx.demo / Demo1234!",
-          recepcion: "recepcion@clinicamx.demo / Demo1234!",
-          medico: "dr.garcia@clinicamx.demo / Demo1234!",
-          enfermeria: "enfermeria@clinicamx.demo / Demo1234!",
-          paciente: "paciente1@clinicamx.demo / Demo1234!",
-        },
-      }),
+      JSON.stringify({ message: "Datos demo creados exitosamente" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
     console.error("Seed error:", err);
     return new Response(
-      JSON.stringify({ error: "Error al crear datos demo", details: String(err) }),
+      JSON.stringify({ error: "Error al crear datos demo" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
