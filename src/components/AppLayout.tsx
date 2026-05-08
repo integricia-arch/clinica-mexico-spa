@@ -1,35 +1,85 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Users,
-  CalendarDays,
-  Receipt,
-  FileText,
-  Pill,
-  Settings,
-  Menu,
-  X,
-  Heart,
-  Bell,
-  ChevronDown,
-  LogOut,
-  CalendarPlus,
-  Headset,
+  LayoutDashboard, Users, CalendarDays, Receipt, FileText,
+  Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
+  CalendarPlus, Headset,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Panel principal" },
-  { to: "/recepcion", icon: Headset, label: "Recepción", roles: ["admin", "receptionist"] },
-  { to: "/pacientes", icon: Users, label: "Pacientes" },
-  { to: "/agenda", icon: CalendarDays, label: "Agenda" },
-  { to: "/nueva-cita", icon: CalendarPlus, label: "Nueva cita" },
-  { to: "/facturacion", icon: Receipt, label: "Facturación" },
-  { to: "/expedientes", icon: FileText, label: "Expedientes" },
-  { to: "/farmacia", icon: Pill, label: "Farmacia" },
-  { to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin"] },
+type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient";
+
+interface NavItem {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  roles?: AppRole[];
+}
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    to: "/",
+    icon: LayoutDashboard,
+    label: "Panel principal",
+    roles: ["admin", "receptionist", "doctor", "nurse"],
+  },
+  {
+    to: "/recepcion",
+    icon: Headset,
+    label: "Recepción",
+    roles: ["admin", "receptionist"],
+  },
+  {
+    to: "/pacientes",
+    icon: Users,
+    label: "Pacientes",
+    roles: ["admin", "receptionist", "doctor", "nurse"],
+  },
+  {
+    to: "/agenda",
+    icon: CalendarDays,
+    label: "Agenda",
+    roles: ["admin", "receptionist", "doctor", "nurse"],
+  },
+  {
+    to: "/nueva-cita",
+    icon: CalendarPlus,
+    label: "Nueva cita",
+    roles: ["admin", "receptionist"],
+  },
+  {
+    to: "/expedientes",
+    icon: FileText,
+    label: "Expedientes",
+    roles: ["admin", "doctor", "nurse"],
+  },
+  {
+    to: "/farmacia",
+    icon: Pill,
+    label: "Farmacia",
+    roles: ["admin", "nurse", "receptionist"],
+  },
+  {
+    to: "/facturacion",
+    icon: Receipt,
+    label: "Facturación",
+    roles: ["admin", "receptionist"],
+  },
+  {
+    to: "/configuracion",
+    icon: Settings,
+    label: "Configuración",
+    roles: ["admin"],
+  },
 ];
+
+const ROLE_LABELS: Record<AppRole, string> = {
+  admin: "Administrador",
+  receptionist: "Recepción",
+  doctor: "Médico",
+  nurse: "Enfermería",
+  patient: "Paciente",
+};
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, roles, signOut } = useAuth();
@@ -37,17 +87,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const visibleNav = navItems.filter((item) => {
+  const visibleNav = NAV_ITEMS.filter((item) => {
     if (!item.roles) return true;
     return item.roles.some((r) => roles.includes(r as any));
   });
 
+  const primaryRole = roles[0] as AppRole | undefined;
+  const roleLabel = primaryRole ? ROLE_LABELS[primaryRole] : "Sin rol";
   const initials = user?.email?.substring(0, 2).toUpperCase() || "??";
-
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden"
@@ -67,17 +117,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Heart className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <span className="text-display font-bold text-sm text-sidebar-accent-foreground">
-              ClínicaMX
-            </span>
-            <span className="block text-[11px] text-sidebar-foreground/60">
-              Operaciones Clínicas
-            </span>
+            <span className="text-display font-bold text-sm text-sidebar-accent-foreground">ClínicaMX</span>
+            <span className="block text-[11px] text-sidebar-foreground/60">Operaciones Clínicas</span>
           </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="ml-auto lg:hidden text-sidebar-foreground hover:text-sidebar-accent-foreground"
-          >
+          <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-sidebar-foreground hover:text-sidebar-accent-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -114,9 +157,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <p className="truncate text-sm font-medium text-sidebar-accent-foreground">
                 {user?.email || "Usuario"}
               </p>
-              <p className="truncate text-xs text-sidebar-foreground/60">
-                {roles[0] === "admin" ? "Administrador" : roles[0] === "receptionist" ? "Recepción" : roles[0] === "doctor" ? "Médico" : roles[0] === "nurse" ? "Enfermería" : roles[0] === "patient" ? "Paciente" : "Sin rol"}
-              </p>
+              <p className="truncate text-xs text-sidebar-foreground/60">{roleLabel}</p>
             </div>
             <button
               onClick={() => { signOut(); navigate("/login"); }}
@@ -131,12 +172,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar */}
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 lg:px-6">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-muted-foreground hover:text-foreground"
-          >
+          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-muted-foreground hover:text-foreground">
             <Menu className="h-5 w-5" />
           </button>
           <div className="hidden lg:block" />
@@ -149,13 +186,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
                 {initials}
               </div>
-              <span className="hidden sm:block text-sm font-medium">{user?.email?.split("@")[0]}</span>
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-medium leading-tight">{user?.email?.split("@")[0]}</p>
+                <p className="text-xs text-muted-foreground leading-tight">{roleLabel}</p>
+              </div>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
           </div>
         </header>
-
-        {/* Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
       </div>
     </div>
