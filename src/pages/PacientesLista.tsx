@@ -1,31 +1,39 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Phone, Mail } from "lucide-react";
+import { Search, Plus, Phone, Mail, Pencil } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import PacienteModal from "@/components/PacienteModal";
 
 type Patient = Tables<"patients">;
 
 export default function PacientesLista() {
+  const { hasRole } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selected, setSelected] = useState<Patient | null>(null);
+
+  const canEdit = hasRole("admin") || hasRole("receptionist");
 
   useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from("patients")
-        .select("*")
-        .eq("activo", true)
-        .order("apellidos", { ascending: true });
-      setPatients(data ?? []);
-      setLoading(false);
-    }
     load();
   }, []);
+
+  async function load() {
+    const { data } = await supabase
+      .from("patients")
+      .select("*")
+      .eq("activo", true)
+      .order("apellidos", { ascending: true });
+    setPatients(data ?? []);
+    setLoading(false);
+  }
 
   const filtered = patients.filter((p) => {
     const term = search.toLowerCase();
@@ -37,6 +45,21 @@ export default function PacientesLista() {
     );
   });
 
+  const openNew = () => { setSelected(null); setModalOpen(true); };
+  const openEdit = (p: Patient) => { setSelected(p); setModalOpen(true); };
+
+  const handleSaved = (p: Patient) => {
+    setPatients((prev) => {
+      const idx = prev.findIndex((x) => x.id === p.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = p;
+        return next;
+      }
+      return [p, ...prev];
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -46,10 +69,12 @@ export default function PacientesLista() {
             {patients.length} pacientes registrados
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo paciente
-        </Button>
+        {canEdit && (
+          <Button onClick={openNew}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo paciente
+          </Button>
+        )}
       </div>
 
       <div className="relative max-w-md">
@@ -67,13 +92,21 @@ export default function PacientesLista() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       ) : filtered.length === 0 ? (
-        <p className="text-center py-12 text-muted-foreground">No se encontraron pacientes</p>
+        <div className="text-center py-12 text-muted-foreground">
+          <p>No se encontraron pacientes</p>
+          {canEdit && (
+            <Button variant="outline" className="mt-4" onClick={openNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              Registrar primer paciente
+            </Button>
+          )}
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => (
             <div
               key={p.id}
-              className="rounded-xl border border-border bg-card p-4 shadow-card hover:shadow-elevated transition-shadow cursor-pointer"
+              className="rounded-xl border border-border bg-card p-4 shadow-card hover:shadow-elevated transition-shadow"
             >
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
@@ -90,6 +123,16 @@ export default function PacientesLista() {
                     · {p.sexo === "M" ? "Masculino" : p.sexo === "F" ? "Femenino" : p.sexo || "—"}
                   </p>
                 </div>
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => openEdit(p)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
 
               <div className="mt-3 space-y-1">
@@ -107,15 +150,29 @@ export default function PacientesLista() {
                 )}
               </div>
 
-              {p.tipo_sangre && (
-                <span className="mt-2 inline-block rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-                  {p.tipo_sangre}
-                </span>
-              )}
+              <div className="mt-2 flex flex-wrap gap-1">
+                {p.tipo_sangre && (
+                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                    {p.tipo_sangre}
+                  </span>
+                )}
+                {p.alergias && (
+                  <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                    Alergias
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <PacienteModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        patient={selected}
+        onSaved={handleSaved}
+      />
     </div>
   );
 }
