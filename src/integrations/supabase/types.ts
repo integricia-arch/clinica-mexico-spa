@@ -256,6 +256,131 @@ export type Database = {
           },
         ]
       }
+      lotes_medicamento: {
+        Row: {
+          created_at: string
+          existencia: number
+          fecha_caducidad: string
+          id: string
+          medicamento_id: string
+          numero_lote: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          existencia?: number
+          fecha_caducidad: string
+          id?: string
+          medicamento_id: string
+          numero_lote: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          existencia?: number
+          fecha_caducidad?: string
+          id?: string
+          medicamento_id?: string
+          numero_lote?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lotes_medicamento_medicamento_id_fkey"
+            columns: ["medicamento_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicamentos: {
+        Row: {
+          activo: boolean
+          categoria: string
+          created_at: string
+          descripcion: string | null
+          id: string
+          nombre: string
+          precio_unitario: number
+          stock_minimo: number
+          unidad: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          precio_unitario?: number
+          stock_minimo?: number
+          unidad?: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          precio_unitario?: number
+          stock_minimo?: number
+          unidad?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      movimientos_inventario: {
+        Row: {
+          cantidad: number
+          created_at: string
+          id: string
+          lote_id: string | null
+          medicamento_id: string
+          motivo: string | null
+          tipo: Database["public"]["Enums"]["movimiento_tipo"]
+          user_id: string | null
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          id?: string
+          lote_id?: string | null
+          medicamento_id: string
+          motivo?: string | null
+          tipo: Database["public"]["Enums"]["movimiento_tipo"]
+          user_id?: string | null
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          id?: string
+          lote_id?: string | null
+          medicamento_id?: string
+          motivo?: string | null
+          tipo?: Database["public"]["Enums"]["movimiento_tipo"]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_inventario_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes_medicamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_medicamento_id_fkey"
+            columns: ["medicamento_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notas_consulta: {
         Row: {
           analisis: string | null
@@ -571,6 +696,7 @@ export type Database = {
         | "urgencia"
         | "cirugia"
         | "cronico"
+      movimiento_tipo: "entrada" | "salida" | "ajuste"
       reminder_channel: "whatsapp" | "sms" | "email"
       reminder_status: "pendiente" | "enviado" | "fallido"
     }
@@ -720,6 +846,7 @@ export const Constants = {
         "cirugia",
         "cronico",
       ],
+      movimiento_tipo: ["entrada", "salida", "ajuste"],
       reminder_channel: ["whatsapp", "sms", "email"],
       reminder_status: ["pendiente", "enviado", "fallido"],
     },
