@@ -49,6 +49,7 @@ const App = () => (
                       <Route path="/expedientes" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Expedientes /></ProtectedRoute>} />
                       <Route path="/farmacia" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Farmacia /></ProtectedRoute>} />
                       <Route path="/configuracion" element={<ProtectedRoute allowedRoles={["admin"]}><Configuracion /></ProtectedRoute>} />
+                      <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Auditoria /></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
