@@ -18,6 +18,7 @@ import Facturacion from "@/pages/Facturacion";
 import Expedientes from "@/pages/Expedientes";
 import Farmacia from "@/pages/Farmacia";
 import Configuracion from "@/pages/Configuracion";
+import Auditoria from "@/pages/Auditoria";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
