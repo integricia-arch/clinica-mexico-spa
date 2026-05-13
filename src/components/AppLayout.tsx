@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
-  CalendarPlus, Headset,
+  CalendarPlus, Headset, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
