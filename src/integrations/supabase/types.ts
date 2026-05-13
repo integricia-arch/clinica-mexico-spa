@@ -48,6 +48,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          creada_por_bot: boolean
           created_at: string
           created_by: string | null
           doctor_id: string
@@ -56,12 +57,15 @@ export type Database = {
           id: string
           motivo_consulta: string | null
           notas: string | null
+          origen: string
           patient_id: string
           room_id: string | null
+          servicio_id: string | null
           status: Database["public"]["Enums"]["appointment_status"]
           updated_at: string
         }
         Insert: {
+          creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
           doctor_id: string
@@ -70,12 +74,15 @@ export type Database = {
           id?: string
           motivo_consulta?: string | null
           notas?: string | null
+          origen?: string
           patient_id: string
           room_id?: string | null
+          servicio_id?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
           updated_at?: string
         }
         Update: {
+          creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
           doctor_id?: string
@@ -84,8 +91,10 @@ export type Database = {
           id?: string
           motivo_consulta?: string | null
           notas?: string | null
+          origen?: string
           patient_id?: string
           room_id?: string | null
+          servicio_id?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
           updated_at?: string
         }
@@ -116,6 +125,13 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_servicio_id_fkey"
+            columns: ["servicio_id"]
+            isOneToOne: false
+            referencedRelation: "servicios"
             referencedColumns: ["id"]
           },
         ]
@@ -594,6 +610,42 @@ export type Database = {
           id?: string
           nombre?: string
           piso?: string | null
+        }
+        Relationships: []
+      }
+      servicios: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string | null
+          duracion_minutos: number
+          especialidad: string | null
+          id: string
+          nombre: string
+          precio_centavos: number
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          duracion_minutos?: number
+          especialidad?: string | null
+          id?: string
+          nombre: string
+          precio_centavos?: number
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          duracion_minutos?: number
+          especialidad?: string | null
+          id?: string
+          nombre?: string
+          precio_centavos?: number
+          updated_at?: string
         }
         Relationships: []
       }
