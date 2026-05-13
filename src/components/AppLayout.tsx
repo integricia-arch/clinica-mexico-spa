@@ -66,6 +66,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "receptionist"],
   },
   {
+    to: "/auditoria",
+    icon: ShieldCheck,
+    label: "Auditoría",
+    roles: ["admin", "receptionist"],
+  },
+  {
     to: "/configuracion",
     icon: Settings,
     label: "Configuración",
