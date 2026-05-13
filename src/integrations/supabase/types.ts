@@ -685,7 +685,7 @@ export type Database = {
         | "confirmada_medico"
         | "cancelada"
         | "liberada"
-      audit_action: "crear" | "actualizar" | "cancelar"
+      audit_action: "crear" | "actualizar" | "cancelar" | "eliminar"
       expediente_tipo:
         | "primera_vez"
         | "seguimiento"
@@ -834,7 +834,7 @@ export const Constants = {
         "cancelada",
         "liberada",
       ],
-      audit_action: ["crear", "actualizar", "cancelar"],
+      audit_action: ["crear", "actualizar", "cancelar", "eliminar"],
       expediente_tipo: [
         "primera_vez",
         "seguimiento",
