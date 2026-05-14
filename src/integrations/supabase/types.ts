@@ -172,6 +172,47 @@ export type Database = {
         }
         Relationships: []
       }
+      conversaciones: {
+        Row: {
+          asignada_humano_id: string | null
+          created_at: string
+          id: string
+          identidad_canal_id: string
+          intencion_actual: string | null
+          last_message_at: string
+          status: Database["public"]["Enums"]["conversacion_status"]
+          updated_at: string
+        }
+        Insert: {
+          asignada_humano_id?: string | null
+          created_at?: string
+          id?: string
+          identidad_canal_id: string
+          intencion_actual?: string | null
+          last_message_at?: string
+          status?: Database["public"]["Enums"]["conversacion_status"]
+          updated_at?: string
+        }
+        Update: {
+          asignada_humano_id?: string | null
+          created_at?: string
+          id?: string
+          identidad_canal_id?: string
+          intencion_actual?: string | null
+          last_message_at?: string
+          status?: Database["public"]["Enums"]["conversacion_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversaciones_identidad_canal_id_fkey"
+            columns: ["identidad_canal_id"]
+            isOneToOne: false
+            referencedRelation: "identidades_canal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctors: {
         Row: {
           activo: boolean
@@ -272,6 +313,47 @@ export type Database = {
           },
         ]
       }
+      identidades_canal: {
+        Row: {
+          canal_id: Database["public"]["Enums"]["canal_tipo"]
+          created_at: string
+          display_name: string | null
+          external_id: string
+          id: string
+          metadata: Json | null
+          patient_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          canal_id: Database["public"]["Enums"]["canal_tipo"]
+          created_at?: string
+          display_name?: string | null
+          external_id: string
+          id?: string
+          metadata?: Json | null
+          patient_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canal_id?: Database["public"]["Enums"]["canal_tipo"]
+          created_at?: string
+          display_name?: string | null
+          external_id?: string
+          id?: string
+          metadata?: Json | null
+          patient_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identidades_canal_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lotes_medicamento: {
         Row: {
           created_at: string
@@ -348,6 +430,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      mensajes: {
+        Row: {
+          contenido: string
+          conversacion_id: string
+          created_at: string
+          id: string
+          rol: Database["public"]["Enums"]["mensaje_rol"]
+        }
+        Insert: {
+          contenido: string
+          conversacion_id: string
+          created_at?: string
+          id?: string
+          rol: Database["public"]["Enums"]["mensaje_rol"]
+        }
+        Update: {
+          contenido?: string
+          conversacion_id?: string
+          created_at?: string
+          id?: string
+          rol?: Database["public"]["Enums"]["mensaje_rol"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensajes_conversacion_id_fkey"
+            columns: ["conversacion_id"]
+            isOneToOne: false
+            referencedRelation: "conversaciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       movimientos_inventario: {
         Row: {
@@ -738,12 +852,15 @@ export type Database = {
         | "cancelada"
         | "liberada"
       audit_action: "crear" | "actualizar" | "cancelar" | "eliminar"
+      canal_tipo: "telegram" | "whatsapp" | "instagram" | "facebook"
+      conversacion_status: "activa" | "escalada" | "cerrada"
       expediente_tipo:
         | "primera_vez"
         | "seguimiento"
         | "urgencia"
         | "cirugia"
         | "cronico"
+      mensaje_rol: "user" | "assistant" | "tool" | "system"
       movimiento_tipo: "entrada" | "salida" | "ajuste"
       reminder_channel: "whatsapp" | "sms" | "email"
       reminder_status: "pendiente" | "enviado" | "fallido"
@@ -887,6 +1004,8 @@ export const Constants = {
         "liberada",
       ],
       audit_action: ["crear", "actualizar", "cancelar", "eliminar"],
+      canal_tipo: ["telegram", "whatsapp", "instagram", "facebook"],
+      conversacion_status: ["activa", "escalada", "cerrada"],
       expediente_tipo: [
         "primera_vez",
         "seguimiento",
@@ -894,6 +1013,7 @@ export const Constants = {
         "cirugia",
         "cronico",
       ],
+      mensaje_rol: ["user", "assistant", "tool", "system"],
       movimiento_tipo: ["entrada", "salida", "ajuste"],
       reminder_channel: ["whatsapp", "sms", "email"],
       reminder_status: ["pendiente", "enviado", "fallido"],

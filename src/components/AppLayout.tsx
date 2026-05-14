@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
-  CalendarPlus, Headset, ShieldCheck,
+  CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -64,6 +64,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: Receipt,
     label: "Facturación",
     roles: ["admin", "receptionist"],
+  },
+  {
+    to: "/inbox",
+    icon: InboxIcon,
+    label: "Inbox",
+    roles: ["admin", "receptionist", "doctor", "nurse"],
   },
   {
     to: "/auditoria",
