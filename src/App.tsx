@@ -19,6 +19,7 @@ import Expedientes from "@/pages/Expedientes";
 import Farmacia from "@/pages/Farmacia";
 import Configuracion from "@/pages/Configuracion";
 import Auditoria from "@/pages/Auditoria";
+import Inbox from "@/pages/Inbox";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
                       <Route path="/farmacia" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Farmacia /></ProtectedRoute>} />
                       <Route path="/configuracion" element={<ProtectedRoute allowedRoles={["admin"]}><Configuracion /></ProtectedRoute>} />
                       <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Auditoria /></ProtectedRoute>} />
+                      <Route path="/inbox" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><Inbox /></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
