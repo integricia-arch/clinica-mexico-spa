@@ -68,6 +68,7 @@ function fmtHora(iso: string) {
 }
 
 export default function Agenda() {
+  const navigate = useNavigate();
   const [vista, setVista] = useState<"dia" | "semana">("dia");
   const [fecha, setFecha] = useState<Date>(new Date());
   const [citas, setCitas] = useState<Cita[]>([]);
@@ -78,7 +79,7 @@ export default function Agenda() {
   const [loading, setLoading] = useState(false);
   const [accion, setAccion] = useState(false);
 
-  const cargar = async () => {
+  const loadAppointments = async () => {
     setLoading(true);
     const ini = new Date(fecha); ini.setHours(0, 0, 0, 0);
     const fin = new Date(fecha); fin.setHours(23, 59, 59, 999);
@@ -96,7 +97,16 @@ export default function Agenda() {
     setLoading(false);
   };
 
-  useEffect(() => { cargar(); }, [fecha]);
+  useEffect(() => { loadAppointments(); }, [fecha]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("agenda-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "appointments" }, () => loadAppointments())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "appointments" }, () => loadAppointments())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fecha]);
 
   const citasFiltradas = useMemo(() =>
     citas.filter((c) =>
