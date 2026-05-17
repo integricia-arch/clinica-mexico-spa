@@ -162,7 +162,8 @@ export default function AgendaMedico() {
                       {slots.map((a) => (
                         <div
                           key={a.id}
-                          className={`rounded-md border px-2 py-1 mb-1 text-xs cursor-pointer ${statusColors[a.status] || "bg-muted"}`}
+                          onClick={() => navigate(`/cita/${a.id}`)}
+                          className={`rounded-md border px-2 py-1 mb-1 text-xs cursor-pointer hover:opacity-80 transition-opacity ${statusColors[a.status] || "bg-muted"}`}
                         >
                           <p className="font-medium truncate">
                             {a.patients?.nombre} {a.patients?.apellidos}
