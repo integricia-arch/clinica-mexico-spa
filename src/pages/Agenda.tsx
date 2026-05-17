@@ -208,7 +208,7 @@ export default function Agenda() {
                   return (
                     <div key={d.id} className="border-l border-border px-1.5 py-1 min-h-[44px]">
                       {cita && (
-                        <button onClick={() => setSeleccionada(cita)}
+                        <button onClick={() => navigate(`/cita/${cita.id}`)}
                           className={`w-full text-left rounded-md border-l-[3px] p-2 cursor-pointer hover:shadow-card transition-shadow ${statusBorder[cita.status]}`}>
                           <p className="text-xs font-semibold text-card-foreground truncate">
                             {cita.paciente ? `${cita.paciente.nombre} ${cita.paciente.apellidos}` : "Paciente"}
