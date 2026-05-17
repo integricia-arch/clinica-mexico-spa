@@ -37,22 +37,35 @@ export default function DetalleCita() {
   const { toast } = useToast();
   const [appointment, setAppointment] = useState<any>(null);
   const [resources, setResources] = useState<any[]>([]);
+  const [servicio, setServicio] = useState<any>(null);
+  const [recordatorios, setRecordatorios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
-      supabase
-        .from("appointments")
-        .select("*, patients(*), doctors(nombre, apellidos, especialidad), rooms(nombre, piso)")
-        .eq("id", id)
-        .single(),
-      supabase.from("appointment_resources").select("*").eq("appointment_id", id),
-    ]).then(([aRes, rRes]) => {
+    (async () => {
+      const [aRes, rRes, remRes] = await Promise.all([
+        supabase
+          .from("appointments")
+          .select("*, patients(*), doctors(nombre, apellidos, especialidad), rooms(nombre, piso)")
+          .eq("id", id)
+          .single(),
+        supabase.from("appointment_resources").select("*").eq("appointment_id", id),
+        supabase.from("reminders").select("*").eq("appointment_id", id).order("programado_para", { ascending: true }),
+      ]);
       setAppointment(aRes.data);
       setResources(rRes.data ?? []);
+      setRecordatorios(remRes.data ?? []);
+      if (aRes.data?.servicio_id) {
+        const { data: sData } = await supabase
+          .from("servicios")
+          .select("nombre, precio_centavos, duracion_minutos")
+          .eq("id", aRes.data.servicio_id)
+          .single();
+        setServicio(sData);
+      }
       setLoading(false);
-    });
+    })();
   }, [id]);
 
   const updateStatus = async (newStatus: AppointmentStatus) => {
