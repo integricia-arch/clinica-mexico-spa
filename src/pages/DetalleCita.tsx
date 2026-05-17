@@ -131,6 +131,25 @@ export default function DetalleCita() {
           )}
         </div>
 
+        {a.creada_por_bot && (
+          <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+            <Bot className="h-4 w-4" />
+            Cita agendada vía Telegram por el bot
+          </div>
+        )}
+
+        {(hasRole("admin") || hasRole("receptionist")) &&
+          (a.status === "solicitada" || a.status === "tentativa") && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button size="lg" className="flex-1" onClick={() => updateStatus("confirmada")}>
+                <CheckCircle className="mr-2 h-4 w-4" /> Confirmar cita
+              </Button>
+              <Button size="lg" variant="destructive" className="flex-1" onClick={() => updateStatus("cancelada")}>
+                <XCircle className="mr-2 h-4 w-4" /> Cancelar cita
+              </Button>
+            </div>
+          )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Fecha y hora */}
           <div className="flex gap-3">
