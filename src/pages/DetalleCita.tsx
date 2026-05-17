@@ -201,6 +201,19 @@ export default function DetalleCita() {
               </p>
             </div>
           </div>
+
+          {servicio && (
+            <div className="flex gap-3">
+              <Pill className="h-5 w-5 text-primary mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Servicio</p>
+                <p className="text-sm text-muted-foreground">{servicio.nombre}</p>
+                <p className="text-xs text-muted-foreground">
+                  ${(servicio.precio_centavos / 100).toLocaleString("es-MX")} · {servicio.duracion_minutos} min
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Motivo */}
