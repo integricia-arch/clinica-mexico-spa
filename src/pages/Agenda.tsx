@@ -124,7 +124,7 @@ export default function Agenda() {
     if (error) { toast.error("No se pudo actualizar: " + error.message); return; }
     toast.success(status === "confirmada" ? "Cita confirmada" : "Cita cancelada");
     setSeleccionada(null);
-    cargar();
+    loadAppointments();
   };
 
   const cambiarDia = (d: number) => { const n = new Date(fecha); n.setDate(n.getDate() + d); setFecha(n); };
