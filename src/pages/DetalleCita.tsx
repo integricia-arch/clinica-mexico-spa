@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText } from "lucide-react";
+import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
@@ -37,22 +37,35 @@ export default function DetalleCita() {
   const { toast } = useToast();
   const [appointment, setAppointment] = useState<any>(null);
   const [resources, setResources] = useState<any[]>([]);
+  const [servicio, setServicio] = useState<any>(null);
+  const [recordatorios, setRecordatorios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
-      supabase
-        .from("appointments")
-        .select("*, patients(*), doctors(nombre, apellidos, especialidad), rooms(nombre, piso)")
-        .eq("id", id)
-        .single(),
-      supabase.from("appointment_resources").select("*").eq("appointment_id", id),
-    ]).then(([aRes, rRes]) => {
+    (async () => {
+      const [aRes, rRes, remRes] = await Promise.all([
+        supabase
+          .from("appointments")
+          .select("*, patients(*), doctors(nombre, apellidos, especialidad), rooms(nombre, piso)")
+          .eq("id", id)
+          .single(),
+        supabase.from("appointment_resources").select("*").eq("appointment_id", id),
+        supabase.from("reminders").select("*").eq("appointment_id", id).order("programado_para", { ascending: true }),
+      ]);
       setAppointment(aRes.data);
       setResources(rRes.data ?? []);
+      setRecordatorios(remRes.data ?? []);
+      if (aRes.data?.servicio_id) {
+        const { data: sData } = await supabase
+          .from("servicios")
+          .select("nombre, precio_centavos, duracion_minutos")
+          .eq("id", aRes.data.servicio_id)
+          .single();
+        setServicio(sData);
+      }
       setLoading(false);
-    });
+    })();
   }, [id]);
 
   const updateStatus = async (newStatus: AppointmentStatus) => {
@@ -118,6 +131,25 @@ export default function DetalleCita() {
           )}
         </div>
 
+        {a.creada_por_bot && (
+          <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+            <Bot className="h-4 w-4" />
+            Cita agendada vía Telegram por el bot
+          </div>
+        )}
+
+        {(hasRole("admin") || hasRole("receptionist")) &&
+          (a.status === "solicitada" || a.status === "tentativa") && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button size="lg" className="flex-1" onClick={() => updateStatus("confirmada")}>
+                <CheckCircle className="mr-2 h-4 w-4" /> Confirmar cita
+              </Button>
+              <Button size="lg" variant="destructive" className="flex-1" onClick={() => updateStatus("cancelada")}>
+                <XCircle className="mr-2 h-4 w-4" /> Cancelar cita
+              </Button>
+            </div>
+          )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Fecha y hora */}
           <div className="flex gap-3">
@@ -169,6 +201,19 @@ export default function DetalleCita() {
               </p>
             </div>
           </div>
+
+          {servicio && (
+            <div className="flex gap-3">
+              <Pill className="h-5 w-5 text-primary mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Servicio</p>
+                <p className="text-sm text-muted-foreground">{servicio.nombre}</p>
+                <p className="text-xs text-muted-foreground">
+                  ${(servicio.precio_centavos / 100).toLocaleString("es-MX")} · {servicio.duracion_minutos} min
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Motivo */}
@@ -204,6 +249,37 @@ export default function DetalleCita() {
             </div>
           </div>
         )}
+
+        <div className="border-t border-border pt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Bell className="h-4 w-4 text-primary" />
+            <p className="text-sm font-medium">Recordatorios automáticos</p>
+          </div>
+          {recordatorios.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay recordatorios programados para esta cita.</p>
+          ) : (
+            <div className="space-y-2">
+              {recordatorios.map((r) => (
+                <div key={r.id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium capitalize">{r.canal}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">
+                      {format(new Date(r.programado_para), "d MMM, HH:mm", { locale: es })}
+                    </span>
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                    r.estado === "enviado" ? "bg-success/10 text-success"
+                    : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
+                    : "bg-warning/10 text-warning"
+                  }`}>
+                    {r.estado === "enviado" ? "Enviado" : r.estado === "fallido" ? "Fallido" : "Pendiente"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, ChevronLeft, ChevronRight, Bot, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -67,6 +68,7 @@ function fmtHora(iso: string) {
 }
 
 export default function Agenda() {
+  const navigate = useNavigate();
   const [vista, setVista] = useState<"dia" | "semana">("dia");
   const [fecha, setFecha] = useState<Date>(new Date());
   const [citas, setCitas] = useState<Cita[]>([]);
@@ -77,7 +79,7 @@ export default function Agenda() {
   const [loading, setLoading] = useState(false);
   const [accion, setAccion] = useState(false);
 
-  const cargar = async () => {
+  const loadAppointments = async () => {
     setLoading(true);
     const ini = new Date(fecha); ini.setHours(0, 0, 0, 0);
     const fin = new Date(fecha); fin.setHours(23, 59, 59, 999);
@@ -95,7 +97,16 @@ export default function Agenda() {
     setLoading(false);
   };
 
-  useEffect(() => { cargar(); }, [fecha]);
+  useEffect(() => { loadAppointments(); }, [fecha]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("agenda-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "appointments" }, () => loadAppointments())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "appointments" }, () => loadAppointments())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fecha]);
 
   const citasFiltradas = useMemo(() =>
     citas.filter((c) =>
@@ -113,7 +124,7 @@ export default function Agenda() {
     if (error) { toast.error("No se pudo actualizar: " + error.message); return; }
     toast.success(status === "confirmada" ? "Cita confirmada" : "Cita cancelada");
     setSeleccionada(null);
-    cargar();
+    loadAppointments();
   };
 
   const cambiarDia = (d: number) => { const n = new Date(fecha); n.setDate(n.getDate() + d); setFecha(n); };
@@ -197,7 +208,7 @@ export default function Agenda() {
                   return (
                     <div key={d.id} className="border-l border-border px-1.5 py-1 min-h-[44px]">
                       {cita && (
-                        <button onClick={() => setSeleccionada(cita)}
+                        <button onClick={() => navigate(`/cita/${cita.id}`)}
                           className={`w-full text-left rounded-md border-l-[3px] p-2 cursor-pointer hover:shadow-card transition-shadow ${statusBorder[cita.status]}`}>
                           <p className="text-xs font-semibold text-card-foreground truncate">
                             {cita.paciente ? `${cita.paciente.nombre} ${cita.paciente.apellidos}` : "Paciente"}
