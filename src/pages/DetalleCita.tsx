@@ -249,6 +249,37 @@ export default function DetalleCita() {
             </div>
           </div>
         )}
+
+        <div className="border-t border-border pt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Bell className="h-4 w-4 text-primary" />
+            <p className="text-sm font-medium">Recordatorios automáticos</p>
+          </div>
+          {recordatorios.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay recordatorios programados para esta cita.</p>
+          ) : (
+            <div className="space-y-2">
+              {recordatorios.map((r) => (
+                <div key={r.id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium capitalize">{r.canal}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">
+                      {format(new Date(r.programado_para), "d MMM, HH:mm", { locale: es })}
+                    </span>
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                    r.estado === "enviado" ? "bg-success/10 text-success"
+                    : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
+                    : "bg-warning/10 text-warning"
+                  }`}>
+                    {r.estado === "enviado" ? "Enviado" : r.estado === "fallido" ? "Fallido" : "Pendiente"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
