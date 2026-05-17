@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, startOfWeek, addDays } from "date-fns";
@@ -35,6 +36,7 @@ const statusColors: Record<string, string> = {
 
 export default function AgendaMedico() {
   const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [doctors, setDoctors] = useState<any[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("all");
@@ -46,7 +48,6 @@ export default function AgendaMedico() {
   useEffect(() => {
     supabase.from("doctors").select("*").eq("activo", true).then(({ data }) => {
       setDoctors(data ?? []);
-      // If user is a doctor, select themselves
       if (user && data) {
         const me = data.find((d) => d.user_id === user.id);
         if (me) setSelectedDoctor(me.id);
@@ -54,29 +55,35 @@ export default function AgendaMedico() {
     });
   }, [user]);
 
-  useEffect(() => {
-    async function loadAppointments() {
-      setLoading(true);
-      const from = weekDays[0].toISOString();
-      const to = addDays(weekDays[weekDays.length - 1], 1).toISOString();
+  const loadAppointments = useCallback(async () => {
+    setLoading(true);
+    const from = weekDays[0].toISOString();
+    const to = addDays(weekDays[weekDays.length - 1], 1).toISOString();
 
-      let query = supabase
-        .from("appointments")
-        .select("*, patients(nombre, apellidos), doctors(nombre, apellidos)")
-        .gte("fecha_inicio", from)
-        .lt("fecha_inicio", to)
-        .not("status", "in", '("cancelada","liberada")');
+    let query = supabase
+      .from("appointments")
+      .select("*, patients(nombre, apellidos), doctors(nombre, apellidos)")
+      .gte("fecha_inicio", from)
+      .lt("fecha_inicio", to)
+      .not("status", "in", '("cancelada","liberada")');
 
-      if (selectedDoctor !== "all") {
-        query = query.eq("doctor_id", selectedDoctor);
-      }
+    if (selectedDoctor !== "all") query = query.eq("doctor_id", selectedDoctor);
 
-      const { data } = await query;
-      setAppointments(data ?? []);
-      setLoading(false);
-    }
-    loadAppointments();
+    const { data } = await query;
+    setAppointments(data ?? []);
+    setLoading(false);
   }, [weekStart, selectedDoctor]);
+
+  useEffect(() => { loadAppointments(); }, [loadAppointments]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("agenda-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "appointments" }, () => loadAppointments())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "appointments" }, () => loadAppointments())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [loadAppointments]);
 
   const getAppointmentsForSlot = (day: Date, hour: number) => {
     return appointments.filter((a) => {
@@ -155,7 +162,8 @@ export default function AgendaMedico() {
                       {slots.map((a) => (
                         <div
                           key={a.id}
-                          className={`rounded-md border px-2 py-1 mb-1 text-xs cursor-pointer ${statusColors[a.status] || "bg-muted"}`}
+                          onClick={() => navigate(`/cita/${a.id}`)}
+                          className={`rounded-md border px-2 py-1 mb-1 text-xs cursor-pointer hover:opacity-80 transition-opacity ${statusColors[a.status] || "bg-muted"}`}
                         >
                           <p className="font-medium truncate">
                             {a.patients?.nombre} {a.patients?.apellidos}
