@@ -4,11 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell } from "lucide-react";
+import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+
+type ReminderChannel = Database["public"]["Enums"]["reminder_channel"];
 
 type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
@@ -40,6 +46,128 @@ export default function DetalleCita() {
   const [servicio, setServicio] = useState<any>(null);
   const [recordatorios, setRecordatorios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal recordatorio manual
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<any | null>(null);
+  const [reminderCanal, setReminderCanal] = useState<ReminderChannel>("whatsapp");
+  const [reminderFecha, setReminderFecha] = useState("");
+  const [reminderMensaje, setReminderMensaje] = useState("");
+  const [savingReminder, setSavingReminder] = useState(false);
+
+  const puedeGestionarRecordatorios = hasRole("admin") || hasRole("receptionist");
+
+  const reloadRecordatorios = async () => {
+    const { data } = await supabase
+      .from("reminders")
+      .select("*")
+      .eq("appointment_id", id!)
+      .order("programado_para", { ascending: true });
+    setRecordatorios(data ?? []);
+  };
+
+  const abrirNuevoRecordatorio = () => {
+    setEditingReminder(null);
+    setReminderCanal("whatsapp");
+    const defaultDate = new Date(Math.max(Date.now() + 60 * 60 * 1000, new Date(appointment.fecha_inicio).getTime() - 2 * 60 * 60 * 1000));
+    setReminderFecha(format(defaultDate, "yyyy-MM-dd'T'HH:mm"));
+    setReminderMensaje(
+      `Recordatorio: tiene una cita el ${format(new Date(appointment.fecha_inicio), "dd/MM/yyyy 'a las' HH:mm", { locale: es })} hrs.`
+    );
+    setReminderOpen(true);
+  };
+
+  const abrirReprogramar = (r: any) => {
+    setEditingReminder(r);
+    setReminderCanal(r.canal);
+    setReminderFecha(format(new Date(r.programado_para), "yyyy-MM-dd'T'HH:mm"));
+    setReminderMensaje(r.mensaje ?? "");
+    setReminderOpen(true);
+  };
+
+  const guardarRecordatorio = async () => {
+    if (!reminderFecha) {
+      toast({ variant: "destructive", title: "Falta fecha", description: "Selecciona fecha y hora del recordatorio." });
+      return;
+    }
+    setSavingReminder(true);
+    const programado = new Date(reminderFecha).toISOString();
+
+    if (editingReminder) {
+      const { error } = await supabase
+        .from("reminders")
+        .update({
+          canal: reminderCanal,
+          programado_para: programado,
+          mensaje: reminderMensaje,
+          estado: "pendiente",
+          enviado_en: null,
+          intentos: 0,
+        })
+        .eq("id", editingReminder.id);
+      if (error) {
+        setSavingReminder(false);
+        toast({ variant: "destructive", title: "Error", description: error.message });
+        return;
+      }
+      await supabase.rpc("log_audit", {
+        _accion: "actualizar",
+        _tabla: "reminders",
+        _registro_id: editingReminder.id,
+        _datos_anteriores: editingReminder as any,
+        _datos_nuevos: { canal: reminderCanal, programado_para: programado, mensaje: reminderMensaje } as any,
+      });
+      toast({ title: "Recordatorio reprogramado" });
+    } else {
+      const { data, error } = await supabase
+        .from("reminders")
+        .insert({
+          appointment_id: id!,
+          canal: reminderCanal,
+          programado_para: programado,
+          mensaje: reminderMensaje,
+          estado: "pendiente",
+        })
+        .select()
+        .single();
+      if (error) {
+        setSavingReminder(false);
+        toast({ variant: "destructive", title: "Error", description: error.message });
+        return;
+      }
+      await supabase.rpc("log_audit", {
+        _accion: "crear",
+        _tabla: "reminders",
+        _registro_id: data.id,
+        _datos_nuevos: data as any,
+      });
+      toast({ title: "Recordatorio creado", description: "Se programó el recordatorio manual." });
+    }
+
+    setSavingReminder(false);
+    setReminderOpen(false);
+    await reloadRecordatorios();
+  };
+
+  const enviarAhora = async (r: any) => {
+    const { error } = await supabase
+      .from("reminders")
+      .update({ estado: "enviado", enviado_en: new Date().toISOString(), intentos: (r.intentos ?? 0) + 1 })
+      .eq("id", r.id);
+    if (error) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+      return;
+    }
+    await supabase.rpc("log_audit", {
+      _accion: "actualizar",
+      _tabla: "reminders",
+      _registro_id: r.id,
+      _datos_anteriores: r as any,
+      _datos_nuevos: { estado: "enviado" } as any,
+    });
+    toast({ title: "Recordatorio enviado" });
+    await reloadRecordatorios();
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -251,16 +379,23 @@ export default function DetalleCita() {
         )}
 
         <div className="border-t border-border pt-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Bell className="h-4 w-4 text-primary" />
-            <p className="text-sm font-medium">Recordatorios automáticos</p>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium">Recordatorios automáticos</p>
+            </div>
+            {puedeGestionarRecordatorios && (
+              <Button size="sm" variant="outline" onClick={abrirNuevoRecordatorio}>
+                <Plus className="mr-1 h-4 w-4" /> Nuevo recordatorio
+              </Button>
+            )}
           </div>
           {recordatorios.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay recordatorios programados para esta cita.</p>
           ) : (
             <div className="space-y-2">
               {recordatorios.map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="font-medium capitalize">{r.canal}</span>
                     <span className="text-muted-foreground">·</span>
@@ -268,19 +403,77 @@ export default function DetalleCita() {
                       {format(new Date(r.programado_para), "d MMM, HH:mm", { locale: es })}
                     </span>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                    r.estado === "enviado" ? "bg-success/10 text-success"
-                    : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
-                    : "bg-warning/10 text-warning"
-                  }`}>
-                    {r.estado === "enviado" ? "Enviado" : r.estado === "fallido" ? "Fallido" : "Pendiente"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                      r.estado === "enviado" ? "bg-success/10 text-success"
+                      : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
+                      : "bg-warning/10 text-warning"
+                    }`}>
+                      {r.estado === "enviado" ? "Enviado" : r.estado === "fallido" ? "Fallido" : "Pendiente"}
+                    </span>
+                    {puedeGestionarRecordatorios && r.estado !== "enviado" && (
+                      <>
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => enviarAhora(r)}>
+                          Enviar ahora
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => abrirReprogramar(r)}>
+                          <CalendarClock className="mr-1 h-3.5 w-3.5" /> Reprogramar
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingReminder ? "Reprogramar recordatorio" : "Nuevo recordatorio manual"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Canal</Label>
+              <Select value={reminderCanal} onValueChange={(v) => setReminderCanal(v as ReminderChannel)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="sms">SMS</SelectItem>
+                  <SelectItem value="email">Correo electrónico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Fecha y hora de envío</Label>
+              <Input
+                type="datetime-local"
+                value={reminderFecha}
+                onChange={(e) => setReminderFecha(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Mensaje</Label>
+              <Textarea
+                rows={3}
+                value={reminderMensaje}
+                onChange={(e) => setReminderMensaje(e.target.value)}
+                placeholder="Mensaje a enviar al paciente"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReminderOpen(false)}>Cancelar</Button>
+            <Button onClick={guardarRecordatorio} disabled={savingReminder}>
+              {savingReminder ? "Guardando..." : editingReminder ? "Reprogramar" : "Crear recordatorio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
