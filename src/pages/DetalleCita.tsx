@@ -16,6 +16,19 @@ import type { Database } from "@/integrations/supabase/types";
 
 type ReminderChannel = Database["public"]["Enums"]["reminder_channel"];
 
+const canalLabel: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  sms: "SMS",
+  email: "Correo electrónico",
+};
+
+const estadoRecordatorioLabel: Record<string, string> = {
+  pendiente: "Pendiente",
+  enviado: "Enviado",
+  fallido: "Fallido",
+  cancelado: "Cancelado",
+};
+
 type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
 const statusLabel: Record<string, string> = {
@@ -397,7 +410,7 @@ export default function DetalleCita() {
               {recordatorios.map((r) => (
                 <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium capitalize">{r.canal}</span>
+                    <span className="font-medium">{canalLabel[r.canal] ?? r.canal}</span>
                     <span className="text-muted-foreground">·</span>
                     <span className="text-muted-foreground">
                       {format(new Date(r.programado_para), "d MMM, HH:mm", { locale: es })}
@@ -409,7 +422,7 @@ export default function DetalleCita() {
                       : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
                       : "bg-warning/10 text-warning"
                     }`}>
-                      {r.estado === "enviado" ? "Enviado" : r.estado === "fallido" ? "Fallido" : "Pendiente"}
+                      {estadoRecordatorioLabel[r.estado] ?? r.estado}
                     </span>
                     {puedeGestionarRecordatorios && r.estado !== "enviado" && (
                       <>
