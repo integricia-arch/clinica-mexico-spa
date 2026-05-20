@@ -47,6 +47,128 @@ export default function DetalleCita() {
   const [recordatorios, setRecordatorios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Modal recordatorio manual
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<any | null>(null);
+  const [reminderCanal, setReminderCanal] = useState<ReminderChannel>("whatsapp");
+  const [reminderFecha, setReminderFecha] = useState("");
+  const [reminderMensaje, setReminderMensaje] = useState("");
+  const [savingReminder, setSavingReminder] = useState(false);
+
+  const puedeGestionarRecordatorios = hasRole("admin") || hasRole("receptionist");
+
+  const reloadRecordatorios = async () => {
+    const { data } = await supabase
+      .from("reminders")
+      .select("*")
+      .eq("appointment_id", id!)
+      .order("programado_para", { ascending: true });
+    setRecordatorios(data ?? []);
+  };
+
+  const abrirNuevoRecordatorio = () => {
+    setEditingReminder(null);
+    setReminderCanal("whatsapp");
+    const defaultDate = new Date(Math.max(Date.now() + 60 * 60 * 1000, new Date(appointment.fecha_inicio).getTime() - 2 * 60 * 60 * 1000));
+    setReminderFecha(format(defaultDate, "yyyy-MM-dd'T'HH:mm"));
+    setReminderMensaje(
+      `Recordatorio: tiene una cita el ${format(new Date(appointment.fecha_inicio), "dd/MM/yyyy 'a las' HH:mm", { locale: es })} hrs.`
+    );
+    setReminderOpen(true);
+  };
+
+  const abrirReprogramar = (r: any) => {
+    setEditingReminder(r);
+    setReminderCanal(r.canal);
+    setReminderFecha(format(new Date(r.programado_para), "yyyy-MM-dd'T'HH:mm"));
+    setReminderMensaje(r.mensaje ?? "");
+    setReminderOpen(true);
+  };
+
+  const guardarRecordatorio = async () => {
+    if (!reminderFecha) {
+      toast({ variant: "destructive", title: "Falta fecha", description: "Selecciona fecha y hora del recordatorio." });
+      return;
+    }
+    setSavingReminder(true);
+    const programado = new Date(reminderFecha).toISOString();
+
+    if (editingReminder) {
+      const { error } = await supabase
+        .from("reminders")
+        .update({
+          canal: reminderCanal,
+          programado_para: programado,
+          mensaje: reminderMensaje,
+          estado: "pendiente",
+          enviado_en: null,
+          intentos: 0,
+        })
+        .eq("id", editingReminder.id);
+      if (error) {
+        setSavingReminder(false);
+        toast({ variant: "destructive", title: "Error", description: error.message });
+        return;
+      }
+      await supabase.rpc("log_audit", {
+        _accion: "actualizar",
+        _tabla: "reminders",
+        _registro_id: editingReminder.id,
+        _datos_anteriores: editingReminder as any,
+        _datos_nuevos: { canal: reminderCanal, programado_para: programado, mensaje: reminderMensaje } as any,
+      });
+      toast({ title: "Recordatorio reprogramado" });
+    } else {
+      const { data, error } = await supabase
+        .from("reminders")
+        .insert({
+          appointment_id: id!,
+          canal: reminderCanal,
+          programado_para: programado,
+          mensaje: reminderMensaje,
+          estado: "pendiente",
+        })
+        .select()
+        .single();
+      if (error) {
+        setSavingReminder(false);
+        toast({ variant: "destructive", title: "Error", description: error.message });
+        return;
+      }
+      await supabase.rpc("log_audit", {
+        _accion: "crear",
+        _tabla: "reminders",
+        _registro_id: data.id,
+        _datos_nuevos: data as any,
+      });
+      toast({ title: "Recordatorio creado", description: "Se programó el recordatorio manual." });
+    }
+
+    setSavingReminder(false);
+    setReminderOpen(false);
+    await reloadRecordatorios();
+  };
+
+  const enviarAhora = async (r: any) => {
+    const { error } = await supabase
+      .from("reminders")
+      .update({ estado: "enviado", enviado_en: new Date().toISOString(), intentos: (r.intentos ?? 0) + 1 })
+      .eq("id", r.id);
+    if (error) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+      return;
+    }
+    await supabase.rpc("log_audit", {
+      _accion: "actualizar",
+      _tabla: "reminders",
+      _registro_id: r.id,
+      _datos_anteriores: r as any,
+      _datos_nuevos: { estado: "enviado" } as any,
+    });
+    toast({ title: "Recordatorio enviado" });
+    await reloadRecordatorios();
+  };
+
   useEffect(() => {
     if (!id) return;
     (async () => {
