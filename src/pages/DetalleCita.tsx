@@ -16,6 +16,19 @@ import type { Database } from "@/integrations/supabase/types";
 
 type ReminderChannel = Database["public"]["Enums"]["reminder_channel"];
 
+const canalLabel: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  sms: "SMS",
+  email: "Correo electrónico",
+};
+
+const estadoRecordatorioLabel: Record<string, string> = {
+  pendiente: "Pendiente",
+  enviado: "Enviado",
+  fallido: "Fallido",
+  cancelado: "Cancelado",
+};
+
 type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
 const statusLabel: Record<string, string> = {
