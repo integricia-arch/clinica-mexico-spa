@@ -379,16 +379,23 @@ export default function DetalleCita() {
         )}
 
         <div className="border-t border-border pt-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Bell className="h-4 w-4 text-primary" />
-            <p className="text-sm font-medium">Recordatorios automáticos</p>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium">Recordatorios automáticos</p>
+            </div>
+            {puedeGestionarRecordatorios && (
+              <Button size="sm" variant="outline" onClick={abrirNuevoRecordatorio}>
+                <Plus className="mr-1 h-4 w-4" /> Nuevo recordatorio
+              </Button>
+            )}
           </div>
           {recordatorios.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay recordatorios programados para esta cita.</p>
           ) : (
             <div className="space-y-2">
               {recordatorios.map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="font-medium capitalize">{r.canal}</span>
                     <span className="text-muted-foreground">·</span>
@@ -396,19 +403,77 @@ export default function DetalleCita() {
                       {format(new Date(r.programado_para), "d MMM, HH:mm", { locale: es })}
                     </span>
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                    r.estado === "enviado" ? "bg-success/10 text-success"
-                    : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
-                    : "bg-warning/10 text-warning"
-                  }`}>
-                    {r.estado === "enviado" ? "Enviado" : r.estado === "fallido" ? "Fallido" : "Pendiente"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                      r.estado === "enviado" ? "bg-success/10 text-success"
+                      : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
+                      : "bg-warning/10 text-warning"
+                    }`}>
+                      {r.estado === "enviado" ? "Enviado" : r.estado === "fallido" ? "Fallido" : "Pendiente"}
+                    </span>
+                    {puedeGestionarRecordatorios && r.estado !== "enviado" && (
+                      <>
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => enviarAhora(r)}>
+                          Enviar ahora
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => abrirReprogramar(r)}>
+                          <CalendarClock className="mr-1 h-3.5 w-3.5" /> Reprogramar
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingReminder ? "Reprogramar recordatorio" : "Nuevo recordatorio manual"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Canal</Label>
+              <Select value={reminderCanal} onValueChange={(v) => setReminderCanal(v as ReminderChannel)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="sms">SMS</SelectItem>
+                  <SelectItem value="email">Correo electrónico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Fecha y hora de envío</Label>
+              <Input
+                type="datetime-local"
+                value={reminderFecha}
+                onChange={(e) => setReminderFecha(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Mensaje</Label>
+              <Textarea
+                rows={3}
+                value={reminderMensaje}
+                onChange={(e) => setReminderMensaje(e.target.value)}
+                placeholder="Mensaje a enviar al paciente"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReminderOpen(false)}>Cancelar</Button>
+            <Button onClick={guardarRecordatorio} disabled={savingReminder}>
+              {savingReminder ? "Guardando..." : editingReminder ? "Reprogramar" : "Crear recordatorio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
