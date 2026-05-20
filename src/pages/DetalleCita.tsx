@@ -422,7 +422,7 @@ export default function DetalleCita() {
                       : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
                       : "bg-warning/10 text-warning"
                     }`}>
-                      {r.estado === "enviado" ? "Enviado" : r.estado === "fallido" ? "Fallido" : "Pendiente"}
+                      {estadoRecordatorioLabel[r.estado] ?? r.estado}
                     </span>
                     {puedeGestionarRecordatorios && r.estado !== "enviado" && (
                       <>
