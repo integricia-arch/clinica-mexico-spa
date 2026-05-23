@@ -8,25 +8,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type ReminderChannel = Database["public"]["Enums"]["reminder_channel"];
-
-const canalLabel: Record<string, string> = {
-  whatsapp: "WhatsApp",
-  sms: "SMS",
-  email: "Correo electrónico",
-};
-
 const estadoRecordatorioLabel: Record<string, string> = {
   pendiente: "Pendiente",
   enviado: "Enviado",
   fallido: "Fallido",
   cancelado: "Cancelado",
+};
+
+const tipoRecordatorioLabel: Record<string, string> = {
+  "T-24h": "T-24h",
+  "T-2h": "T-2h",
+  manual: "Manual",
 };
 
 type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
@@ -49,6 +48,14 @@ const allStatuses: AppointmentStatus[] = [
   "cancelada", "liberada",
 ];
 
+type TipoRecordatorio = "T-24h" | "T-2h" | "manual";
+
+interface IdentidadCanal {
+  id: string;
+  canal_id: string;
+  display_name: string | null;
+}
+
 export default function DetalleCita() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -58,12 +65,14 @@ export default function DetalleCita() {
   const [resources, setResources] = useState<any[]>([]);
   const [servicio, setServicio] = useState<any>(null);
   const [recordatorios, setRecordatorios] = useState<any[]>([]);
+  const [identidadesCanal, setIdentidadesCanal] = useState<IdentidadCanal[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal recordatorio manual
+  // Modal recordatorio
   const [reminderOpen, setReminderOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<any | null>(null);
-  const [reminderCanal, setReminderCanal] = useState<ReminderChannel>("whatsapp");
+  const [reminderIdentidadCanalId, setReminderIdentidadCanalId] = useState<string>("");
+  const [reminderTipo, setReminderTipo] = useState<TipoRecordatorio>("manual");
   const [reminderFecha, setReminderFecha] = useState("");
   const [reminderMensaje, setReminderMensaje] = useState("");
   const [savingReminder, setSavingReminder] = useState(false);
@@ -72,8 +81,8 @@ export default function DetalleCita() {
 
   const reloadRecordatorios = async () => {
     const { data } = await supabase
-      .from("reminders")
-      .select("*")
+      .from("recordatorios_cita")
+      .select("*, identidades_canal(id, canal_id, display_name)")
       .eq("appointment_id", id!)
       .order("programado_para", { ascending: true });
     setRecordatorios(data ?? []);
@@ -81,8 +90,11 @@ export default function DetalleCita() {
 
   const abrirNuevoRecordatorio = () => {
     setEditingReminder(null);
-    setReminderCanal("whatsapp");
-    const defaultDate = new Date(Math.max(Date.now() + 60 * 60 * 1000, new Date(appointment.fecha_inicio).getTime() - 2 * 60 * 60 * 1000));
+    setReminderIdentidadCanalId(identidadesCanal[0]?.id ?? "");
+    setReminderTipo("manual");
+    const defaultDate = new Date(
+      Math.max(Date.now() + 60 * 60 * 1000, new Date(appointment.fecha_inicio).getTime() - 2 * 60 * 60 * 1000)
+    );
     setReminderFecha(format(defaultDate, "yyyy-MM-dd'T'HH:mm"));
     setReminderMensaje(
       `Recordatorio: tiene una cita el ${format(new Date(appointment.fecha_inicio), "dd/MM/yyyy 'a las' HH:mm", { locale: es })} hrs.`
@@ -92,7 +104,8 @@ export default function DetalleCita() {
 
   const abrirReprogramar = (r: any) => {
     setEditingReminder(r);
-    setReminderCanal(r.canal);
+    setReminderIdentidadCanalId(r.identidad_canal_id);
+    setReminderTipo(r.tipo ?? "manual");
     setReminderFecha(format(new Date(r.programado_para), "yyyy-MM-dd'T'HH:mm"));
     setReminderMensaje(r.mensaje ?? "");
     setReminderOpen(true);
@@ -103,18 +116,23 @@ export default function DetalleCita() {
       toast({ variant: "destructive", title: "Falta fecha", description: "Selecciona fecha y hora del recordatorio." });
       return;
     }
+    if (!reminderIdentidadCanalId) {
+      toast({ variant: "destructive", title: "Falta canal", description: "Selecciona el canal de comunicación del paciente." });
+      return;
+    }
     setSavingReminder(true);
     const programado = new Date(reminderFecha).toISOString();
 
     if (editingReminder) {
       const { error } = await supabase
-        .from("reminders")
+        .from("recordatorios_cita")
         .update({
-          canal: reminderCanal,
+          identidad_canal_id: reminderIdentidadCanalId,
+          tipo: reminderTipo,
           programado_para: programado,
           mensaje: reminderMensaje,
-          estado: "pendiente",
-          enviado_en: null,
+          status: "pendiente",
+          enviado_at: null,
           intentos: 0,
         })
         .eq("id", editingReminder.id);
@@ -125,21 +143,27 @@ export default function DetalleCita() {
       }
       await supabase.rpc("log_audit", {
         _accion: "actualizar",
-        _tabla: "reminders",
+        _tabla: "recordatorios_cita",
         _registro_id: editingReminder.id,
         _datos_anteriores: editingReminder as any,
-        _datos_nuevos: { canal: reminderCanal, programado_para: programado, mensaje: reminderMensaje } as any,
+        _datos_nuevos: {
+          identidad_canal_id: reminderIdentidadCanalId,
+          tipo: reminderTipo,
+          programado_para: programado,
+          mensaje: reminderMensaje,
+        } as any,
       });
       toast({ title: "Recordatorio reprogramado" });
     } else {
       const { data, error } = await supabase
-        .from("reminders")
+        .from("recordatorios_cita")
         .insert({
           appointment_id: id!,
-          canal: reminderCanal,
+          identidad_canal_id: reminderIdentidadCanalId,
+          tipo: reminderTipo,
           programado_para: programado,
           mensaje: reminderMensaje,
-          estado: "pendiente",
+          status: "pendiente",
         })
         .select()
         .single();
@@ -150,8 +174,8 @@ export default function DetalleCita() {
       }
       await supabase.rpc("log_audit", {
         _accion: "crear",
-        _tabla: "reminders",
-        _registro_id: data.id,
+        _tabla: "recordatorios_cita",
+        _registro_id: (data as any).id,
         _datos_nuevos: data as any,
       });
       toast({ title: "Recordatorio creado", description: "Se programó el recordatorio manual." });
@@ -164,8 +188,8 @@ export default function DetalleCita() {
 
   const enviarAhora = async (r: any) => {
     const { error } = await supabase
-      .from("reminders")
-      .update({ estado: "enviado", enviado_en: new Date().toISOString(), intentos: (r.intentos ?? 0) + 1 })
+      .from("recordatorios_cita")
+      .update({ status: "enviado", enviado_at: new Date().toISOString(), intentos: (r.intentos ?? 0) + 1 })
       .eq("id", r.id);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -173,10 +197,10 @@ export default function DetalleCita() {
     }
     await supabase.rpc("log_audit", {
       _accion: "actualizar",
-      _tabla: "reminders",
+      _tabla: "recordatorios_cita",
       _registro_id: r.id,
       _datos_anteriores: r as any,
-      _datos_nuevos: { estado: "enviado" } as any,
+      _datos_nuevos: { status: "enviado" } as any,
     });
     toast({ title: "Recordatorio enviado" });
     await reloadRecordatorios();
@@ -192,11 +216,22 @@ export default function DetalleCita() {
           .eq("id", id)
           .single(),
         supabase.from("appointment_resources").select("*").eq("appointment_id", id),
-        supabase.from("reminders").select("*").eq("appointment_id", id).order("programado_para", { ascending: true }),
+        supabase
+          .from("recordatorios_cita")
+          .select("*, identidades_canal(id, canal_id, display_name)")
+          .eq("appointment_id", id)
+          .order("programado_para", { ascending: true }),
       ]);
       setAppointment(aRes.data);
       setResources(rRes.data ?? []);
       setRecordatorios(remRes.data ?? []);
+      if (aRes.data?.patient_id) {
+        const { data: icData } = await supabase
+          .from("identidades_canal")
+          .select("id, canal_id, display_name")
+          .eq("patient_id", aRes.data.patient_id);
+        setIdentidadesCanal(icData ?? []);
+      }
       if (aRes.data?.servicio_id) {
         const { data: sData } = await supabase
           .from("servicios")
@@ -221,7 +256,6 @@ export default function DetalleCita() {
       return;
     }
 
-    // Audit log
     await supabase.rpc("log_audit", {
       _accion: newStatus === "cancelada" ? "cancelar" : "actualizar",
       _tabla: "appointments",
@@ -247,6 +281,7 @@ export default function DetalleCita() {
   }
 
   const a = appointment;
+  const sinCanales = identidadesCanal.length === 0;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -292,7 +327,6 @@ export default function DetalleCita() {
           )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Fecha y hora */}
           <div className="flex gap-3">
             <Clock className="h-5 w-5 text-primary mt-0.5" />
             <div>
@@ -306,7 +340,6 @@ export default function DetalleCita() {
             </div>
           </div>
 
-          {/* Paciente */}
           <div className="flex gap-3">
             <User className="h-5 w-5 text-primary mt-0.5" />
             <div>
@@ -320,7 +353,6 @@ export default function DetalleCita() {
             </div>
           </div>
 
-          {/* Médico */}
           <div className="flex gap-3">
             <Stethoscope className="h-5 w-5 text-primary mt-0.5" />
             <div>
@@ -332,7 +364,6 @@ export default function DetalleCita() {
             </div>
           </div>
 
-          {/* Consultorio */}
           <div className="flex gap-3">
             <MapPin className="h-5 w-5 text-primary mt-0.5" />
             <div>
@@ -357,7 +388,6 @@ export default function DetalleCita() {
           )}
         </div>
 
-        {/* Motivo */}
         {a.motivo_consulta && (
           <div className="flex gap-3">
             <FileText className="h-5 w-5 text-primary mt-0.5" />
@@ -375,7 +405,6 @@ export default function DetalleCita() {
           </div>
         )}
 
-        {/* Recursos */}
         {resources.length > 0 && (
           <div>
             <p className="text-sm font-medium mb-2">Recursos asignados</p>
@@ -395,48 +424,74 @@ export default function DetalleCita() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-primary" />
-              <p className="text-sm font-medium">Recordatorios automáticos</p>
+              <p className="text-sm font-medium">Recordatorios</p>
             </div>
             {puedeGestionarRecordatorios && (
-              <Button size="sm" variant="outline" onClick={abrirNuevoRecordatorio}>
-                <Plus className="mr-1 h-4 w-4" /> Nuevo recordatorio
-              </Button>
+              sinCanales ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button size="sm" variant="outline" disabled>
+                        <Plus className="mr-1 h-4 w-4" /> Nuevo recordatorio
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Este paciente no tiene canales de comunicación registrados.
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Button size="sm" variant="outline" onClick={abrirNuevoRecordatorio}>
+                  <Plus className="mr-1 h-4 w-4" /> Nuevo recordatorio
+                </Button>
+              )
             )}
           </div>
           {recordatorios.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay recordatorios programados para esta cita.</p>
           ) : (
             <div className="space-y-2">
-              {recordatorios.map((r) => (
-                <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{canalLabel[r.canal] ?? r.canal}</span>
-                    <span className="text-muted-foreground">·</span>
-                    <span className="text-muted-foreground">
-                      {format(new Date(r.programado_para), "d MMM, HH:mm", { locale: es })}
-                    </span>
+              {recordatorios.map((r) => {
+                const ic = r.identidades_canal as IdentidadCanal | null;
+                const canalNombre = ic?.display_name ?? ic?.canal_id ?? "—";
+                return (
+                  <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{canalNombre}</span>
+                      {r.tipo && (
+                        <>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-xs text-muted-foreground">{tipoRecordatorioLabel[r.tipo] ?? r.tipo}</span>
+                        </>
+                      )}
+                      <span className="text-muted-foreground">·</span>
+                      <span className="text-muted-foreground">
+                        {format(new Date(r.programado_para), "d MMM, HH:mm", { locale: es })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                        r.status === "enviado" ? "bg-success/10 text-success"
+                        : r.status === "fallido" ? "bg-destructive/10 text-destructive"
+                        : r.status === "cancelado" ? "bg-muted text-muted-foreground"
+                        : "bg-warning/10 text-warning"
+                      }`}>
+                        {estadoRecordatorioLabel[r.status] ?? r.status}
+                      </span>
+                      {puedeGestionarRecordatorios && r.status !== "enviado" && (
+                        <>
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => enviarAhora(r)}>
+                            Enviar ahora
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => abrirReprogramar(r)}>
+                            <CalendarClock className="mr-1 h-3.5 w-3.5" /> Reprogramar
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                      r.estado === "enviado" ? "bg-success/10 text-success"
-                      : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
-                      : "bg-warning/10 text-warning"
-                    }`}>
-                      {estadoRecordatorioLabel[r.estado] ?? r.estado}
-                    </span>
-                    {puedeGestionarRecordatorios && r.estado !== "enviado" && (
-                      <>
-                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => enviarAhora(r)}>
-                          Enviar ahora
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => abrirReprogramar(r)}>
-                          <CalendarClock className="mr-1 h-3.5 w-3.5" /> Reprogramar
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -451,13 +506,32 @@ export default function DetalleCita() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Canal</Label>
-              <Select value={reminderCanal} onValueChange={(v) => setReminderCanal(v as ReminderChannel)}>
+              <Label>Canal de comunicación</Label>
+              <Select
+                value={reminderIdentidadCanalId}
+                onValueChange={setReminderIdentidadCanalId}
+                disabled={sinCanales}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un canal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {identidadesCanal.map((ic) => (
+                    <SelectItem key={ic.id} value={ic.id}>
+                      {ic.display_name ?? ic.canal_id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tipo</Label>
+              <Select value={reminderTipo} onValueChange={(v) => setReminderTipo(v as TipoRecordatorio)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="sms">SMS</SelectItem>
-                  <SelectItem value="email">Correo electrónico</SelectItem>
+                  <SelectItem value="T-24h">T-24h (24 horas antes)</SelectItem>
+                  <SelectItem value="T-2h">T-2h (2 horas antes)</SelectItem>
+                  <SelectItem value="manual">Manual</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -481,7 +555,7 @@ export default function DetalleCita() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setReminderOpen(false)}>Cancelar</Button>
-            <Button onClick={guardarRecordatorio} disabled={savingReminder}>
+            <Button onClick={guardarRecordatorio} disabled={savingReminder || sinCanales}>
               {savingReminder ? "Guardando..." : editingReminder ? "Reprogramar" : "Crear recordatorio"}
             </Button>
           </DialogFooter>

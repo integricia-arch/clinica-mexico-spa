@@ -92,7 +92,7 @@ export default function Inbox() {
     }
     // Cargar último mensaje preview
     const ids = (data ?? []).map((c) => c.id);
-    let previews: Record<string, string> = {};
+    const previews: Record<string, string> = {};
     if (ids.length) {
       const { data: msgs } = await supabase
         .from("mensajes")
@@ -161,7 +161,7 @@ export default function Inbox() {
   );
 
   const filteredOrdered = useMemo(() => {
-    let list = filter === "todas" ? [...conversaciones] : conversaciones.filter((c) => c.status === filter);
+    const list = filter === "todas" ? [...conversaciones] : conversaciones.filter((c) => c.status === filter);
     // Escaladas primero
     list.sort((a, b) => {
       if (a.status === "escalada" && b.status !== "escalada") return -1;
