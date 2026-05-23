@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle, Phone, Instagram, Facebook, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Send, MessageCircle, Phone, Instagram, Facebook, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Circle, SendHorizonal } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -71,12 +73,15 @@ const STATUS_TABS: { key: "todas" | ConvStatus; label: string }[] = [
 
 export default function Inbox() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
-  const [filter, setFilter] = useState<"todas" | ConvStatus>("todas");
+  const [filter, setFilter] = useState<"todas" | ConvStatus>("escalada");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [showTechnical, setShowTechnical] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Cargar conversaciones
@@ -108,6 +113,13 @@ export default function Inbox() {
   };
 
   useEffect(() => { fetchConversaciones(); }, []);
+
+  // Preselección por ?id= en URL
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) setSelectedId(id);
+  }, [searchParams]);
+
 
   // Cargar mensajes al seleccionar
   useEffect(() => {
