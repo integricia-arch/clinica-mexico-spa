@@ -81,6 +81,11 @@ export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, on
                           Iniciar camino
                         </Button>
                       )}
+                      {r.instance && (
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onNavigate(`/camino-paciente/${r.instance!.id}`)}>
+                          Operar
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onOpenRow(r)}>Ver</Button>
                       <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onNavigate(`/cita/${r.appointment.id}`)}>Cita</Button>
                     </td>

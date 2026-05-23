@@ -558,6 +558,204 @@ export type Database = {
         }
         Relationships: []
       }
+      journey_instance_audit: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          journey_instance_id: string
+          journey_instance_step_id: string | null
+          new_value_json: Json | null
+          old_value_json: Json | null
+          reason: string | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          journey_instance_id: string
+          journey_instance_step_id?: string | null
+          new_value_json?: Json | null
+          old_value_json?: Json | null
+          reason?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          journey_instance_id?: string
+          journey_instance_step_id?: string | null
+          new_value_json?: Json | null
+          old_value_json?: Json | null
+          reason?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      journey_instance_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          file_name: string
+          file_url: string
+          id: string
+          journey_instance_id: string
+          journey_instance_step_id: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          file_name: string
+          file_url: string
+          id?: string
+          journey_instance_id: string
+          journey_instance_step_id?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          journey_instance_id?: string
+          journey_instance_step_id?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      journey_instance_overrides: {
+        Row: {
+          authorized_at: string | null
+          authorized_by: string | null
+          created_at: string
+          id: string
+          journey_instance_id: string
+          journey_instance_step_id: string
+          reason: string
+          requested_by: string | null
+          risk_acknowledgement: string | null
+          status: string
+        }
+        Insert: {
+          authorized_at?: string | null
+          authorized_by?: string | null
+          created_at?: string
+          id?: string
+          journey_instance_id: string
+          journey_instance_step_id: string
+          reason: string
+          requested_by?: string | null
+          risk_acknowledgement?: string | null
+          status?: string
+        }
+        Update: {
+          authorized_at?: string | null
+          authorized_by?: string | null
+          created_at?: string
+          id?: string
+          journey_instance_id?: string
+          journey_instance_step_id?: string
+          reason?: string
+          requested_by?: string | null
+          risk_acknowledgement?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      journey_instance_step_data: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_json: Json
+          id: string
+          journey_instance_step_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_json?: Json
+          id?: string
+          journey_instance_step_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_json?: Json
+          id?: string
+          journey_instance_step_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      journey_instance_steps: {
+        Row: {
+          assigned_to: string | null
+          blocked_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          id: string
+          journey_instance_id: string
+          next_action: string | null
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          status: string
+          step_key: string
+          step_name: string
+          step_order: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          blocked_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          journey_instance_id: string
+          next_action?: string | null
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          status?: string
+          step_key: string
+          step_name: string
+          step_order?: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          blocked_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          journey_instance_id?: string
+          next_action?: string | null
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          status?: string
+          step_key?: string
+          step_name?: string
+          step_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       journey_instances: {
         Row: {
           appointment_id: string | null
@@ -1184,6 +1382,54 @@ export type Database = {
           },
         ]
       }
+      patient_checkout_events: {
+        Row: {
+          appointment_id: string | null
+          checked_out_at: string
+          checked_out_by: string | null
+          checkout_status: string
+          checkout_type: string
+          created_at: string
+          discharge_summary: string | null
+          followup_date: string | null
+          followup_required: boolean
+          id: string
+          journey_instance_id: string
+          notes: string | null
+          patient_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          checked_out_at?: string
+          checked_out_by?: string | null
+          checkout_status?: string
+          checkout_type: string
+          created_at?: string
+          discharge_summary?: string | null
+          followup_date?: string | null
+          followup_required?: boolean
+          id?: string
+          journey_instance_id: string
+          notes?: string | null
+          patient_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          checked_out_at?: string
+          checked_out_by?: string | null
+          checkout_status?: string
+          checkout_type?: string
+          created_at?: string
+          discharge_summary?: string | null
+          followup_date?: string | null
+          followup_required?: boolean
+          id?: string
+          journey_instance_id?: string
+          notes?: string | null
+          patient_id?: string
+        }
+        Relationships: []
+      }
       patients: {
         Row: {
           activo: boolean
@@ -1271,6 +1517,180 @@ export type Database = {
           tipo_sangre?: string | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      post_consultation_followups: {
+        Row: {
+          adverse_effects: string | null
+          channel: string
+          created_at: string
+          followup_date: string
+          id: string
+          journey_instance_id: string
+          medication_adherence: string | null
+          notes: string | null
+          patient_id: string
+          prescription_id: string | null
+          requires_new_appointment: boolean
+          responsible_user_id: string | null
+          status: string
+          symptoms_reported: string | null
+          updated_at: string
+        }
+        Insert: {
+          adverse_effects?: string | null
+          channel: string
+          created_at?: string
+          followup_date: string
+          id?: string
+          journey_instance_id: string
+          medication_adherence?: string | null
+          notes?: string | null
+          patient_id: string
+          prescription_id?: string | null
+          requires_new_appointment?: boolean
+          responsible_user_id?: string | null
+          status?: string
+          symptoms_reported?: string | null
+          updated_at?: string
+        }
+        Update: {
+          adverse_effects?: string | null
+          channel?: string
+          created_at?: string
+          followup_date?: string
+          id?: string
+          journey_instance_id?: string
+          medication_adherence?: string | null
+          notes?: string | null
+          patient_id?: string
+          prescription_id?: string | null
+          requires_new_appointment?: boolean
+          responsible_user_id?: string | null
+          status?: string
+          symptoms_reported?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prescription_items: {
+        Row: {
+          brand_name: string | null
+          concentration: string | null
+          controlled_group: string | null
+          created_at: string
+          dose: string
+          duration: string
+          frequency: string
+          generic_name: string
+          id: string
+          instructions: string
+          is_controlled: boolean
+          medication_id: string | null
+          pharmaceutical_form: string | null
+          prescription_id: string
+          presentation: string | null
+          quantity: number | null
+          route: string
+        }
+        Insert: {
+          brand_name?: string | null
+          concentration?: string | null
+          controlled_group?: string | null
+          created_at?: string
+          dose: string
+          duration: string
+          frequency: string
+          generic_name: string
+          id?: string
+          instructions: string
+          is_controlled?: boolean
+          medication_id?: string | null
+          pharmaceutical_form?: string | null
+          prescription_id: string
+          presentation?: string | null
+          quantity?: number | null
+          route: string
+        }
+        Update: {
+          brand_name?: string | null
+          concentration?: string | null
+          controlled_group?: string | null
+          created_at?: string
+          dose?: string
+          duration?: string
+          frequency?: string
+          generic_name?: string
+          id?: string
+          instructions?: string
+          is_controlled?: boolean
+          medication_id?: string | null
+          pharmaceutical_form?: string | null
+          prescription_id?: string
+          presentation?: string | null
+          quantity?: number | null
+          route?: string
+        }
+        Relationships: []
+      }
+      prescriptions: {
+        Row: {
+          appointment_id: string | null
+          consultation_note_id: string | null
+          created_at: string
+          diagnosis: string | null
+          digital_signature_status: string
+          doctor_id: string
+          expediente_id: string | null
+          id: string
+          issue_date: string | null
+          journey_instance_id: string | null
+          notes: string | null
+          patient_id: string
+          pdf_url: string | null
+          prescription_number: string | null
+          qr_code_value: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          consultation_note_id?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          digital_signature_status?: string
+          doctor_id: string
+          expediente_id?: string | null
+          id?: string
+          issue_date?: string | null
+          journey_instance_id?: string | null
+          notes?: string | null
+          patient_id: string
+          pdf_url?: string | null
+          prescription_number?: string | null
+          qr_code_value?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          consultation_note_id?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          digital_signature_status?: string
+          doctor_id?: string
+          expediente_id?: string | null
+          id?: string
+          issue_date?: string | null
+          journey_instance_id?: string | null
+          notes?: string | null
+          patient_id?: string
+          pdf_url?: string | null
+          prescription_number?: string | null
+          qr_code_value?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1458,6 +1878,7 @@ export type Database = {
       }
     }
     Functions: {
+      generate_prescription_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1465,6 +1886,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_clinic_staff: { Args: { _user_id: string }; Returns: boolean }
       log_audit: {
         Args: {
           _accion: Database["public"]["Enums"]["audit_action"]
@@ -1473,6 +1895,10 @@ export type Database = {
           _registro_id: string
           _tabla: string
         }
+        Returns: undefined
+      }
+      update_journey_progress: {
+        Args: { _journey_instance_id: string }
         Returns: undefined
       }
     }
