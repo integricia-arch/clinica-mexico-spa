@@ -93,7 +93,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     to: "/admin/usuarios",
-    icon: ShieldCheck,
+    icon: UserCog,
     label: "Usuarios y roles",
     roles: ["admin"],
   },
