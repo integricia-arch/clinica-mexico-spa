@@ -924,19 +924,138 @@ async function enviarTelegramConBotones(chatId: string, text: string, inlineKeyb
 // ============================================================
 // UTILS
 // ============================================================
-function parseFechaDDMMYYYY(s: string): string | null {
-  const m = s.trim().match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
-  if (!m) return null;
-  const dd = Number(m[1]), mm = Number(m[2]), yyyy = Number(m[3]);
+// ---------- Fecha de nacimiento: parser flexible ----------
+const MESES_ES: Record<string, number> = {
+  enero: 1, ene: 1,
+  febrero: 2, feb: 2,
+  marzo: 3, mar: 3,
+  abril: 4, abr: 4,
+  mayo: 5, may: 5,
+  junio: 6, jun: 6,
+  julio: 7, jul: 7,
+  agosto: 8, ago: 8,
+  septiembre: 9, setiembre: 9, sep: 9, sept: 9,
+  octubre: 10, oct: 10,
+  noviembre: 11, nov: 11,
+  diciembre: 12, dic: 12,
+};
+
+function inferirAño(yy: number): number {
+  const añoActual = new Date().getFullYear();
+  const yyActual = añoActual % 100;
+  return yy <= yyActual + 1 ? 2000 + yy : 1900 + yy;
+}
+
+function validarYFormatear(dd: number, mm: number, yyyy: number): string | null {
+  if (!Number.isInteger(dd) || !Number.isInteger(mm) || !Number.isInteger(yyyy)) return null;
   if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
-  if (yyyy < 1900 || yyyy > new Date().getFullYear()) return null;
-  const iso = `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
-  return iso;
+  const añoActual = new Date().getFullYear();
+  if (yyyy < 1900 || yyyy > añoActual) return null;
+  const d = new Date(Date.UTC(yyyy, mm - 1, dd));
+  if (d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 || d.getUTCDate() !== dd) return null;
+  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+}
+
+function parseFechaRegex(input: string): string | null {
+  const s = input.trim().toLowerCase()
+    .replace(/\bdel?\b/g, " ")
+    .replace(/\bde\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // 8 dígitos pegados: ddmmyyyy
+  let m = s.match(/^(\d{2})(\d{2})(\d{4})$/);
+  if (m) return validarYFormatear(+m[1], +m[2], +m[3]);
+
+  // 6 dígitos pegados: ddmmyy
+  m = s.match(/^(\d{2})(\d{2})(\d{2})$/);
+  if (m) return validarYFormatear(+m[1], +m[2], inferirAño(+m[3]));
+
+  // dd[sep]mm[sep]yy(yy)
+  m = s.match(/^(\d{1,2})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{2}|\d{4})$/);
+  if (m) {
+    const yy = +m[3];
+    const yyyy = m[3].length === 2 ? inferirAño(yy) : yy;
+    return validarYFormatear(+m[1], +m[2], yyyy);
+  }
+
+  // dd <mes-texto> yy(yy)   ej: "12 octubre 1981"
+  m = s.match(/^(\d{1,2})\s+([a-záéíóú]+)\s+(\d{2}|\d{4})$/i);
+  if (m) {
+    const mes = MESES_ES[m[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
+    if (mes) {
+      const yy = +m[3];
+      const yyyy = m[3].length === 2 ? inferirAño(yy) : yy;
+      return validarYFormatear(+m[1], mes, yyyy);
+    }
+  }
+
+  // <mes-texto> dd yy(yy)   ej: "octubre 12 1981"
+  m = s.match(/^([a-záéíóú]+)\s+(\d{1,2})\s+(\d{2}|\d{4})$/i);
+  if (m) {
+    const mes = MESES_ES[m[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
+    if (mes) {
+      const yy = +m[3];
+      const yyyy = m[3].length === 2 ? inferirAño(yy) : yy;
+      return validarYFormatear(+m[2], mes, yyyy);
+    }
+  }
+
+  return null;
+}
+
+async function parseFechaConClaude(input: string): Promise<string | null> {
+  if (!ANTHROPIC_API_KEY) return null;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 256,
+        system: "Eres un parser de fechas en español de México. Devuelve la fecha de nacimiento entendida usando la herramienta devolver_fecha. Si la fecha no se entiende con razonable certeza, devuelve ok=false.",
+        tools: [{
+          name: "devolver_fecha",
+          description: "Devuelve la fecha de nacimiento parseada.",
+          input_schema: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean" },
+              dia: { type: "integer" },
+              mes: { type: "integer" },
+              anio: { type: "integer" },
+            },
+            required: ["ok"],
+          },
+        }],
+        tool_choice: { type: "tool", name: "devolver_fecha" },
+        messages: [{ role: "user", content: input }],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const tool = (data.content ?? []).find((c: any) => c.type === "tool_use");
+    if (!tool?.input?.ok) return null;
+    let { dia, mes, anio } = tool.input;
+    if (typeof anio === "number" && anio < 100) anio = inferirAño(anio);
+    return validarYFormatear(Number(dia), Number(mes), Number(anio));
+  } catch (_e) {
+    return null;
+  }
+}
+
+async function parseFechaFlexible(input: string): Promise<string | null> {
+  const r = parseFechaRegex(input);
+  if (r) return r;
+  return await parseFechaConClaude(input);
 }
 
 function formatFechaMX(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
+  const [y, m, d] = iso.split("-").map(Number);
+  const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  return `${d} de ${meses[m - 1]} de ${y}`;
 }
