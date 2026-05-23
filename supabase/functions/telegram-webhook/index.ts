@@ -349,7 +349,7 @@ async function manejarTextoWizard(chatId: string, conv: any, sesion: any, text: 
       if (v.length < 2) return enviarTelegram(chatId, "Necesito apellidos válidos. ¿Cuáles son?");
       borrador.apellidos = v;
       await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_fecha", flow_data: { ...data, fecha_intentos: 0 } });
-      return enviarTelegram(chatId, "¿Tu *fecha de nacimiento*? Formato: dd/mm/aaaa (ej. 15/03/1985)");
+      return enviarTelegram(chatId, "¿Tu *fecha de nacimiento*? Puedes escribirla en cualquier formato: 12/10/1981, 12-10-81, 12 de octubre 1981, 121081, etc.");
     }
     case "await_fecha": {
       const iso = await parseFechaFlexible(text);
