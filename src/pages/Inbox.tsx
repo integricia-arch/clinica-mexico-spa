@@ -208,6 +208,19 @@ export default function Inbox() {
     else toast.success("Conversación cerrada");
   };
 
+  const enviarRespuesta = async () => {
+    if (!selected || !reply.trim()) return;
+    setSending(true);
+    const { error } = await supabase.from("mensajes").insert({
+      conversacion_id: selected.id,
+      rol: "assistant",
+      contenido: reply.trim(),
+    });
+    setSending(false);
+    if (error) { toast.error("No se pudo enviar"); return; }
+    setReply("");
+  };
+
   return (
     <div className="flex h-[calc(100vh-7rem)] gap-4">
       {/* Columna izquierda */}
