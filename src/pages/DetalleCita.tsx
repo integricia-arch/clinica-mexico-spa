@@ -70,17 +70,18 @@ export default function DetalleCita() {
   // Modal recordatorio
   const [reminderOpen, setReminderOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<any | null>(null);
-  const [reminderCanal, setReminderCanal] = useState<CanalRecordatorio>("whatsapp");
+  const [reminderIdentidadId, setReminderIdentidadId] = useState<string>("");
   const [reminderFecha, setReminderFecha] = useState("");
   const [reminderMensaje, setReminderMensaje] = useState("");
   const [savingReminder, setSavingReminder] = useState(false);
+  const [sendingNow, setSendingNow] = useState<string | null>(null);
 
   const puedeGestionarRecordatorios = hasRole("admin") || hasRole("receptionist");
 
   const reloadRecordatorios = async () => {
-    const { data } = await supabase
-      .from("reminders")
-      .select("*")
+    const { data } = await (supabase as any)
+      .from("recordatorios_cita")
+      .select("*, identidades_canal(canal_id, display_name)")
       .eq("appointment_id", id!)
       .order("programado_para", { ascending: true });
     setRecordatorios(data ?? []);
@@ -88,7 +89,7 @@ export default function DetalleCita() {
 
   const abrirNuevoRecordatorio = () => {
     setEditingReminder(null);
-    setReminderCanal("whatsapp");
+    setReminderIdentidadId(identidadesCanal[0]?.id ?? "");
     const defaultDate = new Date(
       Math.max(Date.now() + 60 * 60 * 1000, new Date(appointment.fecha_inicio).getTime() - 2 * 60 * 60 * 1000)
     );
@@ -101,7 +102,7 @@ export default function DetalleCita() {
 
   const abrirReprogramar = (r: any) => {
     setEditingReminder(r);
-    setReminderCanal((r.canal ?? "whatsapp") as CanalRecordatorio);
+    setReminderIdentidadId(r.identidad_canal_id ?? identidadesCanal[0]?.id ?? "");
     setReminderFecha(format(new Date(r.programado_para), "yyyy-MM-dd'T'HH:mm"));
     setReminderMensaje(r.mensaje ?? "");
     setReminderOpen(true);
@@ -112,18 +113,23 @@ export default function DetalleCita() {
       toast({ variant: "destructive", title: "Falta fecha", description: "Selecciona fecha y hora del recordatorio." });
       return;
     }
+    if (!reminderIdentidadId) {
+      toast({ variant: "destructive", title: "Falta canal", description: "Selecciona un canal de comunicación." });
+      return;
+    }
     setSavingReminder(true);
     const programado = new Date(reminderFecha).toISOString();
 
     if (editingReminder) {
-      const { error } = await supabase
-        .from("reminders")
+      const { error } = await (supabase as any)
+        .from("recordatorios_cita")
         .update({
-          canal: reminderCanal,
+          identidad_canal_id: reminderIdentidadId,
           programado_para: programado,
           mensaje: reminderMensaje,
-          estado: "pendiente",
-          enviado_en: null,
+          status: "pendiente",
+          enviado_at: null,
+          ultimo_error: null,
           intentos: 0,
         })
         .eq("id", editingReminder.id);
@@ -134,14 +140,15 @@ export default function DetalleCita() {
       }
       toast({ title: "Recordatorio reprogramado" });
     } else {
-      const { error } = await supabase
-        .from("reminders")
+      const { error } = await (supabase as any)
+        .from("recordatorios_cita")
         .insert({
           appointment_id: id!,
-          canal: reminderCanal,
+          identidad_canal_id: reminderIdentidadId,
           programado_para: programado,
           mensaje: reminderMensaje,
-          estado: "pendiente",
+          status: "pendiente",
+          tipo: "manual",
         });
       if (error) {
         setSavingReminder(false);
@@ -157,15 +164,16 @@ export default function DetalleCita() {
   };
 
   const enviarAhora = async (r: any) => {
-    const { error } = await supabase
-      .from("reminders")
-      .update({ estado: "enviado", enviado_en: new Date().toISOString(), intentos: (r.intentos ?? 0) + 1 })
-      .eq("id", r.id);
+    setSendingNow(r.id);
+    const { error } = await supabase.functions.invoke("enviar-recordatorios", {
+      body: { recordatorio_id: r.id },
+    });
+    setSendingNow(null);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
       return;
     }
-    toast({ title: "Recordatorio enviado" });
+    toast({ title: "Envío solicitado" });
     await reloadRecordatorios();
   };
 
