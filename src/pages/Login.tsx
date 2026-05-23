@@ -90,7 +90,8 @@ export default function Login() {
       setView("login");
       setEmail("");
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Error", description: err.message });
+      const { title, description } = translateAuthError(err);
+      toast({ variant: "destructive", title, description });
     } finally {
       setLoading(false);
     }
