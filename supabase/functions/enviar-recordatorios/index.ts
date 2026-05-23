@@ -1,14 +1,20 @@
 // =================================================================
-// supabase/functions/enviar-recordatorios/index.ts  (v2)
+// supabase/functions/enviar-recordatorios/index.ts  (v3)
 //
 // Envía recordatorios de cita vía Telegram.
-// Debe invocarse con un cron job cada 5 minutos (ver setup-cron.sql).
+// - Cron job (sin body): procesa todos los pendientes con programado_para <= now
+// - Frontend (body: { recordatorio_id }): procesa uno específico inmediatamente
 //
-// v2: - Joins PostgREST con hint explícito de FK para evitar ambigüedad
-//     - Null-safety en construirMensaje para fecha_inicio nula
+// v3: CORS, soporte recordatorio_id, columna ultimo_error, enums t24h/t2h
 // =================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 const TELEGRAM_BOT_TOKEN   = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
@@ -16,28 +22,33 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
-    const procesados = await procesarRecordatorios();
+    let recordatorioId: string | undefined;
+    try {
+      const body = await req.json();
+      recordatorioId = body?.recordatorio_id;
+    } catch { /* sin body, modo cron */ }
+
+    const procesados = await procesarRecordatorios(recordatorioId);
     return new Response(JSON.stringify({ ok: true, procesados }), {
-      headers: { "content-type": "application/json" },
+      headers: { ...corsHeaders, "content-type": "application/json" },
     });
   } catch (err: any) {
     console.error("enviar-recordatorios error:", err);
     return new Response(JSON.stringify({ ok: false, error: err.message }), {
       status: 500,
-      headers: { "content-type": "application/json" },
+      headers: { ...corsHeaders, "content-type": "application/json" },
     });
   }
 });
 
-async function procesarRecordatorios(): Promise<number> {
-  const ahora = new Date().toISOString();
-
-  // Joins con hint explícito de FK (tabla!columna_fk) para evitar que
-  // PostgREST falle silenciosamente cuando hay múltiples FKs hacia la
-  // misma tabla o cuando el nombre de la relación es ambiguo.
-  const { data: pendientes, error } = await supabase
+async function procesarRecordatorios(recordatorioId?: string): Promise<number> {
+  let query = supabase
     .from("recordatorios_cita")
     .select(`
       id,
@@ -55,10 +66,15 @@ async function procesarRecordatorios(): Promise<number> {
         doctors!doctor_id (nombre, apellidos),
         servicios!servicio_id (nombre)
       )
-    `)
-    .eq("status", "pendiente")
-    .lte("programado_para", ahora);
+    `);
 
+  if (recordatorioId) {
+    query = query.eq("id", recordatorioId);
+  } else {
+    query = query.eq("status", "pendiente").lte("programado_para", new Date().toISOString());
+  }
+
+  const { data: pendientes, error } = await query;
   if (error) throw new Error(`fetch pendientes: ${error.message}`);
   if (!pendientes?.length) return 0;
 
@@ -76,9 +92,8 @@ async function procesarUno(r: any) {
   if (["cancelada", "cancelado", "no_show", "no_asistio"].includes(statusCita)) {
     await supabase.from("recordatorios_cita")
       .update({
-        status:     "enviado",
-        enviado_at: new Date().toISOString(),
-        error:      "omitido: cita cancelada",
+        status:       "cancelado",
+        ultimo_error: "omitido: cita cancelada",
       })
       .eq("id", r.id);
     return;
@@ -86,7 +101,7 @@ async function procesarUno(r: any) {
 
   if (!identidad || identidad.canal_id !== "telegram") {
     await supabase.from("recordatorios_cita")
-      .update({ status: "fallido", error: "canal no soportado" })
+      .update({ status: "fallido", ultimo_error: "canal no soportado" })
       .eq("id", r.id);
     return;
   }
@@ -95,12 +110,12 @@ async function procesarUno(r: any) {
   try {
     await enviarTelegram(identidad.external_id, texto);
     await supabase.from("recordatorios_cita")
-      .update({ status: "enviado", enviado_at: new Date().toISOString() })
+      .update({ status: "enviado", enviado_at: new Date().toISOString(), ultimo_error: null })
       .eq("id", r.id);
   } catch (err: any) {
     console.error(`recordatorio ${r.id}:`, err.message);
     await supabase.from("recordatorios_cita")
-      .update({ status: "fallido", error: err.message?.slice(0, 300) })
+      .update({ status: "fallido", ultimo_error: err.message?.slice(0, 300) })
       .eq("id", r.id);
   }
 }
@@ -112,8 +127,6 @@ function construirMensaje(tipo: string, cita: any): string {
     ? `Dr(a). ${cita.doctors.nombre} ${cita.doctors.apellidos}`
     : "tu médico";
 
-  // Null-safety: si fecha_inicio llega nula (join fallido o dato corrupto)
-  // el mensaje genérico evita enviar "Invalid Date" al paciente.
   if (!cita?.fecha_inicio) {
     return `Hola ${nombre}, tienes una cita próxima en ClínicaMX con ${doctor}. ¡Te esperamos!`;
   }
@@ -128,7 +141,8 @@ function construirMensaje(tipo: string, cita: any): string {
     timeZone: "America/Mexico_City",
   });
 
-  if (tipo === "T-24h") {
+  const t = String(tipo ?? "").toLowerCase();
+  if (t === "t24h" || t === "t-24h") {
     return (
       `Hola ${nombre}, te recordamos que mañana tienes cita en ClínicaMX:\n\n` +
       `Servicio: ${servicio}\n` +
