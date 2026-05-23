@@ -365,22 +365,29 @@ export default function Inbox() {
                 const isUser = m.rol === "user";
                 const isAssist = m.rol === "assistant";
                 const isTech = m.rol === "tool" || m.rol === "system";
+                const isHuman = isAssist && (m as any).raw_payload?.sent_by_human === true;
                 return (
                   <div
                     key={m.id}
                     className={cn(
-                      "flex",
-                      isUser && "justify-start",
-                      isAssist && "justify-end",
-                      isTech && "justify-center",
+                      "flex flex-col",
+                      isUser && "items-start",
+                      isAssist && "items-end",
+                      isTech && "items-center",
                     )}
                   >
+                    {isHuman && (
+                      <span className="text-[10px] font-semibold text-green-700 dark:text-green-400 mb-0.5 mr-1">
+                        Recepción
+                      </span>
+                    )}
                     <div
                       title={new Date(m.created_at).toLocaleString("es-MX")}
                       className={cn(
                         "max-w-[75%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap break-words shadow-sm",
                         isUser && "bg-muted text-foreground rounded-bl-sm",
-                        isAssist && "bg-primary/10 text-foreground rounded-br-sm",
+                        isAssist && !isHuman && "bg-primary/10 text-foreground rounded-br-sm",
+                        isHuman && "bg-green-100 text-green-950 dark:bg-green-900/40 dark:text-green-50 rounded-br-sm border border-green-300/60",
                         isTech && "bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs font-mono border border-amber-500/30",
                       )}
                     >
