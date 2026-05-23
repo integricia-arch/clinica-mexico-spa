@@ -20,6 +20,8 @@ import Farmacia from "@/pages/Farmacia";
 import Configuracion from "@/pages/Configuracion";
 import Auditoria from "@/pages/Auditoria";
 import Inbox from "@/pages/Inbox";
+import Citas from "@/pages/Citas";
+import Recordatorios from "@/pages/Recordatorios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +54,9 @@ const App = () => (
                       <Route path="/configuracion" element={<ProtectedRoute allowedRoles={["admin"]}><Configuracion /></ProtectedRoute>} />
                       <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Auditoria /></ProtectedRoute>} />
                       <Route path="/inbox" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><Inbox /></ProtectedRoute>} />
+                      <Route path="/conversaciones" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><Inbox /></ProtectedRoute>} />
+                      <Route path="/citas" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><Citas /></ProtectedRoute>} />
+                      <Route path="/recordatorios" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor"]}><Recordatorios /></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>

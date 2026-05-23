@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle, Phone, Instagram, Facebook, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Circle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Send, MessageCircle, Phone, Instagram, Facebook, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Circle, SendHorizonal } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -71,12 +73,15 @@ const STATUS_TABS: { key: "todas" | ConvStatus; label: string }[] = [
 
 export default function Inbox() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
-  const [filter, setFilter] = useState<"todas" | ConvStatus>("todas");
+  const [filter, setFilter] = useState<"todas" | ConvStatus>("escalada");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [showTechnical, setShowTechnical] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Cargar conversaciones
@@ -108,6 +113,13 @@ export default function Inbox() {
   };
 
   useEffect(() => { fetchConversaciones(); }, []);
+
+  // Preselección por ?id= en URL
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) setSelectedId(id);
+  }, [searchParams]);
+
 
   // Cargar mensajes al seleccionar
   useEffect(() => {
@@ -194,6 +206,19 @@ export default function Inbox() {
       .eq("id", selected.id);
     if (error) toast.error("No se pudo cerrar");
     else toast.success("Conversación cerrada");
+  };
+
+  const enviarRespuesta = async () => {
+    if (!selected || !reply.trim()) return;
+    setSending(true);
+    const { error } = await supabase.from("mensajes").insert({
+      conversacion_id: selected.id,
+      rol: "assistant",
+      contenido: reply.trim(),
+    });
+    setSending(false);
+    if (error) { toast.error("No se pudo enviar"); return; }
+    setReply("");
   };
 
   return (
@@ -346,6 +371,33 @@ export default function Inbox() {
               })}
               <div ref={bottomRef} />
             </div>
+
+            {selected.status === "escalada" ? (
+              <div className="border-t border-border p-3 bg-card">
+                <div className="flex gap-2 items-end">
+                  <Textarea
+                    rows={2}
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    placeholder="Escribe tu respuesta…"
+                    className="resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarRespuesta(); }
+                    }}
+                  />
+                  <Button onClick={enviarRespuesta} disabled={sending || !reply.trim()}>
+                    <SendHorizonal className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1.5">
+                  Enter para enviar · Shift+Enter para nueva línea
+                </p>
+              </div>
+            ) : selected.status === "activa" ? (
+              <div className="border-t border-border p-3 bg-muted/30 text-xs text-muted-foreground text-center">
+                El bot está atendiendo esta conversación. Usa "Tomar control" para responder.
+              </div>
+            ) : null}
           </>
         )}
       </div>

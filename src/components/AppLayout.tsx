@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
   CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
+  MessageCircle, BellRing, ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient";
 
@@ -66,6 +68,24 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "receptionist"],
   },
   {
+    to: "/citas",
+    icon: ClipboardList,
+    label: "Citas",
+    roles: ["admin", "receptionist", "doctor", "nurse"],
+  },
+  {
+    to: "/recordatorios",
+    icon: BellRing,
+    label: "Recordatorios",
+    roles: ["admin", "receptionist", "doctor"],
+  },
+  {
+    to: "/conversaciones",
+    icon: MessageCircle,
+    label: "Conversaciones",
+    roles: ["admin", "receptionist", "doctor", "nurse"],
+  },
+  {
     to: "/inbox",
     icon: InboxIcon,
     label: "Inbox",
@@ -96,6 +116,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, roles, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [escaladasCount, setEscaladasCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -107,6 +128,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const primaryRole = roles[0] as AppRole | undefined;
   const roleLabel = primaryRole ? ROLE_LABELS[primaryRole] : "Sin rol";
   const initials = user?.email?.substring(0, 2).toUpperCase() || "??";
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCount = async () => {
+      const { count } = await supabase
+        .from("conversaciones")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "escalada");
+      setEscaladasCount(count ?? 0);
+    };
+    fetchCount();
+    const ch = supabase
+      .channel("layout-escaladas")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversaciones" }, fetchCount)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -141,6 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {visibleNav.map((item) => {
             const isActive = location.pathname === item.to;
+            const showBadge = item.to === "/conversaciones" && escaladasCount > 0;
             return (
               <NavLink
                 key={item.to}
@@ -153,7 +192,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <item.icon className="h-[18px] w-[18px]" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {showBadge && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-orange-500 text-white px-1.5">
+                    {escaladasCount}
+                  </span>
+                )}
               </NavLink>
             );
           })}
