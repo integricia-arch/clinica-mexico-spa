@@ -1,5 +1,5 @@
 // Construye una estructura uniforme de pasos para PatientJourneyLine.
-import { KANBAN_COLUMNS, getCurrentStepKey, type JourneyInstanceLite } from "./journeyHelpers";
+import { getCurrentStepKey, type JourneyInstanceLite } from "@/features/centro-control/lib/journeyHelpers";
 
 export type StepStatus = "completed" | "current" | "pending" | "blocked" | "review" | "override" | "skipped";
 

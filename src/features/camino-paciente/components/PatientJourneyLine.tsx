@@ -8,7 +8,7 @@ import { es } from "date-fns/locale";
 import {
   buildJourneyLineSteps, journeyProgress, type JourneyLineStep, type StepStatus,
 } from "../lib/buildJourneyLineSteps";
-import type { JourneyInstanceLite } from "../lib/journeyHelpers";
+import type { JourneyInstanceLite } from "@/features/centro-control/lib/journeyHelpers";
 
 interface Props {
   journeyInstance: JourneyInstanceLite | null;
