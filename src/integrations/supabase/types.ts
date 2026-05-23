@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -48,7 +48,7 @@ export type Database = {
       }
       appointments: {
         Row: {
-          creada_por_bot: boolean | null
+          creada_por_bot: boolean
           created_at: string
           created_by: string | null
           doctor_id: string
@@ -57,7 +57,7 @@ export type Database = {
           id: string
           motivo_consulta: string | null
           notas: string | null
-          origen: string | null
+          origen: string
           patient_id: string
           room_id: string | null
           servicio_id: string | null
@@ -65,7 +65,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          creada_por_bot?: boolean | null
+          creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
           doctor_id: string
@@ -74,7 +74,7 @@ export type Database = {
           id?: string
           motivo_consulta?: string | null
           notas?: string | null
-          origen?: string | null
+          origen?: string
           patient_id: string
           room_id?: string | null
           servicio_id?: string | null
@@ -82,7 +82,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          creada_por_bot?: boolean | null
+          creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
           doctor_id?: string
@@ -91,7 +91,7 @@ export type Database = {
           id?: string
           motivo_consulta?: string | null
           notas?: string | null
-          origen?: string | null
+          origen?: string
           patient_id?: string
           room_id?: string | null
           servicio_id?: string | null
@@ -104,6 +104,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
           {
@@ -125,50 +132,6 @@ export type Database = {
             columns: ["servicio_id"]
             isOneToOne: false
             referencedRelation: "servicios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      atribucion_campania: {
-        Row: {
-          ad_id: string | null
-          created_at: string | null
-          id: string
-          identidad_canal_id: string | null
-          mensaje_inicial: string | null
-          utm_campaign: string | null
-          utm_content: string | null
-          utm_medium: string | null
-          utm_source: string | null
-        }
-        Insert: {
-          ad_id?: string | null
-          created_at?: string | null
-          id?: string
-          identidad_canal_id?: string | null
-          mensaje_inicial?: string | null
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-        }
-        Update: {
-          ad_id?: string | null
-          created_at?: string | null
-          id?: string
-          identidad_canal_id?: string | null
-          mensaje_inicial?: string | null
-          utm_campaign?: string | null
-          utm_content?: string | null
-          utm_medium?: string | null
-          utm_source?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "atribucion_campania_identidad_canal_id_fkey"
-            columns: ["identidad_canal_id"]
-            isOneToOne: false
-            referencedRelation: "identidades_canal"
             referencedColumns: ["id"]
           },
         ]
@@ -209,134 +172,36 @@ export type Database = {
         }
         Relationships: []
       }
-      bot_sesiones: {
-        Row: {
-          borrador_cita: Json | null
-          borrador_paciente: Json | null
-          consentimiento_dado: boolean | null
-          consentimiento_fecha: string | null
-          conversacion_id: string | null
-          id: string
-          updated_at: string | null
-        }
-        Insert: {
-          borrador_cita?: Json | null
-          borrador_paciente?: Json | null
-          consentimiento_dado?: boolean | null
-          consentimiento_fecha?: string | null
-          conversacion_id?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Update: {
-          borrador_cita?: Json | null
-          borrador_paciente?: Json | null
-          consentimiento_dado?: boolean | null
-          consentimiento_fecha?: string | null
-          conversacion_id?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bot_sesiones_conversacion_id_fkey"
-            columns: ["conversacion_id"]
-            isOneToOne: true
-            referencedRelation: "conversaciones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      canales: {
-        Row: {
-          activo: boolean | null
-          display_name: string
-          id: string
-        }
-        Insert: {
-          activo?: boolean | null
-          display_name: string
-          id: string
-        }
-        Update: {
-          activo?: boolean | null
-          display_name?: string
-          id?: string
-        }
-        Relationships: []
-      }
-      consentimientos: {
-        Row: {
-          id: string
-          identidad_canal_id: string | null
-          otorgado: boolean
-          otorgado_at: string | null
-          patient_id: string | null
-          tipo: string
-          version_texto: string
-        }
-        Insert: {
-          id?: string
-          identidad_canal_id?: string | null
-          otorgado: boolean
-          otorgado_at?: string | null
-          patient_id?: string | null
-          tipo: string
-          version_texto: string
-        }
-        Update: {
-          id?: string
-          identidad_canal_id?: string | null
-          otorgado?: boolean
-          otorgado_at?: string | null
-          patient_id?: string | null
-          tipo?: string
-          version_texto?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "consentimientos_identidad_canal_id_fkey"
-            columns: ["identidad_canal_id"]
-            isOneToOne: false
-            referencedRelation: "identidades_canal"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "consentimientos_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "patients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       conversaciones: {
         Row: {
           asignada_humano_id: string | null
-          created_at: string | null
+          created_at: string
           id: string
-          identidad_canal_id: string | null
+          identidad_canal_id: string
           intencion_actual: string | null
-          last_message_at: string | null
-          status: string
+          last_message_at: string
+          status: Database["public"]["Enums"]["conversacion_status"]
+          updated_at: string
         }
         Insert: {
           asignada_humano_id?: string | null
-          created_at?: string | null
+          created_at?: string
           id?: string
-          identidad_canal_id?: string | null
+          identidad_canal_id: string
           intencion_actual?: string | null
-          last_message_at?: string | null
-          status?: string
+          last_message_at?: string
+          status?: Database["public"]["Enums"]["conversacion_status"]
+          updated_at?: string
         }
         Update: {
           asignada_humano_id?: string | null
-          created_at?: string | null
+          created_at?: string
           id?: string
-          identidad_canal_id?: string | null
+          identidad_canal_id?: string
           intencion_actual?: string | null
-          last_message_at?: string | null
-          status?: string
+          last_message_at?: string
+          status?: Database["public"]["Enums"]["conversacion_status"]
+          updated_at?: string
         }
         Relationships: [
           {
@@ -344,36 +209,6 @@ export type Database = {
             columns: ["identidad_canal_id"]
             isOneToOne: false
             referencedRelation: "identidades_canal"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      doctor_servicios: {
-        Row: {
-          doctor_id: string
-          servicio_id: string
-        }
-        Insert: {
-          doctor_id: string
-          servicio_id: string
-        }
-        Update: {
-          doctor_id?: string
-          servicio_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "doctor_servicios_doctor_id_fkey"
-            columns: ["doctor_id"]
-            isOneToOne: false
-            referencedRelation: "doctors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "doctor_servicios_servicio_id_fkey"
-            columns: ["servicio_id"]
-            isOneToOne: false
-            referencedRelation: "servicios"
             referencedColumns: ["id"]
           },
         ]
@@ -463,9 +298,16 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "expedientes_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "expedientes_patient_id_fkey"
             columns: ["patient_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -473,40 +315,36 @@ export type Database = {
       }
       identidades_canal: {
         Row: {
-          canal_id: string | null
-          created_at: string | null
+          canal_id: Database["public"]["Enums"]["canal_tipo"]
+          created_at: string
           display_name: string | null
           external_id: string
           id: string
           metadata: Json | null
           patient_id: string | null
+          updated_at: string
         }
         Insert: {
-          canal_id?: string | null
-          created_at?: string | null
+          canal_id: Database["public"]["Enums"]["canal_tipo"]
+          created_at?: string
           display_name?: string | null
           external_id: string
           id?: string
           metadata?: Json | null
           patient_id?: string | null
+          updated_at?: string
         }
         Update: {
-          canal_id?: string | null
-          created_at?: string | null
+          canal_id?: Database["public"]["Enums"]["canal_tipo"]
+          created_at?: string
           display_name?: string | null
           external_id?: string
           id?: string
           metadata?: Json | null
           patient_id?: string | null
+          updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "identidades_canal_canal_id_fkey"
-            columns: ["canal_id"]
-            isOneToOne: false
-            referencedRelation: "canales"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "identidades_canal_patient_id_fkey"
             columns: ["patient_id"]
@@ -558,39 +396,23 @@ export type Database = {
         Row: {
           activo: boolean
           categoria: string
-          clave_cuadro_basico: string | null
-          concentracion: string | null
-          controlado: boolean
           created_at: string
           descripcion: string | null
-          forma_farmaceutica: string | null
-          grupo_terapeutico: string | null
           id: string
           nombre: string
           precio_unitario: number
-          principio_activo: string | null
-          registro_cofepris: string | null
-          requiere_receta: boolean
           stock_minimo: number
           unidad: string
           updated_at: string
         }
         Insert: {
           activo?: boolean
-          categoria: string
-          clave_cuadro_basico?: string | null
-          concentracion?: string | null
-          controlado?: boolean
+          categoria?: string
           created_at?: string
           descripcion?: string | null
-          forma_farmaceutica?: string | null
-          grupo_terapeutico?: string | null
           id?: string
           nombre: string
           precio_unitario?: number
-          principio_activo?: string | null
-          registro_cofepris?: string | null
-          requiere_receta?: boolean
           stock_minimo?: number
           unidad?: string
           updated_at?: string
@@ -598,19 +420,11 @@ export type Database = {
         Update: {
           activo?: boolean
           categoria?: string
-          clave_cuadro_basico?: string | null
-          concentracion?: string | null
-          controlado?: boolean
           created_at?: string
           descripcion?: string | null
-          forma_farmaceutica?: string | null
-          grupo_terapeutico?: string | null
           id?: string
           nombre?: string
           precio_unitario?: number
-          principio_activo?: string | null
-          registro_cofepris?: string | null
-          requiere_receta?: boolean
           stock_minimo?: number
           unidad?: string
           updated_at?: string
@@ -619,34 +433,25 @@ export type Database = {
       }
       mensajes: {
         Row: {
-          contenido: string | null
-          conversacion_id: string | null
-          created_at: string | null
+          contenido: string
+          conversacion_id: string
+          created_at: string
           id: string
-          raw_payload: Json | null
-          rol: string
-          tool_calls: Json | null
-          tool_result: Json | null
+          rol: Database["public"]["Enums"]["mensaje_rol"]
         }
         Insert: {
-          contenido?: string | null
-          conversacion_id?: string | null
-          created_at?: string | null
+          contenido: string
+          conversacion_id: string
+          created_at?: string
           id?: string
-          raw_payload?: Json | null
-          rol: string
-          tool_calls?: Json | null
-          tool_result?: Json | null
+          rol: Database["public"]["Enums"]["mensaje_rol"]
         }
         Update: {
-          contenido?: string | null
-          conversacion_id?: string | null
-          created_at?: string | null
+          contenido?: string
+          conversacion_id?: string
+          created_at?: string
           id?: string
-          raw_payload?: Json | null
-          rol?: string
-          tool_calls?: Json | null
-          tool_result?: Json | null
+          rol?: Database["public"]["Enums"]["mensaje_rol"]
         }
         Relationships: [
           {
@@ -662,32 +467,32 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string
-          created_by: string | null
           id: string
           lote_id: string | null
           medicamento_id: string
           motivo: string | null
           tipo: Database["public"]["Enums"]["movimiento_tipo"]
+          user_id: string | null
         }
         Insert: {
           cantidad: number
           created_at?: string
-          created_by?: string | null
           id?: string
           lote_id?: string | null
           medicamento_id: string
           motivo?: string | null
           tipo: Database["public"]["Enums"]["movimiento_tipo"]
+          user_id?: string | null
         }
         Update: {
           cantidad?: number
           created_at?: string
-          created_by?: string | null
           id?: string
           lote_id?: string | null
           medicamento_id?: string
           motivo?: string | null
           tipo?: Database["public"]["Enums"]["movimiento_tipo"]
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -709,7 +514,6 @@ export type Database = {
       notas_consulta: {
         Row: {
           analisis: string | null
-          appointment_id: string | null
           created_at: string
           diagnostico_principal: string | null
           doctor_id: string
@@ -723,7 +527,6 @@ export type Database = {
         }
         Insert: {
           analisis?: string | null
-          appointment_id?: string | null
           created_at?: string
           diagnostico_principal?: string | null
           doctor_id: string
@@ -737,7 +540,6 @@ export type Database = {
         }
         Update: {
           analisis?: string | null
-          appointment_id?: string | null
           created_at?: string
           diagnostico_principal?: string | null
           doctor_id?: string
@@ -751,17 +553,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "notas_consulta_appointment_id_fkey"
-            columns: ["appointment_id"]
+            foreignKeyName: "notas_consulta_doctor_id_fkey"
+            columns: ["doctor_id"]
             isOneToOne: false
-            referencedRelation: "appointments"
+            referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notas_consulta_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
-            referencedRelation: "doctors"
+            referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
           {
@@ -851,59 +653,46 @@ export type Database = {
         }
         Relationships: []
       }
-      recordatorios_cita: {
+      reminders: {
         Row: {
-          appointment_id: string | null
-          enviado_at: string | null
-          error: string | null
+          appointment_id: string
+          canal: Database["public"]["Enums"]["reminder_channel"]
+          created_at: string
+          enviado_en: string | null
+          estado: Database["public"]["Enums"]["reminder_status"]
           id: string
-          identidad_canal_id: string | null
-          intentos: number | null
+          intentos: number
           mensaje: string | null
           programado_para: string
-          status: string | null
-          tipo: string
-          ultimo_error: string | null
         }
         Insert: {
-          appointment_id?: string | null
-          enviado_at?: string | null
-          error?: string | null
+          appointment_id: string
+          canal?: Database["public"]["Enums"]["reminder_channel"]
+          created_at?: string
+          enviado_en?: string | null
+          estado?: Database["public"]["Enums"]["reminder_status"]
           id?: string
-          identidad_canal_id?: string | null
-          intentos?: number | null
+          intentos?: number
           mensaje?: string | null
           programado_para: string
-          status?: string | null
-          tipo: string
-          ultimo_error?: string | null
         }
         Update: {
-          appointment_id?: string | null
-          enviado_at?: string | null
-          error?: string | null
+          appointment_id?: string
+          canal?: Database["public"]["Enums"]["reminder_channel"]
+          created_at?: string
+          enviado_en?: string | null
+          estado?: Database["public"]["Enums"]["reminder_status"]
           id?: string
-          identidad_canal_id?: string | null
-          intentos?: number | null
+          intentos?: number
           mensaje?: string | null
           programado_para?: string
-          status?: string | null
-          tipo?: string
-          ultimo_error?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "recordatorios_cita_appointment_id_fkey"
+            foreignKeyName: "reminders_appointment_id_fkey"
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recordatorios_cita_identidad_canal_id_fkey"
-            columns: ["identidad_canal_id"]
-            isOneToOne: false
-            referencedRelation: "identidades_canal"
             referencedColumns: ["id"]
           },
         ]
@@ -940,37 +729,37 @@ export type Database = {
       }
       servicios: {
         Row: {
-          activo: boolean | null
-          created_at: string | null
+          activo: boolean
+          created_at: string
           descripcion: string | null
           duracion_minutos: number
-          especialidad: string
+          especialidad: string | null
           id: string
           nombre: string
-          precio_centavos: number | null
-          updated_at: string | null
+          precio_centavos: number
+          updated_at: string
         }
         Insert: {
-          activo?: boolean | null
-          created_at?: string | null
-          descripcion?: string | null
-          duracion_minutos: number
-          especialidad: string
-          id?: string
-          nombre: string
-          precio_centavos?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          activo?: boolean | null
-          created_at?: string | null
+          activo?: boolean
+          created_at?: string
           descripcion?: string | null
           duracion_minutos?: number
-          especialidad?: string
+          especialidad?: string | null
+          id?: string
+          nombre: string
+          precio_centavos?: number
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          duracion_minutos?: number
+          especialidad?: string | null
           id?: string
           nombre?: string
-          precio_centavos?: number | null
-          updated_at?: string | null
+          precio_centavos?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -997,7 +786,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      doctors_public: {
+        Row: {
+          activo: boolean | null
+          apellidos: string | null
+          duracion_cita_min: number | null
+          especialidad: string | null
+          horario_fin: string | null
+          horario_inicio: string | null
+          id: string | null
+          nombre: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          apellidos?: string | null
+          duracion_cita_min?: number | null
+          especialidad?: string | null
+          horario_fin?: string | null
+          horario_inicio?: string | null
+          id?: string | null
+          nombre?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          apellidos?: string | null
+          duracion_cita_min?: number | null
+          especialidad?: string | null
+          horario_fin?: string | null
+          horario_inicio?: string | null
+          id?: string | null
+          nombre?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -1005,10 +826,6 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
-        Returns: boolean
-      }
-      is_appointment_participant: {
-        Args: { _appointment_id: string }
         Returns: boolean
       }
       log_audit: {
@@ -1034,14 +851,19 @@ export type Database = {
         | "confirmada_medico"
         | "cancelada"
         | "liberada"
-      audit_action: "crear" | "actualizar" | "cancelar"
+      audit_action: "crear" | "actualizar" | "cancelar" | "eliminar"
+      canal_tipo: "telegram" | "whatsapp" | "instagram" | "facebook"
+      conversacion_status: "activa" | "escalada" | "cerrada"
       expediente_tipo:
         | "primera_vez"
         | "seguimiento"
         | "urgencia"
         | "cirugia"
         | "cronico"
-      movimiento_tipo: "entrada" | "salida" | "ajuste" | "caducidad"
+      mensaje_rol: "user" | "assistant" | "tool" | "system"
+      movimiento_tipo: "entrada" | "salida" | "ajuste"
+      reminder_channel: "whatsapp" | "sms" | "email"
+      reminder_status: "pendiente" | "enviado" | "fallido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1181,7 +1003,9 @@ export const Constants = {
         "cancelada",
         "liberada",
       ],
-      audit_action: ["crear", "actualizar", "cancelar"],
+      audit_action: ["crear", "actualizar", "cancelar", "eliminar"],
+      canal_tipo: ["telegram", "whatsapp", "instagram", "facebook"],
+      conversacion_status: ["activa", "escalada", "cerrada"],
       expediente_tipo: [
         "primera_vez",
         "seguimiento",
@@ -1189,9 +1013,10 @@ export const Constants = {
         "cirugia",
         "cronico",
       ],
-      movimiento_tipo: ["entrada", "salida", "ajuste", "caducidad"],
+      mensaje_rol: ["user", "assistant", "tool", "system"],
+      movimiento_tipo: ["entrada", "salida", "ajuste"],
+      reminder_channel: ["whatsapp", "sms", "email"],
+      reminder_status: ["pendiente", "enviado", "fallido"],
     },
   },
 } as const
-A new version of Supabase CLI is available: v2.101.0 (currently installed v)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
