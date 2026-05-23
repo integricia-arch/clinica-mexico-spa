@@ -39,7 +39,7 @@ export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, on
                 <th className="px-5 py-3 font-medium">Médico</th>
                 <th className="px-5 py-3 font-medium">Consultorio</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Etapa</th>
+                <th className="px-5 py-3 font-medium">Camino</th>
                 <th className="px-5 py-3 font-medium">Próxima acción</th>
                 <th className="px-5 py-3 font-medium text-right">Acciones</th>
               </tr>
