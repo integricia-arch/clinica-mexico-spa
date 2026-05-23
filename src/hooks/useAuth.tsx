@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   hasRole: (role: AppRole) => boolean;
   isStaff: () => boolean;
+  refreshRoles: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -31,16 +32,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles(data?.map((r) => r.role) ?? []);
   }, []);
 
+  // Fuerza refresh del JWT para que las claims (incluyendo roles via custom hooks)
+  // queden actualizadas antes de leer user_roles.
+  const refreshSessionAndRoles = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (!error && data.session) {
+        setSession(data.session);
+        setUser(data.user ?? null);
+      }
+    } catch {
+      /* refresh opcional, continuamos */
+    }
+    await fetchRoles(userId);
+  }, [fetchRoles]);
+
+  const refreshRoles = useCallback(async () => {
+    if (!user) return;
+    await refreshSessionAndRoles(user.id);
+  }, [user, refreshSessionAndRoles]);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Defer to avoid Supabase deadlock; keep loading=true until roles arrive
           setLoading(true);
+          // Defer para evitar deadlock del cliente de Supabase
           setTimeout(() => {
-            fetchRoles(session.user.id).finally(() => setLoading(false));
+            // Al iniciar sesión, refrescamos el JWT para obtener claims más recientes
+            if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+              refreshSessionAndRoles(session.user.id).finally(() => setLoading(false));
+            } else {
+              fetchRoles(session.user.id).finally(() => setLoading(false));
+            }
           }, 0);
         } else {
           setRoles([]);
@@ -59,7 +85,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchRoles]);
+  }, [fetchRoles, refreshSessionAndRoles]);
+
+  // Realtime: si cambian los roles del usuario actual, refrescamos al vuelo
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`user-roles-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}` },
+        () => {
+          refreshSessionAndRoles(user.id);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, refreshSessionAndRoles]);
 
   const hasRole = useCallback((role: AppRole) => roles.includes(role), [roles]);
   const isStaff = useCallback(
@@ -75,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, roles, loading, hasRole, isStaff, signOut }}>
+    <AuthContext.Provider value={{ user, session, roles, loading, hasRole, isStaff, refreshRoles, signOut }}>
       {children}
     </AuthContext.Provider>
   );
