@@ -32,6 +32,18 @@ export default function Login() {
       return { title: "Contraseña muy corta", description: "La contraseña debe tener al menos 6 caracteres." };
     if (/email.*invalid|invalid.*email/i.test(msg))
       return { title: "Correo inválido", description: "Ingresa un correo electrónico válido." };
+    const rateMatch = msg.match(/after (\d+) seconds?/i);
+    if (code === "over_email_send_rate_limit" || code === "over_request_rate_limit" || /security purposes.*after \d+ seconds?|rate limit/i.test(msg)) {
+      const secs = rateMatch?.[1];
+      return {
+        title: "Demasiados intentos",
+        description: secs
+          ? `Por seguridad, espera ${secs} segundos antes de solicitar otro enlace.`
+          : "Has solicitado demasiados correos en poco tiempo. Espera unos segundos e inténtalo de nuevo.",
+      };
+    }
+    if (code === "email_not_confirmed" || /email.*not.*confirm/i.test(msg))
+      return { title: "Correo no confirmado", description: "Revisa tu bandeja y confirma tu correo antes de iniciar sesión." };
     return { title: "Error", description: msg || "Ocurrió un error inesperado. Inténtalo de nuevo." };
   };
 
