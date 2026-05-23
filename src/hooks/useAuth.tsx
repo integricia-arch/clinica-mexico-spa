@@ -61,8 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(true);
           // Defer para evitar deadlock del cliente de Supabase
           setTimeout(() => {
-            // Al iniciar sesión, refrescamos el JWT para obtener claims más recientes
-            if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+            // Solo forzamos refresh manual en USER_UPDATED (cambio de claims).
+            // SIGNED_IN ya trae token fresco y TOKEN_REFRESHED provocaría un bucle infinito.
+            if (event === "USER_UPDATED") {
               refreshSessionAndRoles(session.user.id).finally(() => setLoading(false));
             } else {
               fetchRoles(session.user.id).finally(() => setLoading(false));
