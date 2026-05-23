@@ -494,7 +494,7 @@ export default function DetalleCita() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setReminderOpen(false)}>Cancelar</Button>
-            <Button onClick={guardarRecordatorio} disabled={savingReminder || sinCanales}>
+            <Button onClick={guardarRecordatorio} disabled={savingReminder}>
               {savingReminder ? "Guardando..." : editingReminder ? "Reprogramar" : "Crear recordatorio"}
             </Button>
           </DialogFooter>
