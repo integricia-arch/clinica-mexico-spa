@@ -352,19 +352,23 @@ async function manejarTextoWizard(chatId: string, conv: any, sesion: any, text: 
       return enviarTelegram(chatId, "¿Tu *fecha de nacimiento*? Formato: dd/mm/aaaa (ej. 15/03/1985)");
     }
     case "await_fecha": {
-      const iso = parseFechaDDMMYYYY(text);
+      const iso = await parseFechaFlexible(text);
       const intentos = (data.fecha_intentos ?? 0) + 1;
       if (!iso) {
-        if (intentos >= 2) {
-          return enviarTelegramConBotones(chatId, "No pude leer la fecha. Puedes intentar de nuevo o saltar este dato:", [
-            [{ text: "Prefiero no decir", callback_data: "skip:fecha" }],
+        if (intentos >= 3) {
+          await upsertSesion(conv.id, { flow_data: { ...data, fecha_intentos: intentos } });
+          return enviarTelegramConBotones(chatId, "No logré entender la fecha después de varios intentos. Continuemos sin ella:", [
+            [{ text: "⏭️ Prefiero no decir", callback_data: "skip:fecha" }],
           ]);
         }
         await upsertSesion(conv.id, { flow_data: { ...data, fecha_intentos: intentos } });
-        return enviarTelegram(chatId, "Formato no válido. Usa dd/mm/aaaa (ej. 15/03/1985). Intenta de nuevo:");
+        return enviarTelegramConBotones(chatId, "No entendí esa fecha. Puedes escribirla como 12/10/1981 o '12 de octubre de 1981'.", [
+          [{ text: "⏭️ Prefiero no decir", callback_data: "skip:fecha" }],
+        ]);
       }
       borrador.fecha_nacimiento = iso;
       await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_sexo" });
+      await enviarTelegram(chatId, `Anotado: *${formatFechaMX(iso)}*.`);
       return preguntarSexo(chatId);
     }
     case "await_ciudad": {
