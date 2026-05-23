@@ -437,6 +437,7 @@ export type Database = {
           conversacion_id: string
           created_at: string
           id: string
+          raw_payload: Json | null
           rol: Database["public"]["Enums"]["mensaje_rol"]
         }
         Insert: {
@@ -444,6 +445,7 @@ export type Database = {
           conversacion_id: string
           created_at?: string
           id?: string
+          raw_payload?: Json | null
           rol: Database["public"]["Enums"]["mensaje_rol"]
         }
         Update: {
@@ -451,6 +453,7 @@ export type Database = {
           conversacion_id?: string
           created_at?: string
           id?: string
+          raw_payload?: Json | null
           rol?: Database["public"]["Enums"]["mensaje_rol"]
         }
         Relationships: [
@@ -653,46 +656,62 @@ export type Database = {
         }
         Relationships: []
       }
-      reminders: {
+      recordatorios_cita: {
         Row: {
           appointment_id: string
-          canal: Database["public"]["Enums"]["reminder_channel"]
           created_at: string
-          enviado_en: string | null
-          estado: Database["public"]["Enums"]["reminder_status"]
+          enviado_at: string | null
           id: string
+          identidad_canal_id: string | null
           intentos: number
           mensaje: string | null
           programado_para: string
+          status: Database["public"]["Enums"]["recordatorio_status"]
+          tipo: Database["public"]["Enums"]["recordatorio_tipo"]
+          ultimo_error: string | null
+          updated_at: string
         }
         Insert: {
           appointment_id: string
-          canal?: Database["public"]["Enums"]["reminder_channel"]
           created_at?: string
-          enviado_en?: string | null
-          estado?: Database["public"]["Enums"]["reminder_status"]
+          enviado_at?: string | null
           id?: string
+          identidad_canal_id?: string | null
           intentos?: number
           mensaje?: string | null
           programado_para: string
+          status?: Database["public"]["Enums"]["recordatorio_status"]
+          tipo?: Database["public"]["Enums"]["recordatorio_tipo"]
+          ultimo_error?: string | null
+          updated_at?: string
         }
         Update: {
           appointment_id?: string
-          canal?: Database["public"]["Enums"]["reminder_channel"]
           created_at?: string
-          enviado_en?: string | null
-          estado?: Database["public"]["Enums"]["reminder_status"]
+          enviado_at?: string | null
           id?: string
+          identidad_canal_id?: string | null
           intentos?: number
           mensaje?: string | null
           programado_para?: string
+          status?: Database["public"]["Enums"]["recordatorio_status"]
+          tipo?: Database["public"]["Enums"]["recordatorio_tipo"]
+          ultimo_error?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "reminders_appointment_id_fkey"
+            foreignKeyName: "recordatorios_cita_appointment_id_fkey"
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recordatorios_cita_identidad_canal_id_fkey"
+            columns: ["identidad_canal_id"]
+            isOneToOne: false
+            referencedRelation: "identidades_canal"
             referencedColumns: ["id"]
           },
         ]
@@ -862,8 +881,8 @@ export type Database = {
         | "cronico"
       mensaje_rol: "user" | "assistant" | "tool" | "system"
       movimiento_tipo: "entrada" | "salida" | "ajuste"
-      reminder_channel: "whatsapp" | "sms" | "email"
-      reminder_status: "pendiente" | "enviado" | "fallido"
+      recordatorio_status: "pendiente" | "enviado" | "fallido" | "cancelado"
+      recordatorio_tipo: "t24h" | "t2h" | "manual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1015,8 +1034,8 @@ export const Constants = {
       ],
       mensaje_rol: ["user", "assistant", "tool", "system"],
       movimiento_tipo: ["entrada", "salida", "ajuste"],
-      reminder_channel: ["whatsapp", "sms", "email"],
-      reminder_status: ["pendiente", "enviado", "fallido"],
+      recordatorio_status: ["pendiente", "enviado", "fallido", "cancelado"],
+      recordatorio_tipo: ["t24h", "t2h", "manual"],
     },
   },
 } as const
