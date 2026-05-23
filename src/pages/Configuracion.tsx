@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
