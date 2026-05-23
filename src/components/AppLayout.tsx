@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
   CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
+  MessageCircle, BellRing, ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient";
 
@@ -64,6 +66,24 @@ const NAV_ITEMS: NavItem[] = [
     icon: Receipt,
     label: "Facturación",
     roles: ["admin", "receptionist"],
+  },
+  {
+    to: "/citas",
+    icon: ClipboardList,
+    label: "Citas",
+    roles: ["admin", "receptionist", "doctor", "nurse"],
+  },
+  {
+    to: "/recordatorios",
+    icon: BellRing,
+    label: "Recordatorios",
+    roles: ["admin", "receptionist", "doctor"],
+  },
+  {
+    to: "/conversaciones",
+    icon: MessageCircle,
+    label: "Conversaciones",
+    roles: ["admin", "receptionist", "doctor", "nurse"],
   },
   {
     to: "/inbox",
