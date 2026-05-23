@@ -242,6 +242,14 @@ export default function Inbox() {
           <h1 className="text-display text-lg font-bold">Inbox</h1>
           <p className="text-xs text-muted-foreground">Conversaciones de canales externos</p>
         </div>
+        <div className="p-3 border-b border-border">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar paciente…"
+            className="h-9 text-sm"
+          />
+        </div>
         <div className="flex gap-1 p-2 border-b border-border bg-muted/30">
           {STATUS_TABS.map((t) => {
             const isActive = filter === t.key;
