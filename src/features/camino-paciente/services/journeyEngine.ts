@@ -203,16 +203,16 @@ export async function saveJourneyStepData(
   const userId = userData.user?.id ?? null;
 
   if (existing) {
-    const merged = { ...(existing.data_json as object), ...data };
+    const merged = { ...(existing.data_json as Record<string, unknown>), ...data };
     const { error } = await supabase
       .from("journey_instance_step_data")
-      .update({ data_json: merged, updated_by: userId })
+      .update({ data_json: merged as never, updated_by: userId })
       .eq("id", existing.id);
     if (error) return { ok: false, error: error.message };
   } else {
     const { error } = await supabase.from("journey_instance_step_data").insert({
       journey_instance_step_id: stepId,
-      data_json: data,
+      data_json: data as never,
       created_by: userId,
       updated_by: userId,
     });
