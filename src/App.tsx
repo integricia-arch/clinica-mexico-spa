@@ -22,6 +22,7 @@ import Auditoria from "@/pages/Auditoria";
 import Inbox from "@/pages/Inbox";
 import Citas from "@/pages/Citas";
 import Recordatorios from "@/pages/Recordatorios";
+import AdminUsuarios from "@/pages/AdminUsuarios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
