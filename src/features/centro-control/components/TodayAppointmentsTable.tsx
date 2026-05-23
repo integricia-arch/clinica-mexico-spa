@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { KanbanRow } from "./PatientJourneyCard";
 import { getJourneyStageColor, getPatientNextAction } from "../lib/journeyHelpers";
+import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
+import { buildJourneyLineSteps, journeyProgress } from "@/features/camino-paciente/lib/buildJourneyLineSteps";
 
 interface Props {
   rows: KanbanRow[];
