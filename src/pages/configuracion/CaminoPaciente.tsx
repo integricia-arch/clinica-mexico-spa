@@ -251,15 +251,7 @@ function StepEditorSheet({ step, onClose, onSaved }: { step: JourneyStep | null;
   const [maxMin, setMaxMin] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
-  useState(() => {
-    /* effect-like init */
-  });
-  // sync when step changes
-  if (step && name === "" && step.step_name) {
-    // lightweight init
-  }
-  // proper init via useEffect-equivalent
-  useMemo(() => {
+  useEffect(() => {
     if (step) {
       setName(step.step_name);
       setDesc(step.step_description ?? "");
