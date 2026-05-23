@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
   CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
-  MessageCircle, BellRing, ClipboardList,
+  MessageCircle, BellRing, ClipboardList, UserCog,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,6 +90,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: ShieldCheck,
     label: "Auditoría",
     roles: ["admin", "receptionist"],
+  },
+  {
+    to: "/admin/usuarios",
+    icon: UserCog,
+    label: "Usuarios y roles",
+    roles: ["admin"],
   },
   {
     to: "/configuracion",
