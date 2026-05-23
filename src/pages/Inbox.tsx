@@ -76,8 +76,9 @@ export default function Inbox() {
   const [searchParams] = useSearchParams();
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [filter, setFilter] = useState<"todas" | ConvStatus>("escalada");
+  const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  const [mensajes, setMensajes] = useState<any[]>([]);
   const [showTechnical, setShowTechnical] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState("");
