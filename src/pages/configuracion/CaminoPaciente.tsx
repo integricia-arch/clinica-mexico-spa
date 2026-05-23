@@ -405,7 +405,7 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
     setLoading(false);
   };
 
-  useMemo(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentStep?.id]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentStep?.id]);
 
   const available = currentStep ? getAvailableOptionsForStep(currentStep.step_key) : [];
   const existingKeys = new Set(fields.map((f) => f.field_key));
@@ -509,7 +509,7 @@ function CatalogsPanel() {
     setItems(map);
     setLoading(false);
   };
-  useMemo(() => { load(); }, []);
+  useEffect(() => { load(); }, []);
 
   const toggleItem = async (it: any) => {
     const { error } = await supabase.from("journey_option_items").update({ is_active: !it.is_active }).eq("id", it.id);
@@ -573,7 +573,7 @@ function RulesPanel({ steps, versionId }: { steps: JourneyStep[]; versionId: str
     setRules((data as any) ?? []);
     setLoading(false);
   };
-  useMemo(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [versionId]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [versionId]);
 
   const stepKeys = new Set(steps.map((s) => s.step_key));
 
@@ -681,7 +681,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
     setVersions((data as any) ?? []);
     setLoading(false);
   };
-  useMemo(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [templateId]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [templateId]);
 
   const createDraftFromActive = async () => {
     const active = versions.find((v) => v.status === "active");
