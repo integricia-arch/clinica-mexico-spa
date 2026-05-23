@@ -174,15 +174,18 @@ export default function Inbox() {
   );
 
   const filteredOrdered = useMemo(() => {
-    const list = filter === "todas" ? [...conversaciones] : conversaciones.filter((c) => c.status === filter);
-    // Escaladas primero
+    const q = search.trim().toLowerCase();
+    let list = filter === "todas" ? [...conversaciones] : conversaciones.filter((c) => c.status === filter);
+    if (q) {
+      list = list.filter((c) => nombreIdentidad(c).toLowerCase().includes(q));
+    }
     list.sort((a, b) => {
       if (a.status === "escalada" && b.status !== "escalada") return -1;
       if (b.status === "escalada" && a.status !== "escalada") return 1;
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
     return list;
-  }, [conversaciones, filter]);
+  }, [conversaciones, filter, search]);
 
   const selected = conversaciones.find((c) => c.id === selectedId) || null;
 
