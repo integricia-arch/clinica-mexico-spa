@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { toast } from "sonner";
 import { useJourneyTemplates, useJourneyVersion, type JourneyStep, type JourneyTemplate } from "@/features/camino-paciente/hooks/useJourneyData";
 import { STEP_TYPE_LABELS, TEMPLATE_TYPE_LABELS, APP_ROLES, CRITICAL_STEP_KEYS } from "@/features/camino-paciente/lib/stepKeys";
