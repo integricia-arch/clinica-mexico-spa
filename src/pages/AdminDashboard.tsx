@@ -212,36 +212,11 @@ export default function AdminDashboard() {
 
   const startJourney = async (row: KanbanRow) => {
     if (!row.patient || !row.appointment) return;
-    if (data.instancesByAppointment[row.appointment.id]) {
-      toast.info("Esta cita ya tiene un camino iniciado");
-      return;
-    }
-    const { data: tpls } = await supabase
-      .from("journey_templates")
-      .select("id, active_version_id, is_default, is_active")
-      .eq("is_active", true)
-      .order("is_default", { ascending: false })
-      .limit(1);
-    const tpl = tpls?.[0];
-    if (!tpl || !tpl.active_version_id) {
-      toast.error("No existe una plantilla activa del Camino del Paciente. Configúrala antes de iniciar.");
-      return;
-    }
-    const [{ data: version }, { data: steps }] = await Promise.all([
-      supabase.from("journey_template_versions").select("*").eq("id", tpl.active_version_id).maybeSingle(),
-      supabase.from("journey_step_definitions").select("*").eq("template_version_id", tpl.active_version_id).order("step_order"),
-    ]);
-    const firstStep = steps?.[0]?.step_key ?? "arrival";
-    const { error } = await supabase.from("journey_instances").insert({
-      appointment_id: row.appointment.id,
-      patient_id: row.patient.id,
-      template_id: tpl.id,
-      template_version_id: tpl.active_version_id,
-      status: "en_proceso",
-      snapshot_json: { current_step_key: firstStep, version: version?.version_number ?? 1, steps: steps ?? [] },
-    });
-    if (error) { toast.error("No se pudo iniciar el camino: " + error.message); return; }
-    toast.success("Camino del paciente iniciado");
+    const { createJourneyFromAppointment } = await import("@/features/camino-paciente/services/journeyEngine");
+    const r = await createJourneyFromAppointment(row.appointment.id);
+    if (!r.ok) { toast.error(r.error ?? "No se pudo iniciar el camino"); return; }
+    toast.success(r.data?.created ? "Camino del paciente iniciado" : "El camino ya existía, abriéndolo");
+    if (r.data?.journey_instance_id) navigate(`/camino-paciente/${r.data.journey_instance_id}`);
     reload();
   };
 
