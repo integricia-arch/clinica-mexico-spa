@@ -49,8 +49,6 @@ const allStatuses: AppointmentStatus[] = [
   "cancelada", "liberada",
 ];
 
-type CanalRecordatorio = "whatsapp" | "sms" | "email";
-
 interface IdentidadCanal {
   id: string;
   canal_id: string;
