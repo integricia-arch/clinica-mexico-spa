@@ -187,9 +187,9 @@ export default function DetalleCita() {
           .eq("id", id)
           .single(),
         supabase.from("appointment_resources").select("*").eq("appointment_id", id),
-        supabase
-          .from("reminders")
-          .select("*")
+        (supabase as any)
+          .from("recordatorios_cita")
+          .select("*, identidades_canal(canal_id, display_name)")
           .eq("appointment_id", id)
           .order("programado_para", { ascending: true }),
       ]);
