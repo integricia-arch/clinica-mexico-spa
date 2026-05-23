@@ -587,7 +587,7 @@ async function agendarCita(
         appointment_id:     cita.id,
         identidad_canal_id: conv.identidad_canal_id,
         programado_para:    rec24h.toISOString(),
-        tipo:               "T-24h",
+        tipo:               "t24h",
         status:             "pendiente",
       });
     }
@@ -596,7 +596,7 @@ async function agendarCita(
         appointment_id:     cita.id,
         identidad_canal_id: conv.identidad_canal_id,
         programado_para:    rec2h.toISOString(),
-        tipo:               "T-2h",
+        tipo:               "t2h",
         status:             "pendiente",
       });
     }
