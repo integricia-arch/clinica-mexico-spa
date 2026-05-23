@@ -14,8 +14,8 @@ import { Globe, Send, MessageCircle, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type Status = "solicitada" | "confirmada" | "cancelada" | "completada";
-const STATUSES: Status[] = ["solicitada", "confirmada", "cancelada", "completada"];
+type Status = "solicitada" | "confirmada" | "cancelada" | "recordatorio_enviado";
+const STATUSES: Status[] = ["solicitada", "confirmada", "recordatorio_enviado", "cancelada"];
 
 interface Doctor { id: string; nombre: string; apellidos: string; activo: boolean; }
 interface Cita {
@@ -38,8 +38,8 @@ interface Cita {
 const STATUS_META: Record<Status, { label: string; cls: string }> = {
   solicitada: { label: "Solicitada", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
   confirmada: { label: "Confirmada", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
+  recordatorio_enviado: { label: "Recordada", cls: "bg-primary/15 text-primary" },
   cancelada: { label: "Cancelada", cls: "bg-destructive/15 text-destructive" },
-  completada: { label: "Completada", cls: "bg-primary/15 text-primary" },
 };
 
 const ORIGEN_META: Record<string, { Icon: any; cls: string }> = {
