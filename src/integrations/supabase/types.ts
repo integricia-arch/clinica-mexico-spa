@@ -180,6 +180,8 @@ export type Database = {
           conversacion_id: string
           created_at: string
           doctor_id: string | null
+          flow_data: Json
+          flow_step: string | null
           id: string
           servicio_id: string | null
           slot_propuesto: string | null
@@ -192,6 +194,8 @@ export type Database = {
           conversacion_id: string
           created_at?: string
           doctor_id?: string | null
+          flow_data?: Json
+          flow_step?: string | null
           id?: string
           servicio_id?: string | null
           slot_propuesto?: string | null
@@ -204,6 +208,8 @@ export type Database = {
           conversacion_id?: string
           created_at?: string
           doctor_id?: string | null
+          flow_data?: Json
+          flow_step?: string | null
           id?: string
           servicio_id?: string | null
           slot_propuesto?: string | null
@@ -383,7 +389,7 @@ export type Database = {
           nombre: string
           telefono: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           activo?: boolean
@@ -398,7 +404,7 @@ export type Database = {
           nombre: string
           telefono?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           activo?: boolean
@@ -413,7 +419,7 @@ export type Database = {
           nombre?: string
           telefono?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -746,13 +752,17 @@ export type Database = {
           created_at: string
           curp: string | null
           direccion: string | null
+          domicilio_ciudad: string | null
+          domicilio_estado: string | null
           email: string | null
           estado: string | null
           fecha_nacimiento: string | null
           id: string
           municipio: string | null
+          nacionalidad: string | null
           nombre: string
           notas: string | null
+          ocupacion: string | null
           rfc: string | null
           sexo: string | null
           telefono: string | null
@@ -771,13 +781,17 @@ export type Database = {
           created_at?: string
           curp?: string | null
           direccion?: string | null
+          domicilio_ciudad?: string | null
+          domicilio_estado?: string | null
           email?: string | null
           estado?: string | null
           fecha_nacimiento?: string | null
           id?: string
           municipio?: string | null
+          nacionalidad?: string | null
           nombre: string
           notas?: string | null
+          ocupacion?: string | null
           rfc?: string | null
           sexo?: string | null
           telefono?: string | null
@@ -796,13 +810,17 @@ export type Database = {
           created_at?: string
           curp?: string | null
           direccion?: string | null
+          domicilio_ciudad?: string | null
+          domicilio_estado?: string | null
           email?: string | null
           estado?: string | null
           fecha_nacimiento?: string | null
           id?: string
           municipio?: string | null
+          nacionalidad?: string | null
           nombre?: string
           notas?: string | null
+          ocupacion?: string | null
           rfc?: string | null
           sexo?: string | null
           telefono?: string | null
