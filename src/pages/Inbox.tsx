@@ -371,6 +371,33 @@ export default function Inbox() {
               })}
               <div ref={bottomRef} />
             </div>
+
+            {selected.status === "escalada" ? (
+              <div className="border-t border-border p-3 bg-card">
+                <div className="flex gap-2 items-end">
+                  <Textarea
+                    rows={2}
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    placeholder="Escribe tu respuesta…"
+                    className="resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarRespuesta(); }
+                    }}
+                  />
+                  <Button onClick={enviarRespuesta} disabled={sending || !reply.trim()}>
+                    <SendHorizonal className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1.5">
+                  Enter para enviar · Shift+Enter para nueva línea
+                </p>
+              </div>
+            ) : selected.status === "activa" ? (
+              <div className="border-t border-border p-3 bg-muted/30 text-xs text-muted-foreground text-center">
+                El bot está atendiendo esta conversación. Usa "Tomar control" para responder.
+              </div>
+            ) : null}
           </>
         )}
       </div>
