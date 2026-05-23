@@ -174,33 +174,49 @@ export type Database = {
       }
       bot_sesiones: {
         Row: {
-          contexto: Json
+          borrador_paciente: Json
+          consentimiento_dado: boolean
+          consentimiento_fecha: string | null
+          conversacion_id: string
+          created_at: string
           doctor_id: string | null
-          identidad_canal_id: string
-          paso_actual: string | null
+          id: string
           servicio_id: string | null
           slot_propuesto: string | null
           updated_at: string
         }
         Insert: {
-          contexto?: Json
+          borrador_paciente?: Json
+          consentimiento_dado?: boolean
+          consentimiento_fecha?: string | null
+          conversacion_id: string
+          created_at?: string
           doctor_id?: string | null
-          identidad_canal_id: string
-          paso_actual?: string | null
+          id?: string
           servicio_id?: string | null
           slot_propuesto?: string | null
           updated_at?: string
         }
         Update: {
-          contexto?: Json
+          borrador_paciente?: Json
+          consentimiento_dado?: boolean
+          consentimiento_fecha?: string | null
+          conversacion_id?: string
+          created_at?: string
           doctor_id?: string | null
-          identidad_canal_id?: string
-          paso_actual?: string | null
+          id?: string
           servicio_id?: string | null
           slot_propuesto?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bot_sesiones_conversacion_id_fkey"
+            columns: ["conversacion_id"]
+            isOneToOne: true
+            referencedRelation: "conversaciones"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bot_sesiones_doctor_id_fkey"
             columns: ["doctor_id"]
@@ -216,17 +232,58 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "bot_sesiones_identidad_canal_id_fkey"
-            columns: ["identidad_canal_id"]
-            isOneToOne: true
-            referencedRelation: "identidades_canal"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "bot_sesiones_servicio_id_fkey"
             columns: ["servicio_id"]
             isOneToOne: false
             referencedRelation: "servicios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consentimientos: {
+        Row: {
+          created_at: string
+          id: string
+          identidad_canal_id: string | null
+          otorgado: boolean
+          otorgado_at: string
+          patient_id: string
+          tipo: string
+          version_texto: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identidad_canal_id?: string | null
+          otorgado: boolean
+          otorgado_at?: string
+          patient_id: string
+          tipo: string
+          version_texto: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identidad_canal_id?: string | null
+          otorgado?: boolean
+          otorgado_at?: string
+          patient_id?: string
+          tipo?: string
+          version_texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consentimientos_identidad_canal_id_fkey"
+            columns: ["identidad_canal_id"]
+            isOneToOne: false
+            referencedRelation: "identidades_canal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consentimientos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
