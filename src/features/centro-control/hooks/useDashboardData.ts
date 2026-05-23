@@ -75,7 +75,7 @@ export function useDashboardData(date: Date) {
         patientIds.length ? supabase.from("expedientes").select("id,patient_id,activo,tipo").in("patient_id", patientIds).eq("activo", true) : Promise.resolve({ data: [] }),
         patientIds.length ? supabase.from("consentimientos").select("id,patient_id,tipo,otorgado,otorgado_at").in("patient_id", patientIds).eq("otorgado", true) : Promise.resolve({ data: [] }),
         supabase.from("recordatorios_cita").select("*").gte("programado_para", start).lt("programado_para", new Date(date.getTime() + 7 * 86400000).toISOString()).order("programado_para").limit(50),
-        supabase.from("conversaciones").select("*").eq("status", "escalada_humano").order("last_message_at", { ascending: false }).limit(20),
+        supabase.from("conversaciones").select("*").eq("status", "escalada").order("last_message_at", { ascending: false }).limit(20),
         supabase.from("audit_logs").select("id,accion,tabla,registro_id,user_id,created_at").order("created_at", { ascending: false }).limit(20),
         supabase.from("doctors").select("id,nombre,apellidos,especialidad,activo").eq("activo", true).order("apellidos"),
         supabase.from("rooms").select("id,nombre,piso,activo").eq("activo", true).order("nombre"),
