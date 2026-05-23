@@ -49,7 +49,7 @@ const allStatuses: AppointmentStatus[] = [
   "cancelada", "liberada",
 ];
 
-type CanalRecordatorio = "whatsapp" | "sms" | "email" | "telegram";
+type CanalRecordatorio = "whatsapp" | "sms" | "email";
 
 interface IdentidadCanal {
   id: string;
