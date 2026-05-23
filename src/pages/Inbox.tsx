@@ -215,13 +215,22 @@ export default function Inbox() {
   const enviarRespuesta = async () => {
     if (!selected || !reply.trim()) return;
     setSending(true);
-    const { error } = await supabase.from("mensajes").insert({
-      conversacion_id: selected.id,
-      rol: "assistant",
-      contenido: reply.trim(),
-    });
+    const mensaje = reply.trim();
+    try {
+      const { error: fnErr } = await supabase.functions.invoke("enviar-mensaje-humano", {
+        body: { conversacion_id: selected.id, mensaje },
+      });
+      if (fnErr) throw fnErr;
+    } catch {
+      // Fallback: insertar directo si la edge function no está disponible
+      const { error } = await supabase.from("mensajes").insert({
+        conversacion_id: selected.id,
+        rol: "assistant",
+        contenido: mensaje,
+      });
+      if (error) { setSending(false); toast.error("No se pudo enviar"); return; }
+    }
     setSending(false);
-    if (error) { toast.error("No se pudo enviar"); return; }
     setReply("");
   };
 
