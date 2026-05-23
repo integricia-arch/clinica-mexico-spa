@@ -423,7 +423,9 @@ export default function DetalleCita() {
           ) : (
             <div className="space-y-2">
               {recordatorios.map((r) => {
-                const canalNombre = canalLabel[r.canal] ?? r.canal;
+                const canalKey = r.identidades_canal?.canal_id;
+                const canalNombre = canalKey ? (canalLabel[canalKey] ?? canalKey) : "—";
+                const tipoLabel = r.tipo === "manual" ? "Manual" : (r.tipo ?? "");
                 return (
                   <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-sm">
                     <div className="flex items-center gap-2">
@@ -432,20 +434,26 @@ export default function DetalleCita() {
                       <span className="text-muted-foreground">
                         {format(new Date(r.programado_para), "d MMM, HH:mm", { locale: es })}
                       </span>
+                      {tipoLabel && (
+                        <>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-xs text-muted-foreground">{tipoLabel}</span>
+                        </>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                        r.estado === "enviado" ? "bg-success/10 text-success"
-                        : r.estado === "fallido" ? "bg-destructive/10 text-destructive"
-                        : r.estado === "cancelado" ? "bg-muted text-muted-foreground"
+                        r.status === "enviado" ? "bg-success/10 text-success"
+                        : r.status === "fallido" ? "bg-destructive/10 text-destructive"
+                        : r.status === "cancelado" ? "bg-muted text-muted-foreground"
                         : "bg-warning/10 text-warning"
                       }`}>
-                        {estadoRecordatorioLabel[r.estado] ?? r.estado}
+                        {estadoRecordatorioLabel[r.status] ?? r.status}
                       </span>
-                      {puedeGestionarRecordatorios && r.estado !== "enviado" && (
+                      {puedeGestionarRecordatorios && r.status !== "enviado" && (
                         <>
-                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => enviarAhora(r)}>
-                            Enviar ahora
+                          <Button size="sm" variant="ghost" className="h-7 px-2" disabled={sendingNow === r.id} onClick={() => enviarAhora(r)}>
+                            {sendingNow === r.id ? "Enviando…" : "Enviar ahora"}
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => abrirReprogramar(r)}>
                             <CalendarClock className="mr-1 h-3.5 w-3.5" /> Reprogramar
