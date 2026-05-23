@@ -479,12 +479,15 @@ export default function DetalleCita() {
           <div className="space-y-4">
             <div>
               <Label>Canal</Label>
-              <Select value={reminderCanal} onValueChange={(v) => setReminderCanal(v as CanalRecordatorio)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={reminderIdentidadId} onValueChange={setReminderIdentidadId}>
+                <SelectTrigger><SelectValue placeholder="Selecciona un canal" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="sms">SMS</SelectItem>
-                  <SelectItem value="email">Correo</SelectItem>
+                  {identidadesCanal.map((ic) => (
+                    <SelectItem key={ic.id} value={ic.id}>
+                      {(canalLabel[ic.canal_id] ?? ic.canal_id)}
+                      {ic.display_name ? ` — ${ic.display_name}` : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
