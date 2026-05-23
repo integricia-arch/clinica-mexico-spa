@@ -9,6 +9,7 @@ import {
   getPatientOperationalRisk, riskBadgeClass, minutesSince,
   type JourneyInstanceLite,
 } from "../lib/journeyHelpers";
+import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 
 export interface KanbanRow {
   appointment: any;
