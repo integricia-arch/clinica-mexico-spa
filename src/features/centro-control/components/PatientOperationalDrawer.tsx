@@ -9,6 +9,7 @@ import {
   getPatientOperationalRisk, riskBadgeClass,
 } from "../lib/journeyHelpers";
 import { FileText, Calendar as CalIcon, Pill, Receipt, MessageSquare, ShieldCheck } from "lucide-react";
+import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 
 interface Props {
   row: KanbanRow | null;
