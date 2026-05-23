@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,27 @@ export default function Configuracion() {
         <p className="mt-1 text-sm text-muted-foreground">Ajustes generales del sistema y administración de la clínica</p>
       </div>
 
+      {/* Camino del Paciente — submódulo destacado */}
+      {isAdmin && (
+        <Link
+          to="/configuracion/camino-paciente"
+          className="group flex items-center justify-between rounded-xl border border-primary/30 bg-gradient-to-r from-primary/5 to-transparent p-5 shadow-card hover:shadow-elevated transition-shadow"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <RouteIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-display font-semibold text-card-foreground">Configuración del Camino del Paciente</h2>
+              <p className="text-sm text-muted-foreground">Plantillas, etapas, campos, reglas y versionado del flujo del paciente.</p>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-primary group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      )}
+
       {/* Consultorios */}
+      
       <div className="rounded-xl border border-border bg-card p-5 shadow-card">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">

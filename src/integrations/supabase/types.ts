@@ -516,6 +516,450 @@ export type Database = {
           },
         ]
       }
+      journey_configuration_audit: {
+        Row: {
+          action: string
+          created_at: string
+          entity: string
+          entity_id: string | null
+          id: string
+          new_value_json: Json | null
+          old_value_json: Json | null
+          reason: string | null
+          template_id: string | null
+          user_id: string | null
+          version_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity: string
+          entity_id?: string | null
+          id?: string
+          new_value_json?: Json | null
+          old_value_json?: Json | null
+          reason?: string | null
+          template_id?: string | null
+          user_id?: string | null
+          version_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          new_value_json?: Json | null
+          old_value_json?: Json | null
+          reason?: string | null
+          template_id?: string | null
+          user_id?: string | null
+          version_id?: string | null
+        }
+        Relationships: []
+      }
+      journey_instances: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          id: string
+          patient_id: string | null
+          snapshot_json: Json
+          status: string
+          template_id: string
+          template_version_id: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          patient_id?: string | null
+          snapshot_json: Json
+          status?: string
+          template_id: string
+          template_version_id: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          patient_id?: string | null
+          snapshot_json?: Json
+          status?: string
+          template_id?: string
+          template_version_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "journey_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_instances_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "journey_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_option_catalogs: {
+        Row: {
+          applies_to_step_key: string | null
+          applies_to_step_type:
+            | Database["public"]["Enums"]["journey_step_type"]
+            | null
+          catalog_key: string
+          catalog_name: string
+          created_at: string
+          id: string
+          is_active: boolean
+        }
+        Insert: {
+          applies_to_step_key?: string | null
+          applies_to_step_type?:
+            | Database["public"]["Enums"]["journey_step_type"]
+            | null
+          catalog_key: string
+          catalog_name: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Update: {
+          applies_to_step_key?: string | null
+          applies_to_step_type?:
+            | Database["public"]["Enums"]["journey_step_type"]
+            | null
+          catalog_key?: string
+          catalog_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
+      journey_option_items: {
+        Row: {
+          catalog_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_critical: boolean
+          metadata: Json
+          option_key: string
+          option_label: string
+          requires_special_role: boolean
+          sort_order: number
+        }
+        Insert: {
+          catalog_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_critical?: boolean
+          metadata?: Json
+          option_key: string
+          option_label: string
+          requires_special_role?: boolean
+          sort_order?: number
+        }
+        Update: {
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_critical?: boolean
+          metadata?: Json
+          option_key?: string
+          option_label?: string
+          requires_special_role?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_option_items_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "journey_option_catalogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_step_definitions: {
+        Row: {
+          allow_not_applicable: boolean
+          allowed_complete_roles: Json
+          allowed_edit_roles: Json
+          allowed_override_roles: Json
+          blocks_progress: boolean
+          created_at: string
+          id: string
+          is_critical: boolean
+          is_required: boolean
+          max_recommended_minutes: number | null
+          requires_document: boolean
+          requires_responsible: boolean
+          step_description: string | null
+          step_key: string
+          step_name: string
+          step_order: number
+          step_type: Database["public"]["Enums"]["journey_step_type"]
+          template_version_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_not_applicable?: boolean
+          allowed_complete_roles?: Json
+          allowed_edit_roles?: Json
+          allowed_override_roles?: Json
+          blocks_progress?: boolean
+          created_at?: string
+          id?: string
+          is_critical?: boolean
+          is_required?: boolean
+          max_recommended_minutes?: number | null
+          requires_document?: boolean
+          requires_responsible?: boolean
+          step_description?: string | null
+          step_key: string
+          step_name: string
+          step_order: number
+          step_type: Database["public"]["Enums"]["journey_step_type"]
+          template_version_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_not_applicable?: boolean
+          allowed_complete_roles?: Json
+          allowed_edit_roles?: Json
+          allowed_override_roles?: Json
+          blocks_progress?: boolean
+          created_at?: string
+          id?: string
+          is_critical?: boolean
+          is_required?: boolean
+          max_recommended_minutes?: number | null
+          requires_document?: boolean
+          requires_responsible?: boolean
+          step_description?: string | null
+          step_key?: string
+          step_name?: string
+          step_order?: number
+          step_type?: Database["public"]["Enums"]["journey_step_type"]
+          template_version_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_step_definitions_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "journey_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_step_fields: {
+        Row: {
+          created_at: string
+          default_value: Json | null
+          editable_roles: Json
+          field_key: string
+          field_label: string
+          field_type: Database["public"]["Enums"]["journey_field_type"]
+          help_text: string | null
+          id: string
+          is_required: boolean
+          options_source: string | null
+          sort_order: number
+          step_definition_id: string
+          validation_json: Json
+          visible_roles: Json
+        }
+        Insert: {
+          created_at?: string
+          default_value?: Json | null
+          editable_roles?: Json
+          field_key: string
+          field_label: string
+          field_type: Database["public"]["Enums"]["journey_field_type"]
+          help_text?: string | null
+          id?: string
+          is_required?: boolean
+          options_source?: string | null
+          sort_order?: number
+          step_definition_id: string
+          validation_json?: Json
+          visible_roles?: Json
+        }
+        Update: {
+          created_at?: string
+          default_value?: Json | null
+          editable_roles?: Json
+          field_key?: string
+          field_label?: string
+          field_type?: Database["public"]["Enums"]["journey_field_type"]
+          help_text?: string | null
+          id?: string
+          is_required?: boolean
+          options_source?: string | null
+          sort_order?: number
+          step_definition_id?: string
+          validation_json?: Json
+          visible_roles?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_step_fields_step_definition_id_fkey"
+            columns: ["step_definition_id"]
+            isOneToOne: false
+            referencedRelation: "journey_step_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_template_versions: {
+        Row: {
+          config_json: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          publish_reason: string | null
+          published_at: string | null
+          published_by: string | null
+          status: Database["public"]["Enums"]["journey_version_status"]
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          config_json?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          publish_reason?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          status?: Database["public"]["Enums"]["journey_version_status"]
+          template_id: string
+          version_number: number
+        }
+        Update: {
+          config_json?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          publish_reason?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          status?: Database["public"]["Enums"]["journey_version_status"]
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "journey_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_templates: {
+        Row: {
+          active_version_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          type: Database["public"]["Enums"]["journey_template_type"]
+          updated_at: string
+        }
+        Insert: {
+          active_version_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          type: Database["public"]["Enums"]["journey_template_type"]
+          updated_at?: string
+        }
+        Update: {
+          active_version_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          type?: Database["public"]["Enums"]["journey_template_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_templates_active_version_fk"
+            columns: ["active_version_id"]
+            isOneToOne: false
+            referencedRelation: "journey_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_validation_rules: {
+        Row: {
+          action_json: Json
+          condition_json: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          rule_name: string
+          severity: Database["public"]["Enums"]["journey_rule_severity"]
+          source_step_key: string
+          template_version_id: string
+        }
+        Insert: {
+          action_json: Json
+          condition_json: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          rule_name: string
+          severity?: Database["public"]["Enums"]["journey_rule_severity"]
+          source_step_key: string
+          template_version_id: string
+        }
+        Update: {
+          action_json?: Json
+          condition_json?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          rule_name?: string
+          severity?: Database["public"]["Enums"]["journey_rule_severity"]
+          source_step_key?: string
+          template_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_validation_rules_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "journey_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lotes_medicamento: {
         Row: {
           created_at: string
@@ -1053,6 +1497,44 @@ export type Database = {
         | "urgencia"
         | "cirugia"
         | "cronico"
+      journey_field_type:
+        | "texto_corto"
+        | "texto_largo"
+        | "numero"
+        | "fecha"
+        | "fecha_hora"
+        | "seleccion_unica"
+        | "seleccion_multiple"
+        | "si_no"
+        | "archivo"
+        | "firma"
+        | "usuario_responsable"
+        | "medicamento"
+        | "diagnostico"
+        | "servicio"
+        | "metodo_pago"
+        | "resultado_laboratorio"
+        | "signos_vitales"
+        | "checklist"
+      journey_rule_severity: "info" | "warning" | "blocking"
+      journey_step_type:
+        | "administrativa"
+        | "clinica"
+        | "legal"
+        | "farmacia"
+        | "facturacion"
+        | "seguimiento"
+        | "auditoria"
+      journey_template_type:
+        | "consulta_general"
+        | "consulta_seguimiento"
+        | "urgencia"
+        | "procedimiento_menor"
+        | "laboratorio"
+        | "farmacia"
+        | "teleconsulta"
+        | "alta_administrativa"
+      journey_version_status: "draft" | "active" | "archived"
       mensaje_rol: "user" | "assistant" | "tool" | "system"
       movimiento_tipo: "entrada" | "salida" | "ajuste"
       recordatorio_status: "pendiente" | "enviado" | "fallido" | "cancelado"
@@ -1206,6 +1688,47 @@ export const Constants = {
         "cirugia",
         "cronico",
       ],
+      journey_field_type: [
+        "texto_corto",
+        "texto_largo",
+        "numero",
+        "fecha",
+        "fecha_hora",
+        "seleccion_unica",
+        "seleccion_multiple",
+        "si_no",
+        "archivo",
+        "firma",
+        "usuario_responsable",
+        "medicamento",
+        "diagnostico",
+        "servicio",
+        "metodo_pago",
+        "resultado_laboratorio",
+        "signos_vitales",
+        "checklist",
+      ],
+      journey_rule_severity: ["info", "warning", "blocking"],
+      journey_step_type: [
+        "administrativa",
+        "clinica",
+        "legal",
+        "farmacia",
+        "facturacion",
+        "seguimiento",
+        "auditoria",
+      ],
+      journey_template_type: [
+        "consulta_general",
+        "consulta_seguimiento",
+        "urgencia",
+        "procedimiento_menor",
+        "laboratorio",
+        "farmacia",
+        "teleconsulta",
+        "alta_administrativa",
+      ],
+      journey_version_status: ["draft", "active", "archived"],
       mensaje_rol: ["user", "assistant", "tool", "system"],
       movimiento_tipo: ["entrada", "salida", "ajuste"],
       recordatorio_status: ["pendiente", "enviado", "fallido", "cancelado"],
