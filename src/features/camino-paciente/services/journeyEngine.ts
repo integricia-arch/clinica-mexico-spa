@@ -40,8 +40,8 @@ async function audit(
     journey_instance_id,
     journey_instance_step_id: opts.step_id ?? null,
     action,
-    old_value_json: opts.old_value ?? null,
-    new_value_json: opts.new_value ?? null,
+    old_value_json: (opts.old_value ?? null) as never,
+    new_value_json: (opts.new_value ?? null) as never,
     user_id: userData.user?.id ?? null,
     reason: opts.reason ?? null,
   });
