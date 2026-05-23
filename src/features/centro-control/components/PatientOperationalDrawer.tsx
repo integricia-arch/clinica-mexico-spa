@@ -41,7 +41,12 @@ export default function PatientOperationalDrawer({ row, open, onOpenChange, onNa
               <Badge variant="outline" className={`${stage.bg} ${stage.text} border-0`}>{stage.label}</Badge>
             </div>
             <div className="rounded-lg border border-border p-4">
-              <PatientJourneyLine journeyInstance={instance} showLabels showProgress />
+              <PatientJourneyLine
+                journeyInstance={instance}
+                showLabels
+                showProgress
+                onStepDoubleClick={(s) => s.targetRoute && onNavigate(s.targetRoute)}
+              />
             </div>
           </section>
 
