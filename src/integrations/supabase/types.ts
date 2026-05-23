@@ -172,6 +172,65 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_sesiones: {
+        Row: {
+          contexto: Json
+          doctor_id: string | null
+          identidad_canal_id: string
+          paso_actual: string | null
+          servicio_id: string | null
+          slot_propuesto: string | null
+          updated_at: string
+        }
+        Insert: {
+          contexto?: Json
+          doctor_id?: string | null
+          identidad_canal_id: string
+          paso_actual?: string | null
+          servicio_id?: string | null
+          slot_propuesto?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contexto?: Json
+          doctor_id?: string | null
+          identidad_canal_id?: string
+          paso_actual?: string | null
+          servicio_id?: string | null
+          slot_propuesto?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_sesiones_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_sesiones_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_sesiones_identidad_canal_id_fkey"
+            columns: ["identidad_canal_id"]
+            isOneToOne: true
+            referencedRelation: "identidades_canal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_sesiones_servicio_id_fkey"
+            columns: ["servicio_id"]
+            isOneToOne: false
+            referencedRelation: "servicios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversaciones: {
         Row: {
           asignada_humano_id: string | null
@@ -209,6 +268,46 @@ export type Database = {
             columns: ["identidad_canal_id"]
             isOneToOne: false
             referencedRelation: "identidades_canal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_servicios: {
+        Row: {
+          created_at: string
+          doctor_id: string
+          servicio_id: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_id: string
+          servicio_id: string
+        }
+        Update: {
+          created_at?: string
+          doctor_id?: string
+          servicio_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_servicios_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_servicios_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_servicios_servicio_id_fkey"
+            columns: ["servicio_id"]
+            isOneToOne: false
+            referencedRelation: "servicios"
             referencedColumns: ["id"]
           },
         ]
