@@ -18,6 +18,7 @@ import Facturacion from "@/pages/Facturacion";
 import Expedientes from "@/pages/Expedientes";
 import Farmacia from "@/pages/Farmacia";
 import Configuracion from "@/pages/Configuracion";
+import CaminoPacienteConfig from "@/pages/configuracion/CaminoPaciente";
 import Auditoria from "@/pages/Auditoria";
 import Inbox from "@/pages/Inbox";
 import Citas from "@/pages/Citas";
