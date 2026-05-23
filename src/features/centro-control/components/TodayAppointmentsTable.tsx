@@ -62,9 +62,14 @@ export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, on
                         {STATUS_LABEL[r.appointment.status] ?? r.appointment.status}
                       </Badge>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 min-w-[260px]">
                       {r.instance ? (
-                        <Badge variant="outline" className={`${st.bg} ${st.text} border-0 text-[11px]`}>{st.label}</Badge>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1"><PatientJourneyLine journeyInstance={r.instance} compact showLabels={false} /></div>
+                          <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                            {journeyProgress(buildJourneyLineSteps(r.instance)).label}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-[11px] text-muted-foreground italic">Sin camino iniciado</span>
                       )}
