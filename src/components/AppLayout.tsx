@@ -80,15 +80,9 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "receptionist", "doctor"],
   },
   {
-    to: "/conversaciones",
+    to: "/inbox",
     icon: MessageCircle,
     label: "Conversaciones",
-    roles: ["admin", "receptionist", "doctor", "nurse"],
-  },
-  {
-    to: "/inbox",
-    icon: InboxIcon,
-    label: "Inbox",
     roles: ["admin", "receptionist", "doctor", "nurse"],
   },
   {
