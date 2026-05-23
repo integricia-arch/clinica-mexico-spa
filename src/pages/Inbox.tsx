@@ -76,8 +76,9 @@ export default function Inbox() {
   const [searchParams] = useSearchParams();
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [filter, setFilter] = useState<"todas" | ConvStatus>("escalada");
+  const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  const [mensajes, setMensajes] = useState<any[]>([]);
   const [showTechnical, setShowTechnical] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState("");
@@ -173,15 +174,18 @@ export default function Inbox() {
   );
 
   const filteredOrdered = useMemo(() => {
-    const list = filter === "todas" ? [...conversaciones] : conversaciones.filter((c) => c.status === filter);
-    // Escaladas primero
+    const q = search.trim().toLowerCase();
+    let list = filter === "todas" ? [...conversaciones] : conversaciones.filter((c) => c.status === filter);
+    if (q) {
+      list = list.filter((c) => nombreIdentidad(c).toLowerCase().includes(q));
+    }
     list.sort((a, b) => {
       if (a.status === "escalada" && b.status !== "escalada") return -1;
       if (b.status === "escalada" && a.status !== "escalada") return 1;
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
     return list;
-  }, [conversaciones, filter]);
+  }, [conversaciones, filter, search]);
 
   const selected = conversaciones.find((c) => c.id === selectedId) || null;
 
@@ -211,13 +215,22 @@ export default function Inbox() {
   const enviarRespuesta = async () => {
     if (!selected || !reply.trim()) return;
     setSending(true);
-    const { error } = await supabase.from("mensajes").insert({
-      conversacion_id: selected.id,
-      rol: "assistant",
-      contenido: reply.trim(),
-    });
+    const mensaje = reply.trim();
+    try {
+      const { error: fnErr } = await supabase.functions.invoke("enviar-mensaje-humano", {
+        body: { conversacion_id: selected.id, mensaje },
+      });
+      if (fnErr) throw fnErr;
+    } catch {
+      // Fallback: insertar directo si la edge function no está disponible
+      const { error } = await supabase.from("mensajes").insert({
+        conversacion_id: selected.id,
+        rol: "assistant",
+        contenido: mensaje,
+      });
+      if (error) { setSending(false); toast.error("No se pudo enviar"); return; }
+    }
     setSending(false);
-    if (error) { toast.error("No se pudo enviar"); return; }
     setReply("");
   };
 
@@ -228,6 +241,14 @@ export default function Inbox() {
         <div className="p-4 border-b border-border">
           <h1 className="text-display text-lg font-bold">Inbox</h1>
           <p className="text-xs text-muted-foreground">Conversaciones de canales externos</p>
+        </div>
+        <div className="p-3 border-b border-border">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar paciente…"
+            className="h-9 text-sm"
+          />
         </div>
         <div className="flex gap-1 p-2 border-b border-border bg-muted/30">
           {STATUS_TABS.map((t) => {
@@ -344,22 +365,29 @@ export default function Inbox() {
                 const isUser = m.rol === "user";
                 const isAssist = m.rol === "assistant";
                 const isTech = m.rol === "tool" || m.rol === "system";
+                const isHuman = isAssist && (m as any).raw_payload?.sent_by_human === true;
                 return (
                   <div
                     key={m.id}
                     className={cn(
-                      "flex",
-                      isUser && "justify-start",
-                      isAssist && "justify-end",
-                      isTech && "justify-center",
+                      "flex flex-col",
+                      isUser && "items-start",
+                      isAssist && "items-end",
+                      isTech && "items-center",
                     )}
                   >
+                    {isHuman && (
+                      <span className="text-[10px] font-semibold text-green-700 dark:text-green-400 mb-0.5 mr-1">
+                        Recepción
+                      </span>
+                    )}
                     <div
                       title={new Date(m.created_at).toLocaleString("es-MX")}
                       className={cn(
                         "max-w-[75%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap break-words shadow-sm",
                         isUser && "bg-muted text-foreground rounded-bl-sm",
-                        isAssist && "bg-primary/10 text-foreground rounded-br-sm",
+                        isAssist && !isHuman && "bg-primary/10 text-foreground rounded-br-sm",
+                        isHuman && "bg-green-100 text-green-950 dark:bg-green-900/40 dark:text-green-50 rounded-br-sm border border-green-300/60",
                         isTech && "bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs font-mono border border-amber-500/30",
                       )}
                     >

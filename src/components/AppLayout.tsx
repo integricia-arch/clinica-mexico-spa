@@ -80,15 +80,9 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "receptionist", "doctor"],
   },
   {
-    to: "/conversaciones",
+    to: "/inbox",
     icon: MessageCircle,
     label: "Conversaciones",
-    roles: ["admin", "receptionist", "doctor", "nurse"],
-  },
-  {
-    to: "/inbox",
-    icon: InboxIcon,
-    label: "Inbox",
     roles: ["admin", "receptionist", "doctor", "nurse"],
   },
   {
@@ -179,7 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {visibleNav.map((item) => {
             const isActive = location.pathname === item.to;
-            const showBadge = item.to === "/conversaciones" && escaladasCount > 0;
+            const showBadge = item.to === "/inbox" && escaladasCount > 0;
             return (
               <NavLink
                 key={item.to}
@@ -194,7 +188,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <item.icon className="h-[18px] w-[18px]" />
                 <span className="flex-1">{item.label}</span>
                 {showBadge && (
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-orange-500 text-white px-1.5">
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-red-500 text-white px-1.5">
                     {escaladasCount}
                   </span>
                 )}
