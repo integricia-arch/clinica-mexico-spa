@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { KanbanRow } from "./PatientJourneyCard";
 import { getJourneyStageColor, getPatientNextAction } from "../lib/journeyHelpers";
+import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
+import { buildJourneyLineSteps, journeyProgress } from "@/features/camino-paciente/lib/buildJourneyLineSteps";
 
 interface Props {
   rows: KanbanRow[];
@@ -37,7 +39,7 @@ export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, on
                 <th className="px-5 py-3 font-medium">Médico</th>
                 <th className="px-5 py-3 font-medium">Consultorio</th>
                 <th className="px-5 py-3 font-medium">Estado</th>
-                <th className="px-5 py-3 font-medium">Etapa</th>
+                <th className="px-5 py-3 font-medium">Camino</th>
                 <th className="px-5 py-3 font-medium">Próxima acción</th>
                 <th className="px-5 py-3 font-medium text-right">Acciones</th>
               </tr>
@@ -60,9 +62,14 @@ export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, on
                         {STATUS_LABEL[r.appointment.status] ?? r.appointment.status}
                       </Badge>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 min-w-[260px]">
                       {r.instance ? (
-                        <Badge variant="outline" className={`${st.bg} ${st.text} border-0 text-[11px]`}>{st.label}</Badge>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1"><PatientJourneyLine journeyInstance={r.instance} compact showLabels={false} /></div>
+                          <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                            {journeyProgress(buildJourneyLineSteps(r.instance)).label}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-[11px] text-muted-foreground italic">Sin camino iniciado</span>
                       )}

@@ -9,6 +9,7 @@ import {
   getPatientOperationalRisk, riskBadgeClass,
 } from "../lib/journeyHelpers";
 import { FileText, Calendar as CalIcon, Pill, Receipt, MessageSquare, ShieldCheck } from "lucide-react";
+import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 
 interface Props {
   row: KanbanRow | null;
@@ -35,6 +36,21 @@ export default function PatientOperationalDrawer({ row, open, onOpenChange, onNa
 
         <div className="mt-5 space-y-5">
           <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase text-muted-foreground">Camino del paciente</h3>
+              <Badge variant="outline" className={`${stage.bg} ${stage.text} border-0`}>{stage.label}</Badge>
+            </div>
+            <div className="rounded-lg border border-border p-4">
+              <PatientJourneyLine
+                journeyInstance={instance}
+                showLabels
+                showProgress
+                onStepDoubleClick={(s) => s.targetRoute && onNavigate(s.targetRoute)}
+              />
+            </div>
+          </section>
+
+          <section className="space-y-2">
             <h3 className="text-xs font-semibold uppercase text-muted-foreground">Datos básicos</h3>
             <div className="rounded-lg border border-border p-3 text-sm space-y-1">
               {patient?.telefono && <p><span className="text-muted-foreground">Tel:</span> {patient.telefono}</p>}
@@ -56,7 +72,7 @@ export default function PatientOperationalDrawer({ row, open, onOpenChange, onNa
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase text-muted-foreground">Camino del paciente</h3>
+            <h3 className="text-xs font-semibold uppercase text-muted-foreground">Estado actual</h3>
             <div className="rounded-lg border border-border p-3 space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={`${stage.bg} ${stage.text} border-0`}>{stage.label}</Badge>

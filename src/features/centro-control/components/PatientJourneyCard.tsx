@@ -9,6 +9,7 @@ import {
   getPatientOperationalRisk, riskBadgeClass, minutesSince,
   type JourneyInstanceLite,
 } from "../lib/journeyHelpers";
+import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 
 export interface KanbanRow {
   appointment: any;
@@ -72,14 +73,8 @@ export default function PatientJourneyCard({ row, onOpen }: Props) {
           )}
         </div>
 
-        <div className="flex items-center gap-1 flex-wrap">
-          <Badge variant="outline" className={`${stage.bg} ${stage.text} border-0 text-[10px]`}>
-            {stage.label}
-          </Badge>
-          {stepKey && (
-            <Badge variant="outline" className="text-[10px]">{getJourneyStageLabel(stepKey)}</Badge>
-          )}
-        </div>
+        <PatientJourneyLine journeyInstance={instance} compact showLabels={false} />
+
 
         <div className="flex items-start gap-1 text-[11px] text-foreground bg-muted/50 rounded px-2 py-1">
           <AlertCircle className="h-3 w-3 mt-0.5 shrink-0 text-primary" />
