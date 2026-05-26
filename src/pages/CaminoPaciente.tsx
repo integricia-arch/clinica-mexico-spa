@@ -19,6 +19,7 @@ import {
   requestStepOverride,
   authorizeStepOverride,
 } from "@/features/camino-paciente/services/journeyEngine";
+import ArrivalForm from "@/features/camino-paciente/operativo/StepForms/ArrivalForm";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
