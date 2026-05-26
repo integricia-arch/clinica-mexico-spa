@@ -20,6 +20,7 @@ import {
   authorizeStepOverride,
 } from "@/features/camino-paciente/services/journeyEngine";
 import ArrivalForm from "@/features/camino-paciente/operativo/StepForms/ArrivalForm";
+import ConsultationForm from "@/features/camino-paciente/operativo/StepForms/ConsultationForm";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -194,6 +195,13 @@ export default function CaminoPaciente() {
 
                   {activeStep.step_key === "arrival" ? (
                     <ArrivalForm
+                      stepId={activeStep.id}
+                      stepStatus={activeStep.status}
+                      existingData={existingData as never}
+                      onSaved={reload}
+                    />
+                  ) : activeStep.step_key === "consultation_close" ? (
+                    <ConsultationForm
                       stepId={activeStep.id}
                       stepStatus={activeStep.status}
                       existingData={existingData as never}
