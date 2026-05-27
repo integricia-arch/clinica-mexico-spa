@@ -61,14 +61,10 @@ export default function RecetaImprimir() {
 
   const handlePrint = async () => {
     window.print();
-    // Registra evento de impresión en auditoría
     if (id) {
-      await supabase.rpc("log_audit", {
-        _accion: "actualizar",
-        _tabla: "prescriptions",
-        _registro_id: id,
-        _datos_nuevos: { event: "printed", at: new Date().toISOString() } as never,
-      }).then(() => {/* mejor esfuerzo */}, () => {});
+      const { countPrintEvents, logPrescriptionEvent } = await import("@/features/recetas/services/prescriptionAuditService");
+      const prev = await countPrintEvents(id);
+      await logPrescriptionEvent(id, prev > 0 ? "reprinted" : "printed", { print_index: prev + 1 });
     }
   };
 
