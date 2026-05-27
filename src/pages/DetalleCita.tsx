@@ -12,9 +12,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock } from "lucide-react";
+import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock, Route } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
+import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
+import QuickArrivalModal from "@/features/centro-control/components/QuickArrivalModal";
+import type { JourneyInstanceLite } from "@/features/centro-control/lib/journeyHelpers";
 
 const estadoRecordatorioLabel: Record<string, string> = {
   pendiente: "Pendiente",
