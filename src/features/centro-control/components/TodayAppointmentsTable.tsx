@@ -13,6 +13,7 @@ interface Props {
   onOpenRow: (row: KanbanRow) => void;
   onNavigate: (path: string) => void;
   onStartJourney: (row: KanbanRow) => void;
+  onRegisterArrival: (row: KanbanRow) => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
