@@ -274,6 +274,7 @@ export default function AdminDashboard() {
         onOpenRow={openRow}
         onNavigate={navigate}
         onStartJourney={startJourney}
+        onRegisterArrival={registerArrival}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
