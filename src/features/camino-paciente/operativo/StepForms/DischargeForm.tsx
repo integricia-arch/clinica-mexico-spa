@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +10,7 @@ import type { StepFormProps } from "./_shared";
 import { isClosed } from "./_shared";
 
 export default function DischargeForm({
-  stepId, stepStatus, appointmentId, existingData, onSaved,
+  stepId, stepStatus, existingData, onSaved,
 }: StepFormProps) {
   const [indicaciones, setIndicaciones] = useState(existingData.indicaciones ?? "");
   const [saving, setSaving] = useState(false);
@@ -18,9 +18,6 @@ export default function DischargeForm({
 
   const handleConfirm = async () => {
     setSaving(true);
-    if (appointmentId) {
-      await supabase.from("appointments").update({ status: "completada" as any }).eq("id", appointmentId);
-    }
     const s = await saveJourneyStepData(stepId, {
       indicaciones, dado_alta_en: new Date().toISOString(),
     });
