@@ -400,8 +400,8 @@ export default function AdminUsuarios() {
       especialidad: doctorForm.especialidad.trim(),
       cedula_profesional: doctorForm.cedula_profesional.trim() || null,
       telefono: doctorForm.telefono.trim() || null,
-      horario_inicio: doctorForm.horario_inicio + ":00",
-      horario_fin: doctorForm.horario_fin + ":00",
+      horario_inicio: doctorForm.horario_inicio.slice(0, 5) + ":00",
+      horario_fin: doctorForm.horario_fin.slice(0, 5) + ":00",
       duracion_cita_min: doctorForm.duracion_cita_min,
       activo: doctorForm.activo,
     };
