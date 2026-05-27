@@ -25,8 +25,8 @@ export default function AssignmentForm({
     (async () => {
       const [d, r, s, appt] = await Promise.all([
         supabase.from("doctors").select("id,nombre,apellidos").eq("activo", true).order("apellidos"),
-        supabase.from("rooms" as any).select("id,nombre").eq("activo", true).order("nombre"),
-        supabase.from("servicios" as any).select("id,nombre").eq("activo", true).order("nombre"),
+        supabase.from("rooms").select("id,nombre").eq("activo", true).order("nombre"),
+        supabase.from("servicios").select("id,nombre").eq("activo", true).order("nombre"),
         appointmentId
           ? supabase.from("appointments").select("doctor_id,room_id,servicio_id").eq("id", appointmentId).maybeSingle()
           : Promise.resolve({ data: null } as any),
