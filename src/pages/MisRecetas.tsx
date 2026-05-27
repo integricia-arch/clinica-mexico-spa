@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileText, Printer, QrCode, Pill, ShieldCheck, Calendar } from "lucide-react";
+import { FileText, Printer, QrCode, Pill, ShieldCheck, Calendar, History } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
