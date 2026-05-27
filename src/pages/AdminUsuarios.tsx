@@ -333,7 +333,7 @@ export default function AdminUsuarios() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={fetchUsers} disabled={loading}>Recargar</Button>
+          <Button variant="outline" onClick={() => { fetchUsers(); fetchDoctors(); }} disabled={loading}>Recargar</Button>
           <Button variant="outline" onClick={() => setBaseOpen(true)}>
             <Lock className="h-4 w-4 mr-1.5" />
             Contraseña base
