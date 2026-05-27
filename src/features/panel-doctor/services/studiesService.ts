@@ -43,7 +43,7 @@ export async function listStudiesByPatient(patientId: string): Promise<PatientSt
     .eq("patient_id", patientId)
     .order("solicitado_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as PatientStudy[];
+  return (data ?? []) as unknown as PatientStudy[];
 }
 
 export async function listStudiesByJourney(journeyId: string): Promise<PatientStudy[]> {
@@ -53,7 +53,7 @@ export async function listStudiesByJourney(journeyId: string): Promise<PatientSt
     .eq("journey_instance_id", journeyId)
     .order("solicitado_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as PatientStudy[];
+  return (data ?? []) as unknown as PatientStudy[];
 }
 
 export async function requestStudy(input: {
