@@ -335,6 +335,119 @@ export type Database = {
           },
         ]
       }
+      doctor_prescription_template_versions: {
+        Row: {
+          doctor_id: string
+          id: string
+          publish_reason: string | null
+          published_at: string
+          published_by: string | null
+          snapshot_json: Json
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          doctor_id: string
+          id?: string
+          publish_reason?: string | null
+          published_at?: string
+          published_by?: string | null
+          snapshot_json: Json
+          template_id: string
+          version_number: number
+        }
+        Update: {
+          doctor_id?: string
+          id?: string
+          publish_reason?: string | null
+          published_at?: string
+          published_by?: string | null
+          snapshot_json?: Json
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_prescription_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_prescription_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_prescription_templates: {
+        Row: {
+          color_primario: string | null
+          consultorio_direccion: string | null
+          consultorio_email: string | null
+          consultorio_nombre: string | null
+          consultorio_telefono: string | null
+          created_at: string
+          current_version_id: string | null
+          current_version_number: number
+          doctor_id: string
+          encabezado_extra: string | null
+          firma_path: string | null
+          id: string
+          indicaciones_default: string | null
+          logo_path: string | null
+          mostrar_cedula: boolean
+          mostrar_especialidad: boolean
+          mostrar_firma: boolean
+          mostrar_qr: boolean
+          pie_pagina: string | null
+          tamano_papel: string
+          updated_at: string
+        }
+        Insert: {
+          color_primario?: string | null
+          consultorio_direccion?: string | null
+          consultorio_email?: string | null
+          consultorio_nombre?: string | null
+          consultorio_telefono?: string | null
+          created_at?: string
+          current_version_id?: string | null
+          current_version_number?: number
+          doctor_id: string
+          encabezado_extra?: string | null
+          firma_path?: string | null
+          id?: string
+          indicaciones_default?: string | null
+          logo_path?: string | null
+          mostrar_cedula?: boolean
+          mostrar_especialidad?: boolean
+          mostrar_firma?: boolean
+          mostrar_qr?: boolean
+          pie_pagina?: string | null
+          tamano_papel?: string
+          updated_at?: string
+        }
+        Update: {
+          color_primario?: string | null
+          consultorio_direccion?: string | null
+          consultorio_email?: string | null
+          consultorio_nombre?: string | null
+          consultorio_telefono?: string | null
+          created_at?: string
+          current_version_id?: string | null
+          current_version_number?: number
+          doctor_id?: string
+          encabezado_extra?: string | null
+          firma_path?: string | null
+          id?: string
+          indicaciones_default?: string | null
+          logo_path?: string | null
+          mostrar_cedula?: boolean
+          mostrar_especialidad?: boolean
+          mostrar_firma?: boolean
+          mostrar_qr?: boolean
+          pie_pagina?: string | null
+          tamano_papel?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       doctor_servicios: {
         Row: {
           created_at: string
@@ -1667,6 +1780,9 @@ export type Database = {
           prescription_number: string | null
           qr_code_value: string | null
           status: string
+          template_id: string | null
+          template_snapshot_json: Json | null
+          template_version_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1686,6 +1802,9 @@ export type Database = {
           prescription_number?: string | null
           qr_code_value?: string | null
           status?: string
+          template_id?: string | null
+          template_snapshot_json?: Json | null
+          template_version_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1705,6 +1824,9 @@ export type Database = {
           prescription_number?: string | null
           qr_code_value?: string | null
           status?: string
+          template_id?: string | null
+          template_snapshot_json?: Json | null
+          template_version_id?: string | null
           updated_at?: string
         }
         Relationships: []
