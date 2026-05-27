@@ -316,7 +316,32 @@ export default function DetalleCita() {
             </div>
           )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {(hasRole("admin") || hasRole("receptionist") || hasRole("doctor") || hasRole("nurse")) && (
+          <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Route className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium">Camino del paciente</p>
+                {journeyInstance && (
+                  <span className="text-xs text-muted-foreground capitalize">
+                    · {journeyInstance.status?.replace("_", " ")}
+                  </span>
+                )}
+              </div>
+              {(hasRole("admin") || hasRole("receptionist")) && (
+                <Button size="sm" variant={journeyInstance ? "outline" : "default"} onClick={() => setArrivalOpen(true)}>
+                  {journeyInstance ? "Registrar llegada" : "Iniciar camino"}
+                </Button>
+              )}
+            </div>
+            <PatientJourneyLine
+              journeyInstance={journeyInstance}
+              showProgress
+              onStart={(hasRole("admin") || hasRole("receptionist")) ? () => setArrivalOpen(true) : undefined}
+            />
+          </div>
+        )}
+
           <div className="flex gap-3">
             <Clock className="h-5 w-5 text-primary mt-0.5" />
             <div>
