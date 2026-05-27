@@ -87,7 +87,7 @@ export async function requestStudy(input: {
     .select("*")
     .single();
   if (error) throw error;
-  return data as PatientStudy;
+  return data as unknown as PatientStudy;
 }
 
 export async function registerStudyResult(
@@ -112,7 +112,7 @@ export async function registerStudyResult(
     .select("*")
     .single();
   if (error) throw error;
-  return data as PatientStudy;
+  return data as unknown as PatientStudy;
 }
 
 export async function reviewStudy(
@@ -132,7 +132,7 @@ export async function reviewStudy(
     .select("*")
     .single();
   if (error) throw error;
-  return data as PatientStudy;
+  return data as unknown as PatientStudy;
 }
 
 export function hasPendingStudies(studies: PatientStudy[]): boolean {
