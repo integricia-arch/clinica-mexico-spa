@@ -34,6 +34,8 @@ export default function AdminDashboard() {
   });
   const [drawerRow, setDrawerRow] = useState<KanbanRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [arrivalRow, setArrivalRow] = useState<KanbanRow | null>(null);
+  const [arrivalOpen, setArrivalOpen] = useState(false);
 
   const { data, loading, reload } = useDashboardData(filters.date);
 
