@@ -345,121 +345,278 @@ export default function AdminUsuarios() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por correo o ID…"
-            className="pl-9"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      <Tabs defaultValue="usuarios" className="w-full">
+        <TabsList>
+          <TabsTrigger value="usuarios" className="gap-1.5">
+            <UsersIcon className="h-4 w-4" /> Cuentas de usuario ({users.length})
+          </TabsTrigger>
+          <TabsTrigger value="medicos" className="gap-1.5">
+            <Stethoscope className="h-4 w-4" /> Médicos del registro ({doctors.length})
+            {doctors.some((d) => !d.user_id) && (
+              <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                {doctors.filter((d) => !d.user_id).length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium">Usuario</th>
-                <th className="text-left px-4 py-3 font-medium">Roles</th>
-                <th className="text-left px-4 py-3 font-medium">Último acceso</th>
-                <th className="text-left px-4 py-3 font-medium">Asignar / Remover</th>
-                <th className="text-right px-4 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-t border-border">
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-8 w-64" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-8 w-32" /></td>
-                </tr>
+        {/* TAB: Usuarios */}
+        <TabsContent value="usuarios" className="space-y-4 mt-4">
+          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por correo o ID…"
+                className="pl-9"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["all", "admin", "receptionist", "doctor", "nurse", "patient"] as const).map((r) => (
+                <Button
+                  key={r}
+                  size="sm"
+                  variant={roleFilter === r ? "default" : "outline"}
+                  onClick={() => setRoleFilter(r)}
+                  className="h-7 text-xs"
+                >
+                  {r === "all" ? "Todos" : ROLE_LABELS[r]} ({roleCounts[r] ?? 0})
+                </Button>
               ))}
+            </div>
+          </div>
 
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
-                    <UsersIcon className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                    Sin usuarios para mostrar
-                  </td>
-                </tr>
-              )}
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Usuario</th>
+                    <th className="text-left px-4 py-3 font-medium">Roles</th>
+                    <th className="text-left px-4 py-3 font-medium">Último acceso</th>
+                    <th className="text-left px-4 py-3 font-medium">Asignar / Remover</th>
+                    <th className="text-right px-4 py-3 font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-t border-border">
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-8 w-64" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-8 w-32" /></td>
+                    </tr>
+                  ))}
 
-              {!loading && filtered.map((u) => (
-                <tr key={u.id} className="border-t border-border align-top">
-                  <td className="px-4 py-3">
-                    <div className="font-medium flex items-center gap-1.5">
-                      {u.email ?? "(sin correo)"}
-                      {u.is_permanent_admin && (
-                        <Badge variant="outline" className="gap-1 text-[10px]">
-                          <ShieldAlert className="h-3 w-3" /> Permanente
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.roles.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">Sin rol</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {u.roles.map((r) => (
-                          <Badge key={r} className={ROLE_BADGE[r as AppRole]}>
-                            {ROLE_LABELS[r as AppRole] ?? r}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{fmt(u.last_sign_in_at)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {ROLE_OPTIONS.map((role) => {
-                        const has = u.roles.includes(role);
-                        return (
-                          <Button
-                            key={role}
-                            size="sm"
-                            variant={has ? "default" : "outline"}
-                            disabled={busyUser === u.id}
-                            onClick={() => toggleRole(u, role)}
-                            className="h-7 text-xs"
-                          >
-                            {has ? "✓ " : "+ "}{ROLE_LABELS[role]}
+                  {!loading && filtered.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                        <UsersIcon className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                        Sin usuarios para mostrar
+                      </td>
+                    </tr>
+                  )}
+
+                  {!loading && filtered.map((u) => (
+                    <tr key={u.id} className="border-t border-border align-top">
+                      <td className="px-4 py-3">
+                        <div className="font-medium flex items-center gap-1.5">
+                          {u.email ?? "(sin correo)"}
+                          {u.is_permanent_admin && (
+                            <Badge variant="outline" className="gap-1 text-[10px]">
+                              <ShieldAlert className="h-3 w-3" /> Permanente
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.roles.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">Sin rol</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {u.roles.map((r) => (
+                              <Badge key={r} className={ROLE_BADGE[r as AppRole]}>
+                                {ROLE_LABELS[r as AppRole] ?? r}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{fmt(u.last_sign_in_at)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {ROLE_OPTIONS.map((role) => {
+                            const has = u.roles.includes(role);
+                            return (
+                              <Button
+                                key={role}
+                                size="sm"
+                                variant={has ? "default" : "outline"}
+                                disabled={busyUser === u.id}
+                                onClick={() => toggleRole(u, role)}
+                                className="h-7 text-xs"
+                              >
+                                {has ? "✓ " : "+ "}{ROLE_LABELS[role]}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => { setEditUser(u); setEditEmail(u.email ?? ""); }}>
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => { setEditUser(u); setEditEmail(u.email ?? ""); }}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setPwUser(u); setPwValue(""); }}>
-                        <KeyRound className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        disabled={u.is_permanent_admin}
-                        onClick={() => setDelUser(u)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                          <Button size="sm" variant="ghost" onClick={() => { setPwUser(u); setPwValue(""); }}>
+                            <KeyRound className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            disabled={u.is_permanent_admin}
+                            onClick={() => setDelUser(u)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB: Médicos del registro clínico */}
+        <TabsContent value="medicos" className="space-y-4 mt-4">
+          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            Lista de todos los médicos registrados en el sistema clínico. Si un médico no tiene cuenta vinculada,
+            no podrá iniciar sesión ni firmar recetas. Crea o vincula una cuenta desde aquí.
+          </div>
+
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Médico</th>
+                    <th className="text-left px-4 py-3 font-medium">Especialidad</th>
+                    <th className="text-left px-4 py-3 font-medium">Cédula</th>
+                    <th className="text-left px-4 py-3 font-medium">Cuenta vinculada</th>
+                    <th className="text-right px-4 py-3 font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingDoctors && Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="border-t border-border">
+                      <td className="px-4 py-3" colSpan={5}><Skeleton className="h-6 w-full" /></td>
+                    </tr>
+                  ))}
+                  {!loadingDoctors && doctorsEnriched.length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                      <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                      Sin médicos registrados
+                    </td></tr>
+                  )}
+                  {!loadingDoctors && doctorsEnriched.map((d) => (
+                    <tr key={d.id} className="border-t border-border">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">Dr(a). {d.nombre} {d.apellidos}</div>
+                        {!d.activo && <Badge variant="outline" className="text-[10px] mt-0.5">Inactivo</Badge>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{d.especialidad}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{d.cedula_profesional ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        {d.user_id ? (
+                          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span className="text-xs">{d.user_email ?? d.user_id.slice(0, 8) + "…"}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="text-xs">Sin cuenta</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          {d.user_id ? (
+                            <Button size="sm" variant="outline" onClick={() => handleUnlinkDoctor(d)}>
+                              <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
+                            </Button>
+                          ) : (
+                            <Button size="sm" onClick={() => openLinkDoctor(d)}>
+                              <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog: Vincular médico */}
+      <Dialog open={!!linkDoctor} onOpenChange={(o) => !o && setLinkDoctor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular cuenta a médico</DialogTitle>
+            <DialogDescription>
+              Dr(a). {linkDoctor?.nombre} {linkDoctor?.apellidos}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-1.5">
+              <Button size="sm" variant={linkMode === "new" ? "default" : "outline"} onClick={() => setLinkMode("new")}>
+                Crear cuenta nueva
+              </Button>
+              <Button size="sm" variant={linkMode === "existing" ? "default" : "outline"} onClick={() => setLinkMode("existing")}>
+                Usar cuenta existente
+              </Button>
+            </div>
+            {linkMode === "new" ? (
+              <>
+                <div>
+                  <Label>Correo</Label>
+                  <Input type="email" value={linkEmail} onChange={(e) => setLinkEmail(e.target.value)} placeholder="medico@clinica.mx" />
+                </div>
+                <div>
+                  <Label>Contraseña inicial</Label>
+                  <Input type="text" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="mínimo 8 caracteres" />
+                </div>
+              </>
+            ) : (
+              <div>
+                <Label>Usuario existente</Label>
+                <select
+                  className="w-full mt-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={linkExistingUserId}
+                  onChange={(e) => setLinkExistingUserId(e.target.value)}
+                >
+                  <option value="">Selecciona…</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.email}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDoctor(null)}>Cancelar</Button>
+            <Button onClick={handleLinkDoctor} disabled={linking}>{linking ? "Vinculando…" : "Vincular"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Crear usuario */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
