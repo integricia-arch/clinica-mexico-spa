@@ -37,9 +37,57 @@ export default function MachoteReceta() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [adminDoctors, setAdminDoctors] = useState<Array<{ id: string; nombre: string; apellidos: string; especialidad: string }>>([]);
+  const [selectedAdminDoctorId, setSelectedAdminDoctorId] = useState<string>("");
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const firmaInputRef = useRef<HTMLInputElement>(null);
+
+  // Para administradores: cargar lista de médicos disponibles
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      const { data } = await supabase
+        .from("doctors")
+        .select("id, nombre, apellidos, especialidad")
+        .eq("activo", true)
+        .order("apellidos");
+      setAdminDoctors((data as any) ?? []);
+    })();
+  }, [isAdmin]);
+
+  const loadForDoctor = async (dId: string) => {
+    setLoading(true);
+    setTemplate(null);
+    setLogoUrl(null);
+    setFirmaUrl(null);
+    setVersions([]);
+    setDirty(false);
+    try {
+      setDoctorId(dId);
+      const { data: doc } = await supabase
+        .from("doctors")
+        .select("nombre, apellidos, especialidad, cedula_profesional")
+        .eq("id", dId)
+        .maybeSingle();
+      setDoctorMeta(doc as any);
+
+      const tpl = await getOrCreateTemplate(dId);
+      setTemplate(tpl);
+      const [logoSigned, firmaSigned, vs] = await Promise.all([
+        getAssetSignedUrl(tpl.logo_path),
+        getAssetSignedUrl(tpl.firma_path),
+        listVersions(tpl.id),
+      ]);
+      setLogoUrl(logoSigned);
+      setFirmaUrl(firmaSigned);
+      setVersions(vs as any);
+    } catch (err) {
+      toast.error("No se pudo cargar el machote: " + friendlyError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -48,39 +96,17 @@ export default function MachoteReceta() {
         if (!dId) {
           if (!isAdmin) {
             toast.error("Tu cuenta no está vinculada a un médico. Pide a un administrador que la vincule.");
-            setLoading(false);
-            return;
           }
-          // Admin sin doctor: mostrar selector mínimo o aviso
-          toast.message("Como administrador, edita primero el machote desde la cuenta del médico.");
           setLoading(false);
           return;
         }
-        setDoctorId(dId);
-
-        const { data: doc } = await supabase
-          .from("doctors")
-          .select("nombre, apellidos, especialidad, cedula_profesional")
-          .eq("id", dId)
-          .maybeSingle();
-        setDoctorMeta(doc as any);
-
-        const tpl = await getOrCreateTemplate(dId);
-        setTemplate(tpl);
-        const [logoSigned, firmaSigned, vs] = await Promise.all([
-          getAssetSignedUrl(tpl.logo_path),
-          getAssetSignedUrl(tpl.firma_path),
-          listVersions(tpl.id),
-        ]);
-        setLogoUrl(logoSigned);
-        setFirmaUrl(firmaSigned);
-        setVersions(vs as any);
+        await loadForDoctor(dId);
       } catch (err) {
         toast.error("No se pudo cargar el machote: " + friendlyError(err));
-      } finally {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin]);
 
   const patch = (p: Partial<DoctorPrescriptionTemplate>) => {
