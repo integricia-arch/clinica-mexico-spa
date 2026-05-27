@@ -32,12 +32,13 @@ export default function AssignmentForm({
           : Promise.resolve({ data: null } as any),
       ]);
       setDoctors(d.data ?? []);
-      setRooms((r as any).data ?? []);
-      setServicios((s as any).data ?? []);
-      if (appt?.data) {
-        if (!doctorId && appt.data.doctor_id) setDoctorId(appt.data.doctor_id);
-        if (!roomId && appt.data.room_id) setRoomId(appt.data.room_id);
-        if (!servicioId && appt.data.servicio_id) setServicioId(appt.data.servicio_id);
+      setRooms(r.data ?? []);
+      setServicios(s.data ?? []);
+      if ((appt as any)?.data) {
+        const d2 = (appt as any).data;
+        if (!doctorId && d2.doctor_id) setDoctorId(d2.doctor_id);
+        if (!roomId && d2.room_id) setRoomId(d2.room_id);
+        if (!servicioId && d2.servicio_id) setServicioId(d2.servicio_id);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
