@@ -356,8 +356,8 @@ export default function AdminUsuarios() {
       especialidad: d.especialidad ?? "",
       cedula_profesional: d.cedula_profesional ?? "",
       telefono: d.telefono ?? "",
-      horario_inicio: (d as any).horario_inicio ?? "08:00",
-      horario_fin: (d as any).horario_fin ?? "18:00",
+      horario_inicio: ((d as any).horario_inicio ?? "08:00:00").slice(0, 5),
+      horario_fin: ((d as any).horario_fin ?? "18:00:00").slice(0, 5),
       duracion_cita_min: (d as any).duracion_cita_min ?? 30,
       activo: d.activo,
     });
