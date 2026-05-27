@@ -72,21 +72,29 @@ Deno.serve(async (req: Request) => {
 
     // Create demo users via admin API
     const demoUsers = [
-      { email: "admin@clinicamx.demo", password: "Demo1234!", role: "admin" as const },
-      { email: "recepcion@clinicamx.demo", password: "Demo1234!", role: "receptionist" as const },
-      { email: "dr.garcia@clinicamx.demo", password: "Demo1234!", role: "doctor" as const },
-      { email: "dra.martinez@clinicamx.demo", password: "Demo1234!", role: "doctor" as const },
-      { email: "dra.lopez@clinicamx.demo", password: "Demo1234!", role: "doctor" as const },
-      { email: "enfermeria@clinicamx.demo", password: "Demo1234!", role: "nurse" as const },
-      { email: "paciente1@clinicamx.demo", password: "Demo1234!", role: "patient" as const },
+      { email: "admin@clinicamx.demo", role: "admin" as const },
+      { email: "recepcion@clinicamx.demo", role: "receptionist" as const },
+      { email: "dr.garcia@clinicamx.demo", role: "doctor" as const },
+      { email: "dra.martinez@clinicamx.demo", role: "doctor" as const },
+      { email: "dra.lopez@clinicamx.demo", role: "doctor" as const },
+      { email: "enfermeria@clinicamx.demo", role: "nurse" as const },
+      { email: "paciente1@clinicamx.demo", role: "patient" as const },
     ];
 
     const createdUsers: Record<string, string> = {};
+    const generatedCredentials: Array<{ email: string; password: string }> = [];
+
+    const generatePassword = () => {
+      const bytes = new Uint8Array(24);
+      crypto.getRandomValues(bytes);
+      return btoa(String.fromCharCode(...bytes)).replace(/[^A-Za-z0-9]/g, "") + "Aa1!";
+    };
 
     for (const u of demoUsers) {
+      const password = generatePassword();
       const { data, error } = await supabase.auth.admin.createUser({
         email: u.email,
-        password: u.password,
+        password,
         email_confirm: true,
       });
       if (error) {
@@ -94,6 +102,7 @@ Deno.serve(async (req: Request) => {
         continue;
       }
       createdUsers[u.email] = data.user.id;
+      generatedCredentials.push({ email: u.email, password });
 
       // Assign role
       await supabase.from("user_roles").insert({
