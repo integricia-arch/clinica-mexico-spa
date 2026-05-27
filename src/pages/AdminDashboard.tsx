@@ -223,6 +223,12 @@ export default function AdminDashboard() {
     reload();
   };
 
+  const registerArrival = (row: KanbanRow) => {
+    if (!row.appointment) return;
+    setArrivalRow(row);
+    setArrivalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div>
