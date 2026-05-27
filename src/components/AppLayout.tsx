@@ -62,6 +62,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "doctor", "nurse"],
   },
   {
+    to: "/recetas",
+    icon: FileText,
+    label: "Recetas",
+    roles: ["admin", "doctor", "nurse"],
+  },
+  {
     to: "/farmacia",
     icon: Pill,
     label: "Farmacia",
