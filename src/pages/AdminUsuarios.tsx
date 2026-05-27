@@ -609,9 +609,14 @@ export default function AdminUsuarios() {
 
         {/* TAB: Médicos del registro clínico */}
         <TabsContent value="medicos" className="space-y-4 mt-4">
-          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            Lista de todos los médicos registrados en el sistema clínico. Si un médico no tiene cuenta vinculada,
-            no podrá iniciar sesión ni firmar recetas. Crea o vincula una cuenta desde aquí.
+          <div className="rounded-xl border border-border bg-card p-4 flex items-start justify-between gap-3 flex-wrap">
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Lista de todos los médicos registrados. Edita los datos (cédula, horario, especialidad…)
+              o crea uno nuevo. Si un médico no tiene cuenta vinculada, no podrá iniciar sesión ni firmar recetas.
+            </p>
+            <Button onClick={openDoctorNew}>
+              <Plus className="h-4 w-4 mr-1.5" /> Nuevo médico
+            </Button>
           </div>
 
           <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -622,30 +627,36 @@ export default function AdminUsuarios() {
                     <th className="text-left px-4 py-3 font-medium">Médico</th>
                     <th className="text-left px-4 py-3 font-medium">Especialidad</th>
                     <th className="text-left px-4 py-3 font-medium">Cédula</th>
-                    <th className="text-left px-4 py-3 font-medium">Cuenta vinculada</th>
+                    <th className="text-left px-4 py-3 font-medium">Horario / Cita</th>
+                    <th className="text-left px-4 py-3 font-medium">Cuenta</th>
                     <th className="text-right px-4 py-3 font-medium">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingDoctors && Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i} className="border-t border-border">
-                      <td className="px-4 py-3" colSpan={5}><Skeleton className="h-6 w-full" /></td>
+                      <td className="px-4 py-3" colSpan={6}><Skeleton className="h-6 w-full" /></td>
                     </tr>
                   ))}
                   {!loadingDoctors && doctorsEnriched.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                    <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                       <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-40" />
                       Sin médicos registrados
                     </td></tr>
                   )}
                   {!loadingDoctors && doctorsEnriched.map((d) => (
-                    <tr key={d.id} className="border-t border-border">
+                    <tr key={d.id} className="border-t border-border align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium">Dr(a). {d.nombre} {d.apellidos}</div>
+                        {d.telefono && <div className="text-xs text-muted-foreground">{d.telefono}</div>}
                         {!d.activo && <Badge variant="outline" className="text-[10px] mt-0.5">Inactivo</Badge>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{d.especialidad}</td>
                       <td className="px-4 py-3 font-mono text-xs">{d.cedula_profesional ?? "—"}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {(d.horario_inicio ?? "").slice(0, 5)}–{(d.horario_fin ?? "").slice(0, 5)}
+                        <div>{d.duracion_cita_min ?? 30} min</div>
+                      </td>
                       <td className="px-4 py-3">
                         {d.user_id ? (
                           <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
@@ -660,7 +671,10 @@ export default function AdminUsuarios() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1.5">
+                        <div className="flex justify-end gap-1 flex-wrap">
+                          <Button size="sm" variant="ghost" onClick={() => openDoctorEdit(d)} title="Editar datos">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
                           {d.user_id ? (
                             <Button size="sm" variant="outline" onClick={() => handleUnlinkDoctor(d)}>
                               <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
@@ -670,6 +684,15 @@ export default function AdminUsuarios() {
                               <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDoctorDel(d)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -680,6 +703,95 @@ export default function AdminUsuarios() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog: Crear / Editar médico */}
+      <Dialog open={doctorDialogOpen} onOpenChange={setDoctorDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{doctorEdit ? "Editar médico" : "Nuevo médico"}</DialogTitle>
+            <DialogDescription>
+              {doctorEdit
+                ? `Actualiza los datos de Dr(a). ${doctorEdit.nombre} ${doctorEdit.apellidos}.`
+                : "Registra un nuevo médico en el sistema clínico."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>Nombre(s) *</Label>
+              <Input value={doctorForm.nombre} maxLength={80}
+                onChange={(e) => setDoctorForm({ ...doctorForm, nombre: e.target.value })} />
+            </div>
+            <div>
+              <Label>Apellidos *</Label>
+              <Input value={doctorForm.apellidos} maxLength={80}
+                onChange={(e) => setDoctorForm({ ...doctorForm, apellidos: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Especialidad *</Label>
+              <Input value={doctorForm.especialidad} maxLength={100} placeholder="Ej. Medicina General, Pediatría…"
+                onChange={(e) => setDoctorForm({ ...doctorForm, especialidad: e.target.value })} />
+            </div>
+            <div>
+              <Label>Cédula profesional</Label>
+              <Input value={doctorForm.cedula_profesional} maxLength={20} placeholder="Ej. 12345678"
+                onChange={(e) => setDoctorForm({ ...doctorForm, cedula_profesional: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground mt-1">SEP / DGP. Solo letras, números y guiones.</p>
+            </div>
+            <div>
+              <Label>Teléfono</Label>
+              <Input value={doctorForm.telefono} maxLength={20} placeholder="+52 55 1234 5678"
+                onChange={(e) => setDoctorForm({ ...doctorForm, telefono: e.target.value })} />
+            </div>
+            <div>
+              <Label>Horario de inicio *</Label>
+              <Input type="time" value={doctorForm.horario_inicio}
+                onChange={(e) => setDoctorForm({ ...doctorForm, horario_inicio: e.target.value })} />
+            </div>
+            <div>
+              <Label>Horario de fin *</Label>
+              <Input type="time" value={doctorForm.horario_fin}
+                onChange={(e) => setDoctorForm({ ...doctorForm, horario_fin: e.target.value })} />
+            </div>
+            <div>
+              <Label>Duración de cita (min) *</Label>
+              <Input type="number" min={5} max={240} value={doctorForm.duracion_cita_min}
+                onChange={(e) => setDoctorForm({ ...doctorForm, duracion_cita_min: Number(e.target.value) })} />
+            </div>
+            <div className="flex items-end">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={doctorForm.activo}
+                  onChange={(e) => setDoctorForm({ ...doctorForm, activo: e.target.checked })} />
+                Médico activo
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDoctorDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveDoctor} disabled={savingDoctor}>
+              {savingDoctor ? "Guardando…" : doctorEdit ? "Guardar cambios" : "Crear médico"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar eliminación de médico */}
+      <AlertDialog open={!!doctorDel} onOpenChange={(o) => !o && setDoctorDel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar a Dr(a). {doctorDel?.nombre} {doctorDel?.apellidos}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es permanente. Si el médico tiene citas, recetas o expedientes asociados,
+              no podrá eliminarse — en ese caso márcalo como <strong>Inactivo</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteDoctor} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog: Vincular médico */}
       <Dialog open={!!linkDoctor} onOpenChange={(o) => !o && setLinkDoctor(null)}>
