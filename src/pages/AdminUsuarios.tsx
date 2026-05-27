@@ -130,9 +130,26 @@ export default function AdminUsuarios() {
     return doctors.map((d) => ({ ...d, user_email: d.user_id ? byId.get(d.user_id) ?? null : null }));
   }, [doctors, users]);
 
-  const filtered = useMemo(() => {
+  // Filas virtuales para médicos sin cuenta vinculada (para que aparezcan en la pestaña de usuarios)
+  type UnlinkedDoctorRow = UsuarioRow & { _unlinkedDoctor?: DoctorRow };
+  const unlinkedDoctorRows = useMemo<UnlinkedDoctorRow[]>(() => {
+    return doctors
+      .filter((d) => !d.user_id && d.activo)
+      .map((d) => ({
+        id: `doctor:${d.id}`,
+        email: null,
+        created_at: null,
+        last_sign_in_at: null,
+        roles: ["doctor" as AppRole],
+        is_permanent_admin: false,
+        _unlinkedDoctor: d,
+      }));
+  }, [doctors]);
+
+  const filtered = useMemo<UnlinkedDoctorRow[]>(() => {
     const q = query.trim().toLowerCase();
-    let list = users;
+    const combined: UnlinkedDoctorRow[] = [...users, ...unlinkedDoctorRows];
+    let list = combined;
     if (roleFilter !== "all") {
       list = list.filter((u) =>
         roleFilter === "patient"
@@ -141,19 +158,27 @@ export default function AdminUsuarios() {
       );
     }
     if (!q) return list;
-    return list.filter((u) =>
-      u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q),
-    );
-  }, [users, query, roleFilter]);
+    return list.filter((u) => {
+      if (u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)) return true;
+      const d = u._unlinkedDoctor;
+      if (d) {
+        return (
+          `${d.nombre} ${d.apellidos}`.toLowerCase().includes(q) ||
+          (d.especialidad ?? "").toLowerCase().includes(q)
+        );
+      }
+      return false;
+    });
+  }, [users, unlinkedDoctorRows, query, roleFilter]);
 
   const roleCounts = useMemo(() => {
-    const c: Record<string, number> = { all: users.length, admin: 0, receptionist: 0, doctor: 0, nurse: 0, patient: 0 };
+    const c: Record<string, number> = { all: users.length + unlinkedDoctorRows.length, admin: 0, receptionist: 0, doctor: unlinkedDoctorRows.length, nurse: 0, patient: 0 };
     for (const u of users) {
       for (const r of u.roles) c[r] = (c[r] ?? 0) + 1;
       if (u.roles.length === 0) c.patient += 1;
     }
     return c;
-  }, [users]);
+  }, [users, unlinkedDoctorRows]);
 
   const toggleRole = async (user: UsuarioRow, role: AppRole) => {
     const has = user.roles.includes(role);
@@ -536,7 +561,38 @@ export default function AdminUsuarios() {
                     </tr>
                   )}
 
-                  {!loading && filtered.map((u) => (
+                  {!loading && filtered.map((u) => {
+                    const unlinked = u._unlinkedDoctor;
+                    if (unlinked) {
+                      return (
+                        <tr key={u.id} className="border-t border-border align-top bg-amber-500/5">
+                          <td className="px-4 py-3">
+                            <div className="font-medium flex items-center gap-1.5">
+                              Dr(a). {unlinked.nombre} {unlinked.apellidos}
+                              <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-300">
+                                <AlertCircle className="h-3 w-3" /> Sin cuenta
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{unlinked.especialidad}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className={ROLE_BADGE.doctor}>{ROLE_LABELS.doctor}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs">—</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                            Sin cuenta de acceso. Crea una cuenta para asignar roles.
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" onClick={() => openLinkDoctor(unlinked)}>
+                                <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return (
                     <tr key={u.id} className="border-t border-border align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium flex items-center gap-1.5">
@@ -602,7 +658,8 @@ export default function AdminUsuarios() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
