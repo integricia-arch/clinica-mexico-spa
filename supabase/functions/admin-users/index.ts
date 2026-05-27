@@ -154,7 +154,12 @@ Deno.serve(async (req) => {
     return json({ error: "Acción no soportada" }, 400);
   } catch (err: any) {
     console.error("admin-users error:", err);
-    return json({ error: err.message }, 500);
+    const raw = err?.message ?? "Error desconocido";
+    const isWeak = /weak|easy to guess|pwned|compromised/i.test(raw);
+    const msg = isWeak
+      ? "La contraseña es muy débil o aparece en bases de datos de contraseñas filtradas. Usa una combinación más fuerte (letras, números y símbolos) y evita palabras comunes."
+      : raw;
+    return json({ error: msg }, isWeak ? 400 : 500);
   }
 });
 
