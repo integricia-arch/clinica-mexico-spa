@@ -606,15 +606,29 @@ export default function AdminUsuarios() {
                     return (
                     <tr key={u.id} className="border-t border-border align-top">
                       <td className="px-4 py-3">
-                        <div className="font-medium flex items-center gap-1.5">
-                          {u.email ?? "(sin correo)"}
+                        <div className="font-medium flex items-center gap-1.5 flex-wrap">
+                          {u._linkedDoctor ? (
+                            <>
+                              <Stethoscope className="h-3.5 w-3.5 text-emerald-600" />
+                              Dr(a). {u._linkedDoctor.nombre} {u._linkedDoctor.apellidos}
+                            </>
+                          ) : (
+                            u.email ?? "(sin correo)"
+                          )}
                           {u.is_permanent_admin && (
                             <Badge variant="outline" className="gap-1 text-[10px]">
                               <ShieldAlert className="h-3 w-3" /> Permanente
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
+                        {u._linkedDoctor && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {u._linkedDoctor.especialidad} · {u.email}
+                          </div>
+                        )}
+                        {!u._linkedDoctor && (
+                          <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {u.roles.length === 0 ? (
