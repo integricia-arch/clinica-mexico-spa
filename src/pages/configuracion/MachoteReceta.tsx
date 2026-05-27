@@ -194,11 +194,33 @@ export default function MachoteReceta() {
         <Link to="/configuracion" className="inline-flex items-center gap-1 text-sm text-primary">
           <ArrowLeft className="h-4 w-4" /> Volver a Configuración
         </Link>
-        <div className="rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">
-            No se encontró un médico vinculado a tu cuenta. Pide a un administrador que vincule tu usuario a un registro de médico.
-          </p>
-        </div>
+        {isAdmin ? (
+          <div className="rounded-xl border border-border bg-card p-6 space-y-3">
+            <h2 className="text-lg font-semibold">Selecciona un médico</h2>
+            <p className="text-sm text-muted-foreground">
+              Tu cuenta de administrador no está vinculada a un registro de médico. Elige el médico cuyo machote deseas editar.
+            </p>
+            <Select
+              value={selectedAdminDoctorId}
+              onValueChange={(v) => { setSelectedAdminDoctorId(v); loadForDoctor(v); }}
+            >
+              <SelectTrigger className="max-w-md"><SelectValue placeholder="Elegir médico…" /></SelectTrigger>
+              <SelectContent>
+                {adminDoctors.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    Dr(a). {d.nombre} {d.apellidos} — {d.especialidad}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-card p-6">
+            <p className="text-sm text-muted-foreground">
+              No se encontró un médico vinculado a tu cuenta. Pide a un administrador que vincule tu usuario a un registro de médico.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
