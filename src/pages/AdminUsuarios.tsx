@@ -378,10 +378,12 @@ export default function AdminUsuarios() {
     if (f.telefono && !/^[+\d\s()-]{7,20}$/.test(f.telefono.trim())) {
       return "Teléfono inválido (usa solo dígitos, +, espacios o guiones)";
     }
-    if (!/^\d{2}:\d{2}$/.test(f.horario_inicio) || !/^\d{2}:\d{2}$/.test(f.horario_fin)) {
+    const hi = (f.horario_inicio || "").slice(0, 5);
+    const hf = (f.horario_fin || "").slice(0, 5);
+    if (!/^\d{2}:\d{2}$/.test(hi) || !/^\d{2}:\d{2}$/.test(hf)) {
       return "Horario inválido (formato HH:MM)";
     }
-    if (f.horario_inicio >= f.horario_fin) return "El horario de fin debe ser posterior al inicio";
+    if (hi >= hf) return "El horario de fin debe ser posterior al inicio";
     if (f.duracion_cita_min < 5 || f.duracion_cita_min > 240) {
       return "La duración de cita debe estar entre 5 y 240 minutos";
     }
