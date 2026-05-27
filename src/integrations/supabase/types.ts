@@ -1520,6 +1520,21 @@ export type Database = {
         }
         Relationships: []
       }
+      permanent_admins: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
       post_consultation_followups: {
         Row: {
           adverse_effects: string | null
@@ -1878,6 +1893,7 @@ export type Database = {
       }
     }
     Functions: {
+      ensure_permanent_admins: { Args: never; Returns: undefined }
       generate_prescription_number: { Args: never; Returns: string }
       has_role: {
         Args: {
