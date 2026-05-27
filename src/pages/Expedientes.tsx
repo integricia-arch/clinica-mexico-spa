@@ -237,10 +237,25 @@ export default function Expedientes() {
                                 </span>
                               )}
                               {canWrite && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7"
-                                  onClick={() => openNota(exp.id, exp.doctor_id, n)}>
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
+                                <>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Generar receta"
+                                    onClick={() => {
+                                      setRxContext({
+                                        patientId: exp.patient_id,
+                                        doctorId: exp.doctor_id,
+                                        expedienteId: exp.id,
+                                        consultationNoteId: n.id,
+                                        diagnosis: n.diagnostico_principal ?? "",
+                                      });
+                                      setRxModal(true);
+                                    }}>
+                                    <FileCheck2 className="h-3.5 w-3.5 text-primary" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7"
+                                    onClick={() => openNota(exp.id, exp.doctor_id, n)}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </div>
