@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarPlus } from "lucide-react";
+import { friendlyError } from "@/lib/errors";
 
 export default function NuevaCita() {
   const { session } = useAuth();
@@ -73,7 +74,7 @@ export default function NuevaCita() {
       toast({ title: "Cita creada", description: "La cita se agendó exitosamente" });
       navigate("/agenda");
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Error al agendar", description: err.message });
+      toast({ variant: "destructive", title: "Error al agendar", description: friendlyError(err) });
     } finally {
       setLoading(false);
     }

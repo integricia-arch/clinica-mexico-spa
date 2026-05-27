@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Heart, Lock, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { friendlyError } from "@/lib/errors";
 
 type Status = "checking" | "ready" | "error";
 
@@ -57,7 +58,7 @@ export default function ResetPassword() {
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "Error", description: friendlyError(error) });
       return;
     }
     toast({ title: "Contraseña actualizada", description: "Inicia sesión con tu nueva contraseña." });

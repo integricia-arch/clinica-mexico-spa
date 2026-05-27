@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { friendlyError } from "@/lib/errors";
 
 interface Props {
   open: boolean;
@@ -74,7 +75,7 @@ export default function NotaConsultaModal({ open, onClose, expedienteId, doctorI
       onSaved({ ...saved, doctors: { nombre: "", apellidos: "" } });
       onClose();
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Error", description: err.message });
+      toast({ variant: "destructive", title: "Error", description: friendlyError(err) });
     } finally {
       setLoading(false);
     }

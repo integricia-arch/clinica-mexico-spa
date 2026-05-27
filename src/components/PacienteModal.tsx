@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Tables } from "@/integrations/supabase/types";
+import { friendlyError } from "@/lib/errors";
 
 type Patient = Tables<"patients">;
 
@@ -134,7 +135,7 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
       }
       onClose();
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Error", description: err.message });
+      toast({ variant: "destructive", title: "Error", description: friendlyError(err) });
     } finally {
       setLoading(false);
     }

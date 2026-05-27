@@ -13,6 +13,7 @@ import { Search, Plus, AlertTriangle, Package, Pill, ArrowDownCircle, ArrowUpCir
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
+import { friendlyError } from "@/lib/errors";
 
 type Medicamento = Tables<"medicamentos">;
 type Lote = Tables<"lotes_medicamento">;
@@ -96,11 +97,11 @@ export default function Farmacia() {
     };
     if (editMed) {
       const { data, error } = await supabase.from("medicamentos").update(payload).eq("id", editMed.id).select().single();
-      if (error) { toast({ variant:"destructive", title:"Error", description:error.message }); }
+      if (error) { toast({ variant:"destructive", title:"Error", description: friendlyError(error) }); }
       else { setMedicamentos(p => p.map(m => m.id === editMed.id ? data : m)); toast({ title:"Medicamento actualizado" }); setMedModal(false); }
     } else {
       const { data, error } = await supabase.from("medicamentos").insert(payload).select().single();
-      if (error) { toast({ variant:"destructive", title:"Error", description:error.message }); }
+      if (error) { toast({ variant:"destructive", title:"Error", description: friendlyError(error) }); }
       else { setMedicamentos(p => [...p, data].sort((a,b) => a.nombre.localeCompare(b.nombre))); toast({ title:"Medicamento registrado" }); setMedModal(false); }
     }
     setSavingMed(false);
@@ -108,7 +109,7 @@ export default function Farmacia() {
 
   async function deactivateMed(m: Medicamento) {
     const { error } = await supabase.from("medicamentos").update({ activo: false }).eq("id", m.id);
-    if (error) toast({ variant:"destructive", title:"Error", description:error.message });
+    if (error) toast({ variant:"destructive", title:"Error", description: friendlyError(error) });
     else { setMedicamentos(p => p.filter(x => x.id !== m.id)); toast({ title:"Medicamento desactivado" }); }
   }
 

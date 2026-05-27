@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/errors";
 
 const secciones = [
   { icon: Building2, titulo: "Datos del consultorio", descripcion: "Nombre, dirección, teléfono, logotipo y datos fiscales del establecimiento." },
@@ -40,7 +41,7 @@ export default function Configuracion() {
 
   const toggleRoom = async (r: Room) => {
     const { error } = await supabase.from("rooms").update({ activo: !r.activo }).eq("id", r.id);
-    if (error) { toast.error("No se pudo actualizar: " + error.message); return; }
+    if (error) { toast.error("No se pudo actualizar: " + friendlyError(error)); return; }
     setRooms((prev) => prev.map((x) => (x.id === r.id ? { ...x, activo: !r.activo } : x)));
   };
 
@@ -54,7 +55,7 @@ export default function Configuracion() {
       activo: true,
     });
     setSavingRoom(false);
-    if (error) { toast.error("No se pudo crear: " + error.message); return; }
+    if (error) { toast.error("No se pudo crear: " + friendlyError(error)); return; }
     toast.success("Consultorio agregado");
     setRoomModal(false);
     setRoomForm({ nombre: "", piso: "", capacidad: 1 });

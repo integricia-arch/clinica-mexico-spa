@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/errors";
 
 export interface JourneyTemplate {
   id: string;
@@ -52,7 +53,7 @@ export function useJourneyTemplates() {
       .from("journey_templates")
       .select("*")
       .order("created_at", { ascending: true });
-    if (error) toast.error("No se pudieron cargar las plantillas: " + error.message);
+    if (error) toast.error("No se pudieron cargar las plantillas: " + friendlyError(error));
     setTemplates((data as any) ?? []);
     setLoading(false);
   }, []);

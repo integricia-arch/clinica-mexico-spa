@@ -21,6 +21,7 @@ import { validateJourneyConfiguration } from "@/features/camino-paciente/lib/val
 import { simulateJourney, SCENARIO_LABELS, type Scenario } from "@/features/camino-paciente/lib/simulateJourney";
 import { getAvailableOptionsForStep } from "@/features/camino-paciente/lib/getAvailableOptionsForStep";
 import { ConfigHealthBadge } from "@/features/camino-paciente/components/ConfigHealthBadge";
+import { friendlyError } from "@/lib/errors";
 
 export default function CaminoPacienteConfig() {
   const nav = useNavigate();
@@ -297,7 +298,7 @@ function StepEditorSheet({ step, onClose, onSaved }: { step: JourneyStep | null;
       })
       .eq("id", step.id);
     setSaving(false);
-    if (error) { toast.error("No se pudo guardar: " + error.message); return; }
+    if (error) { toast.error("No se pudo guardar: " + friendlyError(error)); return; }
     toast.success("Etapa actualizada");
     onSaved();
   };
@@ -439,7 +440,7 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
                 variant="ghost"
                 onClick={async () => {
                   const { error } = await supabase.from("journey_step_fields").delete().eq("id", f.id);
-                  if (error) toast.error(error.message);
+                  if (error) toast.error(friendlyError(error));
                   else { toast.success("Campo eliminado"); load(); }
                 }}
               >Quitar</Button>
@@ -467,7 +468,7 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
                     field_type: opt.fieldType as any,
                     is_required: false,
                   });
-                  if (error) toast.error(error.message);
+                  if (error) toast.error(friendlyError(error));
                   else { toast.success("Campo agregado"); setAddOpen(false); load(); }
                 }}
               >
@@ -505,7 +506,7 @@ function CatalogsPanel() {
 
   const toggleItem = async (it: any) => {
     const { error } = await supabase.from("journey_option_items").update({ is_active: !it.is_active }).eq("id", it.id);
-    if (error) toast.error(error.message); else load();
+    if (error) toast.error(friendlyError(error)); else load();
   };
 
   return (
@@ -584,7 +585,7 @@ function RulesPanel({ steps, versionId }: { steps: JourneyStep[]; versionId: str
       severity,
       is_active: true,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Regla guardada");
     setOpen(false);
     setRuleName(""); setSourceStep(""); setCondition(""); setAction("");
