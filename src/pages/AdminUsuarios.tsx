@@ -102,15 +102,55 @@ export default function AdminUsuarios() {
     setUsers(((data as any)?.users ?? []) as UsuarioRow[]);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  const fetchDoctors = async () => {
+    setLoadingDoctors(true);
+    const { data, error } = await supabase
+      .from("doctors")
+      .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id")
+      .order("apellidos");
+    setLoadingDoctors(false);
+    if (error) {
+      toast.error("No se pudieron cargar los médicos");
+      return;
+    }
+    setDoctors((data ?? []) as DoctorRow[]);
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchDoctors();
+  }, []);
+
+  // Enriquecer doctores con email del usuario vinculado
+  const doctorsEnriched = useMemo<DoctorRow[]>(() => {
+    const byId = new Map(users.map((u) => [u.id, u.email]));
+    return doctors.map((d) => ({ ...d, user_email: d.user_id ? byId.get(d.user_id) ?? null : null }));
+  }, [doctors, users]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) =>
-      u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)
+    let list = users;
+    if (roleFilter !== "all") {
+      list = list.filter((u) =>
+        roleFilter === "patient"
+          ? u.roles.includes("patient") || u.roles.length === 0
+          : u.roles.includes(roleFilter),
+      );
+    }
+    if (!q) return list;
+    return list.filter((u) =>
+      u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q),
     );
-  }, [users, query]);
+  }, [users, query, roleFilter]);
+
+  const roleCounts = useMemo(() => {
+    const c: Record<string, number> = { all: users.length, admin: 0, receptionist: 0, doctor: 0, nurse: 0, patient: 0 };
+    for (const u of users) {
+      for (const r of u.roles) c[r] = (c[r] ?? 0) + 1;
+      if (u.roles.length === 0) c.patient += 1;
+    }
+    return c;
+  }, [users]);
 
   const toggleRole = async (user: UsuarioRow, role: AppRole) => {
     const has = user.roles.includes(role);
