@@ -77,9 +77,16 @@ export default function RecetaImprimir() {
         <Link to="/farmacia" className="inline-flex items-center gap-1 text-sm text-primary">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Link>
-        <Button onClick={handlePrint}>
-          <Printer className="h-4 w-4 mr-1" /> Imprimir
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to={`/receta/${id}/bitacora`}>
+              <ShieldCheck className="h-4 w-4 mr-1" /> Bitácora
+            </Link>
+          </Button>
+          <Button onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-1" /> Imprimir
+          </Button>
+        </div>
       </div>
       <PrescriptionPrintView data={data} />
     </div>
