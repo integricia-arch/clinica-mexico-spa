@@ -18,6 +18,7 @@ import OperationalAlerts, { type OperationalAlert } from "@/features/centro-cont
 import SeguimientosPendientes from "@/features/centro-control/components/SeguimientosPendientes";
 import RecentActivityFeed from "@/features/centro-control/components/RecentActivityFeed";
 import PatientOperationalDrawer from "@/features/centro-control/components/PatientOperationalDrawer";
+import QuickArrivalModal from "@/features/centro-control/components/QuickArrivalModal";
 import { useDashboardData } from "@/features/centro-control/hooks/useDashboardData";
 import { getKanbanColumnFor, getPatientOperationalRisk, minutesSince } from "@/features/centro-control/lib/journeyHelpers";
 
