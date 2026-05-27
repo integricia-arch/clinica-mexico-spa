@@ -11,6 +11,8 @@ import { Search, Plus, FileText, ChevronDown, ChevronUp, Pencil, Stethoscope } f
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import NotaConsultaModal from "@/components/NotaConsultaModal";
+import PrescriptionEditorModal from "@/features/recetas/components/PrescriptionEditorModal";
+import { FileCheck2 } from "lucide-react";
 
 const TIPO_LABELS: Record<string, string> = {
   primera_vez: "Primera vez", seguimiento: "Seguimiento",
@@ -31,6 +33,8 @@ export default function Expedientes() {
   const [notaSelected, setNotaSelected] = useState<any | null>(null);
   const [currentExpId, setCurrentExpId] = useState<string>("");
   const [currentDoctorId, setCurrentDoctorId] = useState<string>("");
+  const [rxModal, setRxModal] = useState(false);
+  const [rxContext, setRxContext] = useState<{ patientId: string; doctorId: string; expedienteId: string; consultationNoteId?: string; diagnosis?: string } | null>(null);
   const [newExpModal, setNewExpModal] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -233,10 +237,25 @@ export default function Expedientes() {
                                 </span>
                               )}
                               {canWrite && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7"
-                                  onClick={() => openNota(exp.id, exp.doctor_id, n)}>
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
+                                <>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Generar receta"
+                                    onClick={() => {
+                                      setRxContext({
+                                        patientId: exp.patient_id,
+                                        doctorId: exp.doctor_id,
+                                        expedienteId: exp.id,
+                                        consultationNoteId: n.id,
+                                        diagnosis: n.diagnostico_principal ?? "",
+                                      });
+                                      setRxModal(true);
+                                    }}>
+                                    <FileCheck2 className="h-3.5 w-3.5 text-primary" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7"
+                                    onClick={() => openNota(exp.id, exp.doctor_id, n)}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -306,6 +325,18 @@ export default function Expedientes() {
         nota={notaSelected}
         onSaved={handleNotaSaved}
       />
+
+      {rxContext && (
+        <PrescriptionEditorModal
+          open={rxModal}
+          onClose={() => setRxModal(false)}
+          patientId={rxContext.patientId}
+          doctorId={rxContext.doctorId}
+          expedienteId={rxContext.expedienteId}
+          consultationNoteId={rxContext.consultationNoteId}
+          diagnosis={rxContext.diagnosis}
+        />
+      )}
     </div>
   );
 }
