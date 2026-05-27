@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { friendlyError } from "@/lib/errors";
 import {
@@ -36,9 +37,57 @@ export default function MachoteReceta() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [adminDoctors, setAdminDoctors] = useState<Array<{ id: string; nombre: string; apellidos: string; especialidad: string }>>([]);
+  const [selectedAdminDoctorId, setSelectedAdminDoctorId] = useState<string>("");
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const firmaInputRef = useRef<HTMLInputElement>(null);
+
+  // Para administradores: cargar lista de médicos disponibles
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      const { data } = await supabase
+        .from("doctors")
+        .select("id, nombre, apellidos, especialidad")
+        .eq("activo", true)
+        .order("apellidos");
+      setAdminDoctors((data as any) ?? []);
+    })();
+  }, [isAdmin]);
+
+  const loadForDoctor = async (dId: string) => {
+    setLoading(true);
+    setTemplate(null);
+    setLogoUrl(null);
+    setFirmaUrl(null);
+    setVersions([]);
+    setDirty(false);
+    try {
+      setDoctorId(dId);
+      const { data: doc } = await supabase
+        .from("doctors")
+        .select("nombre, apellidos, especialidad, cedula_profesional")
+        .eq("id", dId)
+        .maybeSingle();
+      setDoctorMeta(doc as any);
+
+      const tpl = await getOrCreateTemplate(dId);
+      setTemplate(tpl);
+      const [logoSigned, firmaSigned, vs] = await Promise.all([
+        getAssetSignedUrl(tpl.logo_path),
+        getAssetSignedUrl(tpl.firma_path),
+        listVersions(tpl.id),
+      ]);
+      setLogoUrl(logoSigned);
+      setFirmaUrl(firmaSigned);
+      setVersions(vs as any);
+    } catch (err) {
+      toast.error("No se pudo cargar el machote: " + friendlyError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -47,39 +96,17 @@ export default function MachoteReceta() {
         if (!dId) {
           if (!isAdmin) {
             toast.error("Tu cuenta no está vinculada a un médico. Pide a un administrador que la vincule.");
-            setLoading(false);
-            return;
           }
-          // Admin sin doctor: mostrar selector mínimo o aviso
-          toast.message("Como administrador, edita primero el machote desde la cuenta del médico.");
           setLoading(false);
           return;
         }
-        setDoctorId(dId);
-
-        const { data: doc } = await supabase
-          .from("doctors")
-          .select("nombre, apellidos, especialidad, cedula_profesional")
-          .eq("id", dId)
-          .maybeSingle();
-        setDoctorMeta(doc as any);
-
-        const tpl = await getOrCreateTemplate(dId);
-        setTemplate(tpl);
-        const [logoSigned, firmaSigned, vs] = await Promise.all([
-          getAssetSignedUrl(tpl.logo_path),
-          getAssetSignedUrl(tpl.firma_path),
-          listVersions(tpl.id),
-        ]);
-        setLogoUrl(logoSigned);
-        setFirmaUrl(firmaSigned);
-        setVersions(vs as any);
+        await loadForDoctor(dId);
       } catch (err) {
         toast.error("No se pudo cargar el machote: " + friendlyError(err));
-      } finally {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin]);
 
   const patch = (p: Partial<DoctorPrescriptionTemplate>) => {
@@ -167,11 +194,33 @@ export default function MachoteReceta() {
         <Link to="/configuracion" className="inline-flex items-center gap-1 text-sm text-primary">
           <ArrowLeft className="h-4 w-4" /> Volver a Configuración
         </Link>
-        <div className="rounded-xl border border-border bg-card p-6">
-          <p className="text-sm text-muted-foreground">
-            No se encontró un médico vinculado a tu cuenta. Pide a un administrador que vincule tu usuario a un registro de médico.
-          </p>
-        </div>
+        {isAdmin ? (
+          <div className="rounded-xl border border-border bg-card p-6 space-y-3">
+            <h2 className="text-lg font-semibold">Selecciona un médico</h2>
+            <p className="text-sm text-muted-foreground">
+              Tu cuenta de administrador no está vinculada a un registro de médico. Elige el médico cuyo machote deseas editar.
+            </p>
+            <Select
+              value={selectedAdminDoctorId}
+              onValueChange={(v) => { setSelectedAdminDoctorId(v); loadForDoctor(v); }}
+            >
+              <SelectTrigger className="max-w-md"><SelectValue placeholder="Elegir médico…" /></SelectTrigger>
+              <SelectContent>
+                {adminDoctors.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    Dr(a). {d.nombre} {d.apellidos} — {d.especialidad}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-card p-6">
+            <p className="text-sm text-muted-foreground">
+              No se encontró un médico vinculado a tu cuenta. Pide a un administrador que vincule tu usuario a un registro de médico.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -185,11 +234,31 @@ export default function MachoteReceta() {
           <Link to="/configuracion" className="inline-flex items-center gap-1 text-sm text-primary mb-2">
             <ArrowLeft className="h-4 w-4" /> Volver a Configuración
           </Link>
-          <h1 className="text-display text-2xl font-bold text-foreground">Mi machote de receta</h1>
+          <h1 className="text-display text-2xl font-bold text-foreground">
+            {isAdmin && adminDoctors.length > 0 ? "Machote de receta" : "Mi machote de receta"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Personaliza encabezado, logo, firma y cierre. Cada vez que <strong>publiques</strong> una versión,
             las recetas nuevas usarán ese diseño y guardarán una copia exacta para reimpresiones fieles.
           </p>
+          {isAdmin && adminDoctors.length > 0 && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Editando como:</span>
+              <Select
+                value={doctorId ?? ""}
+                onValueChange={(v) => { setSelectedAdminDoctorId(v); loadForDoctor(v); }}
+              >
+                <SelectTrigger className="w-[320px] h-8 text-sm"><SelectValue placeholder="Elegir médico…" /></SelectTrigger>
+                <SelectContent>
+                  {adminDoctors.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      Dr(a). {d.nombre} {d.apellidos} — {d.especialidad}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-2">
