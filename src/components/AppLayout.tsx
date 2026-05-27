@@ -109,12 +109,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Configuración",
     roles: ["admin"],
   },
-  {
-    to: "/configuracion",
-    icon: Settings,
-    label: "Configuración",
-    roles: ["admin"],
-  },
 ];
 
 const ROLE_LABELS: Record<AppRole, string> = {
