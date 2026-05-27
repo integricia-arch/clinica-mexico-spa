@@ -21,6 +21,7 @@ import Configuracion from "@/pages/Configuracion";
 import CaminoPacienteConfig from "@/pages/configuracion/CaminoPaciente";
 import MachoteReceta from "@/pages/configuracion/MachoteReceta";
 import RecetaImprimir from "@/pages/RecetaImprimir";
+import RecetaBitacora from "@/pages/RecetaBitacora";
 import MisRecetas from "@/pages/MisRecetas";
 import VerificarReceta from "@/pages/VerificarReceta";
 import Auditoria from "@/pages/Auditoria";
@@ -65,6 +66,7 @@ const App = () => (
                       <Route path="/configuracion/camino-paciente" element={<ProtectedRoute allowedRoles={["admin"]}><CaminoPacienteConfig /></ProtectedRoute>} />
                       <Route path="/configuracion/recetas" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><MachoteReceta /></ProtectedRoute>} />
                       <Route path="/receta/:id" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse","receptionist","patient"]}><RecetaImprimir /></ProtectedRoute>} />
+                      <Route path="/receta/:id/bitacora" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse","receptionist","patient"]}><RecetaBitacora /></ProtectedRoute>} />
                       <Route path="/mis-recetas" element={<ProtectedRoute allowedRoles={["patient","admin"]}><MisRecetas /></ProtectedRoute>} />
                       <Route path="/camino-paciente/:id" element={<ProtectedRoute allowedRoles={["admin","doctor","receptionist","nurse"]}><CaminoPaciente /></ProtectedRoute>} />
                       <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Auditoria /></ProtectedRoute>} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Printer, ArrowLeft } from "lucide-react";
+import { Printer, ArrowLeft, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -61,14 +61,10 @@ export default function RecetaImprimir() {
 
   const handlePrint = async () => {
     window.print();
-    // Registra evento de impresión en auditoría
     if (id) {
-      await supabase.rpc("log_audit", {
-        _accion: "actualizar",
-        _tabla: "prescriptions",
-        _registro_id: id,
-        _datos_nuevos: { event: "printed", at: new Date().toISOString() } as never,
-      }).then(() => {/* mejor esfuerzo */}, () => {});
+      const { countPrintEvents, logPrescriptionEvent } = await import("@/features/recetas/services/prescriptionAuditService");
+      const prev = await countPrintEvents(id);
+      await logPrescriptionEvent(id, prev > 0 ? "reprinted" : "printed", { print_index: prev + 1 });
     }
   };
 
@@ -81,9 +77,16 @@ export default function RecetaImprimir() {
         <Link to="/farmacia" className="inline-flex items-center gap-1 text-sm text-primary">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Link>
-        <Button onClick={handlePrint}>
-          <Printer className="h-4 w-4 mr-1" /> Imprimir
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to={`/receta/${id}/bitacora`}>
+              <ShieldCheck className="h-4 w-4 mr-1" /> Bitácora
+            </Link>
+          </Button>
+          <Button onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-1" /> Imprimir
+          </Button>
+        </div>
       </div>
       <PrescriptionPrintView data={data} />
     </div>

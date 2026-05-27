@@ -2021,6 +2021,17 @@ export type Database = {
         Args: { _doctor_id: string }
         Returns: string
       }
+      get_prescription_audit: {
+        Args: { _prescription_id: string }
+        Returns: {
+          accion: Database["public"]["Enums"]["audit_action"]
+          created_at: string
+          event: string
+          id: string
+          payload: Json
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
