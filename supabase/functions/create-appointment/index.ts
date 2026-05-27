@@ -73,6 +73,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Enforce patient ownership: a patient can only book for themselves.
+    const isStaff = roles.some((r: string) => ["admin", "receptionist"].includes(r));
+    if (!isStaff) {
+      const { data: ownPatient } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!ownPatient || ownPatient.id !== body.patient_id) {
+        return new Response(
+          JSON.stringify({ error: "Solo puedes agendar citas para tu propio perfil" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+
     const inicio = new Date(body.fecha_inicio);
     const fin = new Date(body.fecha_fin);
 
