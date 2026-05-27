@@ -86,7 +86,7 @@ export default function PanelDoctor() {
 
         <div className="overflow-y-auto">
           {selected ? (
-            <PatientClinicalContext item={selected} snapshot={snapshot} />
+            <PatientClinicalContext item={selected} snapshot={snapshot} doctorId={doctorId} />
           ) : (
             <Card>
               <CardContent className="p-10 text-center text-sm text-muted-foreground">

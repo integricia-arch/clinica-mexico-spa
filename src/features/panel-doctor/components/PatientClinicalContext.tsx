@@ -9,15 +9,17 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 import { useJourneyInstance } from "@/features/camino-paciente/hooks/useJourneyInstance";
+import DoctorActionPanel from "./DoctorActionPanel";
 import type { DoctorQueueItem } from "../hooks/useDoctorQueue";
 import type { PatientSnapshot } from "../hooks/usePatientClinicalSnapshot";
 
 interface Props {
   item: DoctorQueueItem;
   snapshot: PatientSnapshot;
+  doctorId: string | null;
 }
 
-export default function PatientClinicalContext({ item, snapshot }: Props) {
+export default function PatientClinicalContext({ item, snapshot, doctorId }: Props) {
   const { patient, notas, recetas, studies } = snapshot;
   const journey = useJourneyInstance(item.journey_instance_id);
 
@@ -105,6 +107,8 @@ export default function PatientClinicalContext({ item, snapshot }: Props) {
           />
         </CardContent>
       </Card>
+
+      {doctorId && <DoctorActionPanel item={item} doctorId={doctorId} snapshot={snapshot} />}
 
       {/* Tabs clínicos */}
       <Card className="flex-1 overflow-hidden">
