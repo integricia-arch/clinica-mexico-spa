@@ -11,6 +11,8 @@ import { Search, Plus, FileText, ChevronDown, ChevronUp, Pencil, Stethoscope } f
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import NotaConsultaModal from "@/components/NotaConsultaModal";
+import PrescriptionEditorModal from "@/features/recetas/components/PrescriptionEditorModal";
+import { FileCheck2 } from "lucide-react";
 
 const TIPO_LABELS: Record<string, string> = {
   primera_vez: "Primera vez", seguimiento: "Seguimiento",
