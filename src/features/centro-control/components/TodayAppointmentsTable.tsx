@@ -22,7 +22,8 @@ const STATUS_LABEL: Record<string, string> = {
   tentativa: "Tentativa", recordatorio_enviado: "Recordatorio", liberada: "Liberada",
 };
 
-export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, onStartJourney }: Props) {
+export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, onStartJourney, onRegisterArrival }: Props) {
+  const arrivalHandler = onRegisterArrival ?? onStartJourney;
   return (
     <Card>
       <div className="border-b border-border px-5 py-4">
