@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileText, Printer, QrCode, Pill, ShieldCheck, Calendar } from "lucide-react";
+import { FileText, Printer, QrCode, Pill, ShieldCheck, Calendar, History } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -174,6 +174,11 @@ export default function MisRecetas() {
                       <Button asChild size="sm" variant="outline">
                         <Link to={`/verificar-receta/${r.id}`} target="_blank">
                           <QrCode className="mr-1.5 h-4 w-4" /> Verificar autenticidad
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="ghost">
+                        <Link to={`/receta/${r.id}/bitacora`}>
+                          <History className="mr-1.5 h-4 w-4" /> Ver bitácora
                         </Link>
                       </Button>
                     </div>
