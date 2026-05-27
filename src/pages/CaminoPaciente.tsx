@@ -19,8 +19,7 @@ import {
   requestStepOverride,
   authorizeStepOverride,
 } from "@/features/camino-paciente/services/journeyEngine";
-import ArrivalForm from "@/features/camino-paciente/operativo/StepForms/ArrivalForm";
-import ConsultationForm from "@/features/camino-paciente/operativo/StepForms/ConsultationForm";
+import { getStepForm } from "@/features/camino-paciente/operativo/StepForms/registry";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -193,50 +192,52 @@ export default function CaminoPaciente() {
                     </div>
                   )}
 
-                  {activeStep.step_key === "arrival" ? (
-                    <ArrivalForm
-                      stepId={activeStep.id}
-                      stepStatus={activeStep.status}
-                      existingData={existingData as never}
-                      onSaved={reload}
-                    />
-                  ) : activeStep.step_key === "consultation_close" ? (
-                    <ConsultationForm
-                      stepId={activeStep.id}
-                      stepStatus={activeStep.status}
-                      existingData={existingData as never}
-                      onSaved={reload}
-                    />
-                  ) : (
-                    <div className="space-y-2">
-                      <Label className="text-xs">Agregar dato (clave)</Label>
-                      <Input
-                        placeholder="ej. motivo_visita"
-                        value={formData._key ?? ""}
-                        onChange={(e) => setFormData({ ...formData, _key: e.target.value })}
-                      />
-                      <Label className="text-xs">Valor</Label>
-                      <Textarea
-                        rows={2}
-                        placeholder="Capture el valor"
-                        value={formData._value ?? ""}
-                        onChange={(e) => setFormData({ ...formData, _value: e.target.value })}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={async () => {
-                          const k = formData._key?.trim();
-                          const v = formData._value?.trim();
-                          if (!k || !v) { toast.error("Capture clave y valor"); return; }
-                          const r = await saveJourneyStepData(activeStep.id, { [k]: v });
-                          if (!r.ok) toast.error(r.error ?? "Error");
-                          else { toast.success("Dato guardado"); setFormData({}); reload(); }
-                        }}
-                      >
-                        Guardar dato
-                      </Button>
-                    </div>
-                  )}
+                  {(() => {
+                    const StepForm = getStepForm(activeStep.step_key);
+                    if (StepForm) {
+                      return (
+                        <StepForm
+                          stepId={activeStep.id}
+                          stepStatus={activeStep.status}
+                          journeyInstanceId={instance.id}
+                          patientId={instance.patient_id ?? null}
+                          appointmentId={instance.appointment_id ?? null}
+                          existingData={existingData as never}
+                          onSaved={reload}
+                        />
+                      );
+                    }
+                    return (
+                      <div className="space-y-2">
+                        <Label className="text-xs">Agregar dato (clave)</Label>
+                        <Input
+                          placeholder="ej. motivo_visita"
+                          value={formData._key ?? ""}
+                          onChange={(e) => setFormData({ ...formData, _key: e.target.value })}
+                        />
+                        <Label className="text-xs">Valor</Label>
+                        <Textarea
+                          rows={2}
+                          placeholder="Capture el valor"
+                          value={formData._value ?? ""}
+                          onChange={(e) => setFormData({ ...formData, _value: e.target.value })}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            const k = formData._key?.trim();
+                            const v = formData._value?.trim();
+                            if (!k || !v) { toast.error("Capture clave y valor"); return; }
+                            const r = await saveJourneyStepData(activeStep.id, { [k]: v });
+                            if (!r.ok) toast.error(r.error ?? "Error");
+                            else { toast.success("Dato guardado"); setFormData({}); reload(); }
+                          }}
+                        >
+                          Guardar dato
+                        </Button>
+                      </div>
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="acciones" className="space-y-3 pt-3">
