@@ -44,6 +44,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "receptionist", "doctor", "nurse"],
   },
   {
+    to: "/doctor",
+    icon: Stethoscope,
+    label: "Panel del doctor",
+    roles: ["admin", "doctor"],
+  },
+  {
     to: "/nueva-cita",
     icon: CalendarPlus,
     label: "Nueva cita",
