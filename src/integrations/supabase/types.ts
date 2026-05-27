@@ -2017,6 +2017,10 @@ export type Database = {
     Functions: {
       ensure_permanent_admins: { Args: never; Returns: undefined }
       generate_prescription_number: { Args: never; Returns: string }
+      generate_prescription_number_for_doctor: {
+        Args: { _doctor_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

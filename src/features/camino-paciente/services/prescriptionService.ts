@@ -114,11 +114,40 @@ export async function issuePrescription(prescription_id: string): Promise<RxResu
   );
   if (incompleto) return { ok: false, error: "Hay medicamentos con campos obligatorios incompletos" };
 
-  // Generar folio
-  const { data: numberRpc, error: nErr } = await supabase.rpc("generate_prescription_number");
+  // Generar folio por doctor (formato RX-AAAAMMDD-CODIGO-NNNNN)
+  const { data: numberRpc, error: nErr } = await supabase.rpc(
+    "generate_prescription_number_for_doctor",
+    { _doctor_id: rx.doctor_id },
+  );
   if (nErr) return { ok: false, error: nErr.message };
   const prescription_number = (numberRpc as unknown as string) || `RX-${Date.now()}`;
   const qr_code_value = `${prescription_number}|${rx.patient_id}|${rx.doctor_id}`;
+
+  // Snapshot del machote del doctor (si tiene versión publicada)
+  const { data: tpl } = await supabase
+    .from("doctor_prescription_templates")
+    .select("*")
+    .eq("doctor_id", rx.doctor_id)
+    .maybeSingle();
+
+  let template_id: string | null = null;
+  let template_version_id: string | null = null;
+  let template_snapshot_json: unknown = null;
+
+  if (tpl?.current_version_id) {
+    template_id = tpl.id;
+    template_version_id = tpl.current_version_id;
+    const { data: ver } = await supabase
+      .from("doctor_prescription_template_versions")
+      .select("snapshot_json")
+      .eq("id", tpl.current_version_id)
+      .maybeSingle();
+    template_snapshot_json = ver?.snapshot_json ?? tpl;
+  } else if (tpl) {
+    // Sin versión publicada: usamos el borrador como snapshot de respaldo.
+    template_id = tpl.id;
+    template_snapshot_json = tpl;
+  }
 
   const { error } = await supabase
     .from("prescriptions")
@@ -128,6 +157,9 @@ export async function issuePrescription(prescription_id: string): Promise<RxResu
       prescription_number,
       qr_code_value,
       digital_signature_status: "internal_validated",
+      template_id,
+      template_version_id,
+      template_snapshot_json: template_snapshot_json as never,
     })
     .eq("id", prescription_id);
   if (error) return { ok: false, error: error.message };
