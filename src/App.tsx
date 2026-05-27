@@ -69,6 +69,8 @@ const App = () => (
                       <Route path="/receta/:id" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse","receptionist","patient"]}><RecetaImprimir /></ProtectedRoute>} />
                       <Route path="/receta/:id/bitacora" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse","receptionist","patient"]}><RecetaBitacora /></ProtectedRoute>} />
                       <Route path="/mis-recetas" element={<ProtectedRoute allowedRoles={["patient","admin"]}><MisRecetas /></ProtectedRoute>} />
+                      <Route path="/recetas" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Recetas /></ProtectedRoute>} />
+
                       <Route path="/camino-paciente/:id" element={<ProtectedRoute allowedRoles={["admin","doctor","receptionist","nurse"]}><CaminoPaciente /></ProtectedRoute>} />
                       <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Auditoria /></ProtectedRoute>} />
                       <Route path="/inbox" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><Inbox /></ProtectedRoute>} />
