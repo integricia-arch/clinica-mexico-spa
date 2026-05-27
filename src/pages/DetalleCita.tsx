@@ -231,6 +231,7 @@ export default function DetalleCita() {
       }
       setLoading(false);
     })();
+    reloadJourney();
   }, [id]);
 
   const updateStatus = async (newStatus: AppointmentStatus) => {
