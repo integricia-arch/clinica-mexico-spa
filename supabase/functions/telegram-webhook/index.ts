@@ -86,10 +86,12 @@ const TOOLS = [
 // ENTRY POINT
 // ============================================================
 Deno.serve(async (req) => {
-  if (WEBHOOK_SECRET) {
-    const got = req.headers.get("x-telegram-bot-api-secret-token");
-    if (got !== WEBHOOK_SECRET) return new Response("forbidden", { status: 403 });
+  if (!WEBHOOK_SECRET) {
+    console.error("WEBHOOK_SECRET no está configurado");
+    return new Response("misconfigured", { status: 500 });
   }
+  const got = req.headers.get("x-telegram-bot-api-secret-token");
+  if (got !== WEBHOOK_SECRET) return new Response("forbidden", { status: 403 });
 
   let update: any;
   try { update = await req.json(); }
