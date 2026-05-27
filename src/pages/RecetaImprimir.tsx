@@ -19,18 +19,18 @@ export default function RecetaImprimir() {
       try {
         const { data: rx, error } = await supabase
           .from("prescriptions")
-          .select(`
-            id, prescription_number, issue_date, diagnosis, notes, qr_code_value,
-            template_snapshot_json,
-            doctor:doctors!prescriptions_doctor_id_fkey(nombre, apellidos, especialidad, cedula_profesional),
-            patient:patients!prescriptions_patient_id_fkey(nombre, apellidos, fecha_nacimiento, sexo),
-            items:prescription_items(*)
-          `)
+          .select("id, prescription_number, issue_date, diagnosis, notes, qr_code_value, template_snapshot_json, doctor_id, patient_id")
           .eq("id", id)
           .maybeSingle();
 
         if (error) throw error;
         if (!rx) throw new Error("Receta no encontrada");
+
+        const [docRes, patRes, itemsRes] = await Promise.all([
+          supabase.from("doctors").select("nombre, apellidos, especialidad, cedula_profesional").eq("id", (rx as any).doctor_id).maybeSingle(),
+          supabase.from("patients").select("nombre, apellidos, fecha_nacimiento, sexo").eq("id", (rx as any).patient_id).maybeSingle(),
+          supabase.from("prescription_items").select("*").eq("prescription_id", id),
+        ]);
 
         const tpl = (rx as any).template_snapshot_json ?? null;
         const [logoUrl, firmaUrl] = await Promise.all([
@@ -44,9 +44,9 @@ export default function RecetaImprimir() {
           diagnosis: (rx as any).diagnosis,
           notes: (rx as any).notes,
           qr_code_value: (rx as any).qr_code_value,
-          doctor: (rx as any).doctor,
-          patient: (rx as any).patient,
-          items: (rx as any).items ?? [],
+          doctor: (docRes.data as any) ?? { nombre: "", apellidos: "", especialidad: "", cedula_profesional: null },
+          patient: (patRes.data as any) ?? { nombre: "", apellidos: "", fecha_nacimiento: null, sexo: null },
+          items: (itemsRes.data as any) ?? [],
           template: tpl,
           logoUrl,
           firmaUrl,
