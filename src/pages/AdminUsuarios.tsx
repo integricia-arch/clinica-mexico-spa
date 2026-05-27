@@ -15,8 +15,9 @@ import {
 import { toast } from "sonner";
 import {
   ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
-  Trash2, ShieldAlert, Lock,
+  Trash2, ShieldAlert, Lock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient";
 
@@ -47,9 +48,24 @@ interface UsuarioRow {
   is_permanent_admin?: boolean;
 }
 
+interface DoctorRow {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  especialidad: string;
+  cedula_profesional: string | null;
+  telefono: string | null;
+  activo: boolean;
+  user_id: string | null;
+  user_email?: string | null;
+}
+
 export default function AdminUsuarios() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UsuarioRow[]>([]);
+  const [doctors, setDoctors] = useState<DoctorRow[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
   const [query, setQuery] = useState("");
   const [busyUser, setBusyUser] = useState<string | null>(null);
 
@@ -86,15 +102,55 @@ export default function AdminUsuarios() {
     setUsers(((data as any)?.users ?? []) as UsuarioRow[]);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  const fetchDoctors = async () => {
+    setLoadingDoctors(true);
+    const { data, error } = await supabase
+      .from("doctors")
+      .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id")
+      .order("apellidos");
+    setLoadingDoctors(false);
+    if (error) {
+      toast.error("No se pudieron cargar los médicos");
+      return;
+    }
+    setDoctors((data ?? []) as DoctorRow[]);
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchDoctors();
+  }, []);
+
+  // Enriquecer doctores con email del usuario vinculado
+  const doctorsEnriched = useMemo<DoctorRow[]>(() => {
+    const byId = new Map(users.map((u) => [u.id, u.email]));
+    return doctors.map((d) => ({ ...d, user_email: d.user_id ? byId.get(d.user_id) ?? null : null }));
+  }, [doctors, users]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) =>
-      u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)
+    let list = users;
+    if (roleFilter !== "all") {
+      list = list.filter((u) =>
+        roleFilter === "patient"
+          ? u.roles.includes("patient") || u.roles.length === 0
+          : u.roles.includes(roleFilter),
+      );
+    }
+    if (!q) return list;
+    return list.filter((u) =>
+      u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q),
     );
-  }, [users, query]);
+  }, [users, query, roleFilter]);
+
+  const roleCounts = useMemo(() => {
+    const c: Record<string, number> = { all: users.length, admin: 0, receptionist: 0, doctor: 0, nurse: 0, patient: 0 };
+    for (const u of users) {
+      for (const r of u.roles) c[r] = (c[r] ?? 0) + 1;
+      if (u.roles.length === 0) c.patient += 1;
+    }
+    return c;
+  }, [users]);
 
   const toggleRole = async (user: UsuarioRow, role: AppRole) => {
     const has = user.roles.includes(role);
@@ -208,6 +264,59 @@ export default function AdminUsuarios() {
     setBaseOpen(false); setBasePw("");
   };
 
+  // ---- Vinculación de médicos ----
+  const [linkDoctor, setLinkDoctor] = useState<DoctorRow | null>(null);
+  const [linkEmail, setLinkEmail] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
+  const [linkExistingUserId, setLinkExistingUserId] = useState<string>("");
+  const [linkMode, setLinkMode] = useState<"new" | "existing">("new");
+  const [linking, setLinking] = useState(false);
+
+  const openLinkDoctor = (d: DoctorRow) => {
+    setLinkDoctor(d);
+    setLinkEmail("");
+    setLinkPassword("");
+    setLinkExistingUserId("");
+    setLinkMode("new");
+  };
+
+  const handleLinkDoctor = async () => {
+    if (!linkDoctor) return;
+    setLinking(true);
+    const payload: any = { action: "link_doctor_user", doctor_id: linkDoctor.id };
+    if (linkMode === "existing") {
+      if (!linkExistingUserId) { setLinking(false); toast.error("Selecciona un usuario"); return; }
+      payload.existing_user_id = linkExistingUserId;
+    } else {
+      if (!linkEmail || linkPassword.length < 8) { setLinking(false); toast.error("Correo y contraseña (8+) requeridos"); return; }
+      payload.email = linkEmail;
+      payload.password = linkPassword;
+    }
+    const { data, error } = await supabase.functions.invoke("admin-users", { body: payload });
+    setLinking(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo vincular");
+      return;
+    }
+    toast.success(`Médico ${linkDoctor.nombre} ${linkDoctor.apellidos} vinculado`);
+    setLinkDoctor(null);
+    fetchUsers();
+    fetchDoctors();
+  };
+
+  const handleUnlinkDoctor = async (d: DoctorRow) => {
+    if (!confirm(`¿Desvincular la cuenta de ${d.nombre} ${d.apellidos}? La cuenta de usuario no se elimina.`)) return;
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "unlink_doctor_user", doctor_id: d.id },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo desvincular");
+      return;
+    }
+    toast.success("Médico desvinculado");
+    fetchDoctors();
+  };
+
   const fmt = (d: string | null) =>
     d ? new Date(d).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" }) : "—";
 
@@ -224,7 +333,7 @@ export default function AdminUsuarios() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={fetchUsers} disabled={loading}>Recargar</Button>
+          <Button variant="outline" onClick={() => { fetchUsers(); fetchDoctors(); }} disabled={loading}>Recargar</Button>
           <Button variant="outline" onClick={() => setBaseOpen(true)}>
             <Lock className="h-4 w-4 mr-1.5" />
             Contraseña base
@@ -236,121 +345,278 @@ export default function AdminUsuarios() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por correo o ID…"
-            className="pl-9"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      <Tabs defaultValue="usuarios" className="w-full">
+        <TabsList>
+          <TabsTrigger value="usuarios" className="gap-1.5">
+            <UsersIcon className="h-4 w-4" /> Cuentas de usuario ({users.length})
+          </TabsTrigger>
+          <TabsTrigger value="medicos" className="gap-1.5">
+            <Stethoscope className="h-4 w-4" /> Médicos del registro ({doctors.length})
+            {doctors.some((d) => !d.user_id) && (
+              <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                {doctors.filter((d) => !d.user_id).length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium">Usuario</th>
-                <th className="text-left px-4 py-3 font-medium">Roles</th>
-                <th className="text-left px-4 py-3 font-medium">Último acceso</th>
-                <th className="text-left px-4 py-3 font-medium">Asignar / Remover</th>
-                <th className="text-right px-4 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-t border-border">
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-8 w-64" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-8 w-32" /></td>
-                </tr>
+        {/* TAB: Usuarios */}
+        <TabsContent value="usuarios" className="space-y-4 mt-4">
+          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por correo o ID…"
+                className="pl-9"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["all", "admin", "receptionist", "doctor", "nurse", "patient"] as const).map((r) => (
+                <Button
+                  key={r}
+                  size="sm"
+                  variant={roleFilter === r ? "default" : "outline"}
+                  onClick={() => setRoleFilter(r)}
+                  className="h-7 text-xs"
+                >
+                  {r === "all" ? "Todos" : ROLE_LABELS[r]} ({roleCounts[r] ?? 0})
+                </Button>
               ))}
+            </div>
+          </div>
 
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
-                    <UsersIcon className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                    Sin usuarios para mostrar
-                  </td>
-                </tr>
-              )}
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Usuario</th>
+                    <th className="text-left px-4 py-3 font-medium">Roles</th>
+                    <th className="text-left px-4 py-3 font-medium">Último acceso</th>
+                    <th className="text-left px-4 py-3 font-medium">Asignar / Remover</th>
+                    <th className="text-right px-4 py-3 font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-t border-border">
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-8 w-64" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-8 w-32" /></td>
+                    </tr>
+                  ))}
 
-              {!loading && filtered.map((u) => (
-                <tr key={u.id} className="border-t border-border align-top">
-                  <td className="px-4 py-3">
-                    <div className="font-medium flex items-center gap-1.5">
-                      {u.email ?? "(sin correo)"}
-                      {u.is_permanent_admin && (
-                        <Badge variant="outline" className="gap-1 text-[10px]">
-                          <ShieldAlert className="h-3 w-3" /> Permanente
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.roles.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">Sin rol</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {u.roles.map((r) => (
-                          <Badge key={r} className={ROLE_BADGE[r as AppRole]}>
-                            {ROLE_LABELS[r as AppRole] ?? r}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{fmt(u.last_sign_in_at)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {ROLE_OPTIONS.map((role) => {
-                        const has = u.roles.includes(role);
-                        return (
-                          <Button
-                            key={role}
-                            size="sm"
-                            variant={has ? "default" : "outline"}
-                            disabled={busyUser === u.id}
-                            onClick={() => toggleRole(u, role)}
-                            className="h-7 text-xs"
-                          >
-                            {has ? "✓ " : "+ "}{ROLE_LABELS[role]}
+                  {!loading && filtered.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                        <UsersIcon className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                        Sin usuarios para mostrar
+                      </td>
+                    </tr>
+                  )}
+
+                  {!loading && filtered.map((u) => (
+                    <tr key={u.id} className="border-t border-border align-top">
+                      <td className="px-4 py-3">
+                        <div className="font-medium flex items-center gap-1.5">
+                          {u.email ?? "(sin correo)"}
+                          {u.is_permanent_admin && (
+                            <Badge variant="outline" className="gap-1 text-[10px]">
+                              <ShieldAlert className="h-3 w-3" /> Permanente
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.roles.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">Sin rol</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {u.roles.map((r) => (
+                              <Badge key={r} className={ROLE_BADGE[r as AppRole]}>
+                                {ROLE_LABELS[r as AppRole] ?? r}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{fmt(u.last_sign_in_at)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {ROLE_OPTIONS.map((role) => {
+                            const has = u.roles.includes(role);
+                            return (
+                              <Button
+                                key={role}
+                                size="sm"
+                                variant={has ? "default" : "outline"}
+                                disabled={busyUser === u.id}
+                                onClick={() => toggleRole(u, role)}
+                                className="h-7 text-xs"
+                              >
+                                {has ? "✓ " : "+ "}{ROLE_LABELS[role]}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => { setEditUser(u); setEditEmail(u.email ?? ""); }}>
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => { setEditUser(u); setEditEmail(u.email ?? ""); }}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setPwUser(u); setPwValue(""); }}>
-                        <KeyRound className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        disabled={u.is_permanent_admin}
-                        onClick={() => setDelUser(u)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                          <Button size="sm" variant="ghost" onClick={() => { setPwUser(u); setPwValue(""); }}>
+                            <KeyRound className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            disabled={u.is_permanent_admin}
+                            onClick={() => setDelUser(u)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB: Médicos del registro clínico */}
+        <TabsContent value="medicos" className="space-y-4 mt-4">
+          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+            Lista de todos los médicos registrados en el sistema clínico. Si un médico no tiene cuenta vinculada,
+            no podrá iniciar sesión ni firmar recetas. Crea o vincula una cuenta desde aquí.
+          </div>
+
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Médico</th>
+                    <th className="text-left px-4 py-3 font-medium">Especialidad</th>
+                    <th className="text-left px-4 py-3 font-medium">Cédula</th>
+                    <th className="text-left px-4 py-3 font-medium">Cuenta vinculada</th>
+                    <th className="text-right px-4 py-3 font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingDoctors && Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="border-t border-border">
+                      <td className="px-4 py-3" colSpan={5}><Skeleton className="h-6 w-full" /></td>
+                    </tr>
+                  ))}
+                  {!loadingDoctors && doctorsEnriched.length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                      <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                      Sin médicos registrados
+                    </td></tr>
+                  )}
+                  {!loadingDoctors && doctorsEnriched.map((d) => (
+                    <tr key={d.id} className="border-t border-border">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">Dr(a). {d.nombre} {d.apellidos}</div>
+                        {!d.activo && <Badge variant="outline" className="text-[10px] mt-0.5">Inactivo</Badge>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{d.especialidad}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{d.cedula_profesional ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        {d.user_id ? (
+                          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span className="text-xs">{d.user_email ?? d.user_id.slice(0, 8) + "…"}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="text-xs">Sin cuenta</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          {d.user_id ? (
+                            <Button size="sm" variant="outline" onClick={() => handleUnlinkDoctor(d)}>
+                              <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
+                            </Button>
+                          ) : (
+                            <Button size="sm" onClick={() => openLinkDoctor(d)}>
+                              <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog: Vincular médico */}
+      <Dialog open={!!linkDoctor} onOpenChange={(o) => !o && setLinkDoctor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular cuenta a médico</DialogTitle>
+            <DialogDescription>
+              Dr(a). {linkDoctor?.nombre} {linkDoctor?.apellidos}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-1.5">
+              <Button size="sm" variant={linkMode === "new" ? "default" : "outline"} onClick={() => setLinkMode("new")}>
+                Crear cuenta nueva
+              </Button>
+              <Button size="sm" variant={linkMode === "existing" ? "default" : "outline"} onClick={() => setLinkMode("existing")}>
+                Usar cuenta existente
+              </Button>
+            </div>
+            {linkMode === "new" ? (
+              <>
+                <div>
+                  <Label>Correo</Label>
+                  <Input type="email" value={linkEmail} onChange={(e) => setLinkEmail(e.target.value)} placeholder="medico@clinica.mx" />
+                </div>
+                <div>
+                  <Label>Contraseña inicial</Label>
+                  <Input type="text" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="mínimo 8 caracteres" />
+                </div>
+              </>
+            ) : (
+              <div>
+                <Label>Usuario existente</Label>
+                <select
+                  className="w-full mt-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={linkExistingUserId}
+                  onChange={(e) => setLinkExistingUserId(e.target.value)}
+                >
+                  <option value="">Selecciona…</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.email}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDoctor(null)}>Cancelar</Button>
+            <Button onClick={handleLinkDoctor} disabled={linking}>{linking ? "Vinculando…" : "Vincular"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Crear usuario */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
