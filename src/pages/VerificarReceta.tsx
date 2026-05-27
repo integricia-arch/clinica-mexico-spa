@@ -57,6 +57,10 @@ export default function VerificarReceta() {
         items_count: count ?? 0,
       });
       setLoading(false);
+      // Registrar evento de verificación (mejor esfuerzo, ignora errores de permisos)
+      import("@/features/recetas/services/prescriptionAuditService").then(({ logPrescriptionEvent }) =>
+        logPrescriptionEvent(id, "verified_scan"),
+      );
     })();
   }, [id]);
 
