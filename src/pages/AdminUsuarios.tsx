@@ -106,7 +106,7 @@ export default function AdminUsuarios() {
     setLoadingDoctors(true);
     const { data, error } = await supabase
       .from("doctors")
-      .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id")
+      .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id, horario_inicio, horario_fin, duracion_cita_min")
       .order("apellidos");
     setLoadingDoctors(false);
     if (error) {
