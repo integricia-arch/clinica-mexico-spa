@@ -19,6 +19,7 @@ import Expedientes from "@/pages/Expedientes";
 import Farmacia from "@/pages/Farmacia";
 import Configuracion from "@/pages/Configuracion";
 import CaminoPacienteConfig from "@/pages/configuracion/CaminoPaciente";
+import MachoteReceta from "@/pages/configuracion/MachoteReceta";
 import Auditoria from "@/pages/Auditoria";
 import Inbox from "@/pages/Inbox";
 import Citas from "@/pages/Citas";
@@ -56,8 +57,9 @@ const App = () => (
                       <Route path="/facturacion" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Facturacion /></ProtectedRoute>} />
                       <Route path="/expedientes" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Expedientes /></ProtectedRoute>} />
                       <Route path="/farmacia" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Farmacia /></ProtectedRoute>} />
-                      <Route path="/configuracion" element={<ProtectedRoute allowedRoles={["admin"]}><Configuracion /></ProtectedRoute>} />
+                      <Route path="/configuracion" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><Configuracion /></ProtectedRoute>} />
                       <Route path="/configuracion/camino-paciente" element={<ProtectedRoute allowedRoles={["admin"]}><CaminoPacienteConfig /></ProtectedRoute>} />
+                      <Route path="/configuracion/recetas" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><MachoteReceta /></ProtectedRoute>} />
                       <Route path="/camino-paciente/:id" element={<ProtectedRoute allowedRoles={["admin","doctor","receptionist","nurse"]}><CaminoPaciente /></ProtectedRoute>} />
                       <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Auditoria /></ProtectedRoute>} />
                       <Route path="/inbox" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><Inbox /></ProtectedRoute>} />
