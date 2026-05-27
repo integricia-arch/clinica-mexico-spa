@@ -10,9 +10,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/errors";
 
-const secciones = [
+type Seccion = { icon: any; titulo: string; descripcion: string; to?: string; adminOnly?: boolean };
+
+const secciones: Seccion[] = [
+  { icon: Users, titulo: "Usuarios y roles", descripcion: "Administrar cuentas: Administrador, Recepción, Médico, Enfermería, Farmacia, Caja/Facturación.", to: "/admin/usuarios", adminOnly: true },
   { icon: Building2, titulo: "Datos del consultorio", descripcion: "Nombre, dirección, teléfono, logotipo y datos fiscales del establecimiento." },
-  { icon: Users, titulo: "Usuarios y roles", descripcion: "Administrar cuentas: Administrador, Recepción, Médico, Enfermería, Farmacia, Caja/Facturación." },
   { icon: Shield, titulo: "Permisos y seguridad", descripcion: "Control de acceso por rol, sesiones activas y políticas de contraseña." },
   { icon: Bell, titulo: "Notificaciones y recordatorios", descripcion: "Configurar recordatorios por WhatsApp, SMS o correo electrónico para citas y seguimientos." },
   { icon: Globe, titulo: "Localización", descripcion: "Zona horaria (Ciudad de México), formato de fecha (dd/mm/aaaa), moneda (MXN), idioma (Español)." },
@@ -155,16 +157,29 @@ export default function Configuracion() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {secciones.map((s) => (
-          <div key={s.titulo} className="rounded-xl border border-border bg-card p-5 shadow-card hover:shadow-elevated transition-shadow cursor-pointer group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-              <s.icon className="h-5 w-5" />
-            </div>
-            <h3 className="mt-3 text-display font-semibold text-card-foreground">{s.titulo}</h3>
-            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{s.descripcion}</p>
-          </div>
-        ))}
+        {secciones.filter((s) => !s.adminOnly || isAdmin).map((s) => {
+          const content = (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  <s.icon className="h-5 w-5" />
+                </div>
+                {s.to && <ArrowRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />}
+              </div>
+              <h3 className="mt-3 text-display font-semibold text-card-foreground">{s.titulo}</h3>
+              <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{s.descripcion}</p>
+              {!s.to && <p className="mt-2 text-[11px] text-muted-foreground/70 italic">Próximamente</p>}
+            </>
+          );
+          const cls = "rounded-xl border border-border bg-card p-5 shadow-card hover:shadow-elevated transition-shadow group block";
+          return s.to ? (
+            <Link key={s.titulo} to={s.to} className={cls}>{content}</Link>
+          ) : (
+            <div key={s.titulo} className={cls + " cursor-default opacity-80"}>{content}</div>
+          );
+        })}
       </div>
+
 
       <div className="rounded-xl border border-border bg-muted/50 p-4 text-xs text-muted-foreground leading-relaxed">
         <strong>Aviso:</strong> Este sistema está diseñado como herramienta de apoyo operativo para clínicas privadas en México.
