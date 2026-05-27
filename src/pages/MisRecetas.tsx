@@ -7,30 +7,40 @@ import { FileText, Printer, QrCode, Pill, ShieldCheck, Calendar } from "lucide-r
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+interface Item {
+  id: string;
+  prescription_id: string;
+  generic_name: string;
+  brand_name: string | null;
+  concentration: string | null;
+  dose: string;
+  route: string;
+  frequency: string;
+  duration: string;
+  instructions: string;
+  is_controlled: boolean;
+}
+
+interface Doctor {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  cedula_profesional: string | null;
+  especialidad: string | null;
+}
+
 interface Receta {
   id: string;
   prescription_number: string | null;
   issue_date: string | null;
   status: string;
   diagnosis: string | null;
-  qr_code_value: string | null;
-  doctors?: { nombre: string; apellidos: string; cedula_profesional: string | null; especialidad: string | null };
-  prescription_items?: Array<{
-    id: string;
-    generic_name: string;
-    brand_name: string | null;
-    concentration: string | null;
-    dose: string;
-    route: string;
-    frequency: string;
-    duration: string;
-    instructions: string;
-    is_controlled: boolean;
-  }>;
+  doctor_id: string;
+  doctor?: Doctor;
+  items: Item[];
 }
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  draft: { label: "Borrador", cls: "bg-muted text-muted-foreground" },
   issued: { label: "Emitida", cls: "bg-primary/10 text-primary" },
   partially_dispensed: { label: "Surtida parcial", cls: "bg-warning/10 text-warning" },
   dispensed: { label: "Surtida", cls: "bg-success/10 text-success" },
@@ -47,16 +57,36 @@ export default function MisRecetas() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data: rxs } = await supabase
         .from("prescriptions")
-        .select(`
-          id, prescription_number, issue_date, status, diagnosis, qr_code_value,
-          doctors:doctor_id (nombre, apellidos, cedula_profesional, especialidad),
-          prescription_items (id, generic_name, brand_name, concentration, dose, route, frequency, duration, instructions, is_controlled)
-        `)
+        .select("id, prescription_number, issue_date, status, diagnosis, doctor_id")
         .neq("status", "draft")
         .order("issue_date", { ascending: false, nullsFirst: false });
-      setRecetas((data ?? []) as unknown as Receta[]);
+
+      const list = (rxs ?? []) as Receta[];
+      if (list.length === 0) { setRecetas([]); setLoading(false); return; }
+
+      const ids = list.map((r) => r.id);
+      const doctorIds = Array.from(new Set(list.map((r) => r.doctor_id)));
+      const [{ data: items }, { data: docs }] = await Promise.all([
+        supabase.from("prescription_items").select("*").in("prescription_id", ids),
+        supabase.from("doctors").select("id, nombre, apellidos, cedula_profesional, especialidad").in("id", doctorIds),
+      ]);
+
+      const itemsByRx = new Map<string, Item[]>();
+      (items ?? []).forEach((it: any) => {
+        const arr = itemsByRx.get(it.prescription_id) ?? [];
+        arr.push(it);
+        itemsByRx.set(it.prescription_id, arr);
+      });
+      const docMap = new Map<string, Doctor>();
+      (docs ?? []).forEach((d: any) => docMap.set(d.id, d));
+
+      setRecetas(list.map((r) => ({
+        ...r,
+        items: itemsByRx.get(r.id) ?? [],
+        doctor: docMap.get(r.doctor_id),
+      })));
       setLoading(false);
     })();
   }, [user]);
@@ -102,23 +132,23 @@ export default function MisRecetas() {
                       <span className="font-semibold text-foreground">{r.prescription_number ?? "Sin folio"}</span>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+                    <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                       <Calendar className="h-3 w-3" />
                       {r.issue_date ? format(new Date(r.issue_date), "dd/MM/yyyy HH:mm", { locale: es }) : "Sin fecha"}
-                      {r.doctors && (
-                        <span className="ml-2">· Dr(a). {r.doctors.nombre} {r.doctors.apellidos}{r.doctors.especialidad ? ` — ${r.doctors.especialidad}` : ""}</span>
+                      {r.doctor && (
+                        <span className="ml-2">· Dr(a). {r.doctor.nombre} {r.doctor.apellidos}{r.doctor.especialidad ? ` — ${r.doctor.especialidad}` : ""}</span>
                       )}
                     </p>
                     {r.diagnosis && <p className="mt-1 text-xs text-foreground">Dx: {r.diagnosis}</p>}
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-xs text-muted-foreground">{r.prescription_items?.length ?? 0} medicamento(s)</span>
+                    <span className="text-xs text-muted-foreground">{r.items.length} medicamento(s)</span>
                   </div>
                 </button>
 
                 {isOpen && (
                   <div className="border-t border-border p-4 space-y-3 bg-muted/20">
-                    {(r.prescription_items ?? []).map((it) => (
+                    {r.items.map((it) => (
                       <div key={it.id} className="rounded border border-border bg-card p-3 text-sm">
                         <p className="font-semibold text-foreground">
                           {it.generic_name}
