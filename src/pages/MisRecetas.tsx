@@ -176,6 +176,11 @@ export default function MisRecetas() {
                           <QrCode className="mr-1.5 h-4 w-4" /> Verificar autenticidad
                         </Link>
                       </Button>
+                      <Button asChild size="sm" variant="ghost">
+                        <Link to={`/receta/${r.id}/bitacora`}>
+                          <History className="mr-1.5 h-4 w-4" /> Ver bitácora
+                        </Link>
+                      </Button>
                     </div>
                   </div>
                 )}
