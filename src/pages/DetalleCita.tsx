@@ -12,9 +12,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock } from "lucide-react";
+import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock, Route } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
+import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
+import QuickArrivalModal from "@/features/centro-control/components/QuickArrivalModal";
+import type { JourneyInstanceLite } from "@/features/centro-control/lib/journeyHelpers";
 
 const estadoRecordatorioLabel: Record<string, string> = {
   pendiente: "Pendiente",
@@ -66,7 +69,21 @@ export default function DetalleCita() {
   const [servicio, setServicio] = useState<any>(null);
   const [recordatorios, setRecordatorios] = useState<any[]>([]);
   const [identidadesCanal, setIdentidadesCanal] = useState<IdentidadCanal[]>([]);
+  const [journeyInstance, setJourneyInstance] = useState<JourneyInstanceLite | null>(null);
+  const [arrivalOpen, setArrivalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const reloadJourney = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("journey_instances")
+      .select("id, appointment_id, patient_id, status, snapshot_json, updated_at, created_at")
+      .eq("appointment_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setJourneyInstance((data as JourneyInstanceLite) ?? null);
+  };
 
   // Modal recordatorio
   const [reminderOpen, setReminderOpen] = useState(false);
@@ -214,6 +231,7 @@ export default function DetalleCita() {
       }
       setLoading(false);
     })();
+    reloadJourney();
   }, [id]);
 
   const updateStatus = async (newStatus: AppointmentStatus) => {
@@ -297,6 +315,32 @@ export default function DetalleCita() {
               </Button>
             </div>
           )}
+
+        {(hasRole("admin") || hasRole("receptionist") || hasRole("doctor") || hasRole("nurse")) && (
+          <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Route className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium">Camino del paciente</p>
+                {journeyInstance && (
+                  <span className="text-xs text-muted-foreground capitalize">
+                    · {journeyInstance.status?.replace("_", " ")}
+                  </span>
+                )}
+              </div>
+              {(hasRole("admin") || hasRole("receptionist")) && (
+                <Button size="sm" variant={journeyInstance ? "outline" : "default"} onClick={() => setArrivalOpen(true)}>
+                  {journeyInstance ? "Registrar llegada" : "Iniciar camino"}
+                </Button>
+              )}
+            </div>
+            <PatientJourneyLine
+              journeyInstance={journeyInstance}
+              showProgress
+              onStart={(hasRole("admin") || hasRole("receptionist")) ? () => setArrivalOpen(true) : undefined}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="flex gap-3">
@@ -518,6 +562,14 @@ export default function DetalleCita() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <QuickArrivalModal
+        open={arrivalOpen}
+        onOpenChange={setArrivalOpen}
+        appointmentId={id ?? null}
+        patientName={a.patients ? `${a.patients.nombre} ${a.patients.apellidos}` : undefined}
+        onCompleted={reloadJourney}
+      />
     </div>
   );
 }
