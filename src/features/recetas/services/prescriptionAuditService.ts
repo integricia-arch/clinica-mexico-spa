@@ -46,22 +46,18 @@ export interface PrescriptionAuditEntry {
   user_id: string | null;
   accion: string;
   event: string | null;
-  raw: any;
+  payload: any;
 }
 
 export async function getPrescriptionAudit(prescriptionId: string): Promise<PrescriptionAuditEntry[]> {
-  const { data } = await supabase
-    .from("audit_logs")
-    .select("id, created_at, user_id, accion, datos_nuevos, datos_anteriores")
-    .eq("tabla", "prescriptions")
-    .eq("registro_id", prescriptionId)
-    .order("created_at", { ascending: false });
-  return (data ?? []).map((r: any) => ({
+  const { data, error } = await supabase.rpc("get_prescription_audit", { _prescription_id: prescriptionId });
+  if (error || !data) return [];
+  return (data as any[]).map((r) => ({
     id: r.id,
     created_at: r.created_at,
     user_id: r.user_id,
     accion: r.accion,
-    event: r.datos_nuevos?.event ?? null,
-    raw: r,
+    event: r.event,
+    payload: r.payload,
   }));
 }
