@@ -26,6 +26,28 @@ Deno.serve(async (req) => {
     return json({ error: "method not allowed" }, 405);
   }
 
+  // Require staff role (admin, receptionist, doctor, nurse).
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return json({ error: "no autorizado" }, 401);
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+  if (userErr || !userData?.user) {
+    return json({ error: "token inválido" }, 401);
+  }
+  const { data: rolesRows } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id);
+  const roles = (rolesRows ?? []).map((r: any) => r.role);
+  const isStaff = roles.some((r: string) =>
+    ["admin", "receptionist", "doctor", "nurse"].includes(r)
+  );
+  if (!isStaff) {
+    return json({ error: "permiso denegado" }, 403);
+  }
+
   let body: { conversacion_id?: string; mensaje?: string };
   try { body = await req.json(); }
   catch { return json({ error: "bad json" }, 400); }
@@ -35,6 +57,7 @@ Deno.serve(async (req) => {
   if (!conversacion_id || !mensaje) {
     return json({ error: "conversacion_id y mensaje requeridos" }, 400);
   }
+
 
   // 1. Cargar conversación + identidad para obtener chat_id de Telegram
   const { data: conv, error: ec } = await supabase
