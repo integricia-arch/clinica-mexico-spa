@@ -1,101 +1,93 @@
-# Motor operativo del Camino del Paciente
+# Plan: Centro de Control + Camino del Paciente end-to-end
 
-Convertir el camino del paciente de una representación visual a un motor operativo real, con apertura/cierre formal de cada hito, evidencia, responsables, validaciones y auditoría. Estrictamente aditivo: no se reemplazan tablas, módulos ni componentes existentes.
+## 1. Diagnóstico actual
 
-## Alcance
+En `AdminDashboard` (Centro de Control) hoy la cita del día solo expone:
+- "Iniciar camino" (crea la instancia y **navega** a `/camino-paciente/:id`)
+- "Operar" / "Cita" (también navegan fuera)
+- Drawer lateral con accesos rápidos, sin acción de "registrar llegada"
 
-Cubre los 13 hitos del flujo (llegada → recepción → identificación/consentimiento → expediente → triage → consulta → receta → farmacia → cobro/facturación → alta → post-consulta), respetando RLS y roles actuales (`admin`, `doctor`, `receptionist`, `nurse`, `patient`). El rol `pharmacy` no existe todavía: se prepara la estructura pero se permite que `admin`/`receptionist` cubran temporalmente.
+No existe un botón "Registrar llegada" — por eso el usuario percibe que "no funciona". El flujo real obliga a salir del Centro de Control para tocar el hito `arrival`.
 
-No se tocan: `patients`, `appointments`, `doctors`, `rooms`, `expedientes`, `notas_consulta`, `medicamentos`, `lotes_medicamento`, `recordatorios_cita`, `journey_templates*`, ni el `AdminDashboard` ni `PatientJourneyLine` existentes (solo se enriquecen con datos nuevos vía hook).
+En `operationalSteps.ts` están definidos 13 hitos, pero en `CaminoPaciente.tsx` **solo** `arrival` y `consultation_close` tienen formulario propio. Los demás (`assignment`, `attention_open`, `identification`, `record`, `triage`, `consultation_open`, `prescription`, `pharmacy`, `billing`, `discharge`, `followup`) caen en un fallback genérico "clave/valor" que no captura los datos correctos para una clínica mexicana (NOM-024, NOM-004, CFDI, COFEPRIS).
 
-## Cambios de base de datos (migración aditiva)
+## 2. Objetivos
 
-Nuevas tablas en `public`, todas con RLS habilitada y políticas por rol:
+1. Desde el Centro de Control se puede **abrir la cita del día y registrar la llegada sin salir de la página**.
+2. El botón "Registrar llegada" funciona en 1 clic (crea camino si falta, abre hito, captura motivo, cierra hito y avanza al siguiente).
+3. Cada hito tiene un formulario alineado al proceso real de recepción mexicana.
 
-1. `journey_instance_steps` — un registro por hito por instancia (status, opened_at/by, assigned_to, closed_at/by, blocked_reason, next_action, notes).
-2. `journey_instance_step_data` — `data_json` por hito con `created_by`/`updated_by`.
-3. `journey_instance_audit` — append-only (RLS: INSERT permitido a staff, UPDATE/DELETE denegados). Trigger `journey_step_audit_trigger` registra automáticamente cambios en `journey_instance_steps`.
-4. `journey_instance_documents` — referencias a documentos por hito (file_url/file_name/document_type).
-5. `journey_instance_overrides` — solicitud y autorización de overrides (estados: requested, authorized, rejected).
-6. `prescriptions` — receta electrónica con `prescription_number` único, estados (draft/issued/cancelled/dispensed/partially_dispensed), QR interno, PDF URL.
-7. `prescription_items` — partidas de receta con denominación genérica/distintiva, forma, concentración, dosis, vía, frecuencia, duración, cantidad, indicaciones, flag controlado.
-8. `patient_checkout_events` — alta del paciente (tipo, estatus, resumen, followup_required).
-9. `post_consultation_followups` — seguimiento post-consulta (canal, estado, adherencia, síntomas, efectos adversos).
+## 3. Cambios — Frontend (Centro de Control)
 
-Funciones SQL `SECURITY DEFINER`:
-- `generate_prescription_number()` — folio único por día.
-- `journey_step_audit_trigger()` — append a `journey_instance_audit`.
-- `update_journey_progress(journey_instance_id)` — recalcula `current_step_key`/`status`/`progress_percent` dentro del `snapshot_json`.
+**`src/features/centro-control/components/TodayAppointmentsTable.tsx`**
+- Nueva columna/acción `Registrar llegada` por fila:
+  - Si `!instance` → crea camino y abre modal de llegada.
+  - Si `instance` y hito `arrival` está `pending`/`open` → abre modal.
+  - Si `arrival` está cerrado → muestra etiqueta "✓ Llegada · HH:mm" y deshabilita el botón.
+- Conservar "Operar" y "Cita" para navegación profunda.
 
-Políticas RLS (resumen):
-- Staff lee/escribe steps y data según rol del paso (recepción no edita diagnóstico; doctor no borra pagos; etc.) — se aplica a nivel de aplicación + RLS general por rol de staff.
-- `journey_instance_audit`: INSERT por cualquier staff autenticado; UPDATE/DELETE denegados a todos.
-- `prescriptions`: INSERT/UPDATE solo doctor dueño o admin; SELECT staff clínico y paciente dueño.
-- `patient_checkout_events`: INSERT/UPDATE admin/receptionist/doctor; SELECT staff + paciente dueño.
+**Nuevo `QuickArrivalModal.tsx` en `src/features/centro-control/components/`**
+- Dialog con el mismo `ArrivalForm` ya existente (reutilización, sin duplicar lógica).
+- Al cerrar exitosamente: `reload()` del dashboard y toast "Llegada registrada".
+- Si el hito siguiente (`assignment`) está abierto, ofrece botón secundario "Continuar a asignación" que abre el siguiente modal sin navegar.
 
-## Capa de servicios (frontend)
+**`PatientOperationalDrawer.tsx`**
+- Reemplazar "Abrir cita" por dos acciones contextuales:
+  - "Registrar llegada" (si `arrival` aún no está cerrado)
+  - "Continuar camino" (si ya tiene llegada) → abre modal del hito activo
+- Mantener acceso a `/camino-paciente/:id` como link secundario "Ver camino completo".
 
-Nuevo paquete `src/features/camino-paciente/services/` con módulos puros que encapsulan toda la lógica de negocio y llaman a Supabase:
+## 4. Auditoría y rediseño del camino (13 hitos)
 
-- `journeyEngine.ts`: `createJourneyFromAppointment`, `openJourneyStep`, `saveJourneyStepData`, `closeJourneyStep`, `blockJourneyStep`, `requestStepOverride`, `authorizeStepOverride`, `updateJourneyProgress`.
-- `prescriptionService.ts`: `createPrescriptionFromConsultation`, `addPrescriptionItem`, `issuePrescription` (con validaciones de cédula, alergias, campos obligatorios), `cancelPrescription`, `dispensePrescription` (descuenta `lotes_medicamento` vía `movimientos_inventario`).
-- `checkoutService.ts`: `checkoutPatient` con validaciones de consulta cerrada, receta emitida/justificada y pago/justificación.
-- `followupService.ts`: `createFollowup`, `completeFollowup`, integración con `recordatorios_cita`.
-- `journeyValidations.ts`: reglas declarativas por hito (campos requeridos mínimos, predecesores, roles que pueden cerrar).
+Para cada hito se define: **rol responsable · qué captura · regla de cierre**. Donde hoy hay fallback genérico se crea un `StepForm` específico.
 
-Cada operación de cierre llama a `updateJourneyProgress` y deja registro en `journey_instance_audit`.
+```text
+1. arrival              Recepción     Motivo, síntomas, hora llegada            [ya existe ArrivalForm ✓]
+2. assignment           Recepción     Doctor + consultorio + servicio           [nuevo AssignmentForm]
+3. attention_open       Enfermería    Llamado a sala, hora apertura             [nuevo AttentionOpenForm]
+4. identification       Recepción     INE/CURP verificada + consentimiento      [nuevo IdentificationForm]
+5. record (expediente)  Doctor/Enf.   Antecedentes NOM-004 (AHF, APP, APNP),    [nuevo RecordForm]
+                                       alergias, medicación crónica
+6. triage               Enfermería    TA, FC, FR, T°, SpO2, peso, talla, IMC   [nuevo TriageForm]
+7. consultation_open    Doctor        Hora inicio + queja principal             [nuevo ConsultationOpenForm]
+8. consultation_close   Doctor        SOAP (ya existe ConsultationForm ✓)
+9. prescription         Doctor        Receta electrónica → reutilizar           [link a PrescriptionEditorModal]
+                                       PrescriptionEditorModal existente
+10. pharmacy            Farmacia      Lote + cantidad dispensada                [nuevo PharmacyForm]
+                                       (descuenta de lotes_medicamento)
+11. billing             Recepción     CFDI: RFC, uso, forma pago, total MXN     [nuevo BillingForm]
+12. discharge           Recepción     Indicaciones de egreso + hora salida      [nuevo DischargeForm]
+13. followup            Cualquiera    Programa recordatorio + canal             [nuevo FollowupForm]
+```
 
-## Componentes y pantallas
+Todos los `StepForm` siguen el patrón de `ArrivalForm`: autosave debounced + Zod + `saveJourneyStepData` + `closeJourneyStep`. Se renderizan tanto en `CaminoPaciente.tsx` como dentro del modal rápido del Centro de Control (mismo componente, dos contenedores).
 
-Nuevos archivos en `src/features/camino-paciente/operativo/`:
+## 5. Detalles técnicos por hito
 
-- `RegistrarLlegadaDrawer.tsx` — Drawer accesible desde `AdminDashboard`/`TodayAppointmentsTable`. Precarga doctor/consultorio de la cita, permite reasignar (solo admin/receptionist), llama `createJourneyFromAppointment` + abre hito `arrival`.
-- `JourneyOperationalDrawer.tsx` — Drawer principal del hito actual con tabs: Datos, Acciones, Documentos, Auditoría. Botones contextuales: Abrir, Guardar, Cerrar, Bloquear, Solicitar override. Muestra `PatientJourneyLine` arriba (reutilizada).
-- `StepForms/` — formularios por hito: `ArrivalForm`, `IdentificationConsentForm`, `RecordReviewForm`, `TriageVitalsForm`, `ConsultationOpenForm`, `ConsultationCloseForm`, `PrescriptionForm`, `PharmacyDispenseForm`, `BillingForm`, `CheckoutForm`, `FollowupForm`. Cada uno valida con `zod` y delega al servicio.
-- `OverrideRequestDialog.tsx` y `OverrideAuthorizeDialog.tsx`.
-- `StepAuditList.tsx` — historial filtrado del hito.
-- `PrescriptionPreview.tsx` — vista imprimible con QR (lib `qrcode.react`), folio y todos los datos exigidos.
-- `pages/CaminoPaciente.tsx` — ruta nueva `/camino-paciente/:journeyInstanceId` para abrir el detalle completo.
+- **identification**: validar formato CURP (18 chars, regex oficial) y registrar en `consentimientos` (tabla existente) marcando `otorgado=true`.
+- **record**: si no existe `expedientes` activo para el paciente, lo crea (insert con `tipo='primera_vez'`); si existe, abre el actual.
+- **triage**: cálculo IMC en cliente; alerta si TA > 140/90 o SpO2 < 92.
+- **prescription**: el modal usa `PrescriptionEditorModal` ya construido; al cerrar, marca el hito `prescription` como completado con el `prescription_id`.
+- **pharmacy**: por cada renglón surtido inserta en `movimientos_inventario` (`tipo='salida'`) y descuenta `lotes_medicamento.existencia`. Bloquea cierre si algún medicamento no tiene lote con stock.
+- **billing**: campos RFC + Razón social + Uso CFDI + Forma de pago + Total. No emite CFDI real (no hay PAC), solo registra los datos.
+- **discharge**: cierra hito y dispara cambio de `appointments.status` a `liberada`.
 
-Hooks:
-- `useJourneyInstance(id)` — carga instance + steps + step_data + override pendiente, con suscripción realtime a los tres canales.
-- `useJourneyStepActions()` — wrappers de servicios con toasts.
+## 6. Backend / migración
 
-## Integraciones con módulos existentes (no destructivas)
+Una migración para:
+- Asegurar que `journey_instance_step_data.data_json` tiene índices GIN si se va a consultar (`CREATE INDEX IF NOT EXISTS ...`).
+- Verificar/crear catálogo `journey_option_catalogs` para "uso_cfdi", "forma_pago_sat", "canal_seguimiento".
 
-- `AdminDashboard.tsx` / `TodayAppointmentsTable.tsx`: añadir botón "Registrar llegada" cuando no hay `journey_instance` y "Abrir camino" cuando ya existe. Doble clic en línea gráfica → navega a `/camino-paciente/:id`.
-- `PatientJourneyLine.tsx`: extender `buildJourneyLineSteps` para consumir `journey_instance_steps` cuando existan (fallback al snapshot actual). Sin cambios visuales fuera de mostrar bloqueos y overrides ya soportados.
-- `PatientOperationalDrawer.tsx`: agregar botón "Abrir camino operativo" que enruta al drawer nuevo.
-- `Farmacia.tsx`: añadir tab "Surtir receta" que lista `prescriptions` con `status='issued'`.
-- `Facturacion.tsx`: añadir tab "Pendientes del camino" que lista `journey_instances` con hito `billing` abierto.
-- `Auditoria.tsx`: añadir filtro por `journey_instance_audit`.
-- `AppLayout`/router: registrar ruta `/camino-paciente/:id` protegida para staff.
+No se cambia ningún esquema crítico de pacientes/citas. RLS actuales ya cubren los nuevos formularios (todos pasan por `journey_instance_step_data` que ya tiene policies `is_clinic_staff`).
 
-## Roles y seguridad
+## 7. Validación
 
-- Validación dual: en la capa de servicio (early return + toast con motivo) y en RLS.
-- Documentos clínicos sensibles (notas de consulta, diagnóstico) no se muestran en formularios visibles para `receptionist`.
-- Receta solo editable por doctor dueño o admin; recepción/farmacia ven solo lectura.
-- Override requiere `admin` para autorizar; cualquier staff puede solicitarlo.
-- `journey_instance_audit` nunca se expone para edición/borrado en la UI.
+- Crear cita de prueba para hoy → desde Centro de Control: "Registrar llegada" → modal → guardar → fila muestra "✓ Llegada"; KPI "En espera" -1, "En atención" +1.
+- Recorrer los 13 hitos sin salir del Centro de Control hasta `discharge`; verificar progreso 100% y `appointments.status = liberada`.
+- Verificar audit logs en `journey_instance_audit` por cada cierre.
 
-## Diseño
+## 8. Fuera de alcance (esta iteración)
 
-Se respeta el sistema actual: tokens semánticos (`bg-card`, `text-foreground`, `border-border`), drawer lateral `Sheet`, tipografía Plus Jakarta Sans / DM Sans, acentos teal/blue, estados con colores semánticos ya definidos (`success`, `info`, `warning`, `destructive`, `purple-500` para override). Sin nuevas dependencias visuales pesadas (solo `qrcode.react` para el QR de receta).
-
-## Out of scope
-
-- Firma criptográfica real / cumplimiento NOM-024 o COFEPRIS (se documenta como advertencia en la UI, no se simula cumplimiento).
-- Generación de PDF en backend (se ofrece print-to-PDF del navegador como v1).
-- Validación de interacciones medicamentosas (se deja la estructura preparada).
-- Nuevo rol `pharmacy` en `app_role` (se prepara la lógica de servicio pero la autorización efectiva cae en `admin`/`receptionist` hasta que se cree el rol).
-- Tocar `src/integrations/supabase/client.ts` o `types.ts` (se regeneran tras la migración).
-
-## Entregables
-
-1. Una migración SQL con 9 tablas + RLS + 3 funciones + 1 trigger.
-2. Capa de servicios (~5 archivos) en `src/features/camino-paciente/services/`.
-3. Drawers, formularios por hito y página `/camino-paciente/:id` (~15 archivos en `src/features/camino-paciente/operativo/`).
-4. Ediciones puntuales en `AdminDashboard`, `TodayAppointmentsTable`, `Farmacia`, `Facturacion`, `Auditoria`, `App.tsx` (router).
-5. Hooks `useJourneyInstance`, `useJourneyStepActions`.
-6. Nueva dependencia: `qrcode.react`.
+- Integración real con PAC para CFDI.
+- Firma digital de receta (COFEPRIS) — se mantiene firma visual ya existente.
+- Reportes / exportación NOM-024 (queda como siguiente plan).

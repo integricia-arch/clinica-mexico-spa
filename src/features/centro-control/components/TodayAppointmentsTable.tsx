@@ -13,6 +13,7 @@ interface Props {
   onOpenRow: (row: KanbanRow) => void;
   onNavigate: (path: string) => void;
   onStartJourney: (row: KanbanRow) => void;
+  onRegisterArrival?: (row: KanbanRow) => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -21,7 +22,8 @@ const STATUS_LABEL: Record<string, string> = {
   tentativa: "Tentativa", recordatorio_enviado: "Recordatorio", liberada: "Liberada",
 };
 
-export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, onStartJourney }: Props) {
+export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, onStartJourney, onRegisterArrival }: Props) {
+  const arrivalHandler = onRegisterArrival ?? onStartJourney;
   return (
     <Card>
       <div className="border-b border-border px-5 py-4">
@@ -76,11 +78,9 @@ export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, on
                     </td>
                     <td className="px-5 py-3 text-xs text-foreground">{getPatientNextAction(r)}</td>
                     <td className="px-5 py-3 text-right whitespace-nowrap">
-                      {!r.instance && (
-                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onStartJourney(r)}>
-                          Iniciar camino
-                        </Button>
-                      )}
+                      <Button size="sm" className="h-7 text-xs mr-1" onClick={() => arrivalHandler(r)}>
+                        Registrar llegada
+                      </Button>
                       {r.instance && (
                         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onNavigate(`/camino-paciente/${r.instance!.id}`)}>
                           Operar
