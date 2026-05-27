@@ -15,6 +15,14 @@ Deno.serve(async (req: Request) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    // Guard: only allow seeding when explicitly enabled
+    if (Deno.env.get("ALLOW_SEED_DEMO") !== "true") {
+      return new Response(
+        JSON.stringify({ error: "Seed deshabilitado en este entorno" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Require authenticated admin caller
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
