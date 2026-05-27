@@ -19,7 +19,7 @@ interface Props {
   doctorId: string | null;
 }
 
-export default function PatientClinicalContext({ item, snapshot }: Props) {
+export default function PatientClinicalContext({ item, snapshot, doctorId }: Props) {
   const { patient, notas, recetas, studies } = snapshot;
   const journey = useJourneyInstance(item.journey_instance_id);
 
@@ -107,6 +107,8 @@ export default function PatientClinicalContext({ item, snapshot }: Props) {
           />
         </CardContent>
       </Card>
+
+      {doctorId && <DoctorActionPanel item={item} doctorId={doctorId} snapshot={snapshot} />}
 
       {/* Tabs clínicos */}
       <Card className="flex-1 overflow-hidden">
