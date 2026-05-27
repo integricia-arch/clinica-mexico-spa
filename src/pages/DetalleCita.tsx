@@ -69,7 +69,21 @@ export default function DetalleCita() {
   const [servicio, setServicio] = useState<any>(null);
   const [recordatorios, setRecordatorios] = useState<any[]>([]);
   const [identidadesCanal, setIdentidadesCanal] = useState<IdentidadCanal[]>([]);
+  const [journeyInstance, setJourneyInstance] = useState<JourneyInstanceLite | null>(null);
+  const [arrivalOpen, setArrivalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const reloadJourney = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("journey_instances")
+      .select("id, appointment_id, patient_id, status, snapshot_json, updated_at, created_at")
+      .eq("appointment_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setJourneyInstance((data as JourneyInstanceLite) ?? null);
+  };
 
   // Modal recordatorio
   const [reminderOpen, setReminderOpen] = useState(false);
