@@ -234,11 +234,31 @@ export default function MachoteReceta() {
           <Link to="/configuracion" className="inline-flex items-center gap-1 text-sm text-primary mb-2">
             <ArrowLeft className="h-4 w-4" /> Volver a Configuración
           </Link>
-          <h1 className="text-display text-2xl font-bold text-foreground">Mi machote de receta</h1>
+          <h1 className="text-display text-2xl font-bold text-foreground">
+            {isAdmin && adminDoctors.length > 0 ? "Machote de receta" : "Mi machote de receta"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Personaliza encabezado, logo, firma y cierre. Cada vez que <strong>publiques</strong> una versión,
             las recetas nuevas usarán ese diseño y guardarán una copia exacta para reimpresiones fieles.
           </p>
+          {isAdmin && adminDoctors.length > 0 && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Editando como:</span>
+              <Select
+                value={doctorId ?? ""}
+                onValueChange={(v) => { setSelectedAdminDoctorId(v); loadForDoctor(v); }}
+              >
+                <SelectTrigger className="w-[320px] h-8 text-sm"><SelectValue placeholder="Elegir médico…" /></SelectTrigger>
+                <SelectContent>
+                  {adminDoctors.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      Dr(a). {d.nombre} {d.apellidos} — {d.especialidad}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-2">
