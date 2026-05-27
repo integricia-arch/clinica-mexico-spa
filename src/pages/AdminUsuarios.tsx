@@ -317,6 +317,118 @@ export default function AdminUsuarios() {
     fetchDoctors();
   };
 
+  // ---- CRUD de médicos ----
+  type DoctorForm = {
+    nombre: string;
+    apellidos: string;
+    especialidad: string;
+    cedula_profesional: string;
+    telefono: string;
+    horario_inicio: string;
+    horario_fin: string;
+    duracion_cita_min: number;
+    activo: boolean;
+  };
+  const emptyDoctor: DoctorForm = {
+    nombre: "", apellidos: "", especialidad: "", cedula_profesional: "",
+    telefono: "", horario_inicio: "08:00", horario_fin: "18:00",
+    duracion_cita_min: 30, activo: true,
+  };
+  const [doctorEdit, setDoctorEdit] = useState<DoctorRow | null>(null);
+  const [doctorForm, setDoctorForm] = useState<DoctorForm>(emptyDoctor);
+  const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
+  const [savingDoctor, setSavingDoctor] = useState(false);
+  const [doctorDel, setDoctorDel] = useState<DoctorRow | null>(null);
+
+  const openDoctorNew = () => {
+    setDoctorEdit(null);
+    setDoctorForm(emptyDoctor);
+    setDoctorDialogOpen(true);
+  };
+  const openDoctorEdit = (d: DoctorRow) => {
+    setDoctorEdit(d);
+    setDoctorForm({
+      nombre: d.nombre ?? "",
+      apellidos: d.apellidos ?? "",
+      especialidad: d.especialidad ?? "",
+      cedula_profesional: d.cedula_profesional ?? "",
+      telefono: d.telefono ?? "",
+      horario_inicio: (d as any).horario_inicio ?? "08:00",
+      horario_fin: (d as any).horario_fin ?? "18:00",
+      duracion_cita_min: (d as any).duracion_cita_min ?? 30,
+      activo: d.activo,
+    });
+    setDoctorDialogOpen(true);
+  };
+
+  const validateDoctorForm = (): string | null => {
+    const f = doctorForm;
+    if (!f.nombre.trim()) return "El nombre es requerido";
+    if (!f.apellidos.trim()) return "Los apellidos son requeridos";
+    if (!f.especialidad.trim()) return "La especialidad es requerida";
+    if (f.nombre.length > 80) return "Nombre demasiado largo";
+    if (f.apellidos.length > 80) return "Apellidos demasiado largos";
+    if (f.especialidad.length > 100) return "Especialidad demasiado larga";
+    if (f.cedula_profesional && !/^[A-Za-z0-9-]{4,20}$/.test(f.cedula_profesional.trim())) {
+      return "Cédula profesional: solo letras, números y guiones (4 a 20 caracteres)";
+    }
+    if (f.telefono && !/^[+\d\s()-]{7,20}$/.test(f.telefono.trim())) {
+      return "Teléfono inválido (usa solo dígitos, +, espacios o guiones)";
+    }
+    if (!/^\d{2}:\d{2}$/.test(f.horario_inicio) || !/^\d{2}:\d{2}$/.test(f.horario_fin)) {
+      return "Horario inválido (formato HH:MM)";
+    }
+    if (f.horario_inicio >= f.horario_fin) return "El horario de fin debe ser posterior al inicio";
+    if (f.duracion_cita_min < 5 || f.duracion_cita_min > 240) {
+      return "La duración de cita debe estar entre 5 y 240 minutos";
+    }
+    return null;
+  };
+
+  const handleSaveDoctor = async () => {
+    const err = validateDoctorForm();
+    if (err) { toast.error(err); return; }
+    setSavingDoctor(true);
+    const payload = {
+      nombre: doctorForm.nombre.trim(),
+      apellidos: doctorForm.apellidos.trim(),
+      especialidad: doctorForm.especialidad.trim(),
+      cedula_profesional: doctorForm.cedula_profesional.trim() || null,
+      telefono: doctorForm.telefono.trim() || null,
+      horario_inicio: doctorForm.horario_inicio + ":00",
+      horario_fin: doctorForm.horario_fin + ":00",
+      duracion_cita_min: doctorForm.duracion_cita_min,
+      activo: doctorForm.activo,
+    };
+    let error;
+    if (doctorEdit) {
+      ({ error } = await supabase.from("doctors").update(payload).eq("id", doctorEdit.id));
+    } else {
+      ({ error } = await supabase.from("doctors").insert(payload));
+    }
+    setSavingDoctor(false);
+    if (error) {
+      toast.error(error.message || "No se pudo guardar el médico");
+      return;
+    }
+    toast.success(doctorEdit ? "Médico actualizado" : "Médico creado");
+    setDoctorDialogOpen(false);
+    fetchDoctors();
+  };
+
+  const handleDeleteDoctor = async () => {
+    if (!doctorDel) return;
+    const { error } = await supabase.from("doctors").delete().eq("id", doctorDel.id);
+    if (error) {
+      toast.error("No se puede eliminar: el médico tiene registros relacionados. Marca como Inactivo en su lugar.");
+      setDoctorDel(null);
+      return;
+    }
+    toast.success("Médico eliminado");
+    setDoctorDel(null);
+    fetchDoctors();
+  };
+
   const fmt = (d: string | null) =>
     d ? new Date(d).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" }) : "—";
 
