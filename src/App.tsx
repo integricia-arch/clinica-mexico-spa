@@ -23,6 +23,7 @@ import MachoteReceta from "@/pages/configuracion/MachoteReceta";
 import RecetaImprimir from "@/pages/RecetaImprimir";
 import RecetaBitacora from "@/pages/RecetaBitacora";
 import MisRecetas from "@/pages/MisRecetas";
+import Recetas from "@/pages/Recetas";
 import VerificarReceta from "@/pages/VerificarReceta";
 import Auditoria from "@/pages/Auditoria";
 import Inbox from "@/pages/Inbox";
