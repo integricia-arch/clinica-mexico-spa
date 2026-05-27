@@ -292,7 +292,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ message: "Datos demo creados exitosamente" }),
+      JSON.stringify({ message: "Datos demo creados exitosamente", credentials: generatedCredentials }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
