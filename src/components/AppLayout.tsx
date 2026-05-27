@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
   CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
-  MessageCircle, BellRing, ClipboardList, UserCog,
+  MessageCircle, BellRing, ClipboardList, UserCog, Stethoscope,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: CalendarDays,
     label: "Agenda",
     roles: ["admin", "receptionist", "doctor", "nurse"],
+  },
+  {
+    to: "/doctor",
+    icon: Stethoscope,
+    label: "Panel del doctor",
+    roles: ["admin", "doctor"],
   },
   {
     to: "/nueva-cita",

@@ -1,93 +1,146 @@
-# Plan: Centro de Control + Camino del Paciente end-to-end
+# Panel del doctor — Ventana operativa clínica
 
-## 1. Diagnóstico actual
+Objetivo: agregar `/doctor` para que el médico atienda al paciente de forma guiada, conectado al Camino del Paciente. **No** se duplica nada existente: se reutiliza `journeyEngine`, `PrescriptionEditorModal`, `NotaConsultaModal`, `PatientJourneyLine`, expedientes y recetas.
 
-En `AdminDashboard` (Centro de Control) hoy la cita del día solo expone:
-- "Iniciar camino" (crea la instancia y **navega** a `/camino-paciente/:id`)
-- "Operar" / "Cita" (también navegan fuera)
-- Drawer lateral con accesos rápidos, sin acción de "registrar llegada"
+---
 
-No existe un botón "Registrar llegada" — por eso el usuario percibe que "no funciona". El flujo real obliga a salir del Centro de Control para tocar el hito `arrival`.
+## 1. Cambios de base de datos (1 migración)
 
-En `operationalSteps.ts` están definidos 13 hitos, pero en `CaminoPaciente.tsx` **solo** `arrival` y `consultation_close` tienen formulario propio. Los demás (`assignment`, `attention_open`, `identification`, `record`, `triage`, `consultation_open`, `prescription`, `pharmacy`, `billing`, `discharge`, `followup`) caen en un fallback genérico "clave/valor" que no captura los datos correctos para una clínica mexicana (NOM-024, NOM-004, CFDI, COFEPRIS).
+Hoy no existe ninguna tabla de análisis/estudios — sólo el campo SOAP `notas_consulta.analisis`. Se crea:
 
-## 2. Objetivos
+- **`patient_studies`** — orden de estudio/análisis
+  - `id, patient_id, doctor_id, appointment_id?, journey_instance_id?, expediente_id?, consultation_note_id?`
+  - `tipo` (lab | imagen | otro), `nombre`, `motivo`, `prioridad` (rutina|urgente|stat), `area_laboratorio?`
+  - `requiere_ayuno` bool, `indicaciones_paciente`, `observaciones`
+  - `status` (solicitado|recibido|revisado|reutilizado|descartado)
+  - `solicitado_at, solicitado_por, recibido_at, recibido_por, revisado_at, revisado_por`
+  - `resultado_resumen, interpretacion_medica, archivo_url, laboratorio_origen`
+  - `replaces_study_id?` cuando se reutiliza o repite uno previo + `justificacion_repeticion`
+  - GRANT + RLS: staff lee/escribe; paciente ve los suyos (solo lectura).
+  - Audit trigger ya existente (`audit_trigger`).
 
-1. Desde el Centro de Control se puede **abrir la cita del día y registrar la llegada sin salir de la página**.
-2. El botón "Registrar llegada" funciona en 1 clic (crea camino si falta, abre hito, captura motivo, cierra hito y avanza al siguiente).
-3. Cada hito tiene un formulario alineado al proceso real de recepción mexicana.
+No se crean tablas de seguimiento (ya existe `post_consultation_followups`) ni de receta (`prescriptions`).
 
-## 3. Cambios — Frontend (Centro de Control)
+---
 
-**`src/features/centro-control/components/TodayAppointmentsTable.tsx`**
-- Nueva columna/acción `Registrar llegada` por fila:
-  - Si `!instance` → crea camino y abre modal de llegada.
-  - Si `instance` y hito `arrival` está `pending`/`open` → abre modal.
-  - Si `arrival` está cerrado → muestra etiqueta "✓ Llegada · HH:mm" y deshabilita el botón.
-- Conservar "Operar" y "Cita" para navegación profunda.
+## 2. Ruta y navegación
 
-**Nuevo `QuickArrivalModal.tsx` en `src/features/centro-control/components/`**
-- Dialog con el mismo `ArrivalForm` ya existente (reutilización, sin duplicar lógica).
-- Al cerrar exitosamente: `reload()` del dashboard y toast "Llegada registrada".
-- Si el hito siguiente (`assignment`) está abierto, ofrece botón secundario "Continuar a asignación" que abre el siguiente modal sin navegar.
+- `src/App.tsx`: nueva ruta `/doctor` (roles `doctor`, `admin`, `nurse` lectura).
+- `src/components/AppLayout.tsx`: nuevo `NAV_ITEM` "Panel del doctor" (icono Stethoscope), visible para `doctor` y `admin`.
+- Botones "Abrir en Panel del doctor" en: Dashboard (tarjeta cita del día), `CaminoPaciente.tsx`, `Expedientes.tsx`, `DetalleCita.tsx`.
 
-**`PatientOperationalDrawer.tsx`**
-- Reemplazar "Abrir cita" por dos acciones contextuales:
-  - "Registrar llegada" (si `arrival` aún no está cerrado)
-  - "Continuar camino" (si ya tiene llegada) → abre modal del hito activo
-- Mantener acceso a `/camino-paciente/:id` como link secundario "Ver camino completo".
+Si el `user` tiene rol `doctor` pero no existe en `doctors` → pantalla vacía con mensaje **"No se encontró un perfil médico vinculado a este usuario."**
 
-## 4. Auditoría y rediseño del camino (13 hitos)
+---
 
-Para cada hito se define: **rol responsable · qué captura · regla de cierre**. Donde hoy hay fallback genérico se crea un `StepForm` específico.
+## 3. Layout `/doctor` (3 columnas)
 
 ```text
-1. arrival              Recepción     Motivo, síntomas, hora llegada            [ya existe ArrivalForm ✓]
-2. assignment           Recepción     Doctor + consultorio + servicio           [nuevo AssignmentForm]
-3. attention_open       Enfermería    Llamado a sala, hora apertura             [nuevo AttentionOpenForm]
-4. identification       Recepción     INE/CURP verificada + consentimiento      [nuevo IdentificationForm]
-5. record (expediente)  Doctor/Enf.   Antecedentes NOM-004 (AHF, APP, APNP),    [nuevo RecordForm]
-                                       alergias, medicación crónica
-6. triage               Enfermería    TA, FC, FR, T°, SpO2, peso, talla, IMC   [nuevo TriageForm]
-7. consultation_open    Doctor        Hora inicio + queja principal             [nuevo ConsultationOpenForm]
-8. consultation_close   Doctor        SOAP (ya existe ConsultationForm ✓)
-9. prescription         Doctor        Receta electrónica → reutilizar           [link a PrescriptionEditorModal]
-                                       PrescriptionEditorModal existente
-10. pharmacy            Farmacia      Lote + cantidad dispensada                [nuevo PharmacyForm]
-                                       (descuenta de lotes_medicamento)
-11. billing             Recepción     CFDI: RFC, uso, forma pago, total MXN     [nuevo BillingForm]
-12. discharge           Recepción     Indicaciones de egreso + hora salida      [nuevo DischargeForm]
-13. followup            Cualquiera    Programa recordatorio + canal             [nuevo FollowupForm]
+┌──────────────┬───────────────────────────────┬──────────────┐
+│ Mis pacientes│  Ficha + Línea del camino     │ Acciones     │
+│ (hoy/pend.)  │  + paneles contextuales       │ clínicas     │
+└──────────────┴───────────────────────────────┴──────────────┘
 ```
 
-Todos los `StepForm` siguen el patrón de `ArrivalForm`: autosave debounced + Zod + `saveJourneyStepData` + `closeJourneyStep`. Se renderizan tanto en `CaminoPaciente.tsx` como dentro del modal rápido del Centro de Control (mismo componente, dos contenedores).
+**Columna izquierda — `DoctorPatientQueue`**
+- Lista citas del día del doctor logueado (admin elige doctor en select).
+- Por fila: hora, paciente, servicio, consultorio, estado del camino, hito actual, badges de alerta (sin consentimiento, sin alergias, análisis pendiente).
+- Estados visuales derivados del journey: por atender / en consulta / esperando análisis / resultado recibido / receta pendiente / listo salida / seguimiento.
+- Métricas en cero ocultas.
 
-## 5. Detalles técnicos por hito
+**Columna central — `PatientClinicalContext` + línea**
+- Header: nombre, edad, sexo, teléfono, alergias confirmadas, medicamentos actuales, antecedentes, última visita, servicio, consultorio, llegada, tiempo de espera.
+- Si datos vacíos: textos compactos ("Sin alergias registradas", etc.).
+- Si alergias **no confirmadas** → alerta destructive: *"Debe confirmar alergias antes de recetar."*
+- Tabs compactas: Antecedentes · Estudios previos · Recetas previas · Indicaciones previas (cada tab oculta si no hay datos).
+- Debajo: `PatientJourneyLine` reusada (modo `compact`, refinado visualmente — ver §5).
 
-- **identification**: validar formato CURP (18 chars, regex oficial) y registrar en `consentimientos` (tabla existente) marcando `otorgado=true`.
-- **record**: si no existe `expedientes` activo para el paciente, lo crea (insert con `tipo='primera_vez'`); si existe, abre el actual.
-- **triage**: cálculo IMC en cliente; alerta si TA > 140/90 o SpO2 < 92.
-- **prescription**: el modal usa `PrescriptionEditorModal` ya construido; al cerrar, marca el hito `prescription` como completado con el `prescription_id`.
-- **pharmacy**: por cada renglón surtido inserta en `movimientos_inventario` (`tipo='salida'`) y descuenta `lotes_medicamento.existencia`. Bloquea cierre si algún medicamento no tiene lote con stock.
-- **billing**: campos RFC + Razón social + Uso CFDI + Forma de pago + Total. No emite CFDI real (no hay PAC), solo registra los datos.
-- **discharge**: cierra hito y dispara cambio de `appointments.status` a `liberada`.
+**Columna derecha — `ClinicalActionsPanel`**
+- Botones contextuales habilitados según hito y validaciones:
+  - Abrir consulta · Guardar nota · Solicitar análisis · Revisar análisis · Emitir receta · Cerrar consulta · Enviar a caja · Dar salida · Programar seguimiento.
 
-## 6. Backend / migración
+---
 
-Una migración para:
-- Asegurar que `journey_instance_step_data.data_json` tiene índices GIN si se va a consultar (`CREATE INDEX IF NOT EXISTS ...`).
-- Verificar/crear catálogo `journey_option_catalogs` para "uso_cfdi", "forma_pago_sat", "canal_seguimiento".
+## 4. Acciones clínicas (todas validadas y auditadas)
 
-No se cambia ningún esquema crítico de pacientes/citas. RLS actuales ya cubren los nuevos formularios (todos pasan por `journey_instance_step_data` que ya tiene policies `is_clinic_staff`).
+Todas pasan por un nuevo helper `advancePatientJourneyFromClinicalEvent(eventType, payload)` en `src/features/camino-paciente/services/clinicalEvents.ts` que llama a `openJourneyStepByKey` / `closeJourneyStep` / `saveJourneyStepData` ya existentes.
 
-## 7. Validación
+| Acción | Modal/Drawer | Hitos del journey afectados |
+|---|---|---|
+| Abrir consulta | reusa `NotaConsultaModal` (precarga expediente) | abre `consultation_open`, valida llegada+identificación+expediente+alergias |
+| Guardar nota | `NotaConsultaModal` | `consultation_note_saved` (no avanza) |
+| Solicitar análisis | nuevo `RequestStudyDrawer` (lista estudios previos similares vigentes con alerta de reutilización) | abre hito virtual *"Análisis solicitado"* mapeado a `consultation_close` bloqueado + bandera en `journey_instance_step_data` |
+| Registrar resultado | nuevo `RegisterStudyResultDrawer` (abrible desde panel, camino, expediente) | marca estudio `recibido`, notifica al doctor |
+| Revisar análisis | nuevo `ReviewStudyDrawer` | estudio `revisado` + interpretación |
+| Emitir receta | **reusa `PrescriptionEditorModal`** con todos los props ya soportados | cierra hito `prescription` al emitir |
+| Cerrar consulta | `CloseConsultationDialog` (valida nota, plan, análisis, receta, seguimiento) | cierra `consultation_close` |
+| Enviar a caja / salida | reusa hito `billing` + `discharge` | open/close vía engine |
+| Seguimiento | reusa `post_consultation_followups` + `followupService` | crea seguimiento |
 
-- Crear cita de prueba para hoy → desde Centro de Control: "Registrar llegada" → modal → guardar → fila muestra "✓ Llegada"; KPI "En espera" -1, "En atención" +1.
-- Recorrer los 13 hitos sin salir del Centro de Control hasta `discharge`; verificar progreso 100% y `appointments.status = liberada`.
-- Verificar audit logs en `journey_instance_audit` por cada cierre.
+Las validaciones de bloqueo se ejecutan en el cliente y en el servidor (via `journeyEngine` que ya verifica predecesores). Override sólo con rol autorizado y motivo (ya soportado por `requestStepOverride`).
 
-## 8. Fuera de alcance (esta iteración)
+---
 
-- Integración real con PAC para CFDI.
-- Firma digital de receta (COFEPRIS) — se mantiene firma visual ya existente.
-- Reportes / exportación NOM-024 (queda como siguiente plan).
+## 5. Línea gráfica refinada
+
+Se mejora `PatientJourneyLine` (no se reemplaza) con una variante `variant="clinical"`:
+- Nodos pequeños (24px), línea fina entre ellos.
+- Paleta semántica: verde/turquesa = completado, azul = en proceso, ámbar = esperando análisis/revisión, morado = receta, rojo suave = bloqueo, gris = pendiente.
+- Click → resumen en popover. Doble click → abre drawer del hito (igual que hoy).
+- Tooltip: estado, responsable, opened_at/closed_at, próxima acción, motivo bloqueo.
+- Etiquetas hito-actual + próxima acción debajo de la línea, resto sólo en tooltip (minimalista).
+
+---
+
+## 6. Detalle técnico
+
+**Archivos nuevos:**
+- `src/pages/PanelDoctor.tsx`
+- `src/features/panel-doctor/components/DoctorPatientQueue.tsx`
+- `src/features/panel-doctor/components/PatientClinicalContext.tsx`
+- `src/features/panel-doctor/components/ClinicalActionsPanel.tsx`
+- `src/features/panel-doctor/components/RequestStudyDrawer.tsx`
+- `src/features/panel-doctor/components/RegisterStudyResultDrawer.tsx`
+- `src/features/panel-doctor/components/ReviewStudyDrawer.tsx`
+- `src/features/panel-doctor/components/CloseConsultationDialog.tsx`
+- `src/features/panel-doctor/hooks/useDoctorQueue.ts` (citas del día por doctor)
+- `src/features/panel-doctor/hooks/usePatientClinicalSnapshot.ts` (alergias, meds, antecedentes, últimas notas, estudios, recetas)
+- `src/features/panel-doctor/services/studiesService.ts` (CRUD `patient_studies`)
+- `src/features/camino-paciente/services/clinicalEvents.ts` (helper unificado)
+
+**Archivos editados (mínimos):**
+- `src/App.tsx` (ruta `/doctor`)
+- `src/components/AppLayout.tsx` (`NAV_ITEMS`)
+- `src/features/camino-paciente/components/PatientJourneyLine.tsx` (variante `clinical`)
+- `src/pages/CaminoPaciente.tsx`, `src/pages/DetalleCita.tsx`, `src/pages/AdminDashboard.tsx`, `src/pages/Expedientes.tsx` (botones "Abrir Panel del doctor")
+
+**No se tocan:** `journeyEngine.ts`, `PrescriptionEditorModal.tsx`, `NotaConsultaModal.tsx`, types Supabase, RLS existente, auth.
+
+---
+
+## 7. Auditoría
+
+Todo se registra vía:
+- `audit_trigger` (ya activo en tablas con audit) para `patient_studies`, `notas_consulta`, `prescriptions`.
+- `journey_instance_audit` para cada open/close/skip/override (ya lo hace `journey_step_audit_trigger`).
+
+Sin borrado de auditoría (políticas `Deny delete` ya existentes).
+
+---
+
+## 8. Validación de extremo a extremo
+
+Recorrido manual descrito por el usuario (pasos 1–18): selección paciente → abrir consulta → solicitar análisis → registrar resultado → revisar → receta → cerrar consulta → caja/alta → seguimiento, verificando que la línea gráfica refleje cada cambio y que la auditoría capture cada acción.
+
+---
+
+## 9. Fuera de alcance
+
+- Catálogo CIE-10 real (se mantiene campo libre como hoy).
+- Integración con laboratorio externo / PACS / firma COFEPRIS.
+- Portal del paciente (sólo se asegura que los datos generados sean visibles cuando ese módulo lo consuma).
+- Nuevas tablas de seguimiento o receta (se reutilizan las existentes).
+
+---
+
+¿Apruebo y procedo con la migración de `patient_studies` y luego implemento el frontend?

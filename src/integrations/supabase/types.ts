@@ -1543,6 +1543,113 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_studies: {
+        Row: {
+          appointment_id: string | null
+          archivo_url: string | null
+          area_laboratorio: string | null
+          consultation_note_id: string | null
+          created_at: string
+          doctor_id: string
+          expediente_id: string | null
+          id: string
+          indicaciones_paciente: string | null
+          interpretacion_medica: string | null
+          journey_instance_id: string | null
+          justificacion_repeticion: string | null
+          laboratorio_origen: string | null
+          motivo: string | null
+          nombre: string
+          observaciones: string | null
+          patient_id: string
+          prioridad: string
+          recibido_at: string | null
+          recibido_por: string | null
+          replaces_study_id: string | null
+          requiere_ayuno: boolean
+          resultado_resumen: string | null
+          revisado_at: string | null
+          revisado_por: string | null
+          solicitado_at: string
+          solicitado_por: string | null
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          archivo_url?: string | null
+          area_laboratorio?: string | null
+          consultation_note_id?: string | null
+          created_at?: string
+          doctor_id: string
+          expediente_id?: string | null
+          id?: string
+          indicaciones_paciente?: string | null
+          interpretacion_medica?: string | null
+          journey_instance_id?: string | null
+          justificacion_repeticion?: string | null
+          laboratorio_origen?: string | null
+          motivo?: string | null
+          nombre: string
+          observaciones?: string | null
+          patient_id: string
+          prioridad?: string
+          recibido_at?: string | null
+          recibido_por?: string | null
+          replaces_study_id?: string | null
+          requiere_ayuno?: boolean
+          resultado_resumen?: string | null
+          revisado_at?: string | null
+          revisado_por?: string | null
+          solicitado_at?: string
+          solicitado_por?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          archivo_url?: string | null
+          area_laboratorio?: string | null
+          consultation_note_id?: string | null
+          created_at?: string
+          doctor_id?: string
+          expediente_id?: string | null
+          id?: string
+          indicaciones_paciente?: string | null
+          interpretacion_medica?: string | null
+          journey_instance_id?: string | null
+          justificacion_repeticion?: string | null
+          laboratorio_origen?: string | null
+          motivo?: string | null
+          nombre?: string
+          observaciones?: string | null
+          patient_id?: string
+          prioridad?: string
+          recibido_at?: string | null
+          recibido_por?: string | null
+          replaces_study_id?: string | null
+          requiere_ayuno?: boolean
+          resultado_resumen?: string | null
+          revisado_at?: string | null
+          revisado_por?: string | null
+          solicitado_at?: string
+          solicitado_por?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_studies_replaces_study_id_fkey"
+            columns: ["replaces_study_id"]
+            isOneToOne: false
+            referencedRelation: "patient_studies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           activo: boolean
