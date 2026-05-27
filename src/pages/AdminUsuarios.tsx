@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 import {
   ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
-  Trash2, ShieldAlert, Lock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle,
+  Trash2, ShieldAlert, Lock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle, Plus,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -58,6 +58,9 @@ interface DoctorRow {
   activo: boolean;
   user_id: string | null;
   user_email?: string | null;
+  horario_inicio?: string;
+  horario_fin?: string;
+  duracion_cita_min?: number;
 }
 
 export default function AdminUsuarios() {
@@ -106,7 +109,7 @@ export default function AdminUsuarios() {
     setLoadingDoctors(true);
     const { data, error } = await supabase
       .from("doctors")
-      .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id")
+      .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id, horario_inicio, horario_fin, duracion_cita_min")
       .order("apellidos");
     setLoadingDoctors(false);
     if (error) {
@@ -317,6 +320,118 @@ export default function AdminUsuarios() {
     fetchDoctors();
   };
 
+  // ---- CRUD de médicos ----
+  type DoctorForm = {
+    nombre: string;
+    apellidos: string;
+    especialidad: string;
+    cedula_profesional: string;
+    telefono: string;
+    horario_inicio: string;
+    horario_fin: string;
+    duracion_cita_min: number;
+    activo: boolean;
+  };
+  const emptyDoctor: DoctorForm = {
+    nombre: "", apellidos: "", especialidad: "", cedula_profesional: "",
+    telefono: "", horario_inicio: "08:00", horario_fin: "18:00",
+    duracion_cita_min: 30, activo: true,
+  };
+  const [doctorEdit, setDoctorEdit] = useState<DoctorRow | null>(null);
+  const [doctorForm, setDoctorForm] = useState<DoctorForm>(emptyDoctor);
+  const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
+  const [savingDoctor, setSavingDoctor] = useState(false);
+  const [doctorDel, setDoctorDel] = useState<DoctorRow | null>(null);
+
+  const openDoctorNew = () => {
+    setDoctorEdit(null);
+    setDoctorForm(emptyDoctor);
+    setDoctorDialogOpen(true);
+  };
+  const openDoctorEdit = (d: DoctorRow) => {
+    setDoctorEdit(d);
+    setDoctorForm({
+      nombre: d.nombre ?? "",
+      apellidos: d.apellidos ?? "",
+      especialidad: d.especialidad ?? "",
+      cedula_profesional: d.cedula_profesional ?? "",
+      telefono: d.telefono ?? "",
+      horario_inicio: (d as any).horario_inicio ?? "08:00",
+      horario_fin: (d as any).horario_fin ?? "18:00",
+      duracion_cita_min: (d as any).duracion_cita_min ?? 30,
+      activo: d.activo,
+    });
+    setDoctorDialogOpen(true);
+  };
+
+  const validateDoctorForm = (): string | null => {
+    const f = doctorForm;
+    if (!f.nombre.trim()) return "El nombre es requerido";
+    if (!f.apellidos.trim()) return "Los apellidos son requeridos";
+    if (!f.especialidad.trim()) return "La especialidad es requerida";
+    if (f.nombre.length > 80) return "Nombre demasiado largo";
+    if (f.apellidos.length > 80) return "Apellidos demasiado largos";
+    if (f.especialidad.length > 100) return "Especialidad demasiado larga";
+    if (f.cedula_profesional && !/^[A-Za-z0-9-]{4,20}$/.test(f.cedula_profesional.trim())) {
+      return "Cédula profesional: solo letras, números y guiones (4 a 20 caracteres)";
+    }
+    if (f.telefono && !/^[+\d\s()-]{7,20}$/.test(f.telefono.trim())) {
+      return "Teléfono inválido (usa solo dígitos, +, espacios o guiones)";
+    }
+    if (!/^\d{2}:\d{2}$/.test(f.horario_inicio) || !/^\d{2}:\d{2}$/.test(f.horario_fin)) {
+      return "Horario inválido (formato HH:MM)";
+    }
+    if (f.horario_inicio >= f.horario_fin) return "El horario de fin debe ser posterior al inicio";
+    if (f.duracion_cita_min < 5 || f.duracion_cita_min > 240) {
+      return "La duración de cita debe estar entre 5 y 240 minutos";
+    }
+    return null;
+  };
+
+  const handleSaveDoctor = async () => {
+    const err = validateDoctorForm();
+    if (err) { toast.error(err); return; }
+    setSavingDoctor(true);
+    const payload = {
+      nombre: doctorForm.nombre.trim(),
+      apellidos: doctorForm.apellidos.trim(),
+      especialidad: doctorForm.especialidad.trim(),
+      cedula_profesional: doctorForm.cedula_profesional.trim() || null,
+      telefono: doctorForm.telefono.trim() || null,
+      horario_inicio: doctorForm.horario_inicio + ":00",
+      horario_fin: doctorForm.horario_fin + ":00",
+      duracion_cita_min: doctorForm.duracion_cita_min,
+      activo: doctorForm.activo,
+    };
+    let error;
+    if (doctorEdit) {
+      ({ error } = await supabase.from("doctors").update(payload).eq("id", doctorEdit.id));
+    } else {
+      ({ error } = await supabase.from("doctors").insert(payload));
+    }
+    setSavingDoctor(false);
+    if (error) {
+      toast.error(error.message || "No se pudo guardar el médico");
+      return;
+    }
+    toast.success(doctorEdit ? "Médico actualizado" : "Médico creado");
+    setDoctorDialogOpen(false);
+    fetchDoctors();
+  };
+
+  const handleDeleteDoctor = async () => {
+    if (!doctorDel) return;
+    const { error } = await supabase.from("doctors").delete().eq("id", doctorDel.id);
+    if (error) {
+      toast.error("No se puede eliminar: el médico tiene registros relacionados. Marca como Inactivo en su lugar.");
+      setDoctorDel(null);
+      return;
+    }
+    toast.success("Médico eliminado");
+    setDoctorDel(null);
+    fetchDoctors();
+  };
+
   const fmt = (d: string | null) =>
     d ? new Date(d).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" }) : "—";
 
@@ -494,9 +609,14 @@ export default function AdminUsuarios() {
 
         {/* TAB: Médicos del registro clínico */}
         <TabsContent value="medicos" className="space-y-4 mt-4">
-          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            Lista de todos los médicos registrados en el sistema clínico. Si un médico no tiene cuenta vinculada,
-            no podrá iniciar sesión ni firmar recetas. Crea o vincula una cuenta desde aquí.
+          <div className="rounded-xl border border-border bg-card p-4 flex items-start justify-between gap-3 flex-wrap">
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Lista de todos los médicos registrados. Edita los datos (cédula, horario, especialidad…)
+              o crea uno nuevo. Si un médico no tiene cuenta vinculada, no podrá iniciar sesión ni firmar recetas.
+            </p>
+            <Button onClick={openDoctorNew}>
+              <Plus className="h-4 w-4 mr-1.5" /> Nuevo médico
+            </Button>
           </div>
 
           <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -507,30 +627,36 @@ export default function AdminUsuarios() {
                     <th className="text-left px-4 py-3 font-medium">Médico</th>
                     <th className="text-left px-4 py-3 font-medium">Especialidad</th>
                     <th className="text-left px-4 py-3 font-medium">Cédula</th>
-                    <th className="text-left px-4 py-3 font-medium">Cuenta vinculada</th>
+                    <th className="text-left px-4 py-3 font-medium">Horario / Cita</th>
+                    <th className="text-left px-4 py-3 font-medium">Cuenta</th>
                     <th className="text-right px-4 py-3 font-medium">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingDoctors && Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i} className="border-t border-border">
-                      <td className="px-4 py-3" colSpan={5}><Skeleton className="h-6 w-full" /></td>
+                      <td className="px-4 py-3" colSpan={6}><Skeleton className="h-6 w-full" /></td>
                     </tr>
                   ))}
                   {!loadingDoctors && doctorsEnriched.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                    <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                       <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-40" />
                       Sin médicos registrados
                     </td></tr>
                   )}
                   {!loadingDoctors && doctorsEnriched.map((d) => (
-                    <tr key={d.id} className="border-t border-border">
+                    <tr key={d.id} className="border-t border-border align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium">Dr(a). {d.nombre} {d.apellidos}</div>
+                        {d.telefono && <div className="text-xs text-muted-foreground">{d.telefono}</div>}
                         {!d.activo && <Badge variant="outline" className="text-[10px] mt-0.5">Inactivo</Badge>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{d.especialidad}</td>
                       <td className="px-4 py-3 font-mono text-xs">{d.cedula_profesional ?? "—"}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {(d.horario_inicio ?? "").slice(0, 5)}–{(d.horario_fin ?? "").slice(0, 5)}
+                        <div>{d.duracion_cita_min ?? 30} min</div>
+                      </td>
                       <td className="px-4 py-3">
                         {d.user_id ? (
                           <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
@@ -545,7 +671,10 @@ export default function AdminUsuarios() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1.5">
+                        <div className="flex justify-end gap-1 flex-wrap">
+                          <Button size="sm" variant="ghost" onClick={() => openDoctorEdit(d)} title="Editar datos">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
                           {d.user_id ? (
                             <Button size="sm" variant="outline" onClick={() => handleUnlinkDoctor(d)}>
                               <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
@@ -555,6 +684,15 @@ export default function AdminUsuarios() {
                               <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDoctorDel(d)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -565,6 +703,95 @@ export default function AdminUsuarios() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog: Crear / Editar médico */}
+      <Dialog open={doctorDialogOpen} onOpenChange={setDoctorDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{doctorEdit ? "Editar médico" : "Nuevo médico"}</DialogTitle>
+            <DialogDescription>
+              {doctorEdit
+                ? `Actualiza los datos de Dr(a). ${doctorEdit.nombre} ${doctorEdit.apellidos}.`
+                : "Registra un nuevo médico en el sistema clínico."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>Nombre(s) *</Label>
+              <Input value={doctorForm.nombre} maxLength={80}
+                onChange={(e) => setDoctorForm({ ...doctorForm, nombre: e.target.value })} />
+            </div>
+            <div>
+              <Label>Apellidos *</Label>
+              <Input value={doctorForm.apellidos} maxLength={80}
+                onChange={(e) => setDoctorForm({ ...doctorForm, apellidos: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Especialidad *</Label>
+              <Input value={doctorForm.especialidad} maxLength={100} placeholder="Ej. Medicina General, Pediatría…"
+                onChange={(e) => setDoctorForm({ ...doctorForm, especialidad: e.target.value })} />
+            </div>
+            <div>
+              <Label>Cédula profesional</Label>
+              <Input value={doctorForm.cedula_profesional} maxLength={20} placeholder="Ej. 12345678"
+                onChange={(e) => setDoctorForm({ ...doctorForm, cedula_profesional: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground mt-1">SEP / DGP. Solo letras, números y guiones.</p>
+            </div>
+            <div>
+              <Label>Teléfono</Label>
+              <Input value={doctorForm.telefono} maxLength={20} placeholder="+52 55 1234 5678"
+                onChange={(e) => setDoctorForm({ ...doctorForm, telefono: e.target.value })} />
+            </div>
+            <div>
+              <Label>Horario de inicio *</Label>
+              <Input type="time" value={doctorForm.horario_inicio}
+                onChange={(e) => setDoctorForm({ ...doctorForm, horario_inicio: e.target.value })} />
+            </div>
+            <div>
+              <Label>Horario de fin *</Label>
+              <Input type="time" value={doctorForm.horario_fin}
+                onChange={(e) => setDoctorForm({ ...doctorForm, horario_fin: e.target.value })} />
+            </div>
+            <div>
+              <Label>Duración de cita (min) *</Label>
+              <Input type="number" min={5} max={240} value={doctorForm.duracion_cita_min}
+                onChange={(e) => setDoctorForm({ ...doctorForm, duracion_cita_min: Number(e.target.value) })} />
+            </div>
+            <div className="flex items-end">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={doctorForm.activo}
+                  onChange={(e) => setDoctorForm({ ...doctorForm, activo: e.target.checked })} />
+                Médico activo
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDoctorDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveDoctor} disabled={savingDoctor}>
+              {savingDoctor ? "Guardando…" : doctorEdit ? "Guardar cambios" : "Crear médico"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar eliminación de médico */}
+      <AlertDialog open={!!doctorDel} onOpenChange={(o) => !o && setDoctorDel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar a Dr(a). {doctorDel?.nombre} {doctorDel?.apellidos}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es permanente. Si el médico tiene citas, recetas o expedientes asociados,
+              no podrá eliminarse — en ese caso márcalo como <strong>Inactivo</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteDoctor} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog: Vincular médico */}
       <Dialog open={!!linkDoctor} onOpenChange={(o) => !o && setLinkDoctor(null)}>
