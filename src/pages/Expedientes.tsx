@@ -33,6 +33,8 @@ export default function Expedientes() {
   const [notaSelected, setNotaSelected] = useState<any | null>(null);
   const [currentExpId, setCurrentExpId] = useState<string>("");
   const [currentDoctorId, setCurrentDoctorId] = useState<string>("");
+  const [rxModal, setRxModal] = useState(false);
+  const [rxContext, setRxContext] = useState<{ patientId: string; doctorId: string; expedienteId: string; consultationNoteId?: string; diagnosis?: string } | null>(null);
   const [newExpModal, setNewExpModal] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
