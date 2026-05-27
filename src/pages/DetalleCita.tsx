@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { friendlyError } from "@/lib/errors";
 
 const estadoRecordatorioLabel: Record<string, string> = {
   pendiente: "Pendiente",
@@ -135,7 +136,7 @@ export default function DetalleCita() {
         .eq("id", editingReminder.id);
       if (error) {
         setSavingReminder(false);
-        toast({ variant: "destructive", title: "Error", description: error.message });
+        toast({ variant: "destructive", title: "Error", description: friendlyError(error) });
         return;
       }
       toast({ title: "Recordatorio reprogramado" });
@@ -152,7 +153,7 @@ export default function DetalleCita() {
         });
       if (error) {
         setSavingReminder(false);
-        toast({ variant: "destructive", title: "Error", description: error.message });
+        toast({ variant: "destructive", title: "Error", description: friendlyError(error) });
         return;
       }
       toast({ title: "Recordatorio creado", description: "Se programó el recordatorio manual." });
@@ -170,7 +171,7 @@ export default function DetalleCita() {
     });
     setSendingNow(null);
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "Error", description: friendlyError(error) });
       return;
     }
     toast({ title: "Envío solicitado" });
@@ -223,7 +224,7 @@ export default function DetalleCita() {
       .eq("id", id);
 
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "Error", description: friendlyError(error) });
       return;
     }
 

@@ -10,6 +10,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { friendlyError } from "@/lib/errors";
 
 const horas = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00"];
 
@@ -91,7 +92,7 @@ export default function Agenda() {
         .order("fecha_inicio"),
       supabase.from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos").limit(3),
     ]);
-    if (error) toast.error("Error al cargar citas: " + error.message);
+    if (error) toast.error("Error al cargar citas: " + friendlyError(error));
     setCitas((cdata as any) ?? []);
     setDoctores((ddata as any) ?? []);
     setLoading(false);
@@ -121,7 +122,7 @@ export default function Agenda() {
     setAccion(true);
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     setAccion(false);
-    if (error) { toast.error("No se pudo actualizar: " + error.message); return; }
+    if (error) { toast.error("No se pudo actualizar: " + friendlyError(error)); return; }
     toast.success(status === "confirmada" ? "Cita confirmada" : "Cita cancelada");
     setSeleccionada(null);
     loadAppointments();
