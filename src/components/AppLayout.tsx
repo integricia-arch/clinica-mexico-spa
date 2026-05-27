@@ -104,9 +104,9 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "receptionist"],
   },
   {
-    to: "/admin/usuarios",
-    icon: UserCog,
-    label: "Usuarios y roles",
+    to: "/configuracion",
+    icon: Settings,
+    label: "Configuración",
     roles: ["admin"],
   },
   {
