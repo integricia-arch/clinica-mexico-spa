@@ -130,8 +130,15 @@ export default function AdminUsuarios() {
     return doctors.map((d) => ({ ...d, user_email: d.user_id ? byId.get(d.user_id) ?? null : null }));
   }, [doctors, users]);
 
+  // Mapa: user_id → médico vinculado (para mostrar nombre del doctor en filas de usuario)
+  const doctorByUserId = useMemo(() => {
+    const m = new Map<string, DoctorRow>();
+    for (const d of doctors) if (d.user_id) m.set(d.user_id, d);
+    return m;
+  }, [doctors]);
+
   // Filas virtuales para médicos sin cuenta vinculada (para que aparezcan en la pestaña de usuarios)
-  type UnlinkedDoctorRow = UsuarioRow & { _unlinkedDoctor?: DoctorRow };
+  type UnlinkedDoctorRow = UsuarioRow & { _unlinkedDoctor?: DoctorRow; _linkedDoctor?: DoctorRow };
   const unlinkedDoctorRows = useMemo<UnlinkedDoctorRow[]>(() => {
     return doctors
       .filter((d) => !d.user_id && d.activo)
@@ -148,7 +155,11 @@ export default function AdminUsuarios() {
 
   const filtered = useMemo<UnlinkedDoctorRow[]>(() => {
     const q = query.trim().toLowerCase();
-    const combined: UnlinkedDoctorRow[] = [...users, ...unlinkedDoctorRows];
+    const enrichedUsers: UnlinkedDoctorRow[] = users.map((u) => ({
+      ...u,
+      _linkedDoctor: doctorByUserId.get(u.id),
+    }));
+    const combined: UnlinkedDoctorRow[] = [...enrichedUsers, ...unlinkedDoctorRows];
     let list = combined;
     if (roleFilter !== "all") {
       list = list.filter((u) =>
@@ -160,7 +171,7 @@ export default function AdminUsuarios() {
     if (!q) return list;
     return list.filter((u) => {
       if (u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)) return true;
-      const d = u._unlinkedDoctor;
+      const d = u._unlinkedDoctor ?? u._linkedDoctor;
       if (d) {
         return (
           `${d.nombre} ${d.apellidos}`.toLowerCase().includes(q) ||
@@ -169,7 +180,7 @@ export default function AdminUsuarios() {
       }
       return false;
     });
-  }, [users, unlinkedDoctorRows, query, roleFilter]);
+  }, [users, unlinkedDoctorRows, doctorByUserId, query, roleFilter]);
 
   const roleCounts = useMemo(() => {
     const c: Record<string, number> = { all: users.length + unlinkedDoctorRows.length, admin: 0, receptionist: 0, doctor: unlinkedDoctorRows.length, nurse: 0, patient: 0 };
@@ -595,15 +606,29 @@ export default function AdminUsuarios() {
                     return (
                     <tr key={u.id} className="border-t border-border align-top">
                       <td className="px-4 py-3">
-                        <div className="font-medium flex items-center gap-1.5">
-                          {u.email ?? "(sin correo)"}
+                        <div className="font-medium flex items-center gap-1.5 flex-wrap">
+                          {u._linkedDoctor ? (
+                            <>
+                              <Stethoscope className="h-3.5 w-3.5 text-emerald-600" />
+                              Dr(a). {u._linkedDoctor.nombre} {u._linkedDoctor.apellidos}
+                            </>
+                          ) : (
+                            u.email ?? "(sin correo)"
+                          )}
                           {u.is_permanent_admin && (
                             <Badge variant="outline" className="gap-1 text-[10px]">
                               <ShieldAlert className="h-3 w-3" /> Permanente
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
+                        {u._linkedDoctor && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {u._linkedDoctor.especialidad} · {u.email}
+                          </div>
+                        )}
+                        {!u._linkedDoctor && (
+                          <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {u.roles.length === 0 ? (
