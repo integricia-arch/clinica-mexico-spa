@@ -27,6 +27,38 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Auth: accept either (a) the service-role key as Bearer (used by cron),
+  // or (b) a signed-in staff user (admin or receptionist).
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  if (!bearer) {
+    return new Response(JSON.stringify({ ok: false, error: "no autorizado" }), {
+      status: 401,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
+  }
+
+  let authorized = false;
+  if (bearer === SUPABASE_SERVICE_KEY) {
+    authorized = true;
+  } else {
+    const { data: userData } = await supabase.auth.getUser(bearer);
+    if (userData?.user) {
+      const { data: rolesRows } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id);
+      const roles = (rolesRows ?? []).map((r: any) => r.role);
+      authorized = roles.some((r: string) => ["admin", "receptionist"].includes(r));
+    }
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ ok: false, error: "permiso denegado" }), {
+      status: 403,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
+  }
+
   try {
     let recordatorioId: string | undefined;
     try {
@@ -46,6 +78,7 @@ Deno.serve(async (req) => {
     });
   }
 });
+
 
 async function procesarRecordatorios(recordatorioId?: string): Promise<number> {
   let query = supabase
