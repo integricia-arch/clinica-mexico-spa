@@ -134,6 +134,52 @@ Deno.serve(async (req) => {
       return json({ ok: true, updated, skipped, errors });
     }
 
+    if (action === "link_doctor_user") {
+      // Vincula un doctor (doctors.id) con un usuario auth. Si no existe, lo crea.
+      const { doctor_id, email, password, existing_user_id } = body as {
+        doctor_id?: string; email?: string; password?: string; existing_user_id?: string;
+      };
+      if (!doctor_id) return json({ error: "doctor_id requerido" }, 400);
+
+      let userId = existing_user_id;
+      if (!userId) {
+        if (!email || !password) return json({ error: "email y contraseña requeridos para crear cuenta" }, 400);
+        if (password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+        // Si ya existe un usuario con ese email, reutilízalo
+        const { data: existing } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        const found = existing?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+        if (found) {
+          userId = found.id;
+        } else {
+          const { data: created, error: createErr } = await admin.auth.admin.createUser({
+            email, password, email_confirm: true,
+          });
+          if (createErr) throw createErr;
+          userId = created.user?.id;
+        }
+      }
+      if (!userId) return json({ error: "No se pudo obtener user_id" }, 500);
+
+      // Asignar rol doctor
+      await admin.from("user_roles").upsert(
+        { user_id: userId, role: "doctor" },
+        { onConflict: "user_id,role" },
+      );
+      // Vincular en doctors
+      const { error: dErr } = await admin.from("doctors").update({ user_id: userId }).eq("id", doctor_id);
+      if (dErr) throw dErr;
+
+      return json({ ok: true, user_id: userId });
+    }
+
+    if (action === "unlink_doctor_user") {
+      const { doctor_id } = body as { doctor_id?: string };
+      if (!doctor_id) return json({ error: "doctor_id requerido" }, 400);
+      const { error: dErr } = await admin.from("doctors").update({ user_id: null }).eq("id", doctor_id);
+      if (dErr) throw dErr;
+      return json({ ok: true });
+    }
+
     if (action === "delete") {
       const { user_id } = body as { user_id?: string };
       if (!user_id) return json({ error: "user_id requerido" }, 400);
