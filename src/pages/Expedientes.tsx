@@ -325,6 +325,18 @@ export default function Expedientes() {
         nota={notaSelected}
         onSaved={handleNotaSaved}
       />
+
+      {rxContext && (
+        <PrescriptionEditorModal
+          open={rxModal}
+          onClose={() => setRxModal(false)}
+          patientId={rxContext.patientId}
+          doctorId={rxContext.doctorId}
+          expedienteId={rxContext.expedienteId}
+          consultationNoteId={rxContext.consultationNoteId}
+          diagnosis={rxContext.diagnosis}
+        />
+      )}
     </div>
   );
 }
