@@ -314,6 +314,14 @@ export default function AdminDashboard() {
         onNavigate={(p) => { setDrawerOpen(false); navigate(p); }}
         canViewClinical={canViewClinical}
       />
+
+      <QuickArrivalModal
+        open={arrivalOpen}
+        onOpenChange={setArrivalOpen}
+        appointmentId={arrivalRow?.appointment?.id ?? null}
+        patientName={arrivalRow?.patient ? `${arrivalRow.patient.nombre} ${arrivalRow.patient.apellidos}` : undefined}
+        onCompleted={reload}
+      />
     </div>
   );
 }
