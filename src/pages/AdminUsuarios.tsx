@@ -2,10 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { ShieldCheck, Search, Users as UsersIcon } from "lucide-react";
+import {
+  ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
+  Trash2, ShieldAlert, Lock,
+} from "lucide-react";
 
 type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient";
 
@@ -33,6 +44,7 @@ interface UsuarioRow {
   created_at: string | null;
   last_sign_in_at: string | null;
   roles: AppRole[];
+  is_permanent_admin?: boolean;
 }
 
 export default function AdminUsuarios() {
@@ -41,9 +53,31 @@ export default function AdminUsuarios() {
   const [query, setQuery] = useState("");
   const [busyUser, setBusyUser] = useState<string | null>(null);
 
+  // Diálogos
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createEmail, setCreateEmail] = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createRole, setCreateRole] = useState<AppRole>("patient");
+  const [creating, setCreating] = useState(false);
+
+  const [editUser, setEditUser] = useState<UsuarioRow | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const [pwUser, setPwUser] = useState<UsuarioRow | null>(null);
+  const [pwValue, setPwValue] = useState("");
+  const [savingPw, setSavingPw] = useState(false);
+
+  const [delUser, setDelUser] = useState<UsuarioRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const [baseOpen, setBaseOpen] = useState(false);
+  const [basePw, setBasePw] = useState("");
+  const [applyingBase, setApplyingBase] = useState(false);
+
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("admin-users", { body: {} });
+    const { data, error } = await supabase.functions.invoke("admin-users", { body: { action: "list" } });
     setLoading(false);
     if (error || (data as any)?.error) {
       toast.error("No se pudieron cargar los usuarios");
@@ -67,20 +101,14 @@ export default function AdminUsuarios() {
     setBusyUser(user.id);
     try {
       if (has) {
-        const { error } = await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("role", role);
+        const { error } = await supabase.from("user_roles").delete().eq("user_id", user.id).eq("role", role);
         if (error) throw error;
         setUsers((prev) => prev.map((u) =>
           u.id === user.id ? { ...u, roles: u.roles.filter((r) => r !== role) } : u
         ));
         toast.success(`Rol "${ROLE_LABELS[role]}" removido`);
       } else {
-        const { error } = await supabase
-          .from("user_roles")
-          .insert({ user_id: user.id, role });
+        const { error } = await supabase.from("user_roles").insert({ user_id: user.id, role });
         if (error) throw error;
         setUsers((prev) => prev.map((u) =>
           u.id === user.id ? { ...u, roles: [...u.roles, role] } : u
@@ -92,6 +120,92 @@ export default function AdminUsuarios() {
     } finally {
       setBusyUser(null);
     }
+  };
+
+  const handleCreate = async () => {
+    if (!createEmail || !createPassword) {
+      toast.error("Correo y contraseña requeridos"); return;
+    }
+    if (createPassword.length < 8) {
+      toast.error("La contraseña debe tener al menos 8 caracteres"); return;
+    }
+    setCreating(true);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "create", email: createEmail, password: createPassword, roles: [createRole] },
+    });
+    setCreating(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo crear el usuario");
+      return;
+    }
+    toast.success("Usuario creado");
+    setCreateOpen(false);
+    setCreateEmail(""); setCreatePassword(""); setCreateRole("patient");
+    fetchUsers();
+  };
+
+  const handleEdit = async () => {
+    if (!editUser || !editEmail) return;
+    setSavingEdit(true);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "update", user_id: editUser.id, email: editEmail },
+    });
+    setSavingEdit(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo actualizar");
+      return;
+    }
+    toast.success("Usuario actualizado");
+    setEditUser(null);
+    fetchUsers();
+  };
+
+  const handleSetPassword = async () => {
+    if (!pwUser || !pwValue) return;
+    if (pwValue.length < 8) { toast.error("Mínimo 8 caracteres"); return; }
+    setSavingPw(true);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "set_password", user_id: pwUser.id, password: pwValue },
+    });
+    setSavingPw(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo cambiar la contraseña");
+      return;
+    }
+    toast.success(`Contraseña actualizada para ${pwUser.email}`);
+    setPwUser(null); setPwValue("");
+  };
+
+  const handleDelete = async () => {
+    if (!delUser) return;
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "delete", user_id: delUser.id },
+    });
+    setDeleting(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo eliminar");
+      return;
+    }
+    toast.success("Usuario eliminado");
+    setDelUser(null);
+    fetchUsers();
+  };
+
+  const handleApplyBase = async () => {
+    if (basePw.length < 8) { toast.error("Mínimo 8 caracteres"); return; }
+    setApplyingBase(true);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "set_base_password_all", password: basePw },
+    });
+    setApplyingBase(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo aplicar la contraseña base");
+      return;
+    }
+    const d = data as any;
+    toast.success(`Aplicada a ${d.updated} usuario(s). Omitidos: ${d.skipped} (admin permanente)`);
+    setBaseOpen(false); setBasePw("");
   };
 
   const fmt = (d: string | null) =>
@@ -106,12 +220,20 @@ export default function AdminUsuarios() {
             Gestión de usuarios y roles
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Asigna o remueve roles para cada usuario registrado en el sistema.
+            Crea, edita y asigna roles o contraseñas a cada usuario del sistema.
           </p>
         </div>
-        <Button variant="outline" onClick={fetchUsers} disabled={loading}>
-          Recargar
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={fetchUsers} disabled={loading}>Recargar</Button>
+          <Button variant="outline" onClick={() => setBaseOpen(true)}>
+            <Lock className="h-4 w-4 mr-1.5" />
+            Contraseña base
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-1.5" />
+            Nuevo usuario
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
@@ -132,9 +254,10 @@ export default function AdminUsuarios() {
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">Usuario</th>
-                <th className="text-left px-4 py-3 font-medium">Roles actuales</th>
+                <th className="text-left px-4 py-3 font-medium">Roles</th>
                 <th className="text-left px-4 py-3 font-medium">Último acceso</th>
                 <th className="text-left px-4 py-3 font-medium">Asignar / Remover</th>
+                <th className="text-right px-4 py-3 font-medium">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -144,12 +267,13 @@ export default function AdminUsuarios() {
                   <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
                   <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
                   <td className="px-4 py-3"><Skeleton className="h-8 w-64" /></td>
+                  <td className="px-4 py-3"><Skeleton className="h-8 w-32" /></td>
                 </tr>
               ))}
 
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                     <UsersIcon className="h-10 w-10 mx-auto mb-2 opacity-40" />
                     Sin usuarios para mostrar
                   </td>
@@ -159,7 +283,14 @@ export default function AdminUsuarios() {
               {!loading && filtered.map((u) => (
                 <tr key={u.id} className="border-t border-border align-top">
                   <td className="px-4 py-3">
-                    <div className="font-medium">{u.email ?? "(sin correo)"}</div>
+                    <div className="font-medium flex items-center gap-1.5">
+                      {u.email ?? "(sin correo)"}
+                      {u.is_permanent_admin && (
+                        <Badge variant="outline" className="gap-1 text-[10px]">
+                          <ShieldAlert className="h-3 w-3" /> Permanente
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
                   </td>
                   <td className="px-4 py-3">
@@ -175,9 +306,7 @@ export default function AdminUsuarios() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">
-                    {fmt(u.last_sign_in_at)}
-                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">{fmt(u.last_sign_in_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1.5">
                       {ROLE_OPTIONS.map((role) => {
@@ -197,12 +326,154 @@ export default function AdminUsuarios() {
                       })}
                     </div>
                   </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => { setEditUser(u); setEditEmail(u.email ?? ""); }}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setPwUser(u); setPwValue(""); }}>
+                        <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        disabled={u.is_permanent_admin}
+                        onClick={() => setDelUser(u)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Crear usuario */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuevo usuario</DialogTitle>
+            <DialogDescription>Se creará confirmado y podrá iniciar sesión de inmediato.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Correo</Label>
+              <Input type="email" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} placeholder="correo@clinica.mx" />
+            </div>
+            <div>
+              <Label>Contraseña inicial</Label>
+              <Input type="text" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="mínimo 8 caracteres" />
+            </div>
+            <div>
+              <Label>Rol</Label>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {ROLE_OPTIONS.map((r) => (
+                  <Button
+                    key={r}
+                    type="button"
+                    size="sm"
+                    variant={createRole === r ? "default" : "outline"}
+                    onClick={() => setCreateRole(r)}
+                  >
+                    {ROLE_LABELS[r]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={creating}>{creating ? "Creando…" : "Crear"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Editar correo */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar usuario</DialogTitle>
+            <DialogDescription>Actualiza el correo del usuario.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Correo</Label>
+              <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
+            <Button onClick={handleEdit} disabled={savingEdit}>{savingEdit ? "Guardando…" : "Guardar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cambiar contraseña individual */}
+      <Dialog open={!!pwUser} onOpenChange={(o) => !o && setPwUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar contraseña</DialogTitle>
+            <DialogDescription>{pwUser?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Nueva contraseña</Label>
+              <Input type="text" value={pwValue} onChange={(e) => setPwValue(e.target.value)} placeholder="mínimo 8 caracteres" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwUser(null)}>Cancelar</Button>
+            <Button onClick={handleSetPassword} disabled={savingPw}>{savingPw ? "Aplicando…" : "Cambiar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Contraseña base masiva */}
+      <Dialog open={baseOpen} onOpenChange={setBaseOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar contraseña base</DialogTitle>
+            <DialogDescription>
+              Se aplicará a <strong>todos los usuarios</strong> excepto los administradores permanentes.
+              Comunícala de forma segura y pide a cada usuario cambiarla al iniciar sesión.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Contraseña base</Label>
+              <Input type="text" value={basePw} onChange={(e) => setBasePw(e.target.value)} placeholder="mínimo 8 caracteres" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBaseOpen(false)}>Cancelar</Button>
+            <Button onClick={handleApplyBase} disabled={applyingBase}>
+              {applyingBase ? "Aplicando…" : "Aplicar a todos"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar eliminación */}
+      <AlertDialog open={!!delUser} onOpenChange={(o) => !o && setDelUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar a {delUser?.email}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es permanente y eliminará el acceso del usuario al sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Eliminando…" : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

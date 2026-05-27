@@ -1,5 +1,5 @@
 // =================================================================
-// admin-users: lista todos los usuarios auth + sus roles.
+// admin-users: gestiona usuarios (listar, crear, editar, contraseñas)
 // Solo accesible para usuarios con rol 'admin'.
 // =================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -19,11 +19,8 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return json({ error: "no auth" }, 401);
-    }
+    if (!authHeader) return json({ error: "no auth" }, 401);
 
-    // Verificar usuario y rol admin
     const supaUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -37,34 +34,124 @@ Deno.serve(async (req) => {
     });
     if (!isAdmin) return json({ error: "forbidden" }, 403);
 
-    // Listar todos los usuarios + roles
-    const { data: list, error: listErr } = await admin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
-    if (listErr) throw listErr;
+    let body: any = {};
+    try { body = await req.json(); } catch { /* GET o vacío */ }
+    const action: string = body?.action ?? "list";
 
-    const { data: roles, error: rolesErr } = await admin
-      .from("user_roles")
-      .select("user_id, role");
-    if (rolesErr) throw rolesErr;
+    // Helper para detectar admins permanentes (no se les puede cambiar contraseña masiva)
+    const getPermanentAdminEmails = async (): Promise<Set<string>> => {
+      const { data } = await admin.from("permanent_admins").select("email");
+      return new Set((data ?? []).map((r: any) => (r.email as string).toLowerCase()));
+    };
 
-    const rolesByUser = new Map<string, string[]>();
-    for (const r of roles ?? []) {
-      const arr = rolesByUser.get(r.user_id) ?? [];
-      arr.push(r.role);
-      rolesByUser.set(r.user_id, arr);
+    if (action === "list") {
+      const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (listErr) throw listErr;
+
+      const { data: roles, error: rolesErr } = await admin.from("user_roles").select("user_id, role");
+      if (rolesErr) throw rolesErr;
+
+      const rolesByUser = new Map<string, string[]>();
+      for (const r of roles ?? []) {
+        const arr = rolesByUser.get(r.user_id) ?? [];
+        arr.push(r.role);
+        rolesByUser.set(r.user_id, arr);
+      }
+
+      const permanent = await getPermanentAdminEmails();
+      const users = (list?.users ?? []).map((u) => ({
+        id: u.id,
+        email: u.email,
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at,
+        roles: rolesByUser.get(u.id) ?? [],
+        is_permanent_admin: u.email ? permanent.has(u.email.toLowerCase()) : false,
+      }));
+
+      return json({ users });
     }
 
-    const users = (list?.users ?? []).map((u) => ({
-      id: u.id,
-      email: u.email,
-      created_at: u.created_at,
-      last_sign_in_at: u.last_sign_in_at,
-      roles: rolesByUser.get(u.id) ?? [],
-    }));
+    if (action === "create") {
+      const { email, password, roles } = body as { email?: string; password?: string; roles?: string[] };
+      if (!email || !password) return json({ error: "email y contraseña son requeridos" }, 400);
+      if (password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
 
-    return json({ users });
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+      if (createErr) throw createErr;
+
+      const userId = created.user?.id;
+      if (userId && Array.isArray(roles) && roles.length > 0) {
+        const rows = roles.map((r) => ({ user_id: userId, role: r }));
+        await admin.from("user_roles").upsert(rows, { onConflict: "user_id,role" });
+      }
+      return json({ ok: true, user_id: userId });
+    }
+
+    if (action === "update") {
+      const { user_id, email } = body as { user_id?: string; email?: string };
+      if (!user_id || !email) return json({ error: "user_id y email son requeridos" }, 400);
+      const { error: updErr } = await admin.auth.admin.updateUserById(user_id, { email });
+      if (updErr) throw updErr;
+      return json({ ok: true });
+    }
+
+    if (action === "set_password") {
+      const { user_id, password } = body as { user_id?: string; password?: string };
+      if (!user_id || !password) return json({ error: "user_id y contraseña son requeridos" }, 400);
+      if (password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+      const { error: pErr } = await admin.auth.admin.updateUserById(user_id, { password });
+      if (pErr) throw pErr;
+      return json({ ok: true });
+    }
+
+    if (action === "set_base_password_all") {
+      const { password } = body as { password?: string };
+      if (!password || password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+
+      const permanent = await getPermanentAdminEmails();
+      const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (listErr) throw listErr;
+
+      let updated = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+      for (const u of list?.users ?? []) {
+        if (u.email && permanent.has(u.email.toLowerCase())) {
+          skipped++;
+          continue;
+        }
+        const { error: pErr } = await admin.auth.admin.updateUserById(u.id, { password });
+        if (pErr) {
+          errors.push(`${u.email}: ${pErr.message}`);
+        } else {
+          updated++;
+        }
+      }
+      return json({ ok: true, updated, skipped, errors });
+    }
+
+    if (action === "delete") {
+      const { user_id } = body as { user_id?: string };
+      if (!user_id) return json({ error: "user_id requerido" }, 400);
+      // Proteger admin temporal / permanente
+      const { data: u } = await admin.auth.admin.getUserById(user_id);
+      const permanent = await getPermanentAdminEmails();
+      if (u?.user?.email && permanent.has(u.user.email.toLowerCase())) {
+        return json({ error: "No se puede eliminar a un administrador permanente" }, 403);
+      }
+      if (user_id === userData.user.id) {
+        return json({ error: "No puedes eliminar tu propia cuenta" }, 403);
+      }
+      const { error: dErr } = await admin.auth.admin.deleteUser(user_id);
+      if (dErr) throw dErr;
+      return json({ ok: true });
+    }
+
+    return json({ error: "Acción no soportada" }, 400);
   } catch (err: any) {
     console.error("admin-users error:", err);
     return json({ error: err.message }, 500);
