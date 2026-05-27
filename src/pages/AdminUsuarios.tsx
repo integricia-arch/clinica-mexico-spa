@@ -58,6 +58,9 @@ interface DoctorRow {
   activo: boolean;
   user_id: string | null;
   user_email?: string | null;
+  horario_inicio?: string;
+  horario_fin?: string;
+  duracion_cita_min?: number;
 }
 
 export default function AdminUsuarios() {
