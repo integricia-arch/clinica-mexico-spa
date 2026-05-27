@@ -15,8 +15,9 @@ import {
 import { toast } from "sonner";
 import {
   ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
-  Trash2, ShieldAlert, Lock,
+  Trash2, ShieldAlert, Lock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient";
 
