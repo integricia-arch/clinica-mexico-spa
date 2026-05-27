@@ -47,7 +47,13 @@ const NAV_ITEMS: NavItem[] = [
     to: "/nueva-cita",
     icon: CalendarPlus,
     label: "Nueva cita",
-    roles: ["admin", "receptionist"],
+    roles: ["admin", "receptionist", "patient"],
+  },
+  {
+    to: "/mis-recetas",
+    icon: Pill,
+    label: "Mis recetas",
+    roles: ["patient"],
   },
   {
     to: "/expedientes",

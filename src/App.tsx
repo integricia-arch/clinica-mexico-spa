@@ -21,6 +21,8 @@ import Configuracion from "@/pages/Configuracion";
 import CaminoPacienteConfig from "@/pages/configuracion/CaminoPaciente";
 import MachoteReceta from "@/pages/configuracion/MachoteReceta";
 import RecetaImprimir from "@/pages/RecetaImprimir";
+import MisRecetas from "@/pages/MisRecetas";
+import VerificarReceta from "@/pages/VerificarReceta";
 import Auditoria from "@/pages/Auditoria";
 import Inbox from "@/pages/Inbox";
 import Citas from "@/pages/Citas";
@@ -43,6 +45,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/pitch" element={<Pitch />} />
+            <Route path="/verificar-receta/:id" element={<VerificarReceta />} />
             <Route
               path="/*"
               element={
@@ -62,6 +65,7 @@ const App = () => (
                       <Route path="/configuracion/camino-paciente" element={<ProtectedRoute allowedRoles={["admin"]}><CaminoPacienteConfig /></ProtectedRoute>} />
                       <Route path="/configuracion/recetas" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><MachoteReceta /></ProtectedRoute>} />
                       <Route path="/receta/:id" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse","receptionist","patient"]}><RecetaImprimir /></ProtectedRoute>} />
+                      <Route path="/mis-recetas" element={<ProtectedRoute allowedRoles={["patient","admin"]}><MisRecetas /></ProtectedRoute>} />
                       <Route path="/camino-paciente/:id" element={<ProtectedRoute allowedRoles={["admin","doctor","receptionist","nurse"]}><CaminoPaciente /></ProtectedRoute>} />
                       <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Auditoria /></ProtectedRoute>} />
                       <Route path="/inbox" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><Inbox /></ProtectedRoute>} />
