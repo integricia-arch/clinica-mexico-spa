@@ -73,7 +73,7 @@ export default function Recetas() {
         .order("created_at", { ascending: false })
         .limit(500);
 
-      const list = (rxs ?? []) as Receta[];
+      const list = (rxs ?? []) as unknown as Receta[];
       if (list.length === 0) {
         setRecetas([]);
         setLoading(false);
