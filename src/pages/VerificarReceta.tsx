@@ -29,32 +29,33 @@ export default function VerificarReceta() {
       setLoading(true);
       const { data: rx } = await supabase
         .from("prescriptions")
-        .select(`
-          prescription_number, status, issue_date,
-          doctors:doctor_id (nombre, apellidos, cedula_profesional, especialidad),
-          patients:patient_id (nombre, apellidos),
-          prescription_items (id)
-        `)
+        .select("prescription_number, status, issue_date, doctor_id, patient_id")
         .eq("id", id)
         .maybeSingle();
 
       if (!rx) {
         setData({ found: false, number: null, status: null, issue_date: null, doctor_name: null, cedula: null, especialidad: null, patient_initials: null, items_count: 0 });
-      } else {
-        const d = rx.doctors as any;
-        const p = rx.patients as any;
-        setData({
-          found: true,
-          number: rx.prescription_number,
-          status: rx.status,
-          issue_date: rx.issue_date,
-          doctor_name: d ? `Dr(a). ${d.nombre} ${d.apellidos}` : null,
-          cedula: d?.cedula_profesional ?? null,
-          especialidad: d?.especialidad ?? null,
-          patient_initials: p ? `${(p.nombre ?? "?")[0]}.${(p.apellidos ?? "?")[0]}.` : null,
-          items_count: (rx.prescription_items as any[] | null)?.length ?? 0,
-        });
+        setLoading(false);
+        return;
       }
+
+      const [{ data: doctor }, { data: patient }, { count }] = await Promise.all([
+        supabase.from("doctors").select("nombre, apellidos, cedula_profesional, especialidad").eq("id", rx.doctor_id).maybeSingle(),
+        supabase.from("patients").select("nombre, apellidos").eq("id", rx.patient_id).maybeSingle(),
+        supabase.from("prescription_items").select("id", { count: "exact", head: true }).eq("prescription_id", id),
+      ]);
+
+      setData({
+        found: true,
+        number: rx.prescription_number,
+        status: rx.status,
+        issue_date: rx.issue_date,
+        doctor_name: doctor ? `Dr(a). ${doctor.nombre} ${doctor.apellidos}` : null,
+        cedula: doctor?.cedula_profesional ?? null,
+        especialidad: doctor?.especialidad ?? null,
+        patient_initials: patient ? `${(patient.nombre ?? "?")[0]}.${(patient.apellidos ?? "?")[0]}.` : null,
+        items_count: count ?? 0,
+      });
       setLoading(false);
     })();
   }, [id]);
