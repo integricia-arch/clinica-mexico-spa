@@ -264,6 +264,59 @@ export default function AdminUsuarios() {
     setBaseOpen(false); setBasePw("");
   };
 
+  // ---- Vinculación de médicos ----
+  const [linkDoctor, setLinkDoctor] = useState<DoctorRow | null>(null);
+  const [linkEmail, setLinkEmail] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
+  const [linkExistingUserId, setLinkExistingUserId] = useState<string>("");
+  const [linkMode, setLinkMode] = useState<"new" | "existing">("new");
+  const [linking, setLinking] = useState(false);
+
+  const openLinkDoctor = (d: DoctorRow) => {
+    setLinkDoctor(d);
+    setLinkEmail("");
+    setLinkPassword("");
+    setLinkExistingUserId("");
+    setLinkMode("new");
+  };
+
+  const handleLinkDoctor = async () => {
+    if (!linkDoctor) return;
+    setLinking(true);
+    const payload: any = { action: "link_doctor_user", doctor_id: linkDoctor.id };
+    if (linkMode === "existing") {
+      if (!linkExistingUserId) { setLinking(false); toast.error("Selecciona un usuario"); return; }
+      payload.existing_user_id = linkExistingUserId;
+    } else {
+      if (!linkEmail || linkPassword.length < 8) { setLinking(false); toast.error("Correo y contraseña (8+) requeridos"); return; }
+      payload.email = linkEmail;
+      payload.password = linkPassword;
+    }
+    const { data, error } = await supabase.functions.invoke("admin-users", { body: payload });
+    setLinking(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo vincular");
+      return;
+    }
+    toast.success(`Médico ${linkDoctor.nombre} ${linkDoctor.apellidos} vinculado`);
+    setLinkDoctor(null);
+    fetchUsers();
+    fetchDoctors();
+  };
+
+  const handleUnlinkDoctor = async (d: DoctorRow) => {
+    if (!confirm(`¿Desvincular la cuenta de ${d.nombre} ${d.apellidos}? La cuenta de usuario no se elimina.`)) return;
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "unlink_doctor_user", doctor_id: d.id },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || "No se pudo desvincular");
+      return;
+    }
+    toast.success("Médico desvinculado");
+    fetchDoctors();
+  };
+
   const fmt = (d: string | null) =>
     d ? new Date(d).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" }) : "—";
 
