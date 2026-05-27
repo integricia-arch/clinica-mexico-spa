@@ -78,11 +78,9 @@ export default function TodayAppointmentsTable({ rows, onOpenRow, onNavigate, on
                     </td>
                     <td className="px-5 py-3 text-xs text-foreground">{getPatientNextAction(r)}</td>
                     <td className="px-5 py-3 text-right whitespace-nowrap">
-                      {!r.instance && (
-                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onStartJourney(r)}>
-                          Iniciar camino
-                        </Button>
-                      )}
+                      <Button size="sm" className="h-7 text-xs mr-1" onClick={() => arrivalHandler(r)}>
+                        Registrar llegada
+                      </Button>
                       {r.instance && (
                         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onNavigate(`/camino-paciente/${r.instance!.id}`)}>
                           Operar
