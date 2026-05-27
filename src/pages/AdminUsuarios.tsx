@@ -48,9 +48,24 @@ interface UsuarioRow {
   is_permanent_admin?: boolean;
 }
 
+interface DoctorRow {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  especialidad: string;
+  cedula_profesional: string | null;
+  telefono: string | null;
+  activo: boolean;
+  user_id: string | null;
+  user_email?: string | null;
+}
+
 export default function AdminUsuarios() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UsuarioRow[]>([]);
+  const [doctors, setDoctors] = useState<DoctorRow[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
   const [query, setQuery] = useState("");
   const [busyUser, setBusyUser] = useState<string | null>(null);
 
