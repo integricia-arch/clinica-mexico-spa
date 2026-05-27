@@ -32,6 +32,7 @@ import Recordatorios from "@/pages/Recordatorios";
 import AdminUsuarios from "@/pages/AdminUsuarios";
 import Pitch from "@/pages/Pitch";
 import CaminoPaciente from "@/pages/CaminoPaciente";
+import PanelDoctor from "@/pages/PanelDoctor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
