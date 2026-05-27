@@ -562,6 +562,14 @@ export default function DetalleCita() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <QuickArrivalModal
+        open={arrivalOpen}
+        onOpenChange={setArrivalOpen}
+        appointmentId={id ?? null}
+        patientName={a.patients ? `${a.patients.nombre} ${a.patients.apellidos}` : undefined}
+        onCompleted={reloadJourney}
+      />
     </div>
   );
 }
