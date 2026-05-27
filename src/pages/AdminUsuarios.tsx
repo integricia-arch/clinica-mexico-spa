@@ -356,8 +356,8 @@ export default function AdminUsuarios() {
       especialidad: d.especialidad ?? "",
       cedula_profesional: d.cedula_profesional ?? "",
       telefono: d.telefono ?? "",
-      horario_inicio: (d as any).horario_inicio ?? "08:00",
-      horario_fin: (d as any).horario_fin ?? "18:00",
+      horario_inicio: ((d as any).horario_inicio ?? "08:00:00").slice(0, 5),
+      horario_fin: ((d as any).horario_fin ?? "18:00:00").slice(0, 5),
       duracion_cita_min: (d as any).duracion_cita_min ?? 30,
       activo: d.activo,
     });
@@ -378,10 +378,12 @@ export default function AdminUsuarios() {
     if (f.telefono && !/^[+\d\s()-]{7,20}$/.test(f.telefono.trim())) {
       return "Teléfono inválido (usa solo dígitos, +, espacios o guiones)";
     }
-    if (!/^\d{2}:\d{2}$/.test(f.horario_inicio) || !/^\d{2}:\d{2}$/.test(f.horario_fin)) {
+    const hi = (f.horario_inicio || "").slice(0, 5);
+    const hf = (f.horario_fin || "").slice(0, 5);
+    if (!/^\d{2}:\d{2}$/.test(hi) || !/^\d{2}:\d{2}$/.test(hf)) {
       return "Horario inválido (formato HH:MM)";
     }
-    if (f.horario_inicio >= f.horario_fin) return "El horario de fin debe ser posterior al inicio";
+    if (hi >= hf) return "El horario de fin debe ser posterior al inicio";
     if (f.duracion_cita_min < 5 || f.duracion_cita_min > 240) {
       return "La duración de cita debe estar entre 5 y 240 minutos";
     }
@@ -398,8 +400,8 @@ export default function AdminUsuarios() {
       especialidad: doctorForm.especialidad.trim(),
       cedula_profesional: doctorForm.cedula_profesional.trim() || null,
       telefono: doctorForm.telefono.trim() || null,
-      horario_inicio: doctorForm.horario_inicio + ":00",
-      horario_fin: doctorForm.horario_fin + ":00",
+      horario_inicio: doctorForm.horario_inicio.slice(0, 5) + ":00",
+      horario_fin: doctorForm.horario_fin.slice(0, 5) + ":00",
       duracion_cita_min: doctorForm.duracion_cita_min,
       activo: doctorForm.activo,
     };
