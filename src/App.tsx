@@ -21,6 +21,8 @@ import Configuracion from "@/pages/Configuracion";
 import CaminoPacienteConfig from "@/pages/configuracion/CaminoPaciente";
 import MachoteReceta from "@/pages/configuracion/MachoteReceta";
 import RecetaImprimir from "@/pages/RecetaImprimir";
+import MisRecetas from "@/pages/MisRecetas";
+import VerificarReceta from "@/pages/VerificarReceta";
 import Auditoria from "@/pages/Auditoria";
 import Inbox from "@/pages/Inbox";
 import Citas from "@/pages/Citas";
