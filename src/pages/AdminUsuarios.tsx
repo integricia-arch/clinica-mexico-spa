@@ -561,7 +561,38 @@ export default function AdminUsuarios() {
                     </tr>
                   )}
 
-                  {!loading && filtered.map((u) => (
+                  {!loading && filtered.map((u) => {
+                    const unlinked = u._unlinkedDoctor;
+                    if (unlinked) {
+                      return (
+                        <tr key={u.id} className="border-t border-border align-top bg-amber-500/5">
+                          <td className="px-4 py-3">
+                            <div className="font-medium flex items-center gap-1.5">
+                              Dr(a). {unlinked.nombre} {unlinked.apellidos}
+                              <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-300">
+                                <AlertCircle className="h-3 w-3" /> Sin cuenta
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{unlinked.especialidad}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className={ROLE_BADGE.doctor}>{ROLE_LABELS.doctor}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs">—</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                            Sin cuenta de acceso. Crea una cuenta para asignar roles.
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" onClick={() => openLinkDoctor(unlinked)}>
+                                <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return (
                     <tr key={u.id} className="border-t border-border align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium flex items-center gap-1.5">
@@ -627,7 +658,8 @@ export default function AdminUsuarios() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
