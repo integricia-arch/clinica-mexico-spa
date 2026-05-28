@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useJourneyInstance } from "@/features/camino-paciente/hooks/useJourneyInstance";
 import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 import { Button } from "@/components/ui/button";
