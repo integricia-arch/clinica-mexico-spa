@@ -96,8 +96,9 @@ export default function DoctorActionPanel({ item, doctorId, snapshot }: Props) {
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Acciones clínicas</h3>
             <button
-              className="text-[11px] text-primary hover:underline"
-              onClick={() => navigate(`/camino-paciente?cita=${item.appointment_id}`)}
+              className="text-[11px] text-primary hover:underline disabled:opacity-50"
+              disabled={!journeyId}
+              onClick={() => journeyId && navigate(`/camino-paciente/${journeyId}`)}
             >
               Ver camino completo →
             </button>

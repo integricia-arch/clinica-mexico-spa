@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertTriangle, FlaskConical, Pill, FileText, Phone, User } from "lucide-react";
@@ -20,8 +21,15 @@ interface Props {
 }
 
 export default function PatientClinicalContext({ item, snapshot, doctorId }: Props) {
+  const navigate = useNavigate();
   const { patient, notas, recetas, studies } = snapshot;
   const journey = useJourneyInstance(item.journey_instance_id);
+
+  const goToStep = (stepKey?: string) => {
+    if (!item.journey_instance_id) return;
+    const url = `/camino-paciente/${item.journey_instance_id}${stepKey ? `?step=${stepKey}` : ""}`;
+    navigate(url);
+  };
 
   const edad = useMemo(() => {
     if (!patient?.fecha_nacimiento) return null;
@@ -104,7 +112,12 @@ export default function PatientClinicalContext({ item, snapshot, doctorId }: Pro
             journeyInstance={journey.instance as any}
             templateSteps={journey.steps as any}
             showLabels
+            onStepClick={(s) => goToStep(s.key)}
+            onStart={() => goToStep()}
           />
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Toca un hito para abrirlo y capturar los datos (asignación, llegada, triage…).
+          </p>
         </CardContent>
       </Card>
 
