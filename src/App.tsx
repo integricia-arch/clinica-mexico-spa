@@ -31,6 +31,7 @@ import Inbox from "@/pages/Inbox";
 import Citas from "@/pages/Citas";
 import Recordatorios from "@/pages/Recordatorios";
 import AdminUsuarios from "@/pages/AdminUsuarios";
+import AdminDiagnosticoMulticlinica from "@/pages/AdminDiagnosticoMulticlinica";
 import Pitch from "@/pages/Pitch";
 import CaminoPaciente from "@/pages/CaminoPaciente";
 import PanelDoctor from "@/pages/PanelDoctor";
@@ -82,6 +83,8 @@ const App = () => (
                         <Route path="/citas" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><Citas /></ProtectedRoute>} />
                         <Route path="/recordatorios" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor"]}><Recordatorios /></ProtectedRoute>} />
                         <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsuarios /></ProtectedRoute>} />
+                        <Route path="/admin/diagnostico-multiclinica" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDiagnosticoMulticlinica /></ProtectedRoute>} />
+
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppLayout>
