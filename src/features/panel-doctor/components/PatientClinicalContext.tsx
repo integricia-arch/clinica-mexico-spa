@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, differenceInYears } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertTriangle, FlaskConical, Pill, FileText, Phone, User } from "lucide-react";
