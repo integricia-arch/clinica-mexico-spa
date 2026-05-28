@@ -26,6 +26,8 @@ import { es } from "date-fns/locale";
 export default function CaminoPaciente() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const stepKeyParam = searchParams.get("step");
   const { loading, instance, steps, stepData, pendingOverrides, audit, reload } =
     useJourneyInstance(id ?? null);
 
@@ -33,6 +35,14 @@ export default function CaminoPaciente() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [blockReason, setBlockReason] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
+
+  // Preseleccionar paso si llega por ?step=
+  useEffect(() => {
+    if (!stepKeyParam || !steps.length) return;
+    const target = steps.find((s) => s.step_key === stepKeyParam);
+    if (target && target.id !== activeStepId) setActiveStepId(target.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepKeyParam, steps]);
 
   if (!id) return <div className="p-8">ID de camino inválido</div>;
   if (loading) return <div className="p-8 text-muted-foreground">Cargando camino...</div>;
