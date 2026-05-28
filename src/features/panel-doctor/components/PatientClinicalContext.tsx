@@ -21,8 +21,15 @@ interface Props {
 }
 
 export default function PatientClinicalContext({ item, snapshot, doctorId }: Props) {
+  const navigate = useNavigate();
   const { patient, notas, recetas, studies } = snapshot;
   const journey = useJourneyInstance(item.journey_instance_id);
+
+  const goToStep = (stepKey?: string) => {
+    if (!item.journey_instance_id) return;
+    const url = `/camino-paciente/${item.journey_instance_id}${stepKey ? `?step=${stepKey}` : ""}`;
+    navigate(url);
+  };
 
   const edad = useMemo(() => {
     if (!patient?.fecha_nacimiento) return null;
