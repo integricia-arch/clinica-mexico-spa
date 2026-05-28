@@ -1,146 +1,132 @@
-# Panel del doctor — Ventana operativa clínica
+# Plan: Base multi-clínica (Fase 1)
 
-Objetivo: agregar `/doctor` para que el médico atienda al paciente de forma guiada, conectado al Camino del Paciente. **No** se duplica nada existente: se reutiliza `journeyEngine`, `PrescriptionEditorModal`, `NotaConsultaModal`, `PatientJourneyLine`, expedientes y recetas.
+Objetivo: dejar la estructura, datos y RLS preparados para multi-clínica, asignando todo lo existente a la clínica default **Salud Integral MX**, sin romper la operación actual.
 
----
-
-## 1. Cambios de base de datos (1 migración)
-
-Hoy no existe ninguna tabla de análisis/estudios — sólo el campo SOAP `notas_consulta.analisis`. Se crea:
-
-- **`patient_studies`** — orden de estudio/análisis
-  - `id, patient_id, doctor_id, appointment_id?, journey_instance_id?, expediente_id?, consultation_note_id?`
-  - `tipo` (lab | imagen | otro), `nombre`, `motivo`, `prioridad` (rutina|urgente|stat), `area_laboratorio?`
-  - `requiere_ayuno` bool, `indicaciones_paciente`, `observaciones`
-  - `status` (solicitado|recibido|revisado|reutilizado|descartado)
-  - `solicitado_at, solicitado_por, recibido_at, recibido_por, revisado_at, revisado_por`
-  - `resultado_resumen, interpretacion_medica, archivo_url, laboratorio_origen`
-  - `replaces_study_id?` cuando se reutiliza o repite uno previo + `justificacion_repeticion`
-  - GRANT + RLS: staff lee/escribe; paciente ve los suyos (solo lectura).
-  - Audit trigger ya existente (`audit_trigger`).
-
-No se crean tablas de seguimiento (ya existe `post_consultation_followups`) ni de receta (`prescriptions`).
+Trabajaré en migraciones incrementales y seguras. Cada paso es reversible (sin DROPs, sin borrar datos, sin desactivar RLS).
 
 ---
 
-## 2. Ruta y navegación
+## Fase A — Esquema base (migración 1)
 
-- `src/App.tsx`: nueva ruta `/doctor` (roles `doctor`, `admin`, `nurse` lectura).
-- `src/components/AppLayout.tsx`: nuevo `NAV_ITEM` "Panel del doctor" (icono Stethoscope), visible para `doctor` y `admin`.
-- Botones "Abrir en Panel del doctor" en: Dashboard (tarjeta cita del día), `CaminoPaciente.tsx`, `Expedientes.tsx`, `DetalleCita.tsx`.
+1. Crear `public.clinics` con los campos pedidos, check `status IN ('active','inactive','suspended')`, índices en `code` y `status`, trigger `update_updated_at_column`.
+2. GRANTs: `SELECT` a `authenticated`, `ALL` a `service_role`. RLS habilitado:
+   - SELECT: `user_has_clinic_access(auth.uid(), id)` o `is_global_admin(auth.uid())`.
+   - INSERT/UPDATE/DELETE: solo `is_global_admin`.
+3. Crear `public.clinic_memberships` con FKs a `clinics` y `auth.users`, unique `(clinic_id, user_id, role)`, check status, índices solicitados, trigger updated_at.
+4. GRANTs equivalentes + RLS:
+   - SELECT: el propio `user_id = auth.uid()` o `is_global_admin`.
+   - INSERT/UPDATE/DELETE: solo `is_global_admin` (más adelante admin de clínica).
+5. Insertar clínica default `salud_integral_mx` (idempotente con `ON CONFLICT (code) DO NOTHING`).
+6. Backfill: por cada `user_roles(user_id, role)` insertar membership activa en la clínica default (`ON CONFLICT DO NOTHING`). `user_roles` se conserva intacta.
 
-Si el `user` tiene rol `doctor` pero no existe en `doctors` → pantalla vacía con mensaje **"No se encontró un perfil médico vinculado a este usuario."**
+## Fase B — Helpers SQL (migración 2)
 
----
+Crear funciones `SECURITY DEFINER`, `STABLE`, `SET search_path = public`:
+- `is_global_admin(_user_id uuid) returns boolean` — usa `has_role(_user_id, 'admin')`.
+- `user_has_clinic_access(_user_id, _clinic_id) returns boolean`.
+- `user_has_clinic_role(_user_id, _clinic_id, _role app_role) returns boolean`.
+- `current_user_clinic_ids() returns setof uuid`.
 
-## 3. Layout `/doctor` (3 columnas)
+GRANT EXECUTE a `authenticated`.
 
-```text
-┌──────────────┬───────────────────────────────┬──────────────┐
-│ Mis pacientes│  Ficha + Línea del camino     │ Acciones     │
-│ (hoy/pend.)  │  + paneles contextuales       │ clínicas     │
-└──────────────┴───────────────────────────────┴──────────────┘
-```
+## Fase C — `clinic_id` en tablas sensibles (migraciones 3..N, una por dominio)
 
-**Columna izquierda — `DoctorPatientQueue`**
-- Lista citas del día del doctor logueado (admin elige doctor en select).
-- Por fila: hora, paciente, servicio, consultorio, estado del camino, hito actual, badges de alerta (sin consentimiento, sin alergias, análisis pendiente).
-- Estados visuales derivados del journey: por atender / en consulta / esperando análisis / resultado recibido / receta pendiente / listo salida / seguimiento.
-- Métricas en cero ocultas.
+Patrón por tabla (siempre seguro):
+1. `ALTER TABLE ... ADD COLUMN IF NOT EXISTS clinic_id uuid REFERENCES public.clinics(id);` (nullable).
+2. `UPDATE ... SET clinic_id = <default> WHERE clinic_id IS NULL;`.
+3. Validar `SELECT count(*) WHERE clinic_id IS NULL` = 0; si OK → `ALTER COLUMN clinic_id SET NOT NULL`. Si falla, dejar nullable y registrar en el doc.
+4. Crear índice `idx_<tabla>_clinic_id` y los compuestos pedidos.
 
-**Columna central — `PatientClinicalContext` + línea**
-- Header: nombre, edad, sexo, teléfono, alergias confirmadas, medicamentos actuales, antecedentes, última visita, servicio, consultorio, llegada, tiempo de espera.
-- Si datos vacíos: textos compactos ("Sin alergias registradas", etc.).
-- Si alergias **no confirmadas** → alerta destructive: *"Debe confirmar alergias antes de recetar."*
-- Tabs compactas: Antecedentes · Estudios previos · Recetas previas · Indicaciones previas (cada tab oculta si no hay datos).
-- Debajo: `PatientJourneyLine` reusada (modo `compact`, refinado visualmente — ver §5).
+Tablas (solo si existen, agrupadas por migración):
+- **Núcleo**: `patients`, `doctors`, `rooms`, `servicios`, `appointments`.
+- **Expediente**: `expedientes`, `notas_consulta`, `consentimientos`, `patient_studies` (si existe).
+- **Camino del paciente**: `journey_templates`, `journey_template_versions`, `journey_instances`, `journey_instance_steps`, `journey_instance_step_data`, `journey_instance_documents`, `journey_instance_overrides`, `journey_instance_audit`. `journey_step_definitions` queda sin clinic_id (vive bajo `template_version_id`); documentado.
+- **Recetas**: `prescriptions`, `prescription_items` (si existe), `prescription_audit` (si existe), `prescription_print_events` (si existe), `doctor_prescription_templates`, `doctor_prescription_template_versions`.
+- **Farmacia**: `medicamentos`, `lotes_medicamento`, `movimientos_inventario`.
+- **Comunicación**: `conversaciones`, `mensajes`, `identidades_canal`, `recordatorios_cita` (si existe; en el schema actual hay `reminders` — se aplica al nombre real encontrado).
+- **Auditoría**: `audit_logs`, `clinical_access_audit`/`appointment_notifications`/`secure_access_links` (si existen).
 
-**Columna derecha — `ClinicalActionsPanel`**
-- Botones contextuales habilitados según hito y validaciones:
-  - Abrir consulta · Guardar nota · Solicitar análisis · Revisar análisis · Emitir receta · Cerrar consulta · Enviar a caja · Dar salida · Programar seguimiento.
+Índices compuestos pedidos: `appointments(clinic_id, fecha_inicio)`, `appointments(clinic_id, doctor_id)`, `patients(clinic_id, nombre)`, `prescriptions(clinic_id, patient_id)`, `prescriptions(clinic_id, doctor_id)`, `journey_instances(clinic_id, patient_id)`, `conversaciones(clinic_id, identidad_canal_id)`, `reminders/recordatorios(clinic_id, programado_para, status)`.
 
----
+## Fase D — RLS por clínica (migración N+1)
 
-## 4. Acciones clínicas (todas validadas y auditadas)
+Para cada tabla con `clinic_id`, reemplazar policies amplias por:
+- SELECT: `is_global_admin(auth.uid()) OR user_has_clinic_access(auth.uid(), clinic_id)` combinado con las reglas de rol existentes (paciente dueño, doctor asignado, etc.).
+- INSERT/UPDATE: `WITH CHECK` agrega `user_has_clinic_access(auth.uid(), clinic_id)`.
+- DELETE: restringido a `is_global_admin` (o admin de clínica). Tablas append-only (`audit_logs`, `journey_*_audit`, `prescription_audit`) conservan deny.
 
-Todas pasan por un nuevo helper `advancePatientJourneyFromClinicalEvent(eventType, payload)` en `src/features/camino-paciente/services/clinicalEvents.ts` que llama a `openJourneyStepByKey` / `closeJourneyStep` / `saveJourneyStepData` ya existentes.
+Se preservan las policies de paciente-dueño y doctor-asignado actuales, añadiendo el filtro de clínica como AND. Ninguna policy queda con `USING (true)` en tabla sensible.
 
-| Acción | Modal/Drawer | Hitos del journey afectados |
-|---|---|---|
-| Abrir consulta | reusa `NotaConsultaModal` (precarga expediente) | abre `consultation_open`, valida llegada+identificación+expediente+alergias |
-| Guardar nota | `NotaConsultaModal` | `consultation_note_saved` (no avanza) |
-| Solicitar análisis | nuevo `RequestStudyDrawer` (lista estudios previos similares vigentes con alerta de reutilización) | abre hito virtual *"Análisis solicitado"* mapeado a `consultation_close` bloqueado + bandera en `journey_instance_step_data` |
-| Registrar resultado | nuevo `RegisterStudyResultDrawer` (abrible desde panel, camino, expediente) | marca estudio `recibido`, notifica al doctor |
-| Revisar análisis | nuevo `ReviewStudyDrawer` | estudio `revisado` + interpretación |
-| Emitir receta | **reusa `PrescriptionEditorModal`** con todos los props ya soportados | cierra hito `prescription` al emitir |
-| Cerrar consulta | `CloseConsultationDialog` (valida nota, plan, análisis, receta, seguimiento) | cierra `consultation_close` |
-| Enviar a caja / salida | reusa hito `billing` + `discharge` | open/close vía engine |
-| Seguimiento | reusa `post_consultation_followups` + `followupService` | crea seguimiento |
+## Fase E — Frontend mínimo
 
-Las validaciones de bloqueo se ejecutan en el cliente y en el servidor (via `journeyEngine` que ya verifica predecesores). Override sólo con rol autorizado y motivo (ya soportado por `requestStepOverride`).
+1. `src/hooks/useActiveClinic.tsx`:
+   - Consulta `clinic_memberships` del usuario (activos) + `is_global_admin` vía `has_role`.
+   - Si 1 clínica → la usa. Si admin global sin membership → clínica default (lookup por code). Si nada → error seguro.
+   - Devuelve `{ activeClinicId, activeClinic, userClinics, isGlobalAdmin, loading, error }`.
+   - Persiste selección en `localStorage` (`activeClinicId`).
+2. Integrar el hook en `AppLayout` (provider ligero vía context) sin nueva UI visible. Mostrar nombre de clínica en header (texto pequeño, sin selector).
+3. Inserts del cliente: añadir `clinic_id: activeClinicId` en los servicios que crean datos:
+   - `patients`, `doctors`, `servicios`, `appointments` (frontend), `expedientes`, `prescriptions`, `journey_instances`, `recordatorios`, `conversaciones`, `mensajes`, `notas_consulta`.
+   - Cambios quirúrgicos en los servicios existentes (`src/features/.../services/*.ts`, `PacienteModal`, `NuevaCita`, `NotaConsultaModal`, `prescriptionService`, `journeyEngine`, etc.).
 
----
+## Fase F — Edge Functions
 
-## 5. Línea gráfica refinada
+Cambios mínimos en:
+- `create-appointment`: resolver `clinic_id` desde el `patient.clinic_id`; validar que `doctor`, `room`, `servicio` coincidan; rechazar con 409 si no. Persistir `clinic_id` en `appointments` y `reminders`.
+- `telegram-webhook`: usar clínica default (lookup por code). Comentario `TODO multi-clinic mapping`.
+- `enviar-recordatorios`: propagar `clinic_id` del appointment al insert.
+- `enviar-mensaje-humano`: propagar `clinic_id` desde `conversaciones`.
+- `seed-demo-data`: asignar `clinic_id` default a todo lo creado.
 
-Se mejora `PatientJourneyLine` (no se reemplaza) con una variante `variant="clinical"`:
-- Nodos pequeños (24px), línea fina entre ellos.
-- Paleta semántica: verde/turquesa = completado, azul = en proceso, ámbar = esperando análisis/revisión, morado = receta, rojo suave = bloqueo, gris = pendiente.
-- Click → resumen en popover. Doble click → abre drawer del hito (igual que hoy).
-- Tooltip: estado, responsable, opened_at/closed_at, próxima acción, motivo bloqueo.
-- Etiquetas hito-actual + próxima acción debajo de la línea, resto sólo en tooltip (minimalista).
+## Fase G — Diagnóstico
 
----
+1. `supabase/diagnostics/multiclinic_integrity_check.sql` — solo SELECTs:
+   - Conteos nulos por tabla sensible.
+   - Cruces de `clinic_id` entre appointments↔(patient/doctor/room/servicio), prescriptions↔(patient/doctor/appointment), expedientes↔patient, journey_instances↔(patient/appointment), mensajes↔conversaciones, reminders↔appointments.
+   - Policies con `qual = 'true'` o `with_check = 'true'` en tablas sensibles (vía `pg_policies`).
+   - Tablas sensibles sin RLS o sin policies (vía `pg_class`/`pg_policies`).
+2. Página admin `/admin/diagnostico-multiclinica` (solo `admin`):
+   - Llama una RPC `multiclinic_diagnostics()` que ejecuta los SELECTs y devuelve JSON.
+   - Render: estado global (Seguro/Advertencia/Crítico), tablas con nulos, cruces inconsistentes, tablas sin protección, recomendaciones. UI sencilla con cards (sin librerías nuevas).
+   - Ruta añadida en `App.tsx` con `ProtectedRoute allowedRoles={['admin']}`.
 
-## 6. Detalle técnico
+## Fase H — Auditoría
 
-**Archivos nuevos:**
-- `src/pages/PanelDoctor.tsx`
-- `src/features/panel-doctor/components/DoctorPatientQueue.tsx`
-- `src/features/panel-doctor/components/PatientClinicalContext.tsx`
-- `src/features/panel-doctor/components/ClinicalActionsPanel.tsx`
-- `src/features/panel-doctor/components/RequestStudyDrawer.tsx`
-- `src/features/panel-doctor/components/RegisterStudyResultDrawer.tsx`
-- `src/features/panel-doctor/components/ReviewStudyDrawer.tsx`
-- `src/features/panel-doctor/components/CloseConsultationDialog.tsx`
-- `src/features/panel-doctor/hooks/useDoctorQueue.ts` (citas del día por doctor)
-- `src/features/panel-doctor/hooks/usePatientClinicalSnapshot.ts` (alergias, meds, antecedentes, últimas notas, estudios, recetas)
-- `src/features/panel-doctor/services/studiesService.ts` (CRUD `patient_studies`)
-- `src/features/camino-paciente/services/clinicalEvents.ts` (helper unificado)
+- `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS clinic_id uuid REFERENCES clinics(id)`; backfill default; índice.
+- Actualizar `log_audit` para aceptar `_clinic_id` opcional (firma nueva, manteniendo la actual por compatibilidad vía overload o param default).
+- Inserts críticos pasan `clinic_id` cuando esté disponible.
 
-**Archivos editados (mínimos):**
-- `src/App.tsx` (ruta `/doctor`)
-- `src/components/AppLayout.tsx` (`NAV_ITEMS`)
-- `src/features/camino-paciente/components/PatientJourneyLine.tsx` (variante `clinical`)
-- `src/pages/CaminoPaciente.tsx`, `src/pages/DetalleCita.tsx`, `src/pages/AdminDashboard.tsx`, `src/pages/Expedientes.tsx` (botones "Abrir Panel del doctor")
+## Fase I — Documentación
 
-**No se tocan:** `journeyEngine.ts`, `PrescriptionEditorModal.tsx`, `NotaConsultaModal.tsx`, types Supabase, RLS existente, auth.
+`docs/MULTICLINIC_READINESS.md` con:
+- Tablas con/ sin `clinic_id` y razón.
+- Estrategia de backfill.
+- Cómo funciona `useActiveClinic` y los helpers SQL.
+- Cómo correr el diagnóstico.
+- Limitaciones (sin selector, sin multi-sucursal, sin facturación SaaS).
+- Próximos pasos.
 
----
+## Fase J — Validación final
 
-## 7. Auditoría
-
-Todo se registra vía:
-- `audit_trigger` (ya activo en tablas con audit) para `patient_studies`, `notas_consulta`, `prescriptions`.
-- `journey_instance_audit` para cada open/close/skip/override (ya lo hace `journey_step_audit_trigger`).
-
-Sin borrado de auditoría (políticas `Deny delete` ya existentes).
-
----
-
-## 8. Validación de extremo a extremo
-
-Recorrido manual descrito por el usuario (pasos 1–18): selección paciente → abrir consulta → solicitar análisis → registrar resultado → revisar → receta → cerrar consulta → caja/alta → seguimiento, verificando que la línea gráfica refleje cada cambio y que la auditoría capture cada acción.
+1. `npm run build` (lo dispara el harness).
+2. Smoke manual en preview: login, AdminDashboard, Agenda, Pacientes, Citas, PanelDoctor, Recetas, CaminoPaciente.
+3. Correr `multiclinic_diagnostics()` → 0 críticos.
+4. Crear una cita de prueba y verificar `clinic_id` no nulo.
 
 ---
 
-## 9. Fuera de alcance
+## Detalles técnicos clave
 
-- Catálogo CIE-10 real (se mantiene campo libre como hoy).
-- Integración con laboratorio externo / PACS / firma COFEPRIS.
-- Portal del paciente (sólo se asegura que los datos generados sean visibles cuando ese módulo lo consuma).
-- Nuevas tablas de seguimiento o receta (se reutilizan las existentes).
+- Migraciones separadas por dominio para minimizar bloqueos y permitir rollback parcial.
+- Toda nueva tabla incluye `GRANT` explícito + RLS + policies en la misma migración.
+- Helpers se llaman con `auth.uid()` y son `SECURITY DEFINER` para evitar recursión RLS.
+- Se conserva `user_roles` como roles globales; `admin` global se trata como super-acceso vía `is_global_admin` en cada policy nueva.
+- No se hacen `DROP POLICY` masivos: cada policy modificada se reescribe con el mismo nombre (DROP+CREATE en la misma migración) preservando la lógica de paciente/doctor existente.
+- Cambios de frontend son aditivos (campo extra en payloads). No se modifican formularios visibles.
 
----
+## Riesgos y mitigaciones
 
-¿Apruebo y procedo con la migración de `patient_studies` y luego implemento el frontend?
+- **RLS más estricta rompe queries**: helpers siempre permiten `is_global_admin`; el hook garantiza `clinic_id` antes de cualquier insert; backfill llena nulls antes de NOT NULL.
+- **Edge functions de bot**: usan clínica default; no se cambia el contrato.
+- **Tablas con cardinalidades pesadas**: backfill en una sola sentencia `UPDATE` con índice posterior; aceptable en data actual.
+- **Si `NOT NULL` falla**: se deja nullable y se reporta en el doc + diagnóstico, sin abortar la migración.
