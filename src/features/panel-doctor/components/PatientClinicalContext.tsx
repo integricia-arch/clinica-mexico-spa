@@ -112,7 +112,12 @@ export default function PatientClinicalContext({ item, snapshot, doctorId }: Pro
             journeyInstance={journey.instance as any}
             templateSteps={journey.steps as any}
             showLabels
+            onStepClick={(s) => goToStep(s.key)}
+            onStart={() => goToStep()}
           />
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Toca un hito para abrirlo y capturar los datos (asignación, llegada, triage…).
+          </p>
         </CardContent>
       </Card>
 
