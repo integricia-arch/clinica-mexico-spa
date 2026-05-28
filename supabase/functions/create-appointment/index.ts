@@ -203,9 +203,9 @@ Deno.serve(async (req: Request) => {
     // 7. Create reminder (24h before)
     const reminderTime = new Date(inicio.getTime() - 24 * 60 * 60 * 1000);
     if (reminderTime > new Date()) {
-      await supabase.from("reminders").insert({
+      await supabase.from("recordatorios_cita").insert({
         appointment_id: appointment.id,
-        canal: "whatsapp",
+        tipo: "automatico",
         mensaje: `Recordatorio: tiene una cita programada para el ${inicio.toLocaleDateString("es-MX")} a las ${inicio.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}`,
         programado_para: reminderTime.toISOString(),
       });
