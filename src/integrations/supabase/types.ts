@@ -2600,6 +2600,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      multiclinic_diagnostics: { Args: never; Returns: Json }
       update_journey_progress: {
         Args: { _journey_instance_id: string }
         Returns: undefined
