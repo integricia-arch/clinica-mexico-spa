@@ -205,7 +205,7 @@ Deno.serve(async (req: Request) => {
     if (reminderTime > new Date()) {
       await supabase.from("recordatorios_cita").insert({
         appointment_id: appointment.id,
-        tipo: "automatico",
+        tipo: "t24h",
         mensaje: `Recordatorio: tiene una cita programada para el ${inicio.toLocaleDateString("es-MX")} a las ${inicio.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}`,
         programado_para: reminderTime.toISOString(),
       });
