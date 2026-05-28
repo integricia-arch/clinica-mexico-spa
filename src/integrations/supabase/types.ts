@@ -25,7 +25,7 @@ export type Database = {
         }
         Insert: {
           appointment_id: string
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           descripcion?: string | null
           id?: string
@@ -76,7 +76,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
@@ -221,7 +221,7 @@ export type Database = {
         }
         Insert: {
           borrador_paciente?: Json
-          clinic_id: string
+          clinic_id?: string
           consentimiento_dado?: boolean
           consentimiento_fecha?: string | null
           conversacion_id: string
@@ -395,7 +395,7 @@ export type Database = {
           version_texto: string
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           id?: string
           identidad_canal_id?: string | null
@@ -454,7 +454,7 @@ export type Database = {
         }
         Insert: {
           asignada_humano_id?: string | null
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           id?: string
           identidad_canal_id: string
@@ -504,7 +504,7 @@ export type Database = {
           version_number: number
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           doctor_id: string
           id?: string
           publish_reason?: string | null
@@ -568,7 +568,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           color_primario?: string | null
           consultorio_direccion?: string | null
           consultorio_email?: string | null
@@ -686,7 +686,7 @@ export type Database = {
           activo?: boolean
           apellidos: string
           cedula_profesional?: string | null
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           duracion_cita_min?: number
           especialidad: string
@@ -737,7 +737,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           doctor_id: string
           id?: string
@@ -800,7 +800,7 @@ export type Database = {
         }
         Insert: {
           canal_id: Database["public"]["Enums"]["canal_tipo"]
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           display_name?: string | null
           external_id: string
@@ -895,7 +895,7 @@ export type Database = {
         }
         Insert: {
           action: string
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           id?: string
           journey_instance_id: string
@@ -942,7 +942,7 @@ export type Database = {
           uploaded_by: string | null
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           document_type: string
           file_name: string
@@ -990,7 +990,7 @@ export type Database = {
         Insert: {
           authorized_at?: string | null
           authorized_by?: string | null
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           id?: string
           journey_instance_id: string
@@ -1035,7 +1035,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           created_by?: string | null
           data_json?: Json
@@ -1087,7 +1087,7 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           blocked_reason?: string | null
-          clinic_id: string
+          clinic_id?: string
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
@@ -1147,7 +1147,7 @@ export type Database = {
         }
         Insert: {
           appointment_id?: string | null
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           id?: string
           patient_id?: string | null
@@ -1424,7 +1424,7 @@ export type Database = {
           version_number: number
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           config_json?: Json
           created_at?: string
           created_by?: string | null
@@ -1481,7 +1481,7 @@ export type Database = {
         }
         Insert: {
           active_version_id?: string | null
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -1576,7 +1576,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           existencia?: number
           fecha_caducidad: string
@@ -1629,7 +1629,7 @@ export type Database = {
         Insert: {
           activo?: boolean
           categoria?: string
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           descripcion?: string | null
           id?: string
@@ -1673,7 +1673,7 @@ export type Database = {
           rol: Database["public"]["Enums"]["mensaje_rol"]
         }
         Insert: {
-          clinic_id: string
+          clinic_id?: string
           contenido: string
           conversacion_id: string
           created_at?: string
@@ -1721,7 +1721,7 @@ export type Database = {
         }
         Insert: {
           cantidad: number
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           id?: string
           lote_id?: string | null
@@ -1782,7 +1782,7 @@ export type Database = {
         }
         Insert: {
           analisis?: string | null
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           diagnostico_principal?: string | null
           doctor_id: string
@@ -1862,7 +1862,7 @@ export type Database = {
           checked_out_by?: string | null
           checkout_status?: string
           checkout_type: string
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           discharge_summary?: string | null
           followup_date?: string | null
@@ -1936,7 +1936,7 @@ export type Database = {
           appointment_id?: string | null
           archivo_url?: string | null
           area_laboratorio?: string | null
-          clinic_id: string
+          clinic_id?: string
           consultation_note_id?: string | null
           created_at?: string
           doctor_id: string
@@ -2050,7 +2050,7 @@ export type Database = {
           activo?: boolean
           alergias?: string | null
           apellidos: string
-          clinic_id: string
+          clinic_id?: string
           codigo_postal?: string | null
           colonia?: string | null
           contacto_emergencia_nombre?: string | null
@@ -2153,7 +2153,7 @@ export type Database = {
         Insert: {
           adverse_effects?: string | null
           channel: string
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           followup_date: string
           id?: string
@@ -2219,7 +2219,7 @@ export type Database = {
         }
         Insert: {
           brand_name?: string | null
-          clinic_id: string
+          clinic_id?: string
           concentration?: string | null
           controlled_group?: string | null
           created_at?: string
@@ -2293,7 +2293,7 @@ export type Database = {
         }
         Insert: {
           appointment_id?: string | null
-          clinic_id: string
+          clinic_id?: string
           consultation_note_id?: string | null
           created_at?: string
           diagnosis?: string | null
@@ -2365,7 +2365,7 @@ export type Database = {
         }
         Insert: {
           appointment_id: string
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           enviado_at?: string | null
           id?: string
@@ -2431,7 +2431,7 @@ export type Database = {
         Insert: {
           activo?: boolean
           capacidad?: number
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           equipamiento?: string | null
           id?: string
@@ -2473,7 +2473,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
-          clinic_id: string
+          clinic_id?: string
           created_at?: string
           descripcion?: string | null
           duracion_minutos?: number
