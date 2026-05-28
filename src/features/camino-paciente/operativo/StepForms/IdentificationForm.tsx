@@ -10,7 +10,9 @@ import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-pacient
 import type { StepFormProps } from "./_shared";
 import { isClosed } from "./_shared";
 
-const CURP_RE = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
+// Validación tolerante: 18 caracteres alfanuméricos en mayúsculas.
+// El formato estricto NOM (AAAA######HoMXXXXX##) se valida en backend si se requiere.
+const CURP_RE = /^[A-Z0-9]{18}$/;
 
 export default function IdentificationForm({
   stepId, stepStatus, patientId, existingData, onSaved,
