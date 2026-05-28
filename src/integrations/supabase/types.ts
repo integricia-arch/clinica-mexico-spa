@@ -246,6 +246,101 @@ export type Database = {
           },
         ]
       }
+      clinic_memberships: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_memberships_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinics: {
+        Row: {
+          address: string | null
+          city: string | null
+          code: string
+          country: string
+          created_at: string
+          email: string | null
+          id: string
+          legal_name: string | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          rfc: string | null
+          state: string | null
+          status: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          code: string
+          country?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          legal_name?: string | null
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          rfc?: string | null
+          state?: string | null
+          status?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          code?: string
+          country?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          legal_name?: string | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          rfc?: string | null
+          state?: string | null
+          status?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consentimientos: {
         Row: {
           created_at: string
@@ -2122,6 +2217,7 @@ export type Database = {
       }
     }
     Functions: {
+      current_user_clinic_ids: { Args: never; Returns: string[] }
       ensure_permanent_admins: { Args: never; Returns: undefined }
       generate_prescription_number: { Args: never; Returns: string }
       generate_prescription_number_for_doctor: {
@@ -2147,6 +2243,7 @@ export type Database = {
         Returns: boolean
       }
       is_clinic_staff: { Args: { _user_id: string }; Returns: boolean }
+      is_global_admin: { Args: { _user_id: string }; Returns: boolean }
       log_audit: {
         Args: {
           _accion: Database["public"]["Enums"]["audit_action"]
@@ -2160,6 +2257,18 @@ export type Database = {
       update_journey_progress: {
         Args: { _journey_instance_id: string }
         Returns: undefined
+      }
+      user_has_clinic_access: {
+        Args: { _clinic_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_clinic_role: {
+        Args: {
+          _clinic_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
