@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,7 @@ import {
   MessageCircle, Calendar, Bell, Shield, FileText, Users, Stethoscope,
   Pill, Receipt, Inbox as InboxIcon, ClipboardCheck, Bot, Clock, CheckCircle2,
   ArrowRight, Sparkles, Lock, Activity, Globe, Zap, TrendingUp, Database,
+  Menu, X, UserCheck, Send, Star,
 } from "lucide-react";
 
 const stats = [
@@ -35,12 +37,12 @@ const differentiators = [
 ];
 
 const flow = [
-  { step: "1", title: "Paciente escribe al bot", desc: "Vía Telegram (o WhatsApp). El bot identifica al paciente o lo registra." },
-  { step: "2", title: "IA agenda la cita", desc: "Valida disponibilidad real del doctor en BD y confirma la cita en segundos." },
-  { step: "3", title: "Sistema agenda recordatorios", desc: "Se crean en cola los avisos T-24h y T-2h para el canal del paciente." },
-  { step: "4", title: "Cron despacha", desc: "Cada 5 minutos pg_cron envía los pendientes y reintenta los fallidos." },
-  { step: "5", title: "Si se complica, escala", desc: "El bot transfiere la conversación a recepción, que responde desde el Inbox." },
-  { step: "6", title: "Todo queda auditado", desc: "Cada cambio en cita, rol o expediente se registra con usuario y fecha." },
+  { step: "1", icon: MessageCircle, title: "Paciente escribe al bot", desc: "Vía Telegram (o WhatsApp). El bot identifica al paciente o lo registra." },
+  { step: "2", icon: Calendar, title: "IA agenda la cita", desc: "Valida disponibilidad real del doctor en BD y confirma la cita en segundos." },
+  { step: "3", icon: Bell, title: "Sistema agenda recordatorios", desc: "Se crean en cola los avisos T-24h y T-2h para el canal del paciente." },
+  { step: "4", icon: Clock, title: "Cron despacha", desc: "Cada 5 minutos pg_cron envía los pendientes y reintenta los fallidos." },
+  { step: "5", icon: UserCheck, title: "Si se complica, escala", desc: "El bot transfiere la conversación a recepción, que responde desde el Inbox." },
+  { step: "6", icon: ClipboardCheck, title: "Todo queda auditado", desc: "Cada cambio en cita, rol o expediente se registra con usuario y fecha." },
 ];
 
 const pricing = [
@@ -73,7 +75,56 @@ const pricing = [
   },
 ];
 
+const testimonials = [
+  {
+    initials: "MR",
+    color: "bg-blue-500",
+    name: "Dra. María Rodríguez",
+    role: "Directora Médica",
+    clinic: "Clínica Familiar Rodríguez · Guadalajara",
+    quote: "Antes perdíamos 8-10 citas a la semana por no-shows. Con los recordatorios automáticos bajamos a menos de 2. El bot atiende a los pacientes a las 11 de la noche y yo descanso.",
+  },
+  {
+    initials: "JM",
+    color: "bg-emerald-500",
+    name: "Dr. Jorge Mendoza",
+    role: "Médico General",
+    clinic: "Consultorios Mendoza · CDMX",
+    quote: "Lo que más me sorprendió fue que entiende RFC, CURP y CFDI desde el día uno. No tuve que adaptar nada. En 48 horas estábamos operando con el sistema completo.",
+  },
+  {
+    initials: "AL",
+    color: "bg-violet-500",
+    name: "Lic. Ana Lozano",
+    role: "Administradora",
+    clinic: "Centro Médico Lozano · Monterrey",
+    quote: "El Inbox unificado cambió todo para recepción. Ya no jugamos teléfono entre WhatsApp personal y el sistema. Todo en una pantalla, con historial y trazabilidad.",
+  },
+];
+
+const navLinks = [
+  { href: "#modulos", label: "Módulos" },
+  { href: "#flujo", label: "Cómo funciona" },
+  { href: "#diferenciadores", label: "Diferenciadores" },
+  { href: "#precios", label: "Precios" },
+];
+
+const techBadges = [
+  { label: "Supabase", icon: Database },
+  { label: "Claude AI", icon: Bot },
+  { label: "Telegram", icon: Send },
+  { label: "React 18", icon: Zap },
+];
+
+const mockAppointments = [
+  { initials: "LP", color: "bg-blue-500", name: "Laura Pérez", time: "09:00", status: "Confirmada" },
+  { initials: "CM", color: "bg-emerald-500", name: "Carlos Mora", time: "10:30", status: "Pendiente" },
+  { initials: "SR", color: "bg-violet-500", name: "Sofia Ríos", time: "11:00", status: "Confirmada" },
+];
+
 export default function Pitch() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Top nav */}
@@ -86,15 +137,40 @@ export default function Pitch() {
             <span className="text-display font-bold text-lg">ClínicaMX</span>
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
-            <a href="#modulos" className="hover:text-foreground transition">Módulos</a>
-            <a href="#flujo" className="hover:text-foreground transition">Cómo funciona</a>
-            <a href="#diferenciadores" className="hover:text-foreground transition">Diferenciadores</a>
-            <a href="#precios" className="hover:text-foreground transition">Precios</a>
+            {navLinks.map((l) => (
+              <a key={l.href} href={l.href} className="hover:text-foreground transition">{l.label}</a>
+            ))}
           </nav>
-          <Link to="/login">
-            <Button size="sm" className="bg-[var(--gradient-primary)]">Iniciar sesión</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/login" className="hidden md:block">
+              <Button size="sm" className="bg-[var(--gradient-primary)]">Iniciar sesión</Button>
+            </Link>
+            <button
+              className="md:hidden p-2 rounded-md hover:bg-secondary transition"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Menú"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-md px-6 py-4 flex flex-col gap-4">
+            {navLinks.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="text-sm text-muted-foreground hover:text-foreground transition py-1"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {l.label}
+              </a>
+            ))}
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+              <Button size="sm" className="w-full bg-[var(--gradient-primary)]">Iniciar sesión</Button>
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* Hero */}
@@ -104,32 +180,100 @@ export default function Pitch() {
         <div className="absolute bottom-0 -left-20 w-96 h-96 rounded-full bg-info/10 blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-24">
-          <div className="max-w-3xl animate-fade-in">
-            <Badge variant="secondary" className="mb-6 gap-1.5">
-              <Sparkles className="w-3 h-3" /> Hecho en México · para clínicas mexicanas
-            </Badge>
-            <h1 className="text-display text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
-              La operación de tu clínica,{" "}
-              <span className="bg-clip-text text-transparent bg-[var(--gradient-primary)]">automatizada de verdad.</span>
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8 leading-relaxed max-w-2xl">
-              Bot de IA en Telegram y WhatsApp que agenda citas 24/7, recordatorios automáticos
-              que reducen los no-shows, expediente digital, facturación CFDI y todo auditado.
-              Listo para vender hoy mismo.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button size="lg" className="bg-[var(--gradient-primary)] gap-2">
-                Solicitar demo en vivo <ArrowRight className="w-4 h-4" />
-              </Button>
-              <Link to="/">
-                <Button size="lg" variant="outline">Ver dashboard</Button>
-              </Link>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="animate-fade-in">
+              <Badge variant="secondary" className="mb-6 gap-1.5">
+                <Sparkles className="w-3 h-3" /> Hecho en México · para clínicas mexicanas
+              </Badge>
+              <h1 className="text-display text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
+                La operación de tu clínica,{" "}
+                <span className="bg-clip-text text-transparent bg-[var(--gradient-primary)]">automatizada de verdad.</span>
+              </h1>
+              <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+                Bot de IA en Telegram y WhatsApp que agenda citas 24/7, recordatorios automáticos
+                que reducen los no-shows, expediente digital, facturación CFDI y todo auditado.
+                Listo para vender hoy mismo.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button size="lg" className="bg-[var(--gradient-primary)] gap-2">
+                  Solicitar demo en vivo <ArrowRight className="w-4 h-4" />
+                </Button>
+                <Link to="/">
+                  <Button size="lg" variant="outline">Ver dashboard</Button>
+                </Link>
+              </div>
+              <div className="mt-8 flex flex-wrap items-center gap-5 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Sin instalación</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Onboarding en 48 h</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Datos en México</div>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <span className="text-xs text-muted-foreground">Construido con:</span>
+                {techBadges.map(({ label, icon: Icon }) => (
+                  <div key={label} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-xs font-medium">
+                    <Icon className="w-3 h-3 text-primary" />
+                    {label}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-10 flex items-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Sin instalación</div>
-              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Onboarding en 48 h</div>
-              <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary" /> Datos en México</div>
+            {/* Dashboard mockup */}
+            <div className="hidden md:block">
+              <Card className="border-border/60 shadow-[var(--shadow-elevated)] overflow-hidden bg-card">
+                <div className="bg-[var(--gradient-header)] px-4 py-3 flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                  </div>
+                  <span className="text-xs text-white/60 ml-2 font-mono">dashboard · recepción</span>
+                </div>
+                <CardContent className="p-5">
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    {[
+                      { label: "Citas hoy", value: "12", icon: Calendar, color: "text-primary" },
+                      { label: "Recordatorios", value: "8", icon: Bell, color: "text-info" },
+                      { label: "Pacientes", value: "247", icon: Users, color: "text-success" },
+                    ].map(({ label, value, icon: Icon, color }) => (
+                      <div key={label} className="rounded-lg bg-secondary p-3">
+                        <Icon className={`w-4 h-4 ${color} mb-1`} />
+                        <div className="text-xl font-bold">{value}</div>
+                        <div className="text-xs text-muted-foreground">{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Próximas citas</div>
+                  <div className="space-y-2">
+                    {mockAppointments.map((apt) => (
+                      <div key={apt.name} className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/60">
+                        <div className={`w-7 h-7 rounded-full ${apt.color} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                          {apt.initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{apt.name}</div>
+                          <div className="text-xs text-muted-foreground">{apt.time}</div>
+                        </div>
+                        <Badge variant={apt.status === "Confirmada" ? "default" : "secondary"} className="text-xs shrink-0">
+                          {apt.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 p-3 rounded-lg border border-border/60 bg-background">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Bot className="w-3 h-3 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold">Bot IA</span>
+                      <span className="text-xs text-muted-foreground ml-auto">ahora</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      "Hola Laura, te recuerdo que mañana a las 9:00 AM tienes cita con el Dr. García. ¿Confirmas tu asistencia?"
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
@@ -212,19 +356,82 @@ export default function Pitch() {
         </div>
       </section>
 
+      {/* Testimonios */}
+      <section className="py-20 border-t border-border">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <Badge variant="outline" className="mb-4">Testimonios</Badge>
+            <h2 className="text-display text-4xl font-bold mb-4">Lo que dicen los médicos que ya lo usan.</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t) => (
+              <Card key={t.name} className="border-border/60 shadow-[var(--shadow-card)] hover-scale">
+                <CardContent className="p-7">
+                  <div className="flex items-center gap-1 mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-6 italic">
+                    "{t.quote}"
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full ${t.color} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
+                      {t.initials}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">{t.name}</div>
+                      <div className="text-xs text-muted-foreground">{t.role}</div>
+                      <div className="text-xs text-muted-foreground">{t.clinic}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Flujo */}
-      <section id="flujo" className="py-20 border-t border-border">
+      <section id="flujo" className="py-20 border-t border-border bg-secondary/40">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <Badge variant="outline" className="mb-4">Cómo funciona</Badge>
             <h2 className="text-display text-4xl font-bold mb-4">Del primer mensaje a la cita confirmada, sin tocar nada.</h2>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* Desktop: horizontal con flechas */}
+          <div className="hidden lg:flex items-stretch gap-2">
+            {flow.map((s, i) => (
+              <div key={s.step} className="flex items-center gap-2 flex-1">
+                <Card className="flex-1 border-border/60 shadow-[var(--shadow-card)] relative overflow-hidden">
+                  <CardContent className="p-5">
+                    <div className="text-display text-5xl font-bold text-primary/20 absolute -top-1 right-3">{s.step}</div>
+                    <div className="relative">
+                      <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center mb-3">
+                        <s.icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="text-xs font-semibold text-primary mb-1">PASO {s.step}</div>
+                      <h3 className="text-display font-bold text-sm mb-1.5 leading-tight">{s.title}</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{s.desc}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                {i < flow.length - 1 && (
+                  <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                )}
+              </div>
+            ))}
+          </div>
+          {/* Mobile/tablet: grid */}
+          <div className="lg:hidden grid md:grid-cols-2 gap-5">
             {flow.map((s) => (
               <Card key={s.step} className="border-border/60 shadow-[var(--shadow-card)] relative overflow-hidden">
                 <CardContent className="p-6">
-                  <div className="text-display text-6xl font-bold text-primary/15 absolute -top-2 right-4">{s.step}</div>
+                  <div className="text-display text-6xl font-bold text-primary/20 absolute -top-2 right-4">{s.step}</div>
                   <div className="relative">
+                    <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center mb-3">
+                      <s.icon className="w-4 h-4 text-primary" />
+                    </div>
                     <div className="text-xs font-semibold text-primary mb-2">PASO {s.step}</div>
                     <h3 className="text-display font-bold text-lg mb-2">{s.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
@@ -304,33 +511,25 @@ export default function Pitch() {
                   <span className="text-muted-foreground"> → </span>
                   <span>Telegram / WhatsApp</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">  ↓</span>
-                </div>
+                <div><span className="text-muted-foreground">  ↓</span></div>
                 <div>
                   <span className="text-info">webhook</span>
                   <span className="text-muted-foreground"> → </span>
                   <span>Claude (tool use)</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">  ↓</span>
-                </div>
+                <div><span className="text-muted-foreground">  ↓</span></div>
                 <div>
                   <span className="text-info">appointments</span>
                   <span className="text-muted-foreground"> + </span>
                   <span className="text-info">recordatorios_cita</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">  ↓</span>
-                </div>
+                <div><span className="text-muted-foreground">  ↓</span></div>
                 <div>
                   <span className="text-warning">pg_cron</span>
                   <span className="text-muted-foreground"> (5 min) → </span>
                   <span>enviar-recordatorios</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">  ↓</span>
-                </div>
+                <div><span className="text-muted-foreground">  ↓</span></div>
                 <div>
                   <span className="text-success">Dashboard recepción</span>
                   <span className="text-muted-foreground"> (realtime)</span>
@@ -390,19 +589,29 @@ export default function Pitch() {
       </section>
 
       {/* CTA final */}
-      <section className="py-20 border-t border-border">
+      <section className="py-24 border-t border-border bg-[var(--gradient-header)]">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-display text-4xl md:text-5xl font-bold mb-6 leading-tight">
+          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-6">
+            <Calendar className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-display text-4xl md:text-5xl font-bold mb-6 leading-tight text-white">
             ¿Listo para ver tu clínica funcionando sola?
           </h2>
-          <p className="text-xl text-muted-foreground mb-8">
+          <p className="text-xl text-white/70 mb-8">
             Te mostramos el sistema completo con datos reales en una llamada de 30 minutos.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
-            <Button size="lg" className="bg-[var(--gradient-primary)] gap-2">
+            <Button size="lg" className="bg-white text-foreground hover:bg-white/90 gap-2 font-semibold">
               Agendar demo <ArrowRight className="w-4 h-4" />
             </Button>
-            <Button size="lg" variant="outline">Descargar one-pager</Button>
+            <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+              Descargar one-pager
+            </Button>
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-white/60">
+            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-white/80" /> Sin tarjeta de crédito</div>
+            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-white/80" /> Onboarding incluido</div>
+            <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-white/80" /> Cancela cuando quieras</div>
           </div>
         </div>
       </section>
