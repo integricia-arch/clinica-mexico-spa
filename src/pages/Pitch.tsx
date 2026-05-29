@@ -195,9 +195,11 @@ export default function Pitch() {
                 Listo para vender hoy mismo.
               </p>
               <div className="flex flex-wrap gap-3">
-                <Button size="lg" className="bg-[var(--gradient-primary)] gap-2">
-                  Solicitar demo en vivo <ArrowRight className="w-4 h-4" />
-                </Button>
+                <a href="mailto:contacto@integrika.mx?subject=Demo%20ClinicaMX">
+                  <Button size="lg" className="bg-[var(--gradient-primary)] gap-2">
+                    Solicitar demo en vivo <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </a>
                 <Link to="/">
                   <Button size="lg" variant="outline">Ver dashboard</Button>
                 </Link>
@@ -444,7 +446,7 @@ export default function Pitch() {
       </section>
 
       {/* Diferenciadores */}
-      <section id="diferenciadores" className="py-20 border-t border-border bg-[var(--gradient-header)] text-white">
+      <section id="diferenciadores" className="py-20 border-t border-border bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <Badge variant="secondary" className="mb-4">¿Por qué nosotros?</Badge>
@@ -589,7 +591,7 @@ export default function Pitch() {
       </section>
 
       {/* CTA final */}
-      <section className="py-24 border-t border-border bg-[var(--gradient-header)]">
+      <section className="py-24 border-t border-border bg-slate-900">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-6">
             <Calendar className="w-8 h-8 text-white" />
@@ -601,12 +603,16 @@ export default function Pitch() {
             Te mostramos el sistema completo con datos reales en una llamada de 30 minutos.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
-            <Button size="lg" className="bg-white text-foreground hover:bg-white/90 gap-2 font-semibold">
-              Agendar demo <ArrowRight className="w-4 h-4" />
-            </Button>
-            <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
-              Descargar one-pager
-            </Button>
+            <a href="mailto:contacto@integrika.mx?subject=Demo%20ClinicaMX">
+              <Button size="lg" className="bg-white text-foreground hover:bg-white/90 gap-2 font-semibold">
+                Agendar demo <ArrowRight className="w-4 h-4" />
+              </Button>
+            </a>
+            <a href="mailto:contacto@integrika.mx?subject=One-pager%20ClinicaMX">
+              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                Descargar one-pager
+              </Button>
+            </a>
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-white/60">
             <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-white/80" /> Sin tarjeta de crédito</div>
