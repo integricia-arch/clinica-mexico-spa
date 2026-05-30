@@ -369,12 +369,13 @@ export default function PuntoDeVenta({
     }
 
     // Inserta el desglose de pagos (pharmacy_sale_payments)
-    const rows = paymentsToRows(payment, breakdown).map((r) => ({
-      ...(r as Record<string, unknown>),
+    type PayRow = Record<string, unknown> & { payment_method: string; amount: number; card_last4?: string; card_brand?: string; authorization_code?: string; terminal_id?: string; transfer_reference?: string; bank_name?: string };
+    const baseRows = paymentsToRows(payment, breakdown) as PayRow[];
+    const rows: PayRow[] = baseRows.map((r) => Object.assign({}, r, {
       sale_id: saleId as unknown as string,
       clinic_id: activeClinicId,
       created_by: user?.id ?? null,
-    })) as Array<Record<string, unknown> & { payment_method: string; amount: number }>;
+    }));
     if (rows.length > 0) {
       const { error: pErr } = await supabase.from("pharmacy_sale_payments").insert(rows as never);
       if (pErr) {
