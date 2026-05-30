@@ -174,6 +174,13 @@ export default function Farmacia() {
 
   return (
     <div className="space-y-6">
+      <Tabs defaultValue="inventario" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="inventario">Inventario</TabsTrigger>
+          <TabsTrigger value="venta">Venta directa</TabsTrigger>
+        </TabsList>
+        <TabsContent value="venta"><VentaDirecta /></TabsContent>
+        <TabsContent value="inventario" className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
