@@ -21,7 +21,7 @@ interface Props {
 }
 
 interface Servicio { id: string; nombre: string; duracion_minutos: number }
-interface Doctor   { id: string; nombre: string; apellidos: string; horario_inicio: string; horario_fin: string }
+interface Doctor   { id: string; nombre: string; apellidos: string; horario_inicio: string; horario_fin: string; operational_status: string; operational_status_until: string | null; operational_status_reason: string | null }
 interface Room     { id: string; nombre: string }
 
 function todayMx(): string {
