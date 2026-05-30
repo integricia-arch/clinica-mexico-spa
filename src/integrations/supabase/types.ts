@@ -63,6 +63,9 @@ export type Database = {
           creada_por_bot: boolean
           created_at: string
           created_by: string | null
+          doctor_confirmation_at: string | null
+          doctor_confirmation_reason: string | null
+          doctor_confirmation_status: Database["public"]["Enums"]["doctor_confirmation_status"]
           doctor_id: string
           fecha_fin: string
           fecha_inicio: string
@@ -82,6 +85,9 @@ export type Database = {
           creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
+          doctor_confirmation_at?: string | null
+          doctor_confirmation_reason?: string | null
+          doctor_confirmation_status?: Database["public"]["Enums"]["doctor_confirmation_status"]
           doctor_id: string
           fecha_fin: string
           fecha_inicio: string
@@ -101,6 +107,9 @@ export type Database = {
           creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
+          doctor_confirmation_at?: string | null
+          doctor_confirmation_reason?: string | null
+          doctor_confirmation_status?: Database["public"]["Enums"]["doctor_confirmation_status"]
           doctor_id?: string
           fecha_fin?: string
           fecha_inicio?: string
@@ -3049,8 +3058,11 @@ export type Database = {
         | "conv_cerrada"
         | "paciente_creado_inbox"
         | "paciente_vinculado_inbox"
+        | "doctor_confirmo_cita"
+        | "doctor_rechazo_cita"
       canal_tipo: "telegram" | "whatsapp" | "instagram" | "facebook"
       conversacion_status: "activa" | "escalada" | "cerrada"
+      doctor_confirmation_status: "pending" | "confirmed" | "declined"
       expediente_tipo:
         | "primera_vez"
         | "seguimiento"
@@ -3265,9 +3277,12 @@ export const Constants = {
         "conv_cerrada",
         "paciente_creado_inbox",
         "paciente_vinculado_inbox",
+        "doctor_confirmo_cita",
+        "doctor_rechazo_cita",
       ],
       canal_tipo: ["telegram", "whatsapp", "instagram", "facebook"],
       conversacion_status: ["activa", "escalada", "cerrada"],
+      doctor_confirmation_status: ["pending", "confirmed", "declined"],
       expediente_tipo: [
         "primera_vez",
         "seguimiento",

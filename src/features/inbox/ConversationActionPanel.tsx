@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarPlus, AlertTriangle, UserPlus } from "lucide-react";
+import { CalendarPlus, AlertTriangle, UserPlus, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { AssignAppointmentDialog } from "./AssignAppointmentDialog";
 import { QuickPatientDialog } from "./QuickPatientDialog";
 
@@ -19,11 +20,51 @@ interface Props {
   onPatientLinked?: (patientId: string) => void;
 }
 
+interface LatestAppt {
+  id: string;
+  doctor_confirmation_status: "pending" | "confirmed" | "declined";
+  doctor_confirmation_reason: string | null;
+  fecha_inicio: string;
+}
+
 export function ConversationActionPanel(props: Props) {
   const [openAssign, setOpenAssign] = useState(false);
   const [openPatient, setOpenPatient] = useState(false);
+  const [latest, setLatest] = useState<LatestAppt | null>(null);
   const urgente = props.prioridad === "urgente";
   const sinPaciente = !props.patientId;
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("appointments")
+        .select("id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
+        .eq("conversacion_id", props.conversacionId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (active) setLatest((data as LatestAppt | null) ?? null);
+    })();
+    const ch = supabase
+      .channel(`conv-appt-${props.conversacionId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `conversacion_id=eq.${props.conversacionId}` }, async () => {
+        const { data } = await supabase
+          .from("appointments")
+          .select("id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
+          .eq("conversacion_id", props.conversacionId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (active) setLatest((data as LatestAppt | null) ?? null);
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(ch); };
+  }, [props.conversacionId]);
+
+  const declined = latest?.doctor_confirmation_status === "declined";
+  const confirmed = latest?.doctor_confirmation_status === "confirmed";
+  const pendingDoctor = latest?.doctor_confirmation_status === "pending";
 
   return (
     <div className="border-b border-border bg-muted/30 p-3 space-y-2">
@@ -51,18 +92,34 @@ export function ConversationActionPanel(props: Props) {
             <p className="text-foreground"><span className="text-muted-foreground">Dolor reportado:</span> {props.dolor}/10</p>
           )}
         </div>
-        <div className="shrink-0 flex flex-col gap-2">
+        <div className="shrink-0 flex flex-col gap-2 items-end">
+          {confirmed && (
+            <Badge className="bg-emerald-600 text-white gap-1"><CheckCircle2 className="h-3 w-3" /> Confirmada por doctor</Badge>
+          )}
+          {pendingDoctor && (
+            <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400 gap-1">
+              <Clock className="h-3 w-3" /> Pendiente confirmación doctor
+            </Badge>
+          )}
+          {declined && (
+            <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Rechazada por doctor</Badge>
+          )}
           {sinPaciente ? (
             <Button size="sm" onClick={() => setOpenPatient(true)}>
               <UserPlus className="h-4 w-4 mr-1.5" /> Crear/asociar paciente
             </Button>
           ) : (
             <Button size="sm" onClick={() => setOpenAssign(true)}>
-              <CalendarPlus className="h-4 w-4 mr-1.5" /> Asignar cita
+              <CalendarPlus className="h-4 w-4 mr-1.5" /> {declined ? "Reasignar cita" : "Asignar cita"}
             </Button>
           )}
         </div>
       </div>
+      {declined && latest?.doctor_confirmation_reason && (
+        <p className="text-[11px] text-destructive">
+          Motivo del doctor: {latest.doctor_confirmation_reason}. Reasigna con otro horario o doctor.
+        </p>
+      )}
       {urgente && (
         <p className="text-[11px] text-destructive">
           Valorar atención inmediata. Si el paciente reporta síntomas graves, recomendar acudir a urgencias o llamar al 911.
