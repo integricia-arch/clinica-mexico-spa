@@ -136,8 +136,8 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
   const conv = await obtenerOCrearConversacion(identidad.id);
 
   // === Conversación escalada: el bot NO interfiere ===
-  // Siempre guardar el mensaje para que recepción lo vea en /inbox.
-  // El acuse y el aviso de triage se mandan una sola vez (idempotente).
+  // Guardamos el mensaje, detectamos insistencia y aplicamos throttle
+  // para no spamear con respuestas automáticas.
   if (conv.status === "escalada") {
     await guardarMensajeUsuario(conv.id, text, rawMsg);
     await registrarAudit(conv, "msg_durante_escalamiento", { texto: text?.slice(0, 200) ?? "" });
@@ -145,7 +145,37 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     const sesion = await obtenerSesion(conv.id);
     const flow = sesion?.flow_data ?? {};
 
-    // Triage de señales rojas
+    // Detección de insistencia por frases comunes
+    const lower = (text ?? "").toLowerCase();
+    const FRASES_INSISTENCIA = [
+      "no me contestan", "no me responden", "no me han contestado",
+      "nadie me responde", "nadie contesta", "puede mandar otra vez",
+      "puedes mandar otra vez", "manden otra vez", "manda otra vez",
+      "urge", "urgente", "sigo esperando", "sigo aqui", "sigo aquí",
+      "hola?", "hola??", "hello?", "ya?"
+    ];
+    const esInsistencia = FRASES_INSISTENCIA.some((f) => lower.includes(f));
+
+    // Incrementar contador de seguimientos y marcar insistencia
+    const nuevoCount = (conv.escalated_followup_count ?? 0) + 1;
+    const updates: any = {
+      escalated_followup_count: nuevoCount,
+      last_patient_followup_at: new Date().toISOString(),
+    };
+    if (esInsistencia && !conv.insiste) {
+      updates.insiste = true;
+      if (conv.prioridad !== "urgente") updates.prioridad = "alta";
+    }
+    await supabase.from("conversaciones").update(updates).eq("id", conv.id);
+
+    await registrarAudit(conv, "patient_followed_up_after_escalation", {
+      count: nuevoCount, insiste: esInsistencia, texto: text?.slice(0, 200) ?? "",
+    });
+    if (esInsistencia && !conv.insiste) {
+      await registrarAudit(conv, "patient_insistence_detected", { texto: text?.slice(0, 200) ?? "" });
+    }
+
+    // Triage de señales rojas (siempre prioritario, throttled aparte)
     const triage = detectarUrgencia(text ?? "");
     if (triage.urgente) {
       const yaUrgente = conv.prioridad === "urgente" || flow.urgent_notice_sent === true;
@@ -164,19 +194,34 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
         const aviso = "Si el dolor es intenso, empeora o tienes síntomas graves, acude a urgencias o llama al 911. Recepción ya está atendiendo tu caso.";
         await guardarMensajeAsistente(conv.id, aviso);
         await enviarTelegram(chatId, aviso);
+        await supabase.from("conversaciones").update({ last_bot_ack_at: new Date().toISOString() }).eq("id", conv.id);
         await upsertSesion(conv.id, { flow_data: { ...flow, urgent_notice_sent: true, greeted_during_escalation: true } });
       }
       return;
     }
 
-    if (!flow.greeted_during_escalation) {
-      const aviso = "Recepción ya está atendiendo tu caso. Por favor espera la confirmación.";
+    // Throttle: máximo un acuse cada 15 minutos
+    const THROTTLE_MS = 15 * 60 * 1000;
+    const lastAck = conv.last_bot_ack_at ? new Date(conv.last_bot_ack_at).getTime() : 0;
+    const ahoraMs = Date.now();
+    const yaSaludado = flow.greeted_during_escalation === true;
+    const pasaronXMin = ahoraMs - lastAck > THROTTLE_MS;
+
+    if (!yaSaludado || (esInsistencia && pasaronXMin)) {
+      const aviso = esInsistencia
+        ? "Recepción ya fue notificada nuevamente. Por favor espera la confirmación."
+        : "Recepción ya está atendiendo tu caso. Por favor espera la confirmación.";
       await guardarMensajeAsistente(conv.id, aviso);
       await enviarTelegram(chatId, aviso);
+      await supabase.from("conversaciones").update({ last_bot_ack_at: new Date().toISOString() }).eq("id", conv.id);
       await upsertSesion(conv.id, { flow_data: { ...flow, greeted_during_escalation: true } });
+      if (esInsistencia) {
+        await registrarAudit(conv, "reception_notified_again", { count: nuevoCount });
+      }
     }
     return;
   }
+
 
   if (text === "/start") {
     await guardarMensajeUsuario(conv.id, text, rawMsg);
