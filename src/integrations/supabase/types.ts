@@ -3047,6 +3047,8 @@ export type Database = {
         | "notif_doctor"
         | "notif_paciente"
         | "conv_cerrada"
+        | "paciente_creado_inbox"
+        | "paciente_vinculado_inbox"
       canal_tipo: "telegram" | "whatsapp" | "instagram" | "facebook"
       conversacion_status: "activa" | "escalada" | "cerrada"
       expediente_tipo:
@@ -3261,6 +3263,8 @@ export const Constants = {
         "notif_doctor",
         "notif_paciente",
         "conv_cerrada",
+        "paciente_creado_inbox",
+        "paciente_vinculado_inbox",
       ],
       canal_tipo: ["telegram", "whatsapp", "instagram", "facebook"],
       conversacion_status: ["activa", "escalada", "cerrada"],
