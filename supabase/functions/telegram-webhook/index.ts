@@ -135,8 +135,46 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
 
   const conv = await obtenerOCrearConversacion(identidad.id);
 
+  // === Conversación escalada: el bot NO interfiere ===
+  // Siempre guardar el mensaje para que recepción lo vea en /inbox.
+  // El acuse y el aviso de triage se mandan una sola vez (idempotente).
   if (conv.status === "escalada") {
-    await enviarTelegram(chatId, "Recepción ya está al tanto, en breve te contactan.\nPara iniciar una nueva consulta escribe /nueva.");
+    await guardarMensajeUsuario(conv.id, text, rawMsg);
+    await registrarAudit(conv, "msg_durante_escalamiento", { texto: text?.slice(0, 200) ?? "" });
+
+    const sesion = await obtenerSesion(conv.id);
+    const flow = sesion?.flow_data ?? {};
+
+    // Triage de señales rojas
+    const triage = detectarUrgencia(text ?? "");
+    if (triage.urgente) {
+      const yaUrgente = conv.prioridad === "urgente" || flow.urgent_notice_sent === true;
+      if (!yaUrgente) {
+        await supabase
+          .from("conversaciones")
+          .update({
+            prioridad: "urgente",
+            motivo_resumen: triage.motivo ?? null,
+            dolor_intensidad: triage.dolor ?? null,
+          })
+          .eq("id", conv.id);
+        await registrarAudit(conv, "prioridad_urgente", {
+          motivo: triage.motivo, dolor: triage.dolor,
+        });
+        const aviso = "Si el dolor es intenso, empeora o tienes síntomas graves, acude a urgencias o llama al 911. Recepción ya está atendiendo tu caso.";
+        await guardarMensajeAsistente(conv.id, aviso);
+        await enviarTelegram(chatId, aviso);
+        await upsertSesion(conv.id, { flow_data: { ...flow, urgent_notice_sent: true, greeted_during_escalation: true } });
+      }
+      return;
+    }
+
+    if (!flow.greeted_during_escalation) {
+      const aviso = "Recepción ya está atendiendo tu caso. Por favor espera la confirmación.";
+      await guardarMensajeAsistente(conv.id, aviso);
+      await enviarTelegram(chatId, aviso);
+      await upsertSesion(conv.id, { flow_data: { ...flow, greeted_during_escalation: true } });
+    }
     return;
   }
 
@@ -176,6 +214,63 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     await enviarTelegram(chatId, respuesta);
   }
 }
+
+// ============================================================
+// TRIAGE (heurística simple, NO diagnóstico)
+// ============================================================
+const URGENCIA_REGEX = [
+  /\bdificultad (para )?respirar\b/i,
+  /\bme cuesta respirar\b/i,
+  /\bno puedo respirar\b/i,
+  /\bdolor (en el|de) pecho\b/i,
+  /\bdolor tor[áa]cico\b/i,
+  /\bsangrad[oa]\b/i,
+  /\bme estoy desmayando\b/i,
+  /\bperd[ií] (la )?conciencia\b/i,
+  /\bdesmay[oé]\b/i,
+  /\bconvuls/i,
+  /\bno siento (mi |el )?(brazo|pierna|cara|cuerpo)\b/i,
+  /\bno puedo hablar\b/i,
+  /\bvis[ií]on borrosa\b/i,
+  /\bse me duerme (medio )?cuerpo\b/i,
+];
+
+function detectarUrgencia(text: string): { urgente: boolean; motivo?: string; dolor?: number } {
+  const t = (text ?? "").toLowerCase();
+  // dolor numérico 8-10 (formato "dolor 9", "9/10", "10", "intensidad 8")
+  let dolor: number | undefined;
+  const m1 = t.match(/\b(?:dolor|intensidad|nivel)\D{0,8}(\d{1,2})\b/);
+  const m2 = t.match(/\b(\d{1,2})\s*\/\s*10\b/);
+  const m3 = t.match(/^\s*(\d{1,2})\s*$/);
+  const cand = m1?.[1] ?? m2?.[1] ?? m3?.[1];
+  if (cand) {
+    const n = parseInt(cand, 10);
+    if (n >= 0 && n <= 10) dolor = n;
+  }
+  if (dolor !== undefined && dolor >= 8) {
+    return { urgente: true, motivo: `Dolor reportado ${dolor}/10`, dolor };
+  }
+  for (const rx of URGENCIA_REGEX) {
+    const m = t.match(rx);
+    if (m) return { urgente: true, motivo: m[0], dolor };
+  }
+  return { urgente: false, dolor };
+}
+
+async function registrarAudit(conv: any, accion: string, datos: any) {
+  try {
+    await supabase.from("audit_logs").insert({
+      tabla: "conversaciones",
+      registro_id: conv.id,
+      accion,
+      datos_nuevos: datos,
+      clinic_id: conv.clinic_id ?? null,
+    });
+  } catch (e) {
+    console.error("audit insert error:", e);
+  }
+}
+
 
 // ============================================================
 // CALLBACK QUERIES (botones)
@@ -804,6 +899,7 @@ async function escalarConversacion(conv: any, { razon }: { razon: string }) {
   await supabase.from("conversaciones")
     .update({ status: "escalada", intencion_actual: "escalada" })
     .eq("id", conv.id);
+  await registrarAudit(conv, "conv_escalada", { razon });
   return { ok: true, escalada: true, razon };
 }
 

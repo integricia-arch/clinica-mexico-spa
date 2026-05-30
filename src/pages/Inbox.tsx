@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Send, MessageCircle, Phone, Instagram, Facebook, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Circle, SendHorizonal } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ConversationActionPanel } from "@/features/inbox/ConversationActionPanel";
 
 type CanalTipo = "telegram" | "whatsapp" | "instagram" | "facebook";
 type ConvStatus = "activa" | "escalada" | "cerrada";
@@ -31,6 +32,10 @@ interface Conversacion {
   asignada_humano_id: string | null;
   last_message_at: string;
   created_at: string;
+  clinic_id: string;
+  prioridad?: string | null;
+  motivo_resumen?: string | null;
+  dolor_intensidad?: number | null;
   identidades_canal?: IdentidadCanal | null;
   ultimo_mensaje?: string;
 }
@@ -180,8 +185,11 @@ export default function Inbox() {
       list = list.filter((c) => nombreIdentidad(c).toLowerCase().includes(q));
     }
     list.sort((a, b) => {
+      const pr = (c: Conversacion) => c.prioridad === "urgente" ? 0 : c.prioridad === "alta" ? 1 : 2;
       if (a.status === "escalada" && b.status !== "escalada") return -1;
       if (b.status === "escalada" && a.status !== "escalada") return 1;
+      const dp = pr(a) - pr(b);
+      if (dp !== 0) return dp;
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
     return list;
@@ -208,8 +216,13 @@ export default function Inbox() {
       .from("conversaciones")
       .update({ status: "cerrada" })
       .eq("id", selected.id);
-    if (error) toast.error("No se pudo cerrar");
-    else toast.success("Conversación cerrada");
+    if (error) { toast.error("No se pudo cerrar"); return; }
+    await supabase.from("audit_logs").insert({
+      tabla: "conversaciones", registro_id: selected.id,
+      accion: "conv_cerrada", datos_nuevos: { by: user?.id ?? null },
+      clinic_id: selected.clinic_id,
+    });
+    toast.success("Conversación cerrada");
   };
 
   const enviarRespuesta = async () => {
@@ -343,6 +356,22 @@ export default function Inbox() {
                 )}
               </div>
             </div>
+
+            {selected.status === "escalada" && (
+              <ConversationActionPanel
+                conversacionId={selected.id}
+                patientId={selected.identidades_canal?.patient_id ?? null}
+                clinicId={selected.clinic_id}
+                pacienteNombre={nombreIdentidad(selected)}
+                contacto={selected.identidades_canal?.patients?.telefono
+                  ?? selected.identidades_canal?.display_name
+                  ?? selected.identidades_canal?.external_id
+                  ?? "—"}
+                motivo={selected.motivo_resumen}
+                prioridad={selected.prioridad}
+                dolor={selected.dolor_intensidad}
+              />
+            )}
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
               {hiddenCount > 0 && (
