@@ -104,20 +104,61 @@ export default function Farmacia() {
   function openNewMed() { setEditMed(null); setMedForm(EMPTY_MED); setMedModal(true); }
   function openEditMed(m: Medicamento) {
     setEditMed(m);
-    setMedForm({ nombre: m.nombre, categoria: m.categoria, descripcion: m.descripcion ?? "",
-      precio_unitario: String(m.precio_unitario), stock_minimo: String(m.stock_minimo), unidad: m.unidad });
+    setMedForm({
+      nombre: m.nombre,
+      categoria: m.categoria,
+      descripcion: m.descripcion ?? "",
+      precio_unitario: String(m.precio_unitario),
+      stock_minimo: String(m.stock_minimo),
+      unidad: m.unidad,
+      barcode: (m as Medicamento & { barcode?: string | null }).barcode ?? "",
+      sku: (m as Medicamento & { sku?: string | null }).sku ?? "",
+      codigo_interno: (m as Medicamento & { codigo_interno?: string | null }).codigo_interno ?? "",
+      laboratorio: (m as Medicamento & { laboratorio?: string | null }).laboratorio ?? "",
+      principio_activo: (m as Medicamento & { principio_activo?: string | null }).principio_activo ?? "",
+      forma_farmaceutica: (m as Medicamento & { forma_farmaceutica?: string | null }).forma_farmaceutica ?? "",
+      concentracion: (m as Medicamento & { concentracion?: string | null }).concentracion ?? "",
+      presentacion: (m as Medicamento & { presentacion?: string | null }).presentacion ?? "",
+      registro_sanitario: (m as Medicamento & { registro_sanitario?: string | null }).registro_sanitario ?? "",
+      sale_type: m.sale_type ?? "otc",
+      allow_direct_sale: m.allow_direct_sale ?? true,
+      requires_prescription: m.requires_prescription ?? false,
+      is_controlled: m.is_controlled ?? false,
+      regulatory_notes: m.regulatory_notes ?? "",
+    });
     setMedModal(true);
   }
 
   async function saveMed() {
     if (!medForm.nombre.trim()) { toast({ variant:"destructive", title:"Error", description:"Nombre requerido" }); return; }
     setSavingMed(true);
+    // Reglas de venta directa según tipo de venta
+    const blocksDirect = ["receta_requerida", "receta_retenida", "controlado"].includes(medForm.sale_type);
+    const allowsDirect = blocksDirect ? false : medForm.allow_direct_sale;
+    const requiresRx = blocksDirect ? true : medForm.requires_prescription;
+    const isControlled = medForm.sale_type === "controlado" ? true : medForm.is_controlled;
+
     const payload = {
-      nombre: medForm.nombre.trim(), categoria: medForm.categoria,
+      nombre: medForm.nombre.trim(),
+      categoria: medForm.categoria,
       descripcion: medForm.descripcion || null,
       precio_unitario: parseFloat(medForm.precio_unitario) || 0,
       stock_minimo: parseInt(medForm.stock_minimo) || 0,
       unidad: medForm.unidad,
+      barcode: medForm.barcode.trim() || null,
+      sku: medForm.sku.trim() || null,
+      codigo_interno: medForm.codigo_interno.trim() || null,
+      laboratorio: medForm.laboratorio.trim() || null,
+      principio_activo: medForm.principio_activo.trim() || null,
+      forma_farmaceutica: medForm.forma_farmaceutica.trim() || null,
+      concentracion: medForm.concentracion.trim() || null,
+      presentacion: medForm.presentacion.trim() || null,
+      registro_sanitario: medForm.registro_sanitario.trim() || null,
+      sale_type: medForm.sale_type,
+      allow_direct_sale: allowsDirect,
+      requires_prescription: requiresRx,
+      is_controlled: isControlled,
+      regulatory_notes: medForm.regulatory_notes.trim() || null,
     };
     if (editMed) {
       const { data, error } = await supabase.from("medicamentos").update(payload).eq("id", editMed.id).select().single();
