@@ -669,6 +669,7 @@ export default function PuntoDeVenta({
                 {PAYMENT_METHODS.map((p) => <SelectItem key={p} value={p}>{PAYMENT_LABEL[p]}</SelectItem>)}
               </SelectContent>
             </Select>
+            <PaymentCapture method={payment} total={total} value={breakdown} onChange={setBreakdown} />
             <label className="flex items-center gap-2 text-xs">
               <input type="checkbox" checked={requiresInvoice} onChange={(e) => setRequiresInvoice(e.target.checked)} />
               Requiere factura (CFDI futuro)
