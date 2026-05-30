@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, useMotionValue, useTransform, useSpring, useInView } from "framer-motion";
+import Lottie from "lottie-react";
+import healthReportAnimation from "@/assets/lottie/online-health-report.json";
 import {
   MessageCircle, Calendar, Bell, Shield, Users, Stethoscope,
   Pill, Receipt, Inbox as InboxIcon, ClipboardCheck, Bot, Clock,
@@ -183,11 +185,29 @@ const pricing = [
 ];
 
 const testimonials = [
-  { photoUrl: "https://i.pravatar.cc/150?img=47", name: "Dra. María Rodríguez", role: "Directora Médica · Guadalajara", quote: "Antes perdíamos 8-10 citas a la semana. Con los recordatorios bajamos a menos de 2. El bot atiende a las 11 de la noche y yo descanso." },
-  { photoUrl: "https://i.pravatar.cc/150?img=12", name: "Dr. Jorge Mendoza", role: "Médico General · CDMX", quote: "Entiende RFC, CURP y CFDI desde el día uno. No tuve que adaptar nada. En 48 horas estábamos operando con el sistema completo." },
-  { photoUrl: "https://i.pravatar.cc/150?img=44", name: "Lic. Ana Lozano", role: "Administradora · Monterrey", quote: "El Inbox unificado cambió todo. Ya no jugamos teléfono entre WhatsApp personal y el sistema. Todo en una pantalla." },
-  { photoUrl: "https://i.pravatar.cc/150?img=32", name: "Dr. Carlos Vega", role: "Cardiólogo · Tijuana", quote: "La agenda multi-doctor resolvió el caos de tres consultorios. Los pacientes confirman solos y el expediente aparece listo." },
-  { photoUrl: "https://i.pravatar.cc/150?img=56", name: "Dra. Sandra Torres", role: "Pediatra · Querétaro", quote: "Mis pacientes son mamás muy ocupadas. El bot agenda a las 10pm sin que yo esté disponible. Un cambio total." },
+  {
+    photoUrl: "https://images.unsplash.com/photo-1638202993928-7267aad84c31?q=80&w=400&auto=format&fit=crop&crop=face",
+    name: "Dra. María Rodríguez",
+    role: "Directora Médica",
+    clinic: "Clínica Familiar Rodríguez · Guadalajara",
+    quote: "Antes perdíamos 8-10 citas a la semana por no-shows. Con los recordatorios automáticos bajamos a menos de 2.",
+  },
+  {
+    photoUrl: "https://images.unsplash.com/photo-1530497610245-94d3c16cda28?q=80&w=400&auto=format&fit=crop&crop=face",
+    name: "Dr. Jorge Mendoza",
+    role: "Médico General",
+    clinic: "Consultorios Mendoza · CDMX",
+    quote: "Lo que más me sorprendió fue que entiende RFC, CURP y CFDI desde el día uno. En 48 horas estábamos operando.",
+  },
+  {
+    photoUrl: "https://images.unsplash.com/photo-1511174511562-5f7f18b874f8?q=80&w=400&auto=format&fit=crop&crop=face",
+    name: "Lic. Ana Lozano",
+    role: "Administradora",
+    clinic: "Centro Médico Lozano · Monterrey",
+    quote: "El Inbox unificado cambió todo. Ya no jugamos teléfono entre WhatsApp personal y el sistema.",
+  },
+  { photoUrl: "https://i.pravatar.cc/150?img=32", name: "Dr. Carlos Vega", role: "Cardiólogo · Tijuana", clinic: "", quote: "La agenda multi-doctor resolvió el caos de tres consultorios. Los pacientes confirman solos y el expediente aparece listo." },
+  { photoUrl: "https://i.pravatar.cc/150?img=56", name: "Dra. Sandra Torres", role: "Pediatra · Querétaro", clinic: "", quote: "Mis pacientes son mamás muy ocupadas. El bot agenda a las 10pm sin que yo esté disponible. Un cambio total." },
 ];
 
 const navLinks = [
@@ -410,6 +430,24 @@ export default function Pitch() {
                   </div>
                 </div>
               </TiltCard>
+              {/* Hero doctor photo — accent card */}
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+                <div style={{
+                  borderRadius: 16,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  boxShadow: "0 0 0 1px rgba(0,217,245,0.18), 0 24px 64px rgba(0,0,0,0.55)",
+                  overflow: "hidden",
+                  maxWidth: 320,
+                  width: "100%",
+                }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=800&auto=format&fit=crop"
+                    alt="Médico usando ClínicaMX"
+                    style={{ width: "100%", display: "block" }}
+                    loading="lazy"
+                  />
+                </div>
+              </div>
             </motion.div>
           </div>
 
@@ -513,6 +551,7 @@ export default function Pitch() {
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{t.name}</div>
                     <div style={{ fontSize: 11, color: "#64748b" }}>{t.role}</div>
+                    {t.clinic && <div style={{ fontSize: 10, color: "#475569", marginTop: 1 }}>{t.clinic}</div>}
                   </div>
                 </div>
               </div>
@@ -532,6 +571,7 @@ export default function Pitch() {
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{t.name}</div>
                     <div style={{ fontSize: 11, color: "#64748b" }}>{t.role}</div>
+                    {t.clinic && <div style={{ fontSize: 10, color: "#475569", marginTop: 1 }}>{t.clinic}</div>}
                   </div>
                 </div>
               </div>
@@ -549,6 +589,18 @@ export default function Pitch() {
               Del primer mensaje a la cita confirmada, sin tocar nada.
             </h2>
           </motion.div>
+          {/* Lottie animation */}
+          <div className="flex justify-center my-12">
+            <div className="p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10">
+              <Lottie
+                animationData={healthReportAnimation}
+                loop
+                autoplay
+                style={{ width: 240, height: 240 }}
+                className="opacity-90"
+              />
+            </div>
+          </div>
           {/* Desktop horizontal */}
           <div className="pr-flow-h" style={{ display: "none", gap: 8, alignItems: "stretch" }}>
             {flow.map((s, i) => (
@@ -747,6 +799,23 @@ export default function Pitch() {
             <span style={{ fontSize: 13, color: "#334155" }}>· Hecho en México</span>
           </div>
           <div style={{ fontSize: 12, color: "#334155" }}>© 2026 · Todos los derechos reservados</div>
+          <div className="mt-12 pt-8 border-t border-white/10" style={{ width: "100%" }}>
+            <p className="text-xs text-white/40 text-center px-4">
+              Animación "Online Health Report" por{" "}
+              <a
+                href="https://iconscout.com/es/contributors/victoria-motion/:assets"
+                className="underline hover:text-white/60"
+                target="_blank" rel="noopener noreferrer"
+              >Victoria Shelest</a>
+              {" "}en{" "}
+              <a
+                href="https://iconscout.com"
+                className="underline hover:text-white/60"
+                target="_blank" rel="noopener noreferrer"
+              >IconScout</a>
+              . Fotografías de Unsplash.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
