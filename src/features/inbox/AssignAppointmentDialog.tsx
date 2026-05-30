@@ -16,6 +16,7 @@ interface Props {
   conversacionId: string;
   patientId: string | null;
   clinicId: string;
+  notasPrecargadas?: string;
   onAssigned?: (appointmentId: string) => void;
 }
 
@@ -30,7 +31,7 @@ function todayMx(): string {
   return mx.toISOString().slice(0, 10);
 }
 
-export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, patientId, clinicId, onAssigned }: Props) {
+export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, patientId, clinicId, notasPrecargadas, onAssigned }: Props) {
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [doctores, setDoctores] = useState<Doctor[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -40,8 +41,10 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
   const [fecha, setFecha] = useState(todayMx());
   const [slotIso, setSlotIso] = useState<string>("");
   const [busy, setBusy] = useState<BusyRange[]>([]);
-  const [notas, setNotas] = useState("");
+  const [notas, setNotas] = useState(notasPrecargadas ?? "");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (open) setNotas(notasPrecargadas ?? ""); }, [open, notasPrecargadas]);
 
   // Cargar catálogos al abrir
   useEffect(() => {
