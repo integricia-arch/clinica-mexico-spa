@@ -357,6 +357,22 @@ export default function Inbox() {
               </div>
             </div>
 
+            {selected.status === "escalada" && (
+              <ConversationActionPanel
+                conversacionId={selected.id}
+                patientId={selected.identidades_canal?.patient_id ?? null}
+                clinicId={selected.clinic_id}
+                pacienteNombre={nombreIdentidad(selected)}
+                contacto={selected.identidades_canal?.patients?.telefono
+                  ?? selected.identidades_canal?.display_name
+                  ?? selected.identidades_canal?.external_id
+                  ?? "—"}
+                motivo={selected.motivo_resumen}
+                prioridad={selected.prioridad}
+                dolor={selected.dolor_intensidad}
+              />
+            )}
+
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
               {hiddenCount > 0 && (
                 <button
