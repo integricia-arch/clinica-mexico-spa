@@ -273,6 +273,7 @@ export default function Farmacia() {
           <TabsTrigger value="pos">Punto de venta</TabsTrigger>
           <TabsTrigger value="surtir">Surtir receta</TabsTrigger>
           <TabsTrigger value="venta">Venta directa</TabsTrigger>
+          <TabsTrigger value="corte">Corte de caja</TabsTrigger>
           <TabsTrigger value="inventario">Inventario</TabsTrigger>
         </TabsList>
         <TabsContent value="pos">
@@ -284,7 +285,9 @@ export default function Farmacia() {
           <SurtirReceta initialCode={prescriptionScan ?? undefined} />
         </TabsContent>
         <TabsContent value="venta"><VentaDirecta /></TabsContent>
+        <TabsContent value="corte"><CorteCaja /></TabsContent>
         <TabsContent value="inventario" className="space-y-6">
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
