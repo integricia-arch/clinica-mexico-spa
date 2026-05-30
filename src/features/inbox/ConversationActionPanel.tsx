@@ -20,11 +20,51 @@ interface Props {
   onPatientLinked?: (patientId: string) => void;
 }
 
+interface LatestAppt {
+  id: string;
+  doctor_confirmation_status: "pending" | "confirmed" | "declined";
+  doctor_confirmation_reason: string | null;
+  fecha_inicio: string;
+}
+
 export function ConversationActionPanel(props: Props) {
   const [openAssign, setOpenAssign] = useState(false);
   const [openPatient, setOpenPatient] = useState(false);
+  const [latest, setLatest] = useState<LatestAppt | null>(null);
   const urgente = props.prioridad === "urgente";
   const sinPaciente = !props.patientId;
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("appointments")
+        .select("id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
+        .eq("conversacion_id", props.conversacionId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (active) setLatest((data as LatestAppt | null) ?? null);
+    })();
+    const ch = supabase
+      .channel(`conv-appt-${props.conversacionId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `conversacion_id=eq.${props.conversacionId}` }, async () => {
+        const { data } = await supabase
+          .from("appointments")
+          .select("id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
+          .eq("conversacion_id", props.conversacionId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (active) setLatest((data as LatestAppt | null) ?? null);
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(ch); };
+  }, [props.conversacionId]);
+
+  const declined = latest?.doctor_confirmation_status === "declined";
+  const confirmed = latest?.doctor_confirmation_status === "confirmed";
+  const pendingDoctor = latest?.doctor_confirmation_status === "pending";
 
   return (
     <div className="border-b border-border bg-muted/30 p-3 space-y-2">
