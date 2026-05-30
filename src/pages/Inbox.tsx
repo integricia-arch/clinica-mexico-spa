@@ -357,19 +357,22 @@ export default function Inbox() {
               </div>
             </div>
 
-            {selected.status === "escalada" && (
+            {selected.status === "escalada" && selected.identidades_canal && (
               <ConversationActionPanel
                 conversacionId={selected.id}
-                patientId={selected.identidades_canal?.patient_id ?? null}
+                identidadCanalId={selected.identidades_canal.id}
+                patientId={selected.identidades_canal.patient_id ?? null}
                 clinicId={selected.clinic_id}
                 pacienteNombre={nombreIdentidad(selected)}
-                contacto={selected.identidades_canal?.patients?.telefono
-                  ?? selected.identidades_canal?.display_name
-                  ?? selected.identidades_canal?.external_id
+                displayName={selected.identidades_canal.display_name ?? null}
+                contacto={selected.identidades_canal.patients?.telefono
+                  ?? selected.identidades_canal.display_name
+                  ?? selected.identidades_canal.external_id
                   ?? "—"}
                 motivo={selected.motivo_resumen}
                 prioridad={selected.prioridad}
                 dolor={selected.dolor_intensidad}
+                onPatientLinked={() => fetchConversaciones()}
               />
             )}
 
