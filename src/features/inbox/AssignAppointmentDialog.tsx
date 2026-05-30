@@ -85,7 +85,7 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
       setDoctores(lista);
       setDoctorId("");
     })();
-  }, [servicioId]);
+  }, [servicioId, fecha]);
 
   // Cargar ocupación del día (citas del doctor y del consultorio)
   useEffect(() => {
