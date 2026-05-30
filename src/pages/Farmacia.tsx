@@ -28,7 +28,25 @@ const CATEGORIAS = ["Analgésico","Antibiótico","Antiinflamatorio","Antihiperte
   "Gastrointestinal","Antihistamínico","Broncodilatador","Neurológico","Soluciones","Vitaminas","Tópico","Otro"];
 const UNIDADES = ["tableta","cápsula","frasco","ampolleta","pieza","sobre","ml","g"];
 
-const EMPTY_MED = { nombre:"", categoria:"Analgésico", descripcion:"", precio_unitario:"", stock_minimo:"0", unidad:"tableta" };
+const SALE_TYPES = [
+  { value: "otc", label: "OTC / venta libre" },
+  { value: "receta_requerida", label: "Requiere receta médica" },
+  { value: "receta_retenida", label: "Receta retenida" },
+  { value: "controlado", label: "Controlado (psicotrópico/estupefaciente)" },
+  { value: "no_medicamento", label: "Insumo / no medicamento" },
+] as const;
+
+const EMPTY_MED = {
+  nombre: "", categoria: "Analgésico", descripcion: "", precio_unitario: "", stock_minimo: "0", unidad: "tableta",
+  barcode: "", sku: "", codigo_interno: "",
+  laboratorio: "", principio_activo: "", forma_farmaceutica: "", concentracion: "", presentacion: "",
+  registro_sanitario: "",
+  sale_type: "otc",
+  allow_direct_sale: true,
+  requires_prescription: false,
+  is_controlled: false,
+  regulatory_notes: "",
+};
 const EMPTY_MOV = { medicamento_id:"", lote_id:"", tipo:"entrada", cantidad:"", motivo:"", numero_lote:"", fecha_caducidad:"" };
 
 export default function Farmacia() {
@@ -77,29 +95,80 @@ export default function Farmacia() {
   const bajosStock = medicamentos.filter(m => stockTotal(m.id) < m.stock_minimo);
   const proxCaducidad = lotes.filter(l => new Date(l.fecha_caducidad) <= en30 && l.existencia > 0);
 
-  const filtered = medicamentos.filter(m =>
-    m.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    m.categoria.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = medicamentos.filter(m => {
+    const s = search.trim().toLowerCase();
+    if (!s) return true;
+    const mx = m as Medicamento & {
+      barcode?: string | null; sku?: string | null; codigo_interno?: string | null;
+      laboratorio?: string | null; principio_activo?: string | null;
+      concentracion?: string | null; presentacion?: string | null;
+    };
+    return [
+      m.nombre, m.categoria,
+      mx.barcode, mx.sku, mx.codigo_interno,
+      mx.laboratorio, mx.principio_activo, mx.concentracion, mx.presentacion,
+    ].some(v => (v ?? "").toLowerCase().includes(s));
+  });
 
   // ── Medicamento CRUD ──────────────────────────────────────────────
   function openNewMed() { setEditMed(null); setMedForm(EMPTY_MED); setMedModal(true); }
   function openEditMed(m: Medicamento) {
     setEditMed(m);
-    setMedForm({ nombre: m.nombre, categoria: m.categoria, descripcion: m.descripcion ?? "",
-      precio_unitario: String(m.precio_unitario), stock_minimo: String(m.stock_minimo), unidad: m.unidad });
+    setMedForm({
+      nombre: m.nombre,
+      categoria: m.categoria,
+      descripcion: m.descripcion ?? "",
+      precio_unitario: String(m.precio_unitario),
+      stock_minimo: String(m.stock_minimo),
+      unidad: m.unidad,
+      barcode: (m as Medicamento & { barcode?: string | null }).barcode ?? "",
+      sku: (m as Medicamento & { sku?: string | null }).sku ?? "",
+      codigo_interno: (m as Medicamento & { codigo_interno?: string | null }).codigo_interno ?? "",
+      laboratorio: (m as Medicamento & { laboratorio?: string | null }).laboratorio ?? "",
+      principio_activo: (m as Medicamento & { principio_activo?: string | null }).principio_activo ?? "",
+      forma_farmaceutica: (m as Medicamento & { forma_farmaceutica?: string | null }).forma_farmaceutica ?? "",
+      concentracion: (m as Medicamento & { concentracion?: string | null }).concentracion ?? "",
+      presentacion: (m as Medicamento & { presentacion?: string | null }).presentacion ?? "",
+      registro_sanitario: (m as Medicamento & { registro_sanitario?: string | null }).registro_sanitario ?? "",
+      sale_type: m.sale_type ?? "otc",
+      allow_direct_sale: m.allow_direct_sale ?? true,
+      requires_prescription: m.requires_prescription ?? false,
+      is_controlled: m.is_controlled ?? false,
+      regulatory_notes: m.regulatory_notes ?? "",
+    });
     setMedModal(true);
   }
 
   async function saveMed() {
     if (!medForm.nombre.trim()) { toast({ variant:"destructive", title:"Error", description:"Nombre requerido" }); return; }
     setSavingMed(true);
+    // Reglas de venta directa según tipo de venta
+    const blocksDirect = ["receta_requerida", "receta_retenida", "controlado"].includes(medForm.sale_type);
+    const allowsDirect = blocksDirect ? false : medForm.allow_direct_sale;
+    const requiresRx = blocksDirect ? true : medForm.requires_prescription;
+    const isControlled = medForm.sale_type === "controlado" ? true : medForm.is_controlled;
+
     const payload = {
-      nombre: medForm.nombre.trim(), categoria: medForm.categoria,
+      nombre: medForm.nombre.trim(),
+      categoria: medForm.categoria,
       descripcion: medForm.descripcion || null,
       precio_unitario: parseFloat(medForm.precio_unitario) || 0,
       stock_minimo: parseInt(medForm.stock_minimo) || 0,
       unidad: medForm.unidad,
+      barcode: medForm.barcode.trim() || null,
+      sku: medForm.sku.trim() || null,
+      codigo_interno: medForm.codigo_interno.trim() || null,
+      laboratorio: medForm.laboratorio.trim() || null,
+      principio_activo: medForm.principio_activo.trim() || null,
+      forma_farmaceutica: medForm.forma_farmaceutica.trim() || null,
+      concentracion: medForm.concentracion.trim() || null,
+      presentacion: medForm.presentacion.trim() || null,
+      registro_sanitario: medForm.registro_sanitario.trim() || null,
+      sale_type: medForm.sale_type,
+      allow_direct_sale: allowsDirect,
+      requires_prescription: requiresRx,
+      is_controlled: isControlled,
+      regulatory_notes: medForm.regulatory_notes.trim() || null,
     };
     if (editMed) {
       const { data, error } = await supabase.from("medicamentos").update(payload).eq("id", editMed.id).select().single();
@@ -252,7 +321,7 @@ export default function Farmacia() {
       <div className="flex gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar por nombre o categoría..." value={search}
+          <Input placeholder="Buscar por nombre, código de barras, SKU, laboratorio, principio activo..." value={search}
             onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         {canWrite && (
@@ -359,14 +428,61 @@ export default function Farmacia() {
 
       {/* Modal medicamento */}
       <Dialog open={medModal} onOpenChange={v => !v && setMedModal(false)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editMed ? "Editar medicamento" : "Nuevo medicamento"}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Nombre *</Label>
-              <Input value={medForm.nombre} onChange={e => setMedForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Paracetamol 500mg" />
+          <div className="space-y-5 py-2">
+            {/* Identificación básica */}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Nombre comercial *</Label>
+                <Input value={medForm.nombre} onChange={e => setMedForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Tempra 500 mg" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Código de barras</Label>
+                  <Input value={medForm.barcode} onChange={e => setMedForm(f => ({ ...f, barcode: e.target.value }))} placeholder="EAN-13 / UPC" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>SKU</Label>
+                  <Input value={medForm.sku} onChange={e => setMedForm(f => ({ ...f, sku: e.target.value }))} placeholder="SKU proveedor" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Código interno</Label>
+                  <Input value={medForm.codigo_interno} onChange={e => setMedForm(f => ({ ...f, codigo_interno: e.target.value }))} placeholder="Clave interna" />
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            {/* Datos farmacéuticos */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Laboratorio</Label>
+                <Input value={medForm.laboratorio} onChange={e => setMedForm(f => ({ ...f, laboratorio: e.target.value }))} placeholder="Ej: Pfizer" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Principio activo</Label>
+                <Input value={medForm.principio_activo} onChange={e => setMedForm(f => ({ ...f, principio_activo: e.target.value }))} placeholder="Ej: Paracetamol" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Forma farmacéutica</Label>
+                <Input value={medForm.forma_farmaceutica} onChange={e => setMedForm(f => ({ ...f, forma_farmaceutica: e.target.value }))} placeholder="Tableta, jarabe, ampolla..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Concentración</Label>
+                <Input value={medForm.concentracion} onChange={e => setMedForm(f => ({ ...f, concentracion: e.target.value }))} placeholder="Ej: 500 mg" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Presentación</Label>
+                <Input value={medForm.presentacion} onChange={e => setMedForm(f => ({ ...f, presentacion: e.target.value }))} placeholder="Caja c/20, frasco 120 ml..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Registro sanitario (COFEPRIS)</Label>
+                <Input value={medForm.registro_sanitario} onChange={e => setMedForm(f => ({ ...f, registro_sanitario: e.target.value }))} placeholder="N° de registro" />
+              </div>
+            </div>
+
+            {/* Comerciales */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="space-y-1.5">
                 <Label>Categoría</Label>
                 <Select value={medForm.categoria} onValueChange={v => setMedForm(f => ({ ...f, categoria: v }))}>
@@ -381,10 +497,8 @@ export default function Farmacia() {
                   <SelectContent>{UNIDADES.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Precio unitario ($)</Label>
+                <Label>Precio ($)</Label>
                 <Input type="number" min="0" step="0.01" value={medForm.precio_unitario}
                   onChange={e => setMedForm(f => ({ ...f, precio_unitario: e.target.value }))} />
               </div>
@@ -394,8 +508,66 @@ export default function Farmacia() {
                   onChange={e => setMedForm(f => ({ ...f, stock_minimo: e.target.value }))} />
               </div>
             </div>
+
+            {/* Regulatorio */}
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+              <div className="space-y-1.5">
+                <Label>Tipo de venta *</Label>
+                <Select value={medForm.sale_type} onValueChange={v => {
+                  const blocks = ["receta_requerida","receta_retenida","controlado"].includes(v);
+                  setMedForm(f => ({
+                    ...f,
+                    sale_type: v,
+                    allow_direct_sale: blocks ? false : f.allow_direct_sale,
+                    requires_prescription: blocks ? true : f.requires_prescription,
+                    is_controlled: v === "controlado" ? true : f.is_controlled,
+                  }));
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SALE_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {medForm.is_controlled && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <p>Medicamento sujeto a control sanitario. La venta directa queda bloqueada y debe surtirse contra receta correspondiente.</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={medForm.allow_direct_sale}
+                    disabled={["receta_requerida","receta_retenida","controlado"].includes(medForm.sale_type)}
+                    onChange={e => setMedForm(f => ({ ...f, allow_direct_sale: e.target.checked }))} />
+                  Permitir venta directa
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={medForm.requires_prescription}
+                    disabled={["receta_requerida","receta_retenida","controlado"].includes(medForm.sale_type)}
+                    onChange={e => setMedForm(f => ({ ...f, requires_prescription: e.target.checked }))} />
+                  Requiere receta
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={medForm.is_controlled}
+                    disabled={medForm.sale_type === "controlado"}
+                    onChange={e => setMedForm(f => ({ ...f, is_controlled: e.target.checked }))} />
+                  Es controlado
+                </label>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Notas regulatorias</Label>
+                <Textarea value={medForm.regulatory_notes}
+                  onChange={e => setMedForm(f => ({ ...f, regulatory_notes: e.target.value }))}
+                  placeholder="Restricciones, observaciones COFEPRIS..." rows={2} />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
-              <Label>Descripción</Label>
+              <Label>Descripción / indicaciones</Label>
               <Textarea value={medForm.descripcion} onChange={e => setMedForm(f => ({ ...f, descripcion: e.target.value }))}
                 placeholder="Indicaciones, observaciones..." rows={2} />
             </div>

@@ -43,6 +43,15 @@ export type Med = {
   requires_prescription: boolean | null;
   allow_direct_sale: boolean | null;
   descripcion?: string | null;
+  barcode?: string | null;
+  sku?: string | null;
+  codigo_interno?: string | null;
+  laboratorio?: string | null;
+  principio_activo?: string | null;
+  forma_farmaceutica?: string | null;
+  concentracion?: string | null;
+  presentacion?: string | null;
+  registro_sanitario?: string | null;
 };
 
 /**

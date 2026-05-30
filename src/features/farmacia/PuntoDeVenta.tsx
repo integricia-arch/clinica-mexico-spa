@@ -165,14 +165,39 @@ export default function PuntoDeVenta({
   // TODO: cambiar a "más vendidos" cuando exista índice de ventas frecuentes.
   const frecuentes = useMemo(() => meds.slice(0, 12), [meds]);
 
-  function searchMeds(q: string): Med[] {
-    const s = q.trim().toLowerCase();
+  function norm(v: string | null | undefined) {
+    return (v ?? "").trim().toLowerCase();
+  }
+
+  /** Coincidencia exacta por barcode/SKU/código interno (case-insensitive). */
+  function exactCodeMatch(q: string): Med[] {
+    const s = norm(q);
     if (!s) return [];
-    return meds.filter((m) =>
-      m.nombre.toLowerCase().includes(s) ||
-      m.categoria.toLowerCase().includes(s) ||
-      (m.descripcion ?? "").toLowerCase().includes(s),
+    return meds.filter(
+      (m) => norm(m.barcode) === s || norm(m.sku) === s || norm(m.codigo_interno) === s,
     );
+  }
+
+  function searchMeds(q: string): Med[] {
+    const s = norm(q);
+    if (!s) return [];
+    return meds.filter((m) => {
+      const fields = [
+        m.nombre,
+        m.categoria,
+        m.descripcion,
+        m.barcode,
+        m.sku,
+        m.codigo_interno,
+        m.laboratorio,
+        m.principio_activo,
+        m.forma_farmaceutica,
+        m.concentracion,
+        m.presentacion,
+        m.registro_sanitario,
+      ];
+      return fields.some((f) => norm(f).includes(s));
+    });
   }
 
   function addToCart(m: Med) {
@@ -211,6 +236,20 @@ export default function PuntoDeVenta({
       setScanText("");
       return;
     }
+    // 1) Coincidencia exacta por código de barras / SKU / código interno
+    const exact = exactCodeMatch(text);
+    if (exact.length === 1) {
+      addToCart(exact[0]);
+      setScanText("");
+      setMatches([]);
+      inputRef.current?.focus();
+      return;
+    }
+    if (exact.length > 1) {
+      setMatches(exact.slice(0, 20));
+      return;
+    }
+    // 2) Búsqueda amplia por nombre/laboratorio/principio/etc.
     const hits = searchMeds(text);
     if (hits.length === 0) {
       toast({ title: "Producto no encontrado", variant: "destructive" });
