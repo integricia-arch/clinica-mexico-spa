@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarPlus, AlertTriangle, UserPlus, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { AssignAppointmentDialog } from "./AssignAppointmentDialog";
 import { QuickPatientDialog } from "./QuickPatientDialog";
+import { DoctorCallDialog } from "./DoctorCallDialog";
+import { Phone, PhoneOff } from "lucide-react";
 
 interface Props {
   conversacionId: string;
