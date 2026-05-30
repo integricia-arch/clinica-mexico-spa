@@ -2209,6 +2209,63 @@ export type Database = {
         }
         Relationships: []
       }
+      pharmacy_cash_shifts: {
+        Row: {
+          cash_difference: number | null
+          cashier_user_id: string
+          clinic_id: string
+          close_notes: string | null
+          closed_at: string | null
+          closed_by: string | null
+          closing_cash_count: number | null
+          created_at: string
+          expected_cash_amount: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cash_difference?: number | null
+          cashier_user_id: string
+          clinic_id: string
+          close_notes?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_cash_count?: number | null
+          created_at?: string
+          expected_cash_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cash_difference?: number | null
+          cashier_user_id?: string
+          clinic_id?: string
+          close_notes?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_cash_count?: number | null
+          created_at?: string
+          expected_cash_amount?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pharmacy_sale_items: {
         Row: {
           clinic_id: string
@@ -2355,6 +2412,7 @@ export type Database = {
           prescription_id: string | null
           requires_invoice: boolean
           sale_type: string
+          shift_id: string | null
           status: string
           subtotal: number
           suspended_at: string | null
@@ -2377,6 +2435,7 @@ export type Database = {
           prescription_id?: string | null
           requires_invoice?: boolean
           sale_type: string
+          shift_id?: string | null
           status?: string
           subtotal?: number
           suspended_at?: string | null
@@ -2399,6 +2458,7 @@ export type Database = {
           prescription_id?: string | null
           requires_invoice?: boolean
           sale_type?: string
+          shift_id?: string | null
           status?: string
           subtotal?: number
           suspended_at?: string | null
@@ -2877,6 +2937,45 @@ export type Database = {
         Returns: undefined
       }
       multiclinic_diagnostics: { Args: never; Returns: Json }
+      pharmacy_close_shift: {
+        Args: { p_cash_count: number; p_notes?: string; p_shift_id: string }
+        Returns: Json
+      }
+      pharmacy_current_shift: {
+        Args: { p_clinic?: string }
+        Returns: {
+          cash_difference: number | null
+          cashier_user_id: string
+          clinic_id: string
+          close_notes: string | null
+          closed_at: string | null
+          closed_by: string | null
+          closing_cash_count: number | null
+          created_at: string
+          expected_cash_amount: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pharmacy_cash_shifts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pharmacy_open_shift: {
+        Args: {
+          p_clinic_id: string
+          p_notes?: string
+          p_opening_amount: number
+        }
+        Returns: string
+      }
       pharmacy_recompute_prescription_status: {
         Args: { p_prescription_id: string }
         Returns: string
