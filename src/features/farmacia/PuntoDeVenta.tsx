@@ -481,10 +481,12 @@ export default function PuntoDeVenta({
         <ShiftBadge shift={shift} />
       </div>
 
-      {/* Sin turno → solo pueden abrir turno (admin/manager pueden override desde gestión); cajero debe abrir */}
+      {/* Sin turno → solo se permite abrir turno; el resto del POS se oculta */}
       {!shiftLoading && !shift && (
         <OpenShiftCard onOpened={(s) => setShift(s)} />
       )}
+      {shift && (<>
+      {/* Scanner unificado */}
 
       {/* Scanner unificado */}
       <form onSubmit={onScanSubmit} className="flex gap-2">
