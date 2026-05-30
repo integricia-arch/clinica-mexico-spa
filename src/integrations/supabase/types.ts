@@ -1621,16 +1621,22 @@ export type Database = {
       medicamentos: {
         Row: {
           activo: boolean
+          advertencias: string | null
           allow_direct_sale: boolean
           barcode: string | null
           categoria: string
           clinic_id: string
           codigo_interno: string | null
           concentracion: string | null
+          contraindicaciones: string | null
           created_at: string
           descripcion: string | null
+          equivalence_group_key: string | null
           forma_farmaceutica: string | null
+          fuente_info: string | null
           id: string
+          indicaciones_uso: string | null
+          interacciones_relevantes: string | null
           is_controlled: boolean
           laboratorio: string | null
           nombre: string
@@ -1650,16 +1656,22 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          advertencias?: string | null
           allow_direct_sale?: boolean
           barcode?: string | null
           categoria?: string
           clinic_id?: string
           codigo_interno?: string | null
           concentracion?: string | null
+          contraindicaciones?: string | null
           created_at?: string
           descripcion?: string | null
+          equivalence_group_key?: string | null
           forma_farmaceutica?: string | null
+          fuente_info?: string | null
           id?: string
+          indicaciones_uso?: string | null
+          interacciones_relevantes?: string | null
           is_controlled?: boolean
           laboratorio?: string | null
           nombre: string
@@ -1679,16 +1691,22 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          advertencias?: string | null
           allow_direct_sale?: boolean
           barcode?: string | null
           categoria?: string
           clinic_id?: string
           codigo_interno?: string | null
           concentracion?: string | null
+          contraindicaciones?: string | null
           created_at?: string
           descripcion?: string | null
+          equivalence_group_key?: string | null
           forma_farmaceutica?: string | null
+          fuente_info?: string | null
           id?: string
+          indicaciones_uso?: string | null
+          interacciones_relevantes?: string | null
           is_controlled?: boolean
           laboratorio?: string | null
           nombre?: string
