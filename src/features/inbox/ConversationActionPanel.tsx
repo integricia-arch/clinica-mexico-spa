@@ -124,6 +124,16 @@ export function ConversationActionPanel(props: Props) {
               <Clock className="h-3 w-3" /> Pendiente confirmación doctor
             </Badge>
           )}
+          {callPending && (
+            <Badge variant="outline" className="border-blue-500 text-blue-700 dark:text-blue-400 gap-1">
+              <PhoneOff className="h-3 w-3" /> Llamada pendiente
+            </Badge>
+          )}
+          {pendingDoctor && minutesPending >= 15 && (
+            <Badge variant="outline" className="border-red-500 text-red-700 dark:text-red-400 gap-1">
+              <AlertTriangle className="h-3 w-3" /> Sin confirmar {minutesPending}m
+            </Badge>
+          )}
           {declined && (
             <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Rechazada por doctor</Badge>
           )}
@@ -134,6 +144,11 @@ export function ConversationActionPanel(props: Props) {
           ) : (
             <Button size="sm" onClick={() => setOpenAssign(true)}>
               <CalendarPlus className="h-4 w-4 mr-1.5" /> {declined ? "Reasignar cita" : "Asignar cita"}
+            </Button>
+          )}
+          {latest && pendingDoctor && latest.doctor_id && (
+            <Button size="sm" variant="outline" onClick={() => setOpenCall(true)}>
+              <Phone className="h-4 w-4 mr-1.5" /> Registrar llamada al doctor
             </Button>
           )}
         </div>
