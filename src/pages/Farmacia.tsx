@@ -17,6 +17,7 @@ import { friendlyError } from "@/lib/errors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VentaDirecta from "@/features/farmacia/VentaDirecta";
 import SurtirReceta from "@/features/farmacia/SurtirReceta";
+import PuntoDeVenta from "@/features/farmacia/PuntoDeVenta";
 
 type Medicamento = Tables<"medicamentos">;
 type Lote = Tables<"lotes_medicamento">;
@@ -40,6 +41,8 @@ export default function Farmacia() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [tab, setTab] = useState("pos");
+  const [prescriptionScan, setPrescriptionScan] = useState<string | null>(null);
 
   // Modal medicamento
   const [medModal, setMedModal] = useState(false);
@@ -177,13 +180,21 @@ export default function Farmacia() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="inventario" className="space-y-6">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="inventario">Inventario</TabsTrigger>
+          <TabsTrigger value="pos">Punto de venta</TabsTrigger>
           <TabsTrigger value="surtir">Surtir receta</TabsTrigger>
           <TabsTrigger value="venta">Venta directa</TabsTrigger>
+          <TabsTrigger value="inventario">Inventario</TabsTrigger>
         </TabsList>
-        <TabsContent value="surtir"><SurtirReceta /></TabsContent>
+        <TabsContent value="pos">
+          <PuntoDeVenta
+            onScanPrescription={(code) => { setPrescriptionScan(code); setTab("surtir"); }}
+          />
+        </TabsContent>
+        <TabsContent value="surtir">
+          <SurtirReceta initialCode={prescriptionScan ?? undefined} />
+        </TabsContent>
         <TabsContent value="venta"><VentaDirecta /></TabsContent>
         <TabsContent value="inventario" className="space-y-6">
       {/* Header */}

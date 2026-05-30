@@ -2230,12 +2230,14 @@ export type Database = {
       }
       pharmacy_sales: {
         Row: {
+          cashier_user_id: string | null
           clinic_id: string
           created_at: string
           created_by: string | null
           customer_name: string | null
           discount: number
           id: string
+          manager_authorized_by: string | null
           notes: string | null
           patient_id: string | null
           payment_method: string | null
@@ -2245,16 +2247,19 @@ export type Database = {
           sale_type: string
           status: string
           subtotal: number
+          suspended_at: string | null
           total: number
           updated_at: string
         }
         Insert: {
+          cashier_user_id?: string | null
           clinic_id?: string
           created_at?: string
           created_by?: string | null
           customer_name?: string | null
           discount?: number
           id?: string
+          manager_authorized_by?: string | null
           notes?: string | null
           patient_id?: string | null
           payment_method?: string | null
@@ -2264,16 +2269,19 @@ export type Database = {
           sale_type: string
           status?: string
           subtotal?: number
+          suspended_at?: string | null
           total?: number
           updated_at?: string
         }
         Update: {
+          cashier_user_id?: string | null
           clinic_id?: string
           created_at?: string
           created_by?: string | null
           customer_name?: string | null
           discount?: number
           id?: string
+          manager_authorized_by?: string | null
           notes?: string | null
           patient_id?: string | null
           payment_method?: string | null
@@ -2283,6 +2291,7 @@ export type Database = {
           sale_type?: string
           status?: string
           subtotal?: number
+          suspended_at?: string | null
           total?: number
           updated_at?: string
         }
@@ -2781,7 +2790,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "receptionist" | "doctor" | "nurse" | "patient"
+      app_role:
+        | "admin"
+        | "receptionist"
+        | "doctor"
+        | "nurse"
+        | "patient"
+        | "manager"
       appointment_status:
         | "solicitada"
         | "tentativa"
@@ -2976,7 +2991,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "receptionist", "doctor", "nurse", "patient"],
+      app_role: [
+        "admin",
+        "receptionist",
+        "doctor",
+        "nurse",
+        "patient",
+        "manager",
+      ],
       appointment_status: [
         "solicitada",
         "tentativa",
