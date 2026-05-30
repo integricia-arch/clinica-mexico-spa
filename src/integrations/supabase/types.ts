@@ -2758,6 +2758,10 @@ export type Database = {
         Returns: undefined
       }
       multiclinic_diagnostics: { Args: never; Returns: Json }
+      pharmacy_recompute_prescription_status: {
+        Args: { p_prescription_id: string }
+        Returns: string
+      }
       pharmacy_register_sale: { Args: { p_payload: Json }; Returns: string }
       update_journey_progress: {
         Args: { _journey_instance_id: string }

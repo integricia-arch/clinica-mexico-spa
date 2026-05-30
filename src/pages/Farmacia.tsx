@@ -16,6 +16,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VentaDirecta from "@/features/farmacia/VentaDirecta";
+import SurtirReceta from "@/features/farmacia/SurtirReceta";
 
 type Medicamento = Tables<"medicamentos">;
 type Lote = Tables<"lotes_medicamento">;
@@ -179,8 +180,10 @@ export default function Farmacia() {
       <Tabs defaultValue="inventario" className="space-y-6">
         <TabsList>
           <TabsTrigger value="inventario">Inventario</TabsTrigger>
+          <TabsTrigger value="surtir">Surtir receta</TabsTrigger>
           <TabsTrigger value="venta">Venta directa</TabsTrigger>
         </TabsList>
+        <TabsContent value="surtir"><SurtirReceta /></TabsContent>
         <TabsContent value="venta"><VentaDirecta /></TabsContent>
         <TabsContent value="inventario" className="space-y-6">
       {/* Header */}
