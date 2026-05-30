@@ -29,6 +29,7 @@ import { friendlyError } from "@/lib/errors";
 import { posPermissions, blockReasonForDirectSale, isPrescriptionScan, DEMO_INFO_LEGEND, type Med } from "./permissions";
 import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
 import { PaymentCapture, emptyBreakdown, validatePayment, paymentsToRows, looksLikeFullCardNumber, type PaymentBreakdown } from "./PaymentCapture";
+import { OpenShiftCard, ShiftBadge, fetchCurrentShift, type Shift } from "./ShiftPanel";
 
 type Lote = {
   id: string;
@@ -118,6 +119,16 @@ export default function PuntoDeVenta({
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
   const [breakdown, setBreakdown] = useState<PaymentBreakdown>(() => emptyBreakdown(0));
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(true);
+
+  async function refreshShift() {
+    setShiftLoading(true);
+    const s = await fetchCurrentShift();
+    setShift(s);
+    setShiftLoading(false);
+  }
+  useEffect(() => { refreshShift(); }, []);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -467,8 +478,15 @@ export default function PuntoDeVenta({
           <span className="flex items-center gap-1.5 text-muted-foreground"><Building2 className="h-4 w-4" />{activeClinic?.name ?? "—"}</span>
           <span className="flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4" />{format(now, "dd/MM/yyyy HH:mm", { locale: es })}</span>
         </div>
-        <Badge variant="outline">Turno actual</Badge>
+        <ShiftBadge shift={shift} />
       </div>
+
+      {/* Sin turno → solo se permite abrir turno; el resto del POS se oculta */}
+      {!shiftLoading && !shift && (
+        <OpenShiftCard onOpened={(s) => setShift(s)} />
+      )}
+      {shift && (<>
+      {/* Scanner unificado */}
 
       {/* Scanner unificado */}
       <form onSubmit={onScanSubmit} className="flex gap-2">
@@ -696,6 +714,7 @@ export default function PuntoDeVenta({
           </Button>
         </div>
       </div>
+      </>)}
 
       <TicketInterno open={ticketOpen} onClose={() => setTicketOpen(false)} data={ticketData} />
     </div>
