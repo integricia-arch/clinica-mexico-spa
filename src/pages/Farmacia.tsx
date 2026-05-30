@@ -180,17 +180,23 @@ export default function Farmacia() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="inventario" className="space-y-6">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="inventario">Inventario</TabsTrigger>
+          <TabsTrigger value="pos">Punto de venta</TabsTrigger>
           <TabsTrigger value="surtir">Surtir receta</TabsTrigger>
           <TabsTrigger value="venta">Venta directa</TabsTrigger>
+          <TabsTrigger value="inventario">Inventario</TabsTrigger>
         </TabsList>
-        <TabsContent value="surtir"><SurtirReceta /></TabsContent>
+        <TabsContent value="pos">
+          <PuntoDeVenta
+            onScanPrescription={(code) => { setPrescriptionScan(code); setTab("surtir"); }}
+          />
+        </TabsContent>
+        <TabsContent value="surtir">
+          <SurtirReceta initialCode={prescriptionScan ?? undefined} />
+        </TabsContent>
         <TabsContent value="venta"><VentaDirecta /></TabsContent>
         <TabsContent value="inventario" className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Farmacia y almacén</h1>
           <p className="mt-1 text-sm text-muted-foreground">Control de inventario y dispensación</p>
