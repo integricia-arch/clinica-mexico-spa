@@ -24,9 +24,16 @@ interface Props {
 
 interface LatestAppt {
   id: string;
+  doctor_id: string | null;
   doctor_confirmation_status: "pending" | "confirmed" | "declined";
   doctor_confirmation_reason: string | null;
   fecha_inicio: string;
+}
+
+interface LastAttempt {
+  status: string;
+  channel: string;
+  created_at: string;
 }
 
 export function ConversationActionPanel(props: Props) {
