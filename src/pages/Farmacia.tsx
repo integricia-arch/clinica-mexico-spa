@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VentaDirecta from "@/features/farmacia/VentaDirecta";
 import SurtirReceta from "@/features/farmacia/SurtirReceta";
 import PuntoDeVenta from "@/features/farmacia/PuntoDeVenta";
+import CorteCaja from "@/features/farmacia/CorteCaja";
 
 type Medicamento = Tables<"medicamentos">;
 type Lote = Tables<"lotes_medicamento">;
