@@ -472,7 +472,8 @@ export default function Farmacia() {
                       </Button>
                     )}
                   </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}
