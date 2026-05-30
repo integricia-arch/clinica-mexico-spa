@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import DoctorPatientQueue from "@/features/panel-doctor/components/DoctorPatientQueue";
 import PatientClinicalContext from "@/features/panel-doctor/components/PatientClinicalContext";
+import { DoctorConfirmationPanel } from "@/features/panel-doctor/components/DoctorConfirmationPanel";
 import { useDoctorQueue, type DoctorQueueItem } from "@/features/panel-doctor/hooks/useDoctorQueue";
 import { usePatientClinicalSnapshot } from "@/features/panel-doctor/hooks/usePatientClinicalSnapshot";
 
@@ -71,6 +72,8 @@ export default function PanelDoctor() {
           </select>
         )}
       </div>
+
+      <DoctorConfirmationPanel doctorId={doctorId} />
 
       <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-[320px_1fr]">
         <Card className="overflow-hidden">
