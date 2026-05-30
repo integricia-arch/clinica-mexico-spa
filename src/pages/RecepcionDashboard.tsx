@@ -103,7 +103,7 @@ export default function RecepcionDashboard() {
         .limit(20),
       supabase.from("doctor_contact_attempts")
         .select("id", { count: "exact", head: true })
-        .in("status", ["no_answer", "busy", "voicemail"]),
+        .in("status", ["no_answer", "busy", "callback_requested"]),
     ]);
 
     setStats({
