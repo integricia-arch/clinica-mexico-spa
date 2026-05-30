@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarPlus, AlertTriangle, UserPlus, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { AssignAppointmentDialog } from "./AssignAppointmentDialog";
 import { QuickPatientDialog } from "./QuickPatientDialog";
+import { DoctorCallDialog } from "./DoctorCallDialog";
+import { Phone, PhoneOff } from "lucide-react";
 
 interface Props {
   conversacionId: string;
@@ -22,49 +24,70 @@ interface Props {
 
 interface LatestAppt {
   id: string;
+  doctor_id: string | null;
   doctor_confirmation_status: "pending" | "confirmed" | "declined";
   doctor_confirmation_reason: string | null;
   fecha_inicio: string;
 }
 
+interface LastAttempt {
+  status: string;
+  channel: string;
+  created_at: string;
+}
+
 export function ConversationActionPanel(props: Props) {
   const [openAssign, setOpenAssign] = useState(false);
   const [openPatient, setOpenPatient] = useState(false);
+  const [openCall, setOpenCall] = useState(false);
   const [latest, setLatest] = useState<LatestAppt | null>(null);
+  const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
   const urgente = props.prioridad === "urgente";
   const sinPaciente = !props.patientId;
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select("id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
-        .eq("conversacion_id", props.conversacionId)
+  const fetchLatest = async () => {
+    const { data } = await supabase
+      .from("appointments")
+      .select("id, doctor_id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
+      .eq("conversacion_id", props.conversacionId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setLatest((data as LatestAppt | null) ?? null);
+    if (data?.id) {
+      const { data: att } = await supabase
+        .from("doctor_contact_attempts")
+        .select("status, channel, created_at")
+        .eq("appointment_id", data.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (active) setLatest((data as LatestAppt | null) ?? null);
-    })();
+      setLastAttempt((att as LastAttempt | null) ?? null);
+    } else {
+      setLastAttempt(null);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    fetchLatest();
     const ch = supabase
       .channel(`conv-appt-${props.conversacionId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `conversacion_id=eq.${props.conversacionId}` }, async () => {
-        const { data } = await supabase
-          .from("appointments")
-          .select("id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
-          .eq("conversacion_id", props.conversacionId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (active) setLatest((data as LatestAppt | null) ?? null);
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `conversacion_id=eq.${props.conversacionId}` }, () => {
+        if (active) fetchLatest();
       })
       .subscribe();
     return () => { active = false; supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.conversacionId]);
 
   const declined = latest?.doctor_confirmation_status === "declined";
   const confirmed = latest?.doctor_confirmation_status === "confirmed";
   const pendingDoctor = latest?.doctor_confirmation_status === "pending";
+  const callPending = pendingDoctor && lastAttempt && ["no_answer","busy","callback_requested"].includes(lastAttempt.status);
+  const minutesPending = latest && pendingDoctor
+    ? Math.floor((Date.now() - new Date(latest.fecha_inicio).getTime()) / 60000)
+    : 0;
 
   return (
     <div className="border-b border-border bg-muted/30 p-3 space-y-2">
@@ -101,6 +124,16 @@ export function ConversationActionPanel(props: Props) {
               <Clock className="h-3 w-3" /> Pendiente confirmación doctor
             </Badge>
           )}
+          {callPending && (
+            <Badge variant="outline" className="border-blue-500 text-blue-700 dark:text-blue-400 gap-1">
+              <PhoneOff className="h-3 w-3" /> Llamada pendiente
+            </Badge>
+          )}
+          {pendingDoctor && minutesPending >= 15 && (
+            <Badge variant="outline" className="border-red-500 text-red-700 dark:text-red-400 gap-1">
+              <AlertTriangle className="h-3 w-3" /> Sin confirmar {minutesPending}m
+            </Badge>
+          )}
           {declined && (
             <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Rechazada por doctor</Badge>
           )}
@@ -111,6 +144,11 @@ export function ConversationActionPanel(props: Props) {
           ) : (
             <Button size="sm" onClick={() => setOpenAssign(true)}>
               <CalendarPlus className="h-4 w-4 mr-1.5" /> {declined ? "Reasignar cita" : "Asignar cita"}
+            </Button>
+          )}
+          {latest && pendingDoctor && latest.doctor_id && (
+            <Button size="sm" variant="outline" onClick={() => setOpenCall(true)}>
+              <Phone className="h-4 w-4 mr-1.5" /> Registrar llamada al doctor
             </Button>
           )}
         </div>
@@ -157,6 +195,16 @@ export function ConversationActionPanel(props: Props) {
           typeof props.dolor === "number" ? `Dolor reportado: ${props.dolor}/10` : null,
         ].filter(Boolean).join(" · ")}
       />
+
+      {latest?.doctor_id && (
+        <DoctorCallDialog
+          open={openCall}
+          onOpenChange={setOpenCall}
+          appointmentId={latest.id}
+          doctorId={latest.doctor_id}
+          clinicId={props.clinicId}
+        />
+      )}
     </div>
   );
 }

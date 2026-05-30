@@ -15,22 +15,29 @@ export default function PanelDoctor() {
   const isAdmin = roles.includes("admin");
   const [doctors, setDoctors] = useState<any[]>([]);
   const [doctorId, setDoctorId] = useState<string | null>(null);
+  const [doctorInfo, setDoctorInfo] = useState<any | null>(null);
   const [noDoctorProfile, setNoDoctorProfile] = useState(false);
 
   useEffect(() => {
     (async () => {
       if (isAdmin) {
-        const { data } = await supabase.from("doctors").select("id, nombre, apellidos, user_id").eq("activo", true);
+        const { data } = await supabase.from("doctors").select("id, nombre, apellidos, user_id, operational_status, operational_status_reason, operational_status_until").eq("activo", true);
         setDoctors(data ?? []);
         if (data && data.length > 0 && !doctorId) setDoctorId(data[0].id);
       } else if (user?.id) {
-        const { data } = await supabase.from("doctors").select("id").eq("user_id", user.id).maybeSingle();
-        if (data?.id) setDoctorId(data.id);
+        const { data } = await supabase.from("doctors").select("id, operational_status, operational_status_reason, operational_status_until").eq("user_id", user.id).maybeSingle();
+        if (data?.id) { setDoctorId(data.id); setDoctorInfo(data); }
         else setNoDoctorProfile(true);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin && doctorId) {
+      setDoctorInfo(doctors.find((d) => d.id === doctorId) ?? null);
+    }
+  }, [isAdmin, doctorId, doctors]);
 
   const { items, loading } = useDoctorQueue(doctorId);
   const selectedId = params.get("cita");
@@ -72,6 +79,30 @@ export default function PanelDoctor() {
           </select>
         )}
       </div>
+
+      {doctorInfo && doctorInfo.operational_status && doctorInfo.operational_status !== "active" && (
+        <div className="rounded-md border border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm">
+          <p className="font-medium text-amber-800 dark:text-amber-300">
+            Estatus operativo: {{
+              unavailable: "No disponible",
+              vacation: "En vacaciones",
+              sick_leave: "Incapacidad médica",
+              suspended: "Suspendido",
+            }[doctorInfo.operational_status as string] ?? doctorInfo.operational_status}
+          </p>
+          {doctorInfo.operational_status_reason && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">Motivo: {doctorInfo.operational_status_reason}</p>
+          )}
+          {doctorInfo.operational_status_until && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Hasta: {new Date(doctorInfo.operational_status_until).toLocaleString("es-MX")}
+            </p>
+          )}
+          <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+            No se asignarán nuevas citas automáticamente. Solo verás las citas ya programadas.
+          </p>
+        </div>
+      )}
 
       <DoctorConfirmationPanel doctorId={doctorId} />
 
