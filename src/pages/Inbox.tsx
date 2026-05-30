@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Send, MessageCircle, Phone, Instagram, Facebook, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, Circle, SendHorizonal } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ConversationActionPanel } from "@/features/inbox/ConversationActionPanel";
 
 type CanalTipo = "telegram" | "whatsapp" | "instagram" | "facebook";
 type ConvStatus = "activa" | "escalada" | "cerrada";
@@ -184,8 +185,11 @@ export default function Inbox() {
       list = list.filter((c) => nombreIdentidad(c).toLowerCase().includes(q));
     }
     list.sort((a, b) => {
+      const pr = (c: Conversacion) => c.prioridad === "urgente" ? 0 : c.prioridad === "alta" ? 1 : 2;
       if (a.status === "escalada" && b.status !== "escalada") return -1;
       if (b.status === "escalada" && a.status !== "escalada") return 1;
+      const dp = pr(a) - pr(b);
+      if (dp !== 0) return dp;
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
     return list;
@@ -212,8 +216,13 @@ export default function Inbox() {
       .from("conversaciones")
       .update({ status: "cerrada" })
       .eq("id", selected.id);
-    if (error) toast.error("No se pudo cerrar");
-    else toast.success("Conversación cerrada");
+    if (error) { toast.error("No se pudo cerrar"); return; }
+    await supabase.from("audit_logs").insert({
+      tabla: "conversaciones", registro_id: selected.id,
+      accion: "conv_cerrada", datos_nuevos: { by: user?.id ?? null },
+      clinic_id: selected.clinic_id,
+    });
+    toast.success("Conversación cerrada");
   };
 
   const enviarRespuesta = async () => {
