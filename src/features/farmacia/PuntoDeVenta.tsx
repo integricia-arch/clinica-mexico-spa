@@ -309,6 +309,18 @@ export default function PuntoDeVenta({
   const globalDiscount = perms.canPosDiscount ? Number(discount) || 0 : 0;
   const total = Math.max(0, subtotal - itemsDiscount - globalDiscount);
 
+  // Sincroniza montos por defecto según método y total.
+  useEffect(() => {
+    setBreakdown((bd) => {
+      if (payment === "efectivo") return { ...bd, efectivo: total, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
+      if (payment === "tarjeta") return { ...bd, efectivo: 0, tarjeta: total, transferencia: 0, card: { ...bd.card, amount: total }, transfer: { ...bd.transfer, amount: 0 } };
+      if (payment === "transferencia") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: total, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: total } };
+      if (payment === "pendiente") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
+      return bd; // mixto: el usuario captura manualmente
+    });
+  }, [payment, total]);
+
+
   async function submitSale() {
     if (!perms.canPosSell || cart.length === 0) return;
     setSubmitting(true);
