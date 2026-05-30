@@ -195,6 +195,16 @@ export function ConversationActionPanel(props: Props) {
           typeof props.dolor === "number" ? `Dolor reportado: ${props.dolor}/10` : null,
         ].filter(Boolean).join(" · ")}
       />
+
+      {latest?.doctor_id && (
+        <DoctorCallDialog
+          open={openCall}
+          onOpenChange={setOpenCall}
+          appointmentId={latest.id}
+          doctorId={latest.doctor_id}
+          clinicId={props.clinicId}
+        />
+      )}
     </div>
   );
 }
