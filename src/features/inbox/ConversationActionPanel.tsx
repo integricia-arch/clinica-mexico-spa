@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarPlus, AlertTriangle, UserPlus } from "lucide-react";
+import { CalendarPlus, AlertTriangle, UserPlus, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { AssignAppointmentDialog } from "./AssignAppointmentDialog";
 import { QuickPatientDialog } from "./QuickPatientDialog";
 
