@@ -92,18 +92,34 @@ export function ConversationActionPanel(props: Props) {
             <p className="text-foreground"><span className="text-muted-foreground">Dolor reportado:</span> {props.dolor}/10</p>
           )}
         </div>
-        <div className="shrink-0 flex flex-col gap-2">
+        <div className="shrink-0 flex flex-col gap-2 items-end">
+          {confirmed && (
+            <Badge className="bg-emerald-600 text-white gap-1"><CheckCircle2 className="h-3 w-3" /> Confirmada por doctor</Badge>
+          )}
+          {pendingDoctor && (
+            <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400 gap-1">
+              <Clock className="h-3 w-3" /> Pendiente confirmación doctor
+            </Badge>
+          )}
+          {declined && (
+            <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Rechazada por doctor</Badge>
+          )}
           {sinPaciente ? (
             <Button size="sm" onClick={() => setOpenPatient(true)}>
               <UserPlus className="h-4 w-4 mr-1.5" /> Crear/asociar paciente
             </Button>
           ) : (
             <Button size="sm" onClick={() => setOpenAssign(true)}>
-              <CalendarPlus className="h-4 w-4 mr-1.5" /> Asignar cita
+              <CalendarPlus className="h-4 w-4 mr-1.5" /> {declined ? "Reasignar cita" : "Asignar cita"}
             </Button>
           )}
         </div>
       </div>
+      {declined && latest?.doctor_confirmation_reason && (
+        <p className="text-[11px] text-destructive">
+          Motivo del doctor: {latest.doctor_confirmation_reason}. Reasigna con otro horario o doctor.
+        </p>
+      )}
       {urgente && (
         <p className="text-[11px] text-destructive">
           Valorar atención inmediata. Si el paciente reporta síntomas graves, recomendar acudir a urgencias o llamar al 911.
