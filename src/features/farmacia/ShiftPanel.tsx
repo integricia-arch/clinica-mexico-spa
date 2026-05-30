@@ -38,10 +38,11 @@ export type Shift = {
 
 export function ShiftBadge({ shift }: { shift: Shift | null }) {
   if (!shift) return <Badge variant="destructive">Sin turno</Badge>;
+  const shortId = shift.id ? shift.id.slice(0, 6).toUpperCase() : "------";
   return (
     <Badge variant="outline" className="gap-1">
       <LockOpen className="h-3 w-3" />
-      Turno {shift.id.slice(0, 6).toUpperCase()} · {formatMXN(shift.opening_amount)}
+      Turno {shortId} · {formatMXN(shift.opening_amount ?? 0)}
     </Badge>
   );
 }
