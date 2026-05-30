@@ -59,6 +59,7 @@ export type Database = {
       appointments: {
         Row: {
           clinic_id: string
+          conversacion_id: string | null
           creada_por_bot: boolean
           created_at: string
           created_by: string | null
@@ -77,6 +78,7 @@ export type Database = {
         }
         Insert: {
           clinic_id?: string
+          conversacion_id?: string | null
           creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
@@ -95,6 +97,7 @@ export type Database = {
         }
         Update: {
           clinic_id?: string
+          conversacion_id?: string | null
           creada_por_bot?: boolean
           created_at?: string
           created_by?: string | null
@@ -117,6 +120,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_conversacion_id_fkey"
+            columns: ["conversacion_id"]
+            isOneToOne: false
+            referencedRelation: "conversaciones"
             referencedColumns: ["id"]
           },
           {
@@ -445,10 +455,13 @@ export type Database = {
           asignada_humano_id: string | null
           clinic_id: string
           created_at: string
+          dolor_intensidad: number | null
           id: string
           identidad_canal_id: string
           intencion_actual: string | null
           last_message_at: string
+          motivo_resumen: string | null
+          prioridad: string
           status: Database["public"]["Enums"]["conversacion_status"]
           updated_at: string
         }
@@ -456,10 +469,13 @@ export type Database = {
           asignada_humano_id?: string | null
           clinic_id?: string
           created_at?: string
+          dolor_intensidad?: number | null
           id?: string
           identidad_canal_id: string
           intencion_actual?: string | null
           last_message_at?: string
+          motivo_resumen?: string | null
+          prioridad?: string
           status?: Database["public"]["Enums"]["conversacion_status"]
           updated_at?: string
         }
@@ -467,10 +483,13 @@ export type Database = {
           asignada_humano_id?: string | null
           clinic_id?: string
           created_at?: string
+          dolor_intensidad?: number | null
           id?: string
           identidad_canal_id?: string
           intencion_actual?: string | null
           last_message_at?: string
+          motivo_resumen?: string | null
+          prioridad?: string
           status?: Database["public"]["Enums"]["conversacion_status"]
           updated_at?: string
         }
@@ -3016,7 +3035,18 @@ export type Database = {
         | "confirmada_medico"
         | "cancelada"
         | "liberada"
-      audit_action: "crear" | "actualizar" | "cancelar" | "eliminar"
+      audit_action:
+        | "crear"
+        | "actualizar"
+        | "cancelar"
+        | "eliminar"
+        | "conv_escalada"
+        | "msg_durante_escalamiento"
+        | "prioridad_urgente"
+        | "cita_desde_inbox"
+        | "notif_doctor"
+        | "notif_paciente"
+        | "conv_cerrada"
       canal_tipo: "telegram" | "whatsapp" | "instagram" | "facebook"
       conversacion_status: "activa" | "escalada" | "cerrada"
       expediente_tipo:
@@ -3219,7 +3249,19 @@ export const Constants = {
         "cancelada",
         "liberada",
       ],
-      audit_action: ["crear", "actualizar", "cancelar", "eliminar"],
+      audit_action: [
+        "crear",
+        "actualizar",
+        "cancelar",
+        "eliminar",
+        "conv_escalada",
+        "msg_durante_escalamiento",
+        "prioridad_urgente",
+        "cita_desde_inbox",
+        "notif_doctor",
+        "notif_paciente",
+        "conv_cerrada",
+      ],
       canal_tipo: ["telegram", "whatsapp", "instagram", "facebook"],
       conversacion_status: ["activa", "escalada", "cerrada"],
       expediente_tipo: [
