@@ -119,6 +119,16 @@ export default function PuntoDeVenta({
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
   const [breakdown, setBreakdown] = useState<PaymentBreakdown>(() => emptyBreakdown(0));
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(true);
+
+  async function refreshShift() {
+    setShiftLoading(true);
+    const s = await fetchCurrentShift();
+    setShift(s);
+    setShiftLoading(false);
+  }
+  useEffect(() => { refreshShift(); }, []);
 
   useEffect(() => {
     inputRef.current?.focus();
