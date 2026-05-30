@@ -52,7 +52,17 @@ export type Med = {
   concentracion?: string | null;
   presentacion?: string | null;
   registro_sanitario?: string | null;
+  indicaciones_uso?: string | null;
+  contraindicaciones?: string | null;
+  advertencias?: string | null;
+  interacciones_relevantes?: string | null;
+  regulatory_notes?: string | null;
+  fuente_info?: string | null;
+  equivalence_group_key?: string | null;
 };
+
+export const DEMO_INFO_LEGEND =
+  "Información demo operativa. Validar contra etiqueta, registro sanitario, IPP/etiquetado autorizado y responsable sanitario antes de operación real. No sustituye criterio médico.";
 
 /**
  * Devuelve null si se puede vender directamente, o el mensaje regulatorio exacto.
