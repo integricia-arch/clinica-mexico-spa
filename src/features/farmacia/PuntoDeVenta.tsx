@@ -27,7 +27,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { friendlyError } from "@/lib/errors";
 import { posPermissions, blockReasonForDirectSale, isPrescriptionScan, DEMO_INFO_LEGEND, type Med } from "./permissions";
-import { TicketInterno, type TicketData } from "./TicketInterno";
+import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
+import { PaymentCapture, emptyBreakdown, validatePayment, paymentsToRows, looksLikeFullCardNumber, type PaymentBreakdown } from "./PaymentCapture";
 
 type Lote = {
   id: string;
@@ -116,6 +117,7 @@ export default function PuntoDeVenta({
 
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
+  const [breakdown, setBreakdown] = useState<PaymentBreakdown>(() => emptyBreakdown(0));
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -307,8 +309,40 @@ export default function PuntoDeVenta({
   const globalDiscount = perms.canPosDiscount ? Number(discount) || 0 : 0;
   const total = Math.max(0, subtotal - itemsDiscount - globalDiscount);
 
+  // Sincroniza montos por defecto según método y total.
+  useEffect(() => {
+    setBreakdown((bd) => {
+      if (payment === "efectivo") return { ...bd, efectivo: total, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
+      if (payment === "tarjeta") return { ...bd, efectivo: 0, tarjeta: total, transferencia: 0, card: { ...bd.card, amount: total }, transfer: { ...bd.transfer, amount: 0 } };
+      if (payment === "transferencia") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: total, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: total } };
+      if (payment === "pendiente") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
+      return bd; // mixto: el usuario captura manualmente
+    });
+  }, [payment, total]);
+
+
   async function submitSale() {
     if (!perms.canPosSell || cart.length === 0) return;
+
+    // Bloqueo PCI: nunca aceptar número completo de tarjeta en ningún campo.
+    if (
+      looksLikeFullCardNumber(breakdown.card.card_last4) ||
+      breakdown.card.card_last4.length > 4
+    ) {
+      await logPosAudit(activeClinicId, "intento_tarjeta_numero_completo_bloqueado", {
+        field: "card_last4",
+      });
+      toast({ title: "Captura inválida", description: "Solo los últimos 4 dígitos.", variant: "destructive" });
+      return;
+    }
+
+    const v = validatePayment(payment, total, breakdown);
+    if (!v.ok) {
+      await logPosAudit(activeClinicId, "diferencia_pago_total", { method: payment, error: v.error, total });
+      toast({ title: "Pago inválido", description: v.error, variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
     const payload = {
       sale_type: "direct_sale",
@@ -328,11 +362,39 @@ export default function PuntoDeVenta({
       })),
     };
     const { data: saleId, error } = await supabase.rpc("pharmacy_register_sale", { p_payload: payload as never });
-    setSubmitting(false);
     if (error) {
+      setSubmitting(false);
       toast({ title: "No se pudo registrar la venta", description: friendlyError(error), variant: "destructive" });
       return;
     }
+
+    // Inserta el desglose de pagos (pharmacy_sale_payments)
+    type PayRow = Record<string, unknown> & { payment_method: string; amount: number; card_last4?: string; card_brand?: string; authorization_code?: string; terminal_id?: string; transfer_reference?: string; bank_name?: string };
+    const baseRows = paymentsToRows(payment, breakdown) as PayRow[];
+    const rows: PayRow[] = baseRows.map((r) => Object.assign({}, r, {
+      sale_id: saleId as unknown as string,
+      clinic_id: activeClinicId,
+      created_by: user?.id ?? null,
+    }));
+    if (rows.length > 0) {
+      const { error: pErr } = await supabase.from("pharmacy_sale_payments").insert(rows as never);
+      if (pErr) {
+        await logPosAudit(activeClinicId, "diferencia_pago_total", { sale_id: saleId, error: pErr.message }, String(saleId));
+        toast({ title: "Venta registrada, falló desglose de pago", description: friendlyError(pErr), variant: "destructive" });
+      } else {
+        const auditEvent =
+          payment === "mixto" ? "pago_mixto_registrado"
+          : payment === "tarjeta" ? "pago_tarjeta_registrado"
+          : payment === "transferencia" ? "pago_transferencia_registrado"
+          : "pago_efectivo_registrado";
+        await logPosAudit(activeClinicId, auditEvent, {
+          sale_id: saleId,
+          total,
+          methods: rows.map((r) => ({ m: r.payment_method, amount: r.amount, last4: (r as { card_last4?: string }).card_last4 ?? null })),
+        }, String(saleId));
+      }
+    }
+    setSubmitting(false);
 
     if (globalDiscount > 0) {
       await logPosAudit(activeClinicId, "pos_discount_authorized", {
@@ -343,12 +405,22 @@ export default function PuntoDeVenta({
       sale_id: saleId, total, payment_method: payment, requires_invoice: requiresInvoice,
     }, String(saleId));
 
-    // Persist cashier and (si aplica) gerente que autorizó
     if (perms.isManager && globalDiscount > 0 && user?.id) {
       await supabase.from("pharmacy_sales")
         .update({ manager_authorized_by: user.id } as never)
         .eq("id", saleId as never);
     }
+
+    const ticketPayments: TicketPaymentLine[] = rows.map((r) => ({
+      method: r.payment_method as TicketPaymentLine["method"],
+      amount: Number(r.amount),
+      card_brand: (r as { card_brand?: string }).card_brand ?? null,
+      card_last4: (r as { card_last4?: string }).card_last4 ?? null,
+      authorization_code: (r as { authorization_code?: string }).authorization_code ?? null,
+      terminal_id: (r as { terminal_id?: string }).terminal_id ?? null,
+      transfer_reference: (r as { transfer_reference?: string }).transfer_reference ?? null,
+      bank_name: (r as { bank_name?: string }).bank_name ?? null,
+    }));
 
     const cajeroNombre = user?.user_metadata?.full_name ?? user?.email ?? "Cajero";
     setTicketData({
@@ -359,6 +431,7 @@ export default function PuntoDeVenta({
       cliente: clienteTipo === "publico" ? (customerName || "Público general") : (patientSearch || "Paciente"),
       paciente: clienteTipo === "paciente" ? patientSearch : null,
       metodoPago: PAYMENT_LABEL[payment],
+      payments: ticketPayments,
       items: cart.map((c) => ({ nombre: c.med.nombre, cantidad: c.quantity, precio: c.unit_price })),
       subtotal, descuento: itemsDiscount + globalDiscount, total,
     });
@@ -370,9 +443,9 @@ export default function PuntoDeVenta({
     setNotes("");
     setRequiresInvoice(false);
     setPayment("efectivo");
+    setBreakdown(emptyBreakdown(0));
     setPatientId(""); setPatientSearch(""); setCustomerName("Público general");
     setClienteTipo("publico");
-    // refrescar lotes
     const { data: l } = await supabase
       .from("lotes_medicamento").select("*").gt("existencia", 0).order("fecha_entrada");
     setLotes((l as Lote[]) ?? []);
@@ -596,6 +669,7 @@ export default function PuntoDeVenta({
                 {PAYMENT_METHODS.map((p) => <SelectItem key={p} value={p}>{PAYMENT_LABEL[p]}</SelectItem>)}
               </SelectContent>
             </Select>
+            <PaymentCapture method={payment} total={total} value={breakdown} onChange={setBreakdown} />
             <label className="flex items-center gap-2 text-xs">
               <input type="checkbox" checked={requiresInvoice} onChange={(e) => setRequiresInvoice(e.target.checked)} />
               Requiere factura (CFDI futuro)

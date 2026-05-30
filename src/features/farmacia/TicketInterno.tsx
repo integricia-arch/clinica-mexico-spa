@@ -6,6 +6,17 @@ import { es } from "date-fns/locale";
 const formatMXN = (n: number) =>
   n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
+export type TicketPaymentLine = {
+  method: "efectivo" | "tarjeta" | "transferencia";
+  amount: number;
+  card_brand?: string | null;
+  card_last4?: string | null;
+  authorization_code?: string | null;
+  terminal_id?: string | null;
+  transfer_reference?: string | null;
+  bank_name?: string | null;
+};
+
 export type TicketData = {
   folio: string;
   fecha: Date;
@@ -15,6 +26,7 @@ export type TicketData = {
   paciente?: string | null;
   recetaFolio?: string | null;
   metodoPago: string;
+  payments?: TicketPaymentLine[];
   items: { nombre: string; cantidad: number; precio: number }[];
   subtotal: number;
   descuento: number;
@@ -68,6 +80,30 @@ export function TicketInterno({
             </div>
             <p>Pago: {data.metodoPago}</p>
           </div>
+          {data.payments && data.payments.length > 0 && (
+            <div className="border-t border-dashed pt-2 space-y-0.5">
+              {data.payments.map((p, i) => (
+                <div key={i} className="space-y-0.5">
+                  <div className="flex justify-between">
+                    <span className="capitalize">{p.method}</span>
+                    <span>{formatMXN(p.amount)}</span>
+                  </div>
+                  {p.method === "tarjeta" && (
+                    <p className="pl-2 text-[10px] opacity-80">
+                      {p.card_brand ?? ""} ****{p.card_last4 ?? "----"}
+                      {p.authorization_code ? ` · aut ${p.authorization_code}` : ""}
+                      {p.terminal_id ? ` · ${p.terminal_id}` : ""}
+                    </p>
+                  )}
+                  {p.method === "transferencia" && (
+                    <p className="pl-2 text-[10px] opacity-80">
+                      ref {p.transfer_reference ?? "—"}{p.bank_name ? ` · ${p.bank_name}` : ""}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <p className="text-center text-muted-foreground pt-1">¡Gracias por su compra!</p>
         </div>
         <DialogFooter className="gap-2">
