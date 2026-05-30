@@ -16,6 +16,7 @@ interface Props {
   conversacionId: string;
   patientId: string | null;
   clinicId: string;
+  notasPrecargadas?: string;
   onAssigned?: (appointmentId: string) => void;
 }
 
