@@ -461,6 +461,9 @@ export default function Farmacia() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
+
