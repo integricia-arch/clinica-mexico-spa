@@ -141,6 +141,12 @@ export default function Farmacia() {
       requires_prescription: m.requires_prescription ?? false,
       is_controlled: m.is_controlled ?? false,
       regulatory_notes: m.regulatory_notes ?? "",
+      indicaciones_uso: (m as Medicamento & { indicaciones_uso?: string | null }).indicaciones_uso ?? "",
+      contraindicaciones: (m as Medicamento & { contraindicaciones?: string | null }).contraindicaciones ?? "",
+      advertencias: (m as Medicamento & { advertencias?: string | null }).advertencias ?? "",
+      interacciones_relevantes: (m as Medicamento & { interacciones_relevantes?: string | null }).interacciones_relevantes ?? "",
+      fuente_info: (m as Medicamento & { fuente_info?: string | null }).fuente_info ?? "",
+      equivalence_group_key: (m as Medicamento & { equivalence_group_key?: string | null }).equivalence_group_key ?? "",
     });
     setMedModal(true);
   }
