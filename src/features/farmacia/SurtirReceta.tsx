@@ -124,13 +124,13 @@ async function logAudit(
   }
 }
 
-export default function SurtirReceta() {
+export default function SurtirReceta({ initialCode }: { initialCode?: string } = {}) {
   const { hasRole } = useAuth();
   const { activeClinicId } = useActiveClinic();
   const { toast } = useToast();
   const canSell = hasRole("admin") || hasRole("nurse") || hasRole("receptionist");
 
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode ?? "");
   const [searching, setSearching] = useState(false);
   const [rx, setRx] = useState<Prescription | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -139,6 +139,16 @@ export default function SurtirReceta() {
   const [submitting, setSubmitting] = useState(false);
   const [payment, setPayment] = useState<string>("Efectivo");
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (initialCode && initialCode.trim()) {
+      setCode(initialCode);
+      const { number } = parseScannedCode(initialCode);
+      if (number) loadPrescription(number);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCode]);
+
 
   function reset() {
     setRx(null);
