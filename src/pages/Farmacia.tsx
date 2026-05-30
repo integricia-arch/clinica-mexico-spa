@@ -400,9 +400,44 @@ export default function Farmacia() {
                   {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                 </div>
 
-                {isOpen && (
+                {isOpen && (() => {
+                  const mx = med as Medicamento & {
+                    indicaciones_uso?: string | null; contraindicaciones?: string | null;
+                    advertencias?: string | null; interacciones_relevantes?: string | null;
+                    fuente_info?: string | null; equivalence_group_key?: string | null;
+                    principio_activo?: string | null; concentracion?: string | null;
+                    laboratorio?: string | null; presentacion?: string | null;
+                  };
+                  return (
                   <div className="border-t border-border px-5 py-4 bg-muted/10 space-y-3">
                     {med.descripcion && <p className="text-sm text-muted-foreground">{med.descripcion}</p>}
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {mx.principio_activo && <p><span className="font-semibold">Principio activo:</span> {mx.principio_activo} {mx.concentracion ?? ""}</p>}
+                      {mx.laboratorio && <p><span className="font-semibold">Laboratorio:</span> {mx.laboratorio}</p>}
+                      {mx.presentacion && <p><span className="font-semibold">Presentación:</span> {mx.presentacion}</p>}
+                      <p>
+                        <span className="font-semibold">Tipo:</span>{" "}
+                        <Badge variant={med.is_controlled ? "destructive" : med.requires_prescription ? "secondary" : "outline"}>
+                          {med.sale_type ?? "otc"}
+                        </Badge>
+                      </p>
+                    </div>
+
+                    {(mx.indicaciones_uso || mx.contraindicaciones || mx.advertencias || mx.interacciones_relevantes) && (
+                      <div className="space-y-1.5 rounded-lg border border-border bg-card p-3 text-xs">
+                        {mx.indicaciones_uso && <p><span className="font-semibold">Indicaciones:</span> {mx.indicaciones_uso}</p>}
+                        {mx.contraindicaciones && <p className="text-destructive"><span className="font-semibold">Contraindicaciones:</span> {mx.contraindicaciones}</p>}
+                        {mx.advertencias && <p className="text-warning"><span className="font-semibold">Advertencias:</span> {mx.advertencias}</p>}
+                        {mx.interacciones_relevantes && <p><span className="font-semibold">Interacciones:</span> {mx.interacciones_relevantes}</p>}
+                        {med.regulatory_notes && <p><span className="font-semibold">Notas regulatorias:</span> {med.regulatory_notes}</p>}
+                        {mx.fuente_info && <p className="italic text-muted-foreground">Fuente: {mx.fuente_info}</p>}
+                        <p className="italic text-muted-foreground border-t border-border/40 pt-1.5">
+                          Información demo operativa. Validar contra etiqueta, registro sanitario, IPP/etiquetado autorizado y responsable sanitario antes de operación real. No sustituye criterio médico.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Lotes ({lotesActivos.length})</p>
                       <p className="text-xs text-muted-foreground">Mínimo: {med.stock_minimo} {med.unidad}</p>
