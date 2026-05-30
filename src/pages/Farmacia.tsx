@@ -181,6 +181,12 @@ export default function Farmacia() {
       requires_prescription: requiresRx,
       is_controlled: isControlled,
       regulatory_notes: medForm.regulatory_notes.trim() || null,
+      indicaciones_uso: medForm.indicaciones_uso.trim() || null,
+      contraindicaciones: medForm.contraindicaciones.trim() || null,
+      advertencias: medForm.advertencias.trim() || null,
+      interacciones_relevantes: medForm.interacciones_relevantes.trim() || null,
+      fuente_info: medForm.fuente_info.trim() || null,
+      equivalence_group_key: medForm.equivalence_group_key.trim() || null,
     };
     if (editMed) {
       const { data, error } = await supabase.from("medicamentos").update(payload).eq("id", editMed.id).select().single();
