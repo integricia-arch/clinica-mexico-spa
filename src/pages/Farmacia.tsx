@@ -197,6 +197,8 @@ export default function Farmacia() {
         </TabsContent>
         <TabsContent value="venta"><VentaDirecta /></TabsContent>
         <TabsContent value="inventario" className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Farmacia y almacén</h1>
           <p className="mt-1 text-sm text-muted-foreground">Control de inventario y dispensación</p>
