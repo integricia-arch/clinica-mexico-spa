@@ -1567,9 +1567,11 @@ export type Database = {
       lotes_medicamento: {
         Row: {
           clinic_id: string
+          costo_unitario: number | null
           created_at: string
           existencia: number
           fecha_caducidad: string
+          fecha_entrada: string
           id: string
           medicamento_id: string
           numero_lote: string
@@ -1577,9 +1579,11 @@ export type Database = {
         }
         Insert: {
           clinic_id?: string
+          costo_unitario?: number | null
           created_at?: string
           existencia?: number
           fecha_caducidad: string
+          fecha_entrada?: string
           id?: string
           medicamento_id: string
           numero_lote: string
@@ -1587,9 +1591,11 @@ export type Database = {
         }
         Update: {
           clinic_id?: string
+          costo_unitario?: number | null
           created_at?: string
           existencia?: number
           fecha_caducidad?: string
+          fecha_entrada?: string
           id?: string
           medicamento_id?: string
           numero_lote?: string
@@ -1615,39 +1621,60 @@ export type Database = {
       medicamentos: {
         Row: {
           activo: boolean
+          allow_direct_sale: boolean
           categoria: string
           clinic_id: string
           created_at: string
           descripcion: string | null
           id: string
+          is_controlled: boolean
           nombre: string
           precio_unitario: number
+          regulatory_notes: string | null
+          requires_prescription: boolean
+          requires_retained_prescription: boolean
+          requires_special_prescription: boolean
+          sale_type: string
           stock_minimo: number
           unidad: string
           updated_at: string
         }
         Insert: {
           activo?: boolean
+          allow_direct_sale?: boolean
           categoria?: string
           clinic_id?: string
           created_at?: string
           descripcion?: string | null
           id?: string
+          is_controlled?: boolean
           nombre: string
           precio_unitario?: number
+          regulatory_notes?: string | null
+          requires_prescription?: boolean
+          requires_retained_prescription?: boolean
+          requires_special_prescription?: boolean
+          sale_type?: string
           stock_minimo?: number
           unidad?: string
           updated_at?: string
         }
         Update: {
           activo?: boolean
+          allow_direct_sale?: boolean
           categoria?: string
           clinic_id?: string
           created_at?: string
           descripcion?: string | null
           id?: string
+          is_controlled?: boolean
           nombre?: string
           precio_unitario?: number
+          regulatory_notes?: string | null
+          requires_prescription?: boolean
+          requires_retained_prescription?: boolean
+          requires_special_prescription?: boolean
+          sale_type?: string
           stock_minimo?: number
           unidad?: string
           updated_at?: string
@@ -1716,6 +1743,8 @@ export type Database = {
           lote_id: string | null
           medicamento_id: string
           motivo: string | null
+          reference_id: string | null
+          reference_type: string | null
           tipo: Database["public"]["Enums"]["movimiento_tipo"]
           user_id: string | null
         }
@@ -1727,6 +1756,8 @@ export type Database = {
           lote_id?: string | null
           medicamento_id: string
           motivo?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           tipo: Database["public"]["Enums"]["movimiento_tipo"]
           user_id?: string | null
         }
@@ -1738,6 +1769,8 @@ export type Database = {
           lote_id?: string | null
           medicamento_id?: string
           motivo?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           tipo?: Database["public"]["Enums"]["movimiento_tipo"]
           user_id?: string | null
         }
@@ -2128,6 +2161,130 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string
+        }
+        Relationships: []
+      }
+      pharmacy_sale_items: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          discount: number
+          id: string
+          lote_id: string | null
+          medicamento_id: string
+          prescription_item_id: string | null
+          quantity: number
+          sale_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          clinic_id?: string
+          created_at?: string
+          discount?: number
+          id?: string
+          lote_id?: string | null
+          medicamento_id: string
+          prescription_item_id?: string | null
+          quantity: number
+          sale_id: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          discount?: number
+          id?: string
+          lote_id?: string | null
+          medicamento_id?: string
+          prescription_item_id?: string | null
+          quantity?: number
+          sale_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_sale_items_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes_medicamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_sale_items_medicamento_id_fkey"
+            columns: ["medicamento_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_sales: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          customer_name: string | null
+          discount: number
+          id: string
+          notes: string | null
+          patient_id: string | null
+          payment_method: string | null
+          payment_status: string
+          prescription_id: string | null
+          requires_invoice: boolean
+          sale_type: string
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          discount?: number
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          prescription_id?: string | null
+          requires_invoice?: boolean
+          sale_type: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          discount?: number
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          prescription_id?: string | null
+          requires_invoice?: boolean
+          sale_type?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2601,6 +2758,7 @@ export type Database = {
         Returns: undefined
       }
       multiclinic_diagnostics: { Args: never; Returns: Json }
+      pharmacy_register_sale: { Args: { p_payload: Json }; Returns: string }
       update_journey_progress: {
         Args: { _journey_instance_id: string }
         Returns: undefined
@@ -2678,7 +2836,13 @@ export type Database = {
         | "alta_administrativa"
       journey_version_status: "draft" | "active" | "archived"
       mensaje_rol: "user" | "assistant" | "tool" | "system"
-      movimiento_tipo: "entrada" | "salida" | "ajuste"
+      movimiento_tipo:
+        | "entrada"
+        | "salida"
+        | "ajuste"
+        | "salida_venta"
+        | "salida_surtido_receta"
+        | "cancelacion"
       recordatorio_status: "pendiente" | "enviado" | "fallido" | "cancelado"
       recordatorio_tipo: "t24h" | "t2h" | "manual"
     }
@@ -2872,7 +3036,14 @@ export const Constants = {
       ],
       journey_version_status: ["draft", "active", "archived"],
       mensaje_rol: ["user", "assistant", "tool", "system"],
-      movimiento_tipo: ["entrada", "salida", "ajuste"],
+      movimiento_tipo: [
+        "entrada",
+        "salida",
+        "ajuste",
+        "salida_venta",
+        "salida_surtido_receta",
+        "cancelacion",
+      ],
       recordatorio_status: ["pendiente", "enviado", "fallido", "cancelado"],
       recordatorio_tipo: ["t24h", "t2h", "manual"],
     },

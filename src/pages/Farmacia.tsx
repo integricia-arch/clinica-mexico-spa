@@ -14,6 +14,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VentaDirecta from "@/features/farmacia/VentaDirecta";
 
 type Medicamento = Tables<"medicamentos">;
 type Lote = Tables<"lotes_medicamento">;
@@ -174,6 +176,13 @@ export default function Farmacia() {
 
   return (
     <div className="space-y-6">
+      <Tabs defaultValue="inventario" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="inventario">Inventario</TabsTrigger>
+          <TabsTrigger value="venta">Venta directa</TabsTrigger>
+        </TabsList>
+        <TabsContent value="venta"><VentaDirecta /></TabsContent>
+        <TabsContent value="inventario" className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -454,6 +463,9 @@ export default function Farmacia() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
+
