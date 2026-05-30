@@ -117,6 +117,7 @@ export default function PuntoDeVenta({
 
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
+  const [breakdown, setBreakdown] = useState<PaymentBreakdown>(() => emptyBreakdown(0));
 
   useEffect(() => {
     inputRef.current?.focus();
