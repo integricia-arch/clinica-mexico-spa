@@ -46,6 +46,12 @@ const EMPTY_MED = {
   requires_prescription: false,
   is_controlled: false,
   regulatory_notes: "",
+  indicaciones_uso: "",
+  contraindicaciones: "",
+  advertencias: "",
+  interacciones_relevantes: "",
+  fuente_info: "",
+  equivalence_group_key: "",
 };
 const EMPTY_MOV = { medicamento_id:"", lote_id:"", tipo:"entrada", cantidad:"", motivo:"", numero_lote:"", fecha_caducidad:"" };
 
