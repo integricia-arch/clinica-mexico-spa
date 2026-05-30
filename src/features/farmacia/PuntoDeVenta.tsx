@@ -27,7 +27,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { friendlyError } from "@/lib/errors";
 import { posPermissions, blockReasonForDirectSale, isPrescriptionScan, DEMO_INFO_LEGEND, type Med } from "./permissions";
-import { TicketInterno, type TicketData } from "./TicketInterno";
+import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
+import { PaymentCapture, emptyBreakdown, validatePayment, paymentsToRows, looksLikeFullCardNumber, type PaymentBreakdown } from "./PaymentCapture";
 
 type Lote = {
   id: string;
