@@ -584,10 +584,55 @@ export default function Farmacia() {
               </div>
             </div>
 
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Información clínica</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Indicaciones de uso</Label>
+                  <Textarea rows={2} value={medForm.indicaciones_uso}
+                    onChange={e => setMedForm(f => ({ ...f, indicaciones_uso: e.target.value }))}
+                    placeholder="Para qué se indica…" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Contraindicaciones</Label>
+                  <Textarea rows={2} value={medForm.contraindicaciones}
+                    onChange={e => setMedForm(f => ({ ...f, contraindicaciones: e.target.value }))}
+                    placeholder="Hipersensibilidad, embarazo…" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Advertencias</Label>
+                  <Textarea rows={2} value={medForm.advertencias}
+                    onChange={e => setMedForm(f => ({ ...f, advertencias: e.target.value }))}
+                    placeholder="Precauciones, riesgos…" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Interacciones relevantes</Label>
+                  <Textarea rows={2} value={medForm.interacciones_relevantes}
+                    onChange={e => setMedForm(f => ({ ...f, interacciones_relevantes: e.target.value }))}
+                    placeholder="Anticoagulantes, alcohol…" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Clave de equivalencia</Label>
+                  <Input value={medForm.equivalence_group_key}
+                    onChange={e => setMedForm(f => ({ ...f, equivalence_group_key: e.target.value }))}
+                    placeholder="paracetamol|500mg|tableta|oral" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Fuente de información</Label>
+                  <Input value={medForm.fuente_info}
+                    onChange={e => setMedForm(f => ({ ...f, fuente_info: e.target.value }))}
+                    placeholder="Etiqueta / IPP / proveedor…" />
+                </div>
+              </div>
+              <p className="text-[11px] italic text-muted-foreground">
+                Información demo operativa. Validar contra etiqueta, registro sanitario, IPP/etiquetado autorizado y responsable sanitario antes de operación real. No sustituye criterio médico.
+              </p>
+            </div>
+
             <div className="space-y-1.5">
-              <Label>Descripción / indicaciones</Label>
+              <Label>Descripción</Label>
               <Textarea value={medForm.descripcion} onChange={e => setMedForm(f => ({ ...f, descripcion: e.target.value }))}
-                placeholder="Indicaciones, observaciones..." rows={2} />
+                placeholder="Notas comerciales o adicionales..." rows={2} />
             </div>
           </div>
           <DialogFooter>
