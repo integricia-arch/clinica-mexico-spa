@@ -65,11 +65,23 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
     (async () => {
       const { data } = await supabase
         .from("doctor_servicios")
-        .select("doctor:doctors(id, nombre, apellidos, horario_inicio, horario_fin, activo)")
+        .select("doctor:doctors(id, nombre, apellidos, horario_inicio, horario_fin, activo, operational_status, operational_status_until, operational_status_reason)")
         .eq("servicio_id", servicioId);
+      const fechaIso = new Date(`${fecha}T12:00:00-06:00`);
       const lista = (data ?? [])
         .map((r: any) => r.doctor)
-        .filter((d: any) => d?.activo) as Doctor[];
+        .filter((d: any) => {
+          if (!d?.activo) return false;
+          // suspendido nunca aparece
+          if (d.operational_status === "suspended") return false;
+          // si tiene status hasta una fecha y la cita cae dentro, descartar
+          if (d.operational_status !== "active" && d.operational_status_until) {
+            if (fechaIso <= new Date(d.operational_status_until)) return false;
+          }
+          // vacation/sick_leave sin until siempre descartar
+          if (["vacation","sick_leave"].includes(d.operational_status) && !d.operational_status_until) return false;
+          return true;
+        }) as Doctor[];
       setDoctores(lista);
       setDoctorId("");
     })();
