@@ -519,6 +519,64 @@ export type Database = {
           },
         ]
       }
+      doctor_contact_attempts: {
+        Row: {
+          appointment_id: string | null
+          channel: Database["public"]["Enums"]["doctor_contact_channel"]
+          clinic_id: string
+          contacted_by: string | null
+          created_at: string
+          doctor_id: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["doctor_contact_result"]
+        }
+        Insert: {
+          appointment_id?: string | null
+          channel?: Database["public"]["Enums"]["doctor_contact_channel"]
+          clinic_id: string
+          contacted_by?: string | null
+          created_at?: string
+          doctor_id: string
+          id?: string
+          notes?: string | null
+          status: Database["public"]["Enums"]["doctor_contact_result"]
+        }
+        Update: {
+          appointment_id?: string | null
+          channel?: Database["public"]["Enums"]["doctor_contact_channel"]
+          clinic_id?: string
+          contacted_by?: string | null
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["doctor_contact_result"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_contact_attempts_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_contact_attempts_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_contact_attempts_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_prescription_template_versions: {
         Row: {
           clinic_id: string
@@ -706,6 +764,9 @@ export type Database = {
           horario_inicio: string
           id: string
           nombre: string
+          operational_status: Database["public"]["Enums"]["doctor_operational_status"]
+          operational_status_reason: string | null
+          operational_status_until: string | null
           telefono: string | null
           updated_at: string
           user_id: string | null
@@ -722,6 +783,9 @@ export type Database = {
           horario_inicio?: string
           id?: string
           nombre: string
+          operational_status?: Database["public"]["Enums"]["doctor_operational_status"]
+          operational_status_reason?: string | null
+          operational_status_until?: string | null
           telefono?: string | null
           updated_at?: string
           user_id?: string | null
@@ -738,6 +802,9 @@ export type Database = {
           horario_inicio?: string
           id?: string
           nombre?: string
+          operational_status?: Database["public"]["Enums"]["doctor_operational_status"]
+          operational_status_reason?: string | null
+          operational_status_until?: string | null
           telefono?: string | null
           updated_at?: string
           user_id?: string | null
@@ -3060,9 +3127,29 @@ export type Database = {
         | "paciente_vinculado_inbox"
         | "doctor_confirmo_cita"
         | "doctor_rechazo_cita"
+        | "doctor_contact_attempt_created"
+        | "doctor_confirmo_por_llamada"
+        | "doctor_rechazo_por_llamada"
+        | "doctor_no_contesto"
+        | "doctor_status_changed"
+        | "doctor_unavailable_override"
       canal_tipo: "telegram" | "whatsapp" | "instagram" | "facebook"
       conversacion_status: "activa" | "escalada" | "cerrada"
       doctor_confirmation_status: "pending" | "confirmed" | "declined"
+      doctor_contact_channel: "phone" | "whatsapp" | "email" | "internal"
+      doctor_contact_result:
+        | "answered"
+        | "no_answer"
+        | "busy"
+        | "could_attend"
+        | "could_not_attend"
+        | "callback_requested"
+      doctor_operational_status:
+        | "active"
+        | "unavailable"
+        | "vacation"
+        | "sick_leave"
+        | "suspended"
       expediente_tipo:
         | "primera_vez"
         | "seguimiento"
@@ -3279,10 +3366,32 @@ export const Constants = {
         "paciente_vinculado_inbox",
         "doctor_confirmo_cita",
         "doctor_rechazo_cita",
+        "doctor_contact_attempt_created",
+        "doctor_confirmo_por_llamada",
+        "doctor_rechazo_por_llamada",
+        "doctor_no_contesto",
+        "doctor_status_changed",
+        "doctor_unavailable_override",
       ],
       canal_tipo: ["telegram", "whatsapp", "instagram", "facebook"],
       conversacion_status: ["activa", "escalada", "cerrada"],
       doctor_confirmation_status: ["pending", "confirmed", "declined"],
+      doctor_contact_channel: ["phone", "whatsapp", "email", "internal"],
+      doctor_contact_result: [
+        "answered",
+        "no_answer",
+        "busy",
+        "could_attend",
+        "could_not_attend",
+        "callback_requested",
+      ],
+      doctor_operational_status: [
+        "active",
+        "unavailable",
+        "vacation",
+        "sick_leave",
+        "suspended",
+      ],
       expediente_tipo: [
         "primera_vez",
         "seguimiento",
