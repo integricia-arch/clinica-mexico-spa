@@ -465,10 +465,14 @@ export type Database = {
           clinic_id: string
           created_at: string
           dolor_intensidad: number | null
+          escalated_followup_count: number
           id: string
           identidad_canal_id: string
+          insiste: boolean
           intencion_actual: string | null
+          last_bot_ack_at: string | null
           last_message_at: string
+          last_patient_followup_at: string | null
           motivo_resumen: string | null
           prioridad: string
           status: Database["public"]["Enums"]["conversacion_status"]
@@ -479,10 +483,14 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           dolor_intensidad?: number | null
+          escalated_followup_count?: number
           id?: string
           identidad_canal_id: string
+          insiste?: boolean
           intencion_actual?: string | null
+          last_bot_ack_at?: string | null
           last_message_at?: string
+          last_patient_followup_at?: string | null
           motivo_resumen?: string | null
           prioridad?: string
           status?: Database["public"]["Enums"]["conversacion_status"]
@@ -493,10 +501,14 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           dolor_intensidad?: number | null
+          escalated_followup_count?: number
           id?: string
           identidad_canal_id?: string
+          insiste?: boolean
           intencion_actual?: string | null
+          last_bot_ack_at?: string | null
           last_message_at?: string
+          last_patient_followup_at?: string | null
           motivo_resumen?: string | null
           prioridad?: string
           status?: Database["public"]["Enums"]["conversacion_status"]
@@ -3133,6 +3145,11 @@ export type Database = {
         | "doctor_no_contesto"
         | "doctor_status_changed"
         | "doctor_unavailable_override"
+        | "patient_followed_up_after_escalation"
+        | "reception_notified_again"
+        | "reception_case_opened"
+        | "reception_case_closed"
+        | "patient_insistence_detected"
       canal_tipo: "telegram" | "whatsapp" | "instagram" | "facebook"
       conversacion_status: "activa" | "escalada" | "cerrada"
       doctor_confirmation_status: "pending" | "confirmed" | "declined"
@@ -3372,6 +3389,11 @@ export const Constants = {
         "doctor_no_contesto",
         "doctor_status_changed",
         "doctor_unavailable_override",
+        "patient_followed_up_after_escalation",
+        "reception_notified_again",
+        "reception_case_opened",
+        "reception_case_closed",
+        "patient_insistence_detected",
       ],
       canal_tipo: ["telegram", "whatsapp", "instagram", "facebook"],
       conversacion_status: ["activa", "escalada", "cerrada"],
