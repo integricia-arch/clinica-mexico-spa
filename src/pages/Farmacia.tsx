@@ -28,7 +28,25 @@ const CATEGORIAS = ["Analgésico","Antibiótico","Antiinflamatorio","Antihiperte
   "Gastrointestinal","Antihistamínico","Broncodilatador","Neurológico","Soluciones","Vitaminas","Tópico","Otro"];
 const UNIDADES = ["tableta","cápsula","frasco","ampolleta","pieza","sobre","ml","g"];
 
-const EMPTY_MED = { nombre:"", categoria:"Analgésico", descripcion:"", precio_unitario:"", stock_minimo:"0", unidad:"tableta" };
+const SALE_TYPES = [
+  { value: "otc", label: "OTC / venta libre" },
+  { value: "receta_requerida", label: "Requiere receta médica" },
+  { value: "receta_retenida", label: "Receta retenida" },
+  { value: "controlado", label: "Controlado (psicotrópico/estupefaciente)" },
+  { value: "no_medicamento", label: "Insumo / no medicamento" },
+] as const;
+
+const EMPTY_MED = {
+  nombre: "", categoria: "Analgésico", descripcion: "", precio_unitario: "", stock_minimo: "0", unidad: "tableta",
+  barcode: "", sku: "", codigo_interno: "",
+  laboratorio: "", principio_activo: "", forma_farmaceutica: "", concentracion: "", presentacion: "",
+  registro_sanitario: "",
+  sale_type: "otc",
+  allow_direct_sale: true,
+  requires_prescription: false,
+  is_controlled: false,
+  regulatory_notes: "",
+};
 const EMPTY_MOV = { medicamento_id:"", lote_id:"", tipo:"entrada", cantidad:"", motivo:"", numero_lote:"", fecha_caducidad:"" };
 
 export default function Farmacia() {
