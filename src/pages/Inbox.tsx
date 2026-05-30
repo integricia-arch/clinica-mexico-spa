@@ -31,6 +31,10 @@ interface Conversacion {
   asignada_humano_id: string | null;
   last_message_at: string;
   created_at: string;
+  clinic_id: string;
+  prioridad?: string | null;
+  motivo_resumen?: string | null;
+  dolor_intensidad?: number | null;
   identidades_canal?: IdentidadCanal | null;
   ultimo_mensaje?: string;
 }
