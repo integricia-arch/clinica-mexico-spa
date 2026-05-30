@@ -2273,6 +2273,71 @@ export type Database = {
           },
         ]
       }
+      pharmacy_sale_payments: {
+        Row: {
+          acquirer: string | null
+          amount: number
+          authorization_code: string | null
+          bank_name: string | null
+          card_brand: string | null
+          card_last4: string | null
+          card_type: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          payment_method: string
+          sale_id: string
+          terminal_id: string | null
+          transfer_reference: string | null
+        }
+        Insert: {
+          acquirer?: string | null
+          amount: number
+          authorization_code?: string | null
+          bank_name?: string | null
+          card_brand?: string | null
+          card_last4?: string | null
+          card_type?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_method: string
+          sale_id: string
+          terminal_id?: string | null
+          transfer_reference?: string | null
+        }
+        Update: {
+          acquirer?: string | null
+          amount?: number
+          authorization_code?: string | null
+          bank_name?: string | null
+          card_brand?: string | null
+          card_last4?: string | null
+          card_type?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          sale_id?: string
+          terminal_id?: string | null
+          transfer_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_sale_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pharmacy_sales: {
         Row: {
           cashier_user_id: string | null
