@@ -41,6 +41,8 @@ export default function Farmacia() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [tab, setTab] = useState("pos");
+  const [prescriptionScan, setPrescriptionScan] = useState<string | null>(null);
 
   // Modal medicamento
   const [medModal, setMedModal] = useState(false);
