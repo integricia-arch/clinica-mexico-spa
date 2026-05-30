@@ -95,10 +95,20 @@ export default function Farmacia() {
   const bajosStock = medicamentos.filter(m => stockTotal(m.id) < m.stock_minimo);
   const proxCaducidad = lotes.filter(l => new Date(l.fecha_caducidad) <= en30 && l.existencia > 0);
 
-  const filtered = medicamentos.filter(m =>
-    m.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    m.categoria.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = medicamentos.filter(m => {
+    const s = search.trim().toLowerCase();
+    if (!s) return true;
+    const mx = m as Medicamento & {
+      barcode?: string | null; sku?: string | null; codigo_interno?: string | null;
+      laboratorio?: string | null; principio_activo?: string | null;
+      concentracion?: string | null; presentacion?: string | null;
+    };
+    return [
+      m.nombre, m.categoria,
+      mx.barcode, mx.sku, mx.codigo_interno,
+      mx.laboratorio, mx.principio_activo, mx.concentracion, mx.presentacion,
+    ].some(v => (v ?? "").toLowerCase().includes(s));
+  });
 
   // ── Medicamento CRUD ──────────────────────────────────────────────
   function openNewMed() { setEditMed(null); setMedForm(EMPTY_MED); setMedModal(true); }
