@@ -478,8 +478,13 @@ export default function PuntoDeVenta({
           <span className="flex items-center gap-1.5 text-muted-foreground"><Building2 className="h-4 w-4" />{activeClinic?.name ?? "—"}</span>
           <span className="flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4" />{format(now, "dd/MM/yyyy HH:mm", { locale: es })}</span>
         </div>
-        <Badge variant="outline">Turno actual</Badge>
+        <ShiftBadge shift={shift} />
       </div>
+
+      {/* Sin turno → solo pueden abrir turno (admin/manager pueden override desde gestión); cajero debe abrir */}
+      {!shiftLoading && !shift && (
+        <OpenShiftCard onOpened={(s) => setShift(s)} />
+      )}
 
       {/* Scanner unificado */}
       <form onSubmit={onScanSubmit} className="flex gap-2">
