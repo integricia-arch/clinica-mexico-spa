@@ -1622,19 +1622,28 @@ export type Database = {
         Row: {
           activo: boolean
           allow_direct_sale: boolean
+          barcode: string | null
           categoria: string
           clinic_id: string
+          codigo_interno: string | null
+          concentracion: string | null
           created_at: string
           descripcion: string | null
+          forma_farmaceutica: string | null
           id: string
           is_controlled: boolean
+          laboratorio: string | null
           nombre: string
           precio_unitario: number
+          presentacion: string | null
+          principio_activo: string | null
+          registro_sanitario: string | null
           regulatory_notes: string | null
           requires_prescription: boolean
           requires_retained_prescription: boolean
           requires_special_prescription: boolean
           sale_type: string
+          sku: string | null
           stock_minimo: number
           unidad: string
           updated_at: string
@@ -1642,19 +1651,28 @@ export type Database = {
         Insert: {
           activo?: boolean
           allow_direct_sale?: boolean
+          barcode?: string | null
           categoria?: string
           clinic_id?: string
+          codigo_interno?: string | null
+          concentracion?: string | null
           created_at?: string
           descripcion?: string | null
+          forma_farmaceutica?: string | null
           id?: string
           is_controlled?: boolean
+          laboratorio?: string | null
           nombre: string
           precio_unitario?: number
+          presentacion?: string | null
+          principio_activo?: string | null
+          registro_sanitario?: string | null
           regulatory_notes?: string | null
           requires_prescription?: boolean
           requires_retained_prescription?: boolean
           requires_special_prescription?: boolean
           sale_type?: string
+          sku?: string | null
           stock_minimo?: number
           unidad?: string
           updated_at?: string
@@ -1662,19 +1680,28 @@ export type Database = {
         Update: {
           activo?: boolean
           allow_direct_sale?: boolean
+          barcode?: string | null
           categoria?: string
           clinic_id?: string
+          codigo_interno?: string | null
+          concentracion?: string | null
           created_at?: string
           descripcion?: string | null
+          forma_farmaceutica?: string | null
           id?: string
           is_controlled?: boolean
+          laboratorio?: string | null
           nombre?: string
           precio_unitario?: number
+          presentacion?: string | null
+          principio_activo?: string | null
+          registro_sanitario?: string | null
           regulatory_notes?: string | null
           requires_prescription?: boolean
           requires_retained_prescription?: boolean
           requires_special_prescription?: boolean
           sale_type?: string
+          sku?: string | null
           stock_minimo?: number
           unidad?: string
           updated_at?: string
