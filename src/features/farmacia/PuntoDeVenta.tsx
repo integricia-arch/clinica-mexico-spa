@@ -26,7 +26,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { friendlyError } from "@/lib/errors";
-import { posPermissions, blockReasonForDirectSale, isPrescriptionScan, type Med } from "./permissions";
+import { posPermissions, blockReasonForDirectSale, isPrescriptionScan, DEMO_INFO_LEGEND, type Med } from "./permissions";
 import { TicketInterno, type TicketData } from "./TicketInterno";
 
 type Lote = {
@@ -490,6 +490,18 @@ export default function PuntoDeVenta({
                         <p className="text-[11px] text-destructive flex items-start gap-1">
                           <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />{reason}
                         </p>
+                      )}
+                      {(c.med.indicaciones_uso || c.med.contraindicaciones || c.med.advertencias || c.med.interacciones_relevantes) && (
+                        <details className="text-[11px] text-muted-foreground rounded border border-border/60 bg-muted/30 px-2 py-1">
+                          <summary className="cursor-pointer font-medium text-foreground">Información clínica</summary>
+                          <div className="space-y-1 pt-1.5">
+                            {c.med.indicaciones_uso && <p><strong>Indicaciones:</strong> {c.med.indicaciones_uso}</p>}
+                            {c.med.contraindicaciones && <p className="text-destructive"><strong>Contraindicaciones:</strong> {c.med.contraindicaciones}</p>}
+                            {c.med.advertencias && <p className="text-warning"><strong>Advertencias:</strong> {c.med.advertencias}</p>}
+                            {c.med.interacciones_relevantes && <p><strong>Interacciones:</strong> {c.med.interacciones_relevantes}</p>}
+                            <p className="italic opacity-80 pt-1 border-t border-border/40">{DEMO_INFO_LEGEND}</p>
+                          </div>
+                        </details>
                       )}
                       <div className="flex items-center gap-2 pt-1">
                         <Button size="icon" variant="outline" className="h-9 w-9" onClick={() => updateQty(i, -1)}>

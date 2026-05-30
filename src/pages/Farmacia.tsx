@@ -46,6 +46,12 @@ const EMPTY_MED = {
   requires_prescription: false,
   is_controlled: false,
   regulatory_notes: "",
+  indicaciones_uso: "",
+  contraindicaciones: "",
+  advertencias: "",
+  interacciones_relevantes: "",
+  fuente_info: "",
+  equivalence_group_key: "",
 };
 const EMPTY_MOV = { medicamento_id:"", lote_id:"", tipo:"entrada", cantidad:"", motivo:"", numero_lote:"", fecha_caducidad:"" };
 
@@ -135,6 +141,12 @@ export default function Farmacia() {
       requires_prescription: m.requires_prescription ?? false,
       is_controlled: m.is_controlled ?? false,
       regulatory_notes: m.regulatory_notes ?? "",
+      indicaciones_uso: (m as Medicamento & { indicaciones_uso?: string | null }).indicaciones_uso ?? "",
+      contraindicaciones: (m as Medicamento & { contraindicaciones?: string | null }).contraindicaciones ?? "",
+      advertencias: (m as Medicamento & { advertencias?: string | null }).advertencias ?? "",
+      interacciones_relevantes: (m as Medicamento & { interacciones_relevantes?: string | null }).interacciones_relevantes ?? "",
+      fuente_info: (m as Medicamento & { fuente_info?: string | null }).fuente_info ?? "",
+      equivalence_group_key: (m as Medicamento & { equivalence_group_key?: string | null }).equivalence_group_key ?? "",
     });
     setMedModal(true);
   }
@@ -169,6 +181,12 @@ export default function Farmacia() {
       requires_prescription: requiresRx,
       is_controlled: isControlled,
       regulatory_notes: medForm.regulatory_notes.trim() || null,
+      indicaciones_uso: medForm.indicaciones_uso.trim() || null,
+      contraindicaciones: medForm.contraindicaciones.trim() || null,
+      advertencias: medForm.advertencias.trim() || null,
+      interacciones_relevantes: medForm.interacciones_relevantes.trim() || null,
+      fuente_info: medForm.fuente_info.trim() || null,
+      equivalence_group_key: medForm.equivalence_group_key.trim() || null,
     };
     if (editMed) {
       const { data, error } = await supabase.from("medicamentos").update(payload).eq("id", editMed.id).select().single();
@@ -382,9 +400,44 @@ export default function Farmacia() {
                   {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                 </div>
 
-                {isOpen && (
+                {isOpen && (() => {
+                  const mx = med as Medicamento & {
+                    indicaciones_uso?: string | null; contraindicaciones?: string | null;
+                    advertencias?: string | null; interacciones_relevantes?: string | null;
+                    fuente_info?: string | null; equivalence_group_key?: string | null;
+                    principio_activo?: string | null; concentracion?: string | null;
+                    laboratorio?: string | null; presentacion?: string | null;
+                  };
+                  return (
                   <div className="border-t border-border px-5 py-4 bg-muted/10 space-y-3">
                     {med.descripcion && <p className="text-sm text-muted-foreground">{med.descripcion}</p>}
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {mx.principio_activo && <p><span className="font-semibold">Principio activo:</span> {mx.principio_activo} {mx.concentracion ?? ""}</p>}
+                      {mx.laboratorio && <p><span className="font-semibold">Laboratorio:</span> {mx.laboratorio}</p>}
+                      {mx.presentacion && <p><span className="font-semibold">Presentación:</span> {mx.presentacion}</p>}
+                      <p>
+                        <span className="font-semibold">Tipo:</span>{" "}
+                        <Badge variant={med.is_controlled ? "destructive" : med.requires_prescription ? "secondary" : "outline"}>
+                          {med.sale_type ?? "otc"}
+                        </Badge>
+                      </p>
+                    </div>
+
+                    {(mx.indicaciones_uso || mx.contraindicaciones || mx.advertencias || mx.interacciones_relevantes) && (
+                      <div className="space-y-1.5 rounded-lg border border-border bg-card p-3 text-xs">
+                        {mx.indicaciones_uso && <p><span className="font-semibold">Indicaciones:</span> {mx.indicaciones_uso}</p>}
+                        {mx.contraindicaciones && <p className="text-destructive"><span className="font-semibold">Contraindicaciones:</span> {mx.contraindicaciones}</p>}
+                        {mx.advertencias && <p className="text-warning"><span className="font-semibold">Advertencias:</span> {mx.advertencias}</p>}
+                        {mx.interacciones_relevantes && <p><span className="font-semibold">Interacciones:</span> {mx.interacciones_relevantes}</p>}
+                        {med.regulatory_notes && <p><span className="font-semibold">Notas regulatorias:</span> {med.regulatory_notes}</p>}
+                        {mx.fuente_info && <p className="italic text-muted-foreground">Fuente: {mx.fuente_info}</p>}
+                        <p className="italic text-muted-foreground border-t border-border/40 pt-1.5">
+                          Información demo operativa. Validar contra etiqueta, registro sanitario, IPP/etiquetado autorizado y responsable sanitario antes de operación real. No sustituye criterio médico.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold">Lotes ({lotesActivos.length})</p>
                       <p className="text-xs text-muted-foreground">Mínimo: {med.stock_minimo} {med.unidad}</p>
@@ -419,7 +472,8 @@ export default function Farmacia() {
                       </Button>
                     )}
                   </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}
@@ -566,10 +620,55 @@ export default function Farmacia() {
               </div>
             </div>
 
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Información clínica</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Indicaciones de uso</Label>
+                  <Textarea rows={2} value={medForm.indicaciones_uso}
+                    onChange={e => setMedForm(f => ({ ...f, indicaciones_uso: e.target.value }))}
+                    placeholder="Para qué se indica…" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Contraindicaciones</Label>
+                  <Textarea rows={2} value={medForm.contraindicaciones}
+                    onChange={e => setMedForm(f => ({ ...f, contraindicaciones: e.target.value }))}
+                    placeholder="Hipersensibilidad, embarazo…" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Advertencias</Label>
+                  <Textarea rows={2} value={medForm.advertencias}
+                    onChange={e => setMedForm(f => ({ ...f, advertencias: e.target.value }))}
+                    placeholder="Precauciones, riesgos…" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Interacciones relevantes</Label>
+                  <Textarea rows={2} value={medForm.interacciones_relevantes}
+                    onChange={e => setMedForm(f => ({ ...f, interacciones_relevantes: e.target.value }))}
+                    placeholder="Anticoagulantes, alcohol…" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Clave de equivalencia</Label>
+                  <Input value={medForm.equivalence_group_key}
+                    onChange={e => setMedForm(f => ({ ...f, equivalence_group_key: e.target.value }))}
+                    placeholder="paracetamol|500mg|tableta|oral" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Fuente de información</Label>
+                  <Input value={medForm.fuente_info}
+                    onChange={e => setMedForm(f => ({ ...f, fuente_info: e.target.value }))}
+                    placeholder="Etiqueta / IPP / proveedor…" />
+                </div>
+              </div>
+              <p className="text-[11px] italic text-muted-foreground">
+                Información demo operativa. Validar contra etiqueta, registro sanitario, IPP/etiquetado autorizado y responsable sanitario antes de operación real. No sustituye criterio médico.
+              </p>
+            </div>
+
             <div className="space-y-1.5">
-              <Label>Descripción / indicaciones</Label>
+              <Label>Descripción</Label>
               <Textarea value={medForm.descripcion} onChange={e => setMedForm(f => ({ ...f, descripcion: e.target.value }))}
-                placeholder="Indicaciones, observaciones..." rows={2} />
+                placeholder="Notas comerciales o adicionales..." rows={2} />
             </div>
           </div>
           <DialogFooter>
