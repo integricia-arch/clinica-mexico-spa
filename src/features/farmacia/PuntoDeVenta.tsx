@@ -29,6 +29,7 @@ import { friendlyError } from "@/lib/errors";
 import { posPermissions, blockReasonForDirectSale, isPrescriptionScan, DEMO_INFO_LEGEND, type Med } from "./permissions";
 import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
 import { PaymentCapture, emptyBreakdown, validatePayment, paymentsToRows, looksLikeFullCardNumber, type PaymentBreakdown } from "./PaymentCapture";
+import { OpenShiftCard, ShiftBadge, fetchCurrentShift, type Shift } from "./ShiftPanel";
 
 type Lote = {
   id: string;
