@@ -714,6 +714,7 @@ export default function PuntoDeVenta({
           </Button>
         </div>
       </div>
+      </>)}
 
       <TicketInterno open={ticketOpen} onClose={() => setTicketOpen(false)} data={ticketData} />
     </div>
