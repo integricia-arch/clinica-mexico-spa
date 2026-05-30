@@ -15,22 +15,29 @@ export default function PanelDoctor() {
   const isAdmin = roles.includes("admin");
   const [doctors, setDoctors] = useState<any[]>([]);
   const [doctorId, setDoctorId] = useState<string | null>(null);
+  const [doctorInfo, setDoctorInfo] = useState<any | null>(null);
   const [noDoctorProfile, setNoDoctorProfile] = useState(false);
 
   useEffect(() => {
     (async () => {
       if (isAdmin) {
-        const { data } = await supabase.from("doctors").select("id, nombre, apellidos, user_id").eq("activo", true);
+        const { data } = await supabase.from("doctors").select("id, nombre, apellidos, user_id, operational_status, operational_status_reason, operational_status_until").eq("activo", true);
         setDoctors(data ?? []);
         if (data && data.length > 0 && !doctorId) setDoctorId(data[0].id);
       } else if (user?.id) {
-        const { data } = await supabase.from("doctors").select("id").eq("user_id", user.id).maybeSingle();
-        if (data?.id) setDoctorId(data.id);
+        const { data } = await supabase.from("doctors").select("id, operational_status, operational_status_reason, operational_status_until").eq("user_id", user.id).maybeSingle();
+        if (data?.id) { setDoctorId(data.id); setDoctorInfo(data); }
         else setNoDoctorProfile(true);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin && doctorId) {
+      setDoctorInfo(doctors.find((d) => d.id === doctorId) ?? null);
+    }
+  }, [isAdmin, doctorId, doctors]);
 
   const { items, loading } = useDoctorQueue(doctorId);
   const selectedId = params.get("cita");
