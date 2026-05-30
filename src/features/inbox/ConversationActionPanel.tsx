@@ -39,41 +39,55 @@ interface LastAttempt {
 export function ConversationActionPanel(props: Props) {
   const [openAssign, setOpenAssign] = useState(false);
   const [openPatient, setOpenPatient] = useState(false);
+  const [openCall, setOpenCall] = useState(false);
   const [latest, setLatest] = useState<LatestAppt | null>(null);
+  const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
   const urgente = props.prioridad === "urgente";
   const sinPaciente = !props.patientId;
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await supabase
-        .from("appointments")
-        .select("id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
-        .eq("conversacion_id", props.conversacionId)
+  const fetchLatest = async () => {
+    const { data } = await supabase
+      .from("appointments")
+      .select("id, doctor_id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
+      .eq("conversacion_id", props.conversacionId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setLatest((data as LatestAppt | null) ?? null);
+    if (data?.id) {
+      const { data: att } = await supabase
+        .from("doctor_contact_attempts")
+        .select("status, channel, created_at")
+        .eq("appointment_id", data.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (active) setLatest((data as LatestAppt | null) ?? null);
-    })();
+      setLastAttempt((att as LastAttempt | null) ?? null);
+    } else {
+      setLastAttempt(null);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    fetchLatest();
     const ch = supabase
       .channel(`conv-appt-${props.conversacionId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `conversacion_id=eq.${props.conversacionId}` }, async () => {
-        const { data } = await supabase
-          .from("appointments")
-          .select("id, doctor_confirmation_status, doctor_confirmation_reason, fecha_inicio")
-          .eq("conversacion_id", props.conversacionId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (active) setLatest((data as LatestAppt | null) ?? null);
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `conversacion_id=eq.${props.conversacionId}` }, () => {
+        if (active) fetchLatest();
       })
       .subscribe();
     return () => { active = false; supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.conversacionId]);
 
   const declined = latest?.doctor_confirmation_status === "declined";
   const confirmed = latest?.doctor_confirmation_status === "confirmed";
   const pendingDoctor = latest?.doctor_confirmation_status === "pending";
+  const callPending = pendingDoctor && lastAttempt && ["no_answer","busy","callback_requested"].includes(lastAttempt.status);
+  const minutesPending = latest && pendingDoctor
+    ? Math.floor((Date.now() - new Date(latest.fecha_inicio).getTime()) / 60000)
+    : 0;
 
   return (
     <div className="border-b border-border bg-muted/30 p-3 space-y-2">
