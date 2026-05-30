@@ -6,6 +6,17 @@ import { es } from "date-fns/locale";
 const formatMXN = (n: number) =>
   n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
+export type TicketPaymentLine = {
+  method: "efectivo" | "tarjeta" | "transferencia";
+  amount: number;
+  card_brand?: string | null;
+  card_last4?: string | null;
+  authorization_code?: string | null;
+  terminal_id?: string | null;
+  transfer_reference?: string | null;
+  bank_name?: string | null;
+};
+
 export type TicketData = {
   folio: string;
   fecha: Date;
@@ -15,6 +26,7 @@ export type TicketData = {
   paciente?: string | null;
   recetaFolio?: string | null;
   metodoPago: string;
+  payments?: TicketPaymentLine[];
   items: { nombre: string; cantidad: number; precio: number }[];
   subtotal: number;
   descuento: number;
