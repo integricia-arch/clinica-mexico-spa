@@ -899,6 +899,7 @@ async function escalarConversacion(conv: any, { razon }: { razon: string }) {
   await supabase.from("conversaciones")
     .update({ status: "escalada", intencion_actual: "escalada" })
     .eq("id", conv.id);
+  await registrarAudit(conv, "conv_escalada", { razon });
   return { ok: true, escalada: true, razon };
 }
 
