@@ -2981,6 +2981,59 @@ export type Database = {
           },
         ]
       }
+      turnos: {
+        Row: {
+          abierto_at: string
+          caja_id: string
+          cajero_user_id: string
+          cerrado_at: string | null
+          clinic_id: string
+          created_at: string
+          estado: string
+          id: string
+          monto_apertura: number
+          notas_apertura: string | null
+          notas_cierre: string | null
+          updated_at: string
+        }
+        Insert: {
+          abierto_at?: string
+          caja_id: string
+          cajero_user_id: string
+          cerrado_at?: string | null
+          clinic_id: string
+          created_at?: string
+          estado?: string
+          id?: string
+          monto_apertura?: number
+          notas_apertura?: string | null
+          notas_cierre?: string | null
+          updated_at?: string
+        }
+        Update: {
+          abierto_at?: string
+          caja_id?: string
+          cajero_user_id?: string
+          cerrado_at?: string | null
+          clinic_id?: string
+          created_at?: string
+          estado?: string
+          id?: string
+          monto_apertura?: number
+          notas_apertura?: string | null
+          notas_cierre?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turnos_caja_id_fkey"
+            columns: ["caja_id"]
+            isOneToOne: false
+            referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -3146,6 +3199,7 @@ export type Database = {
         | "nurse"
         | "patient"
         | "manager"
+        | "cajero"
       appointment_status:
         | "solicitada"
         | "tentativa"
@@ -3388,6 +3442,7 @@ export const Constants = {
         "nurse",
         "patient",
         "manager",
+        "cajero",
       ],
       appointment_status: [
         "solicitada",
