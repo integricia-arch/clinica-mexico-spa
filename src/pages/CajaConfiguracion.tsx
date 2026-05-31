@@ -62,12 +62,13 @@ export default function CajaConfiguracion() {
       nombre: form.nombre.trim(),
       descripcion: form.descripcion.trim() || null,
       fondo_default: form.fondo_default,
+      es_farmacia: form.es_farmacia,
     });
     setSaving(false);
     if (error) { toast.error("No se pudo crear la caja"); return; }
     toast.success("Caja creada");
     setModalOpen(false);
-    setForm({ nombre: "", descripcion: "", fondo_default: 0 });
+    setForm({ nombre: "", descripcion: "", fondo_default: 0, es_farmacia: false });
     load();
   };
 
