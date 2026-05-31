@@ -5,11 +5,12 @@ import {
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
   CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
   MessageCircle, BellRing, ClipboardList, UserCog, Stethoscope,
+  CreditCard, Timer,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient";
+type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient" | "manager" | "cajero";
 
 interface NavItem {
   to: string;
@@ -110,6 +111,18 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "receptionist"],
   },
   {
+    to: "/configuracion/caja",
+    icon: CreditCard,
+    label: "Caja · Configuración",
+    roles: ["admin", "manager"],
+  },
+  {
+    to: "/caja/turno",
+    icon: Timer,
+    label: "Caja · Turno",
+    roles: ["admin", "manager", "cajero"],
+  },
+  {
     to: "/configuracion",
     icon: Settings,
     label: "Configuración",
@@ -123,6 +136,8 @@ const ROLE_LABELS: Record<AppRole, string> = {
   doctor: "Médico",
   nurse: "Enfermería",
   patient: "Paciente",
+  manager: "Supervisor",
+  cajero: "Cajero",
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

@@ -3113,6 +3113,7 @@ export type Database = {
         | "nurse"
         | "patient"
         | "manager"
+        | "cajero"
       appointment_status:
         | "solicitada"
         | "tentativa"
@@ -3355,6 +3356,7 @@ export const Constants = {
         "nurse",
         "patient",
         "manager",
+        "cajero",
       ],
       appointment_status: [
         "solicitada",
