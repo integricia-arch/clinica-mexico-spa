@@ -21,6 +21,7 @@ interface Turno {
   estado: string;
   monto_apertura: number;
   abierto_at: string;
+  pharmacy_shift_id: string | null;
 }
 
 export default function CajaTurno() {
