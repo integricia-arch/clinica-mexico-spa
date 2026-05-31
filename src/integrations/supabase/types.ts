@@ -306,6 +306,39 @@ export type Database = {
           },
         ]
       }
+      cajas: {
+        Row: {
+          activo: boolean
+          clinic_id: string
+          created_at: string
+          descripcion: string | null
+          fondo_default: number
+          id: string
+          nombre: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          clinic_id: string
+          created_at?: string
+          descripcion?: string | null
+          fondo_default?: number
+          id?: string
+          nombre: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          clinic_id?: string
+          created_at?: string
+          descripcion?: string | null
+          fondo_default?: number
+          id?: string
+          nombre?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clinic_memberships: {
         Row: {
           clinic_id: string
