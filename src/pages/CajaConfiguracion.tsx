@@ -15,6 +15,7 @@ interface Caja {
   descripcion: string | null;
   fondo_default: number;
   activo: boolean;
+  es_farmacia: boolean;
 }
 
 export default function CajaConfiguracion() {
@@ -26,7 +27,7 @@ export default function CajaConfiguracion() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ nombre: "", descripcion: "", fondo_default: 0 });
+  const [form, setForm] = useState({ nombre: "", descripcion: "", fondo_default: 0, es_farmacia: false });
 
   const load = async () => {
     if (!activeClinic?.id) return;
