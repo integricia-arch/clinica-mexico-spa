@@ -21,6 +21,7 @@ interface Turno {
   estado: string;
   monto_apertura: number;
   abierto_at: string;
+  pharmacy_shift_id: string | null;
 }
 
 export default function CajaTurno() {
@@ -124,6 +125,11 @@ export default function CajaTurno() {
               <p className="text-xs text-muted-foreground">
                 Abierto: {new Date(turnoActivo.abierto_at).toLocaleString("es-MX")} — Fondo: ${turnoActivo.monto_apertura.toFixed(2)} MXN
               </p>
+              {turnoActivo.pharmacy_shift_id && (
+                <p className="text-xs text-primary mt-1">
+                  Vinculado al POS Farmacia. Cierra primero el corte en <strong>Farmacia</strong> antes de cerrar este turno.
+                </p>
+              )}
             </div>
           </div>
           <div>

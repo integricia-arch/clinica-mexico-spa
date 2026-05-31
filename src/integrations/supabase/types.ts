@@ -312,6 +312,7 @@ export type Database = {
           clinic_id: string
           created_at: string
           descripcion: string | null
+          es_farmacia: boolean
           fondo_default: number
           id: string
           nombre: string
@@ -322,6 +323,7 @@ export type Database = {
           clinic_id: string
           created_at?: string
           descripcion?: string | null
+          es_farmacia?: boolean
           fondo_default?: number
           id?: string
           nombre: string
@@ -332,6 +334,7 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           descripcion?: string | null
+          es_farmacia?: boolean
           fondo_default?: number
           id?: string
           nombre?: string
@@ -2994,6 +2997,7 @@ export type Database = {
           monto_apertura: number
           notas_apertura: string | null
           notas_cierre: string | null
+          pharmacy_shift_id: string | null
           updated_at: string
         }
         Insert: {
@@ -3008,6 +3012,7 @@ export type Database = {
           monto_apertura?: number
           notas_apertura?: string | null
           notas_cierre?: string | null
+          pharmacy_shift_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -3022,6 +3027,7 @@ export type Database = {
           monto_apertura?: number
           notas_apertura?: string | null
           notas_cierre?: string | null
+          pharmacy_shift_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3030,6 +3036,13 @@ export type Database = {
             columns: ["caja_id"]
             isOneToOne: false
             referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_pharmacy_shift_id_fkey"
+            columns: ["pharmacy_shift_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_cash_shifts"
             referencedColumns: ["id"]
           },
         ]
