@@ -162,6 +162,17 @@ export default function CajaConfiguracion() {
                 onChange={(e) => setForm({ ...form, fondo_default: parseFloat(e.target.value) || 0 })}
               />
             </div>
+            <label className="flex items-start gap-2 rounded-lg border border-border bg-background px-3 py-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={form.es_farmacia}
+                onChange={(e) => setForm({ ...form, es_farmacia: e.target.checked })}
+              />
+              <span className="text-xs text-foreground">
+                <strong>Caja de farmacia (POS).</strong> Al abrir turno en esta caja, se abrirá automáticamente el turno del Punto de Venta de Farmacia para el mismo cajero.
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Button>
