@@ -102,7 +102,12 @@ export default function CajaConfiguracion() {
             {cajas.map((caja) => (
               <div key={caja.id} className="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3">
                 <div>
-                  <p className="text-sm font-medium text-foreground">{caja.nombre}</p>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    {caja.nombre}
+                    {caja.es_farmacia && (
+                      <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary">Farmacia POS</span>
+                    )}
+                  </p>
                   {caja.descripcion && <p className="text-xs text-muted-foreground">{caja.descripcion}</p>}
                   <p className="text-xs text-muted-foreground">Fondo inicial: ${caja.fondo_default.toFixed(2)} MXN</p>
                 </div>
