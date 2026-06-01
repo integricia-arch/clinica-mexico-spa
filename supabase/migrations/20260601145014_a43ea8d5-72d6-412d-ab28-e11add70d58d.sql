@@ -1,0 +1,2 @@
+ALTER TABLE public.appointments DROP CONSTRAINT appointments_origen_check;
+ALTER TABLE public.appointments ADD CONSTRAINT appointments_origen_check CHECK (origen = ANY (ARRAY['telegram','whatsapp','web','walk_in','inbox','recepcion','manual']));
