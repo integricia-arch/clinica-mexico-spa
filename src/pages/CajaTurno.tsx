@@ -49,6 +49,7 @@ export default function CajaTurno() {
 
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [turnoActivo, setTurnoActivo] = useState<Turno | null>(null);
+  const [auditLog, setAuditLog] = useState<LinkAudit[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cajaId, setCajaId] = useState("");
@@ -59,14 +60,20 @@ export default function CajaTurno() {
     if (!activeClinic?.id || !user?.id) return;
     setLoading(true);
 
-    const [{ data: cajasData }, { data: turnoData }] = await Promise.all([
+    const [{ data: cajasData }, { data: turnoData }, { data: auditData }] = await Promise.all([
       supabase.from("cajas").select("id, nombre, fondo_default").eq("clinic_id", activeClinic.id).eq("activo", true).order("nombre"),
       supabase.from("turnos").select("*").eq("clinic_id", activeClinic.id).eq("cajero_user_id", user.id).eq("estado", "abierto").maybeSingle(),
+      (supabase as any).from("turno_pharmacy_link_audit")
+        .select("id, turno_id, caja_id, pharmacy_shift_id, action, reason, created_at")
+        .eq("clinic_id", activeClinic.id)
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
     const cajasList = (cajasData as Caja[]) ?? [];
     setCajas(cajasList);
     setTurnoActivo((turnoData as Turno | null) ?? null);
+    setAuditLog((auditData as LinkAudit[]) ?? []);
 
     if (cajasList[0] && !cajaId) {
       setCajaId(cajasList[0].id);
