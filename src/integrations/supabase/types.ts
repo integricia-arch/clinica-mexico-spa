@@ -2984,6 +2984,45 @@ export type Database = {
           },
         ]
       }
+      turno_pharmacy_link_audit: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          caja_id: string
+          cajero_user_id: string
+          clinic_id: string
+          created_at: string
+          id: string
+          pharmacy_shift_id: string | null
+          reason: string | null
+          turno_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          caja_id: string
+          cajero_user_id: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          pharmacy_shift_id?: string | null
+          reason?: string | null
+          turno_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          caja_id?: string
+          cajero_user_id?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          pharmacy_shift_id?: string | null
+          reason?: string | null
+          turno_id?: string
+        }
+        Relationships: []
+      }
       turnos: {
         Row: {
           abierto_at: string
