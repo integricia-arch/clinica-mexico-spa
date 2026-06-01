@@ -220,6 +220,32 @@ export default function CajaTurno() {
           </Button>
         </div>
       )}
+
+      <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+        <h2 className="font-semibold text-card-foreground mb-1">Historial de enlace con POS Farmacia</h2>
+        <p className="text-xs text-muted-foreground mb-4">Últimos 20 eventos de vinculación entre turnos de caja y cortes de farmacia en esta clínica.</p>
+        {auditLog.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sin eventos registrados aún.</p>
+        ) : (
+          <ul className="divide-y divide-border text-sm">
+            {auditLog.map((a) => {
+              const meta = ACTION_LABELS[a.action] ?? { label: a.action, tone: "text-muted-foreground bg-muted" };
+              return (
+                <li key={a.id} className="py-3 flex items-start gap-3">
+                  <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${meta.tone}`}>{meta.label}</span>
+                  <div className="flex-1 min-w-0">
+                    {a.reason && <p className="text-foreground">{a.reason}</p>}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {new Date(a.created_at).toLocaleString("es-MX")}
+                      {a.pharmacy_shift_id && <> · corte <code className="font-mono">{a.pharmacy_shift_id.slice(0, 8)}</code></>}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
