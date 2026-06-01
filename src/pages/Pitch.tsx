@@ -50,7 +50,7 @@ const PITCH_STYLES = `
   .pr-flow-h{display:flex!important;}
   .pr-flow-v{display:none!important;}
   .pr-tech-grid{grid-template-columns:1fr 1fr!important;}
-  .pr-testi-grid{grid-template-columns:repeat(3,1fr)!important;}
+  .pr-testi-grid{grid-template-columns:repeat(2,1fr)!important;}
 }
 `;
 
@@ -190,6 +190,13 @@ const pricing = [
 
 const testimonials = [
   {
+    photoUrl: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=400&auto=format&fit=crop&crop=face",
+    name: "Dr. Carlos Ramírez",
+    role: "Médico Internista",
+    clinic: "Clínica Ramírez · Puebla",
+    quote: "La agenda multi-doctor y el bot 24/7 nos permitieron atender el doble de pacientes sin contratar más personal de recepción.",
+  },
+  {
     photoUrl: "https://images.unsplash.com/photo-1638202993928-7267aad84c31?q=80&w=400&auto=format&fit=crop&crop=face",
     name: "Dra. María Rodríguez",
     role: "Directora Médica",
@@ -242,10 +249,10 @@ function PricingCardInner({ plan }: { plan: typeof pricing[0] }) {
         <span className="pr-h" style={{ fontSize: 42, fontWeight: 800, color: plan.featured ? TEAL : "#0f172a", letterSpacing: "-0.04em" }}>{plan.price}</span>
         {plan.period && <span style={{ fontSize: 13, color: SLATE }}>{plan.period}</span>}
       </div>
-      <a href="mailto:contacto@integrika.mx?subject=Plan%20ClinicaMX" style={{ display: "block", marginBottom: 24 }}>
-        <button className={`pr-btn ${plan.featured ? "pr-btn-p" : "pr-btn-o"}`} style={{ width: "100%", justifyContent: "center" }}>
-          {plan.cta}
-        </button>
+      <a href={`mailto:pablo@integrika.com.mx?subject=Plan%20Cl%C3%ADnicaMX%20-%20${encodeURIComponent(plan.name)}`}
+        className={`pr-btn ${plan.featured ? "pr-btn-p" : "pr-btn-o"}`}
+        style={{ display: "flex", width: "100%", justifyContent: "center", marginBottom: 24, boxSizing: "border-box" }}>
+        {plan.cta}
       </a>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {plan.features.map((f) => (
@@ -291,8 +298,9 @@ export default function Pitch() {
             ))}
           </nav>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <a href="mailto:contacto@integrika.mx?subject=Demo%20ClinicaMX">
-              <button className="pr-btn pr-btn-p" style={{ padding: "10px 20px", fontSize: 13 }}>Demo gratuita <ArrowRight size={14} /></button>
+            <a href="mailto:pablo@integrika.com.mx?subject=Demo%20Cl%C3%ADnicaMX"
+              className="pr-btn pr-btn-p" style={{ padding: "10px 20px", fontSize: 13 }}>
+              Demo gratuita <ArrowRight size={14} />
             </a>
             <button className="pr-mob-btn"
               style={{ background: "transparent", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#0f172a" }}
@@ -334,12 +342,11 @@ export default function Pitch() {
                 <strong style={{ color: "#0f172a" }}>Hecho para clínicas mexicanas.</strong>
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 36 }}>
-                <a href="mailto:contacto@integrika.mx?subject=Demo%20ClinicaMX">
-                  <button className="pr-btn pr-btn-p">Solicitar demo en vivo <ArrowRight size={16} /></button>
+                <a href="mailto:pablo@integrika.com.mx?subject=Demo%20Cl%C3%ADnicaMX"
+                  className="pr-btn pr-btn-p">
+                  Solicitar demo en vivo <ArrowRight size={16} />
                 </a>
-                <Link to="/">
-                  <button className="pr-btn pr-btn-o">Ver dashboard</button>
-                </Link>
+                <Link to="/" className="pr-btn pr-btn-o">Ver dashboard</Link>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 20, fontSize: 13, color: "#64748b" }}>
                 {["Sin instalación", "Onboarding en 48 h", "Datos en México"].map((t) => (
@@ -782,11 +789,13 @@ export default function Pitch() {
               Te mostramos el sistema completo con datos reales en una llamada de 30 minutos.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center", marginBottom: 36 }}>
-              <a href="mailto:contacto@integrika.mx?subject=Demo%20ClinicaMX">
-                <button className="pr-btn" style={{ background: "#fff", color: TEAL, fontSize: 16, padding: "16px 36px", fontWeight: 700 }}>Agendar demo <ArrowRight size={18} /></button>
+              <a href="mailto:pablo@integrika.com.mx?subject=Demo%20Cl%C3%ADnicaMX"
+                className="pr-btn" style={{ background: "#fff", color: TEAL, fontSize: 16, padding: "16px 36px", fontWeight: 700 }}>
+                Agendar demo <ArrowRight size={18} />
               </a>
-              <a href="mailto:contacto@integrika.mx?subject=One-pager%20ClinicaMX">
-                <button className="pr-btn" style={{ background: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,.4)", fontSize: 16, padding: "16px 36px" }}>Descargar one-pager</button>
+              <a href="mailto:pablo@integrika.com.mx?subject=Solicitar%20one-pager%20Cl%C3%ADnicaMX"
+                className="pr-btn" style={{ background: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,.4)", fontSize: 16, padding: "16px 36px" }}>
+                Solicitar one-pager
               </a>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 24, fontSize: 13, color: "rgba(255,255,255,.7)" }}>

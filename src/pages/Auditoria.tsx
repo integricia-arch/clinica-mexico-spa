@@ -42,14 +42,6 @@ const MODULOS = ["Todos", "Agenda", "Expedientes", "Farmacia", "Facturación"] a
 export default function Auditoria() {
   const { hasRole } = useAuth();
   const [rows, setRows] = useState<AuditRow[]>([]);
-
-  if (!hasRole("admin")) {
-    return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        Acceso restringido a administradores.
-      </div>
-    );
-  }
   const [loading, setLoading] = useState(true);
   const [modulo, setModulo] = useState<(typeof MODULOS)[number]>("Todos");
 
@@ -65,6 +57,14 @@ export default function Auditoria() {
       setLoading(false);
     })();
   }, []);
+
+  if (!hasRole("admin")) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        Acceso restringido a administradores.
+      </div>
+    );
+  }
 
   const filtradas = rows.filter((r) => {
     if (modulo === "Todos") return true;

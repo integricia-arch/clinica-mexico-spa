@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
     tabla: "appointments",
     registro_id: appt.id,
     accion: "notif_doctor",
-    datos_nuevos: { ok: emailOk, motivo: emailReason, email: doctorEmail },
+    datos_nuevos: { ok: emailOk, motivo: emailReason },
     clinic_id: appt.clinic_id,
   });
 
