@@ -32,3 +32,13 @@ supabase/.temp/
 # Audit artifacts
 AUDITORIA_*.txt
 auditar_*.ps1
+
+# Temp de debugging (Claude/build)
+_build_*.txt
+_build_*.cmd
+dist_integrika.zip
+
+# Config local de herramientas
+.claude/
+.agents/
+skills-lock.json
