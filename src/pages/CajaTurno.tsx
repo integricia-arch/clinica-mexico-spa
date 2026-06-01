@@ -24,6 +24,25 @@ interface Turno {
   pharmacy_shift_id: string | null;
 }
 
+interface LinkAudit {
+  id: string;
+  turno_id: string;
+  caja_id: string;
+  pharmacy_shift_id: string | null;
+  action: string;
+  reason: string | null;
+  created_at: string;
+}
+
+const ACTION_LABELS: Record<string, { label: string; tone: string }> = {
+  linked_existing: { label: "Reutilizó corte abierto", tone: "text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/20" },
+  created_new: { label: "Creó corte de farmacia", tone: "text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-900/20" },
+  skipped_not_pharmacy: { label: "Caja no es de farmacia", tone: "text-muted-foreground bg-muted" },
+  blocked_close_pharmacy_open: { label: "Cierre bloqueado: corte farmacia abierto", tone: "text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-900/20" },
+  manual_link: { label: "Enlace manual", tone: "text-blue-700 bg-blue-50" },
+  manual_unlink: { label: "Desenlace manual", tone: "text-amber-700 bg-amber-50" },
+};
+
 export default function CajaTurno() {
   const { user } = useAuth();
   const { activeClinic } = useActiveClinic();
