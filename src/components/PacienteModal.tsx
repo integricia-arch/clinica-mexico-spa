@@ -89,6 +89,22 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
       toast({ variant: "destructive", title: "Error", description: "Nombre y apellidos son requeridos" });
       return;
     }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      toast({ variant: "destructive", title: "Error", description: "Correo electrónico inválido" });
+      return;
+    }
+    if (form.curp && !/^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[A-Z0-9]{2}$/.test(form.curp.toUpperCase())) {
+      toast({ variant: "destructive", title: "Error", description: "CURP inválido (18 caracteres, formato oficial)" });
+      return;
+    }
+    if (form.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(form.rfc.toUpperCase())) {
+      toast({ variant: "destructive", title: "Error", description: "RFC inválido (12-13 caracteres)" });
+      return;
+    }
+    if (form.codigo_postal && !/^\d{5}$/.test(form.codigo_postal)) {
+      toast({ variant: "destructive", title: "Error", description: "Código postal debe tener 5 dígitos" });
+      return;
+    }
 
     setLoading(true);
     const payload = {

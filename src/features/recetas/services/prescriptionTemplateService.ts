@@ -56,6 +56,11 @@ export async function getOrCreateTemplate(doctorId: string): Promise<DoctorPresc
 }
 
 export async function saveTemplate(id: string, patch: TemplatePatch): Promise<void> {
+  const doctorId = await getCurrentDoctorId();
+  if (!doctorId) throw new Error("No autenticado como doctor");
+  const { data: tpl } = await supabase
+    .from("doctor_prescription_templates").select("doctor_id").eq("id", id).maybeSingle();
+  if (!tpl || tpl.doctor_id !== doctorId) throw new Error("Sin permiso para modificar este machote");
   const { error } = await supabase
     .from("doctor_prescription_templates")
     .update(patch)
@@ -100,12 +105,18 @@ export async function publishTemplateVersion(
 }
 
 /** Sube un asset (logo/firma) al bucket doctor-assets bajo {doctor_id}/{kind}.{ext} */
+const ALLOWED_IMG_EXT = ["png", "jpg", "jpeg", "webp", "svg"];
+const ALLOWED_IMG_MIME = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+
 export async function uploadDoctorAsset(
   doctorId: string,
   kind: "logo" | "firma",
   file: File,
 ): Promise<string> {
-  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+  if (!ALLOWED_IMG_EXT.includes(ext)) throw new Error("Tipo de archivo no permitido. Usa PNG, JPG, WEBP o SVG.");
+  if (!ALLOWED_IMG_MIME.includes(file.type)) throw new Error("Tipo MIME no permitido.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("El archivo no debe superar 5 MB.");
   const path = `${doctorId}/${kind}.${ext}`;
   const { error } = await supabase.storage
     .from("doctor-assets")

@@ -71,7 +71,7 @@ export function useDashboardData(date: Date) {
         doctorIds.length ? supabase.from("doctors").select("id,nombre,apellidos,especialidad").in("id", doctorIds) : Promise.resolve({ data: [] }),
         roomIds.length ? supabase.from("rooms").select("id,nombre,piso").in("id", roomIds) : Promise.resolve({ data: [] }),
         servicioIds.length ? supabase.from("servicios").select("id,nombre,duracion_minutos").in("id", servicioIds) : Promise.resolve({ data: [] }),
-        apIds.length ? supabase.from("journey_instances").select("*").in("appointment_id", apIds) : Promise.resolve({ data: [] }),
+        apIds.length ? supabase.from("journey_instances").select("id, appointment_id, status, snapshot_json").in("appointment_id", apIds) : Promise.resolve({ data: [] }),
         patientIds.length ? supabase.from("expedientes").select("id,patient_id,activo,tipo").in("patient_id", patientIds).eq("activo", true) : Promise.resolve({ data: [] }),
         patientIds.length ? supabase.from("consentimientos").select("id,patient_id,tipo,otorgado,otorgado_at").in("patient_id", patientIds).eq("otorgado", true) : Promise.resolve({ data: [] }),
         supabase.from("recordatorios_cita").select("*").gte("programado_para", start).lt("programado_para", new Date(date.getTime() + 7 * 86400000).toISOString()).order("programado_para").limit(50),
@@ -118,7 +118,7 @@ export function useDashboardData(date: Date) {
       });
     } catch (e: any) {
       console.error("[Dashboard] loadDashboardData error", e);
-      setError(e.message || "Error al cargar el panel");
+      setError("Error al cargar el panel de control");
     } finally {
       setLoading(false);
     }
@@ -127,13 +127,21 @@ export function useDashboardData(date: Date) {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedLoad = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => load(), 1500);
+    };
     const ch = supabase
       .channel("dashboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "journey_instances" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "recordatorios_cita" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments" }, debouncedLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "journey_instances" }, debouncedLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "recordatorios_cita" }, debouncedLoad)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(ch);
+    };
   }, [load]);
 
   return { data, loading, error, reload: load };
