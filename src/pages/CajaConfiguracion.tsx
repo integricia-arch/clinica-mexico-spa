@@ -15,6 +15,7 @@ interface Caja {
   descripcion: string | null;
   fondo_default: number;
   activo: boolean;
+  es_farmacia: boolean;
 }
 
 export default function CajaConfiguracion() {
@@ -26,7 +27,7 @@ export default function CajaConfiguracion() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ nombre: "", descripcion: "", fondo_default: 0 });
+  const [form, setForm] = useState({ nombre: "", descripcion: "", fondo_default: 0, es_farmacia: false });
 
   const load = async () => {
     if (!activeClinic?.id) return;
@@ -61,12 +62,13 @@ export default function CajaConfiguracion() {
       nombre: form.nombre.trim(),
       descripcion: form.descripcion.trim() || null,
       fondo_default: form.fondo_default,
+      es_farmacia: form.es_farmacia,
     });
     setSaving(false);
     if (error) { toast.error("No se pudo crear la caja"); return; }
     toast.success("Caja creada");
     setModalOpen(false);
-    setForm({ nombre: "", descripcion: "", fondo_default: 0 });
+    setForm({ nombre: "", descripcion: "", fondo_default: 0, es_farmacia: false });
     load();
   };
 
@@ -100,7 +102,12 @@ export default function CajaConfiguracion() {
             {cajas.map((caja) => (
               <div key={caja.id} className="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3">
                 <div>
-                  <p className="text-sm font-medium text-foreground">{caja.nombre}</p>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    {caja.nombre}
+                    {caja.es_farmacia && (
+                      <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary">Farmacia POS</span>
+                    )}
+                  </p>
                   {caja.descripcion && <p className="text-xs text-muted-foreground">{caja.descripcion}</p>}
                   <p className="text-xs text-muted-foreground">Fondo inicial: ${caja.fondo_default.toFixed(2)} MXN</p>
                 </div>
@@ -155,6 +162,17 @@ export default function CajaConfiguracion() {
                 onChange={(e) => setForm({ ...form, fondo_default: parseFloat(e.target.value) || 0 })}
               />
             </div>
+            <label className="flex items-start gap-2 rounded-lg border border-border bg-background px-3 py-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={form.es_farmacia}
+                onChange={(e) => setForm({ ...form, es_farmacia: e.target.checked })}
+              />
+              <span className="text-xs text-foreground">
+                <strong>Caja de farmacia (POS).</strong> Al abrir turno en esta caja, se abrirá automáticamente el turno del Punto de Venta de Farmacia para el mismo cajero.
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Button>

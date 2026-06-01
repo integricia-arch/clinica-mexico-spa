@@ -21,7 +21,27 @@ interface Turno {
   estado: string;
   monto_apertura: number;
   abierto_at: string;
+  pharmacy_shift_id: string | null;
 }
+
+interface LinkAudit {
+  id: string;
+  turno_id: string;
+  caja_id: string;
+  pharmacy_shift_id: string | null;
+  action: string;
+  reason: string | null;
+  created_at: string;
+}
+
+const ACTION_LABELS: Record<string, { label: string; tone: string }> = {
+  linked_existing: { label: "Reutilizó corte abierto", tone: "text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/20" },
+  created_new: { label: "Creó corte de farmacia", tone: "text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-900/20" },
+  skipped_not_pharmacy: { label: "Caja no es de farmacia", tone: "text-muted-foreground bg-muted" },
+  blocked_close_pharmacy_open: { label: "Cierre bloqueado: corte farmacia abierto", tone: "text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-900/20" },
+  manual_link: { label: "Enlace manual", tone: "text-blue-700 bg-blue-50" },
+  manual_unlink: { label: "Desenlace manual", tone: "text-amber-700 bg-amber-50" },
+};
 
 export default function CajaTurno() {
   const { user } = useAuth();
@@ -29,6 +49,7 @@ export default function CajaTurno() {
 
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [turnoActivo, setTurnoActivo] = useState<Turno | null>(null);
+  const [auditLog, setAuditLog] = useState<LinkAudit[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cajaId, setCajaId] = useState("");
@@ -39,14 +60,20 @@ export default function CajaTurno() {
     if (!activeClinic?.id || !user?.id) return;
     setLoading(true);
 
-    const [{ data: cajasData }, { data: turnoData }] = await Promise.all([
+    const [{ data: cajasData }, { data: turnoData }, { data: auditData }] = await Promise.all([
       supabase.from("cajas").select("id, nombre, fondo_default").eq("clinic_id", activeClinic.id).eq("activo", true).order("nombre"),
       supabase.from("turnos").select("*").eq("clinic_id", activeClinic.id).eq("cajero_user_id", user.id).eq("estado", "abierto").maybeSingle(),
+      (supabase as any).from("turno_pharmacy_link_audit")
+        .select("id, turno_id, caja_id, pharmacy_shift_id, action, reason, created_at")
+        .eq("clinic_id", activeClinic.id)
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
     const cajasList = (cajasData as Caja[]) ?? [];
     setCajas(cajasList);
     setTurnoActivo((turnoData as Turno | null) ?? null);
+    setAuditLog((auditData as LinkAudit[]) ?? []);
 
     if (cajasList[0] && !cajaId) {
       setCajaId(cajasList[0].id);
@@ -124,6 +151,11 @@ export default function CajaTurno() {
               <p className="text-xs text-muted-foreground">
                 Abierto: {new Date(turnoActivo.abierto_at).toLocaleString("es-MX")} — Fondo: ${turnoActivo.monto_apertura.toFixed(2)} MXN
               </p>
+              {turnoActivo.pharmacy_shift_id && (
+                <p className="text-xs text-primary mt-1">
+                  Vinculado al POS Farmacia. Cierra primero el corte en <strong>Farmacia</strong> antes de cerrar este turno.
+                </p>
+              )}
             </div>
           </div>
           <div>
@@ -188,6 +220,32 @@ export default function CajaTurno() {
           </Button>
         </div>
       )}
+
+      <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+        <h2 className="font-semibold text-card-foreground mb-1">Historial de enlace con POS Farmacia</h2>
+        <p className="text-xs text-muted-foreground mb-4">Últimos 20 eventos de vinculación entre turnos de caja y cortes de farmacia en esta clínica.</p>
+        {auditLog.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sin eventos registrados aún.</p>
+        ) : (
+          <ul className="divide-y divide-border text-sm">
+            {auditLog.map((a) => {
+              const meta = ACTION_LABELS[a.action] ?? { label: a.action, tone: "text-muted-foreground bg-muted" };
+              return (
+                <li key={a.id} className="py-3 flex items-start gap-3">
+                  <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${meta.tone}`}>{meta.label}</span>
+                  <div className="flex-1 min-w-0">
+                    {a.reason && <p className="text-foreground">{a.reason}</p>}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {new Date(a.created_at).toLocaleString("es-MX")}
+                      {a.pharmacy_shift_id && <> · corte <code className="font-mono">{a.pharmacy_shift_id.slice(0, 8)}</code></>}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
