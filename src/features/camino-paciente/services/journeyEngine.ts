@@ -145,7 +145,7 @@ export async function openJourneyStep(
 ): Promise<JourneyServiceResult<{ step_id: string }>> {
   const { data: step, error } = await supabase
     .from("journey_instance_steps")
-    .select("*")
+    .select("id, journey_instance_id, step_order, status, opened_at, opened_by, step_key")
     .eq("id", stepId)
     .maybeSingle();
   if (error || !step) return { ok: false, error: "Hito no encontrado" };
@@ -228,7 +228,7 @@ export async function closeJourneyStep(
 ): Promise<JourneyServiceResult> {
   const { data: step } = await supabase
     .from("journey_instance_steps")
-    .select("*")
+    .select("id, journey_instance_id, step_order, step_key")
     .eq("id", stepId)
     .maybeSingle();
   if (!step) return { ok: false, error: "Hito no encontrado" };
@@ -343,34 +343,15 @@ export async function requestStepOverride(
   return { ok: true };
 }
 
-/** 7. Autorizar override (solo admin) */
+/** 7. Autorizar override (solo admin) — validado en DB via SECURITY DEFINER */
 export async function authorizeStepOverride(
   overrideId: string,
 ): Promise<JourneyServiceResult> {
-  const { data: ov } = await supabase
-    .from("journey_instance_overrides")
-    .select("*")
-    .eq("id", overrideId)
-    .maybeSingle();
-  if (!ov) return { ok: false, error: "Override no encontrado" };
-  if (ov.status !== "requested") return { ok: false, error: "Override ya procesado" };
-
-  const { data: userData } = await supabase.auth.getUser();
-  const now = new Date().toISOString();
-
-  const { error: ue1 } = await supabase
-    .from("journey_instance_overrides")
-    .update({ status: "authorized", authorized_by: userData.user?.id, authorized_at: now })
-    .eq("id", overrideId);
-  if (ue1) return { ok: false, error: ue1.message };
-
-  await supabase
-    .from("journey_instance_steps")
-    .update({ status: "override_authorized", closed_at: now, closed_by: userData.user?.id })
-    .eq("id", ov.journey_instance_step_id);
-
-  await supabase.rpc("update_journey_progress", { _journey_instance_id: ov.journey_instance_id });
-  return { ok: true };
+  const { data, error } = await supabase.rpc("authorize_step_override", {
+    p_override_id: overrideId,
+  });
+  if (error) return { ok: false, error: error.message };
+  return (data as JourneyServiceResult) ?? { ok: false, error: "Sin respuesta del servidor" };
 }
 
 /** 8. Asignar responsable */

@@ -14,6 +14,20 @@ const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY    = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// In-memory rate limiter: key → { count, resetAt }
+const _rateMap = new Map<string, { count: number; resetAt: number }>();
+function checkRateLimit(key: string, maxReq: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = _rateMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    _rateMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= maxReq) return false;
+  entry.count++;
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -34,9 +48,21 @@ Deno.serve(async (req) => {
     });
     if (!isAdmin) return json({ error: "forbidden" }, 403);
 
+    const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+    const adminId = userData.user.id;
+
     let body: any = {};
     try { body = await req.json(); } catch { /* GET o vacío */ }
     const action: string = body?.action ?? "list";
+
+    // Mutating actions: 10 requests per 15 min per admin
+    const mutatingActions = ["create", "set_password", "link_doctor_user", "delete", "update"];
+    if (mutatingActions.includes(action)) {
+      const key = `${action}:${adminId}:${ip}`;
+      if (!checkRateLimit(key, 10, 15 * 60 * 1000)) {
+        return json({ error: "Demasiadas solicitudes. Intenta de nuevo en 15 minutos." }, 429);
+      }
+    }
 
     // Helper para detectar admins permanentes (no se les puede cambiar contraseña masiva)
     const getPermanentAdminEmails = async (): Promise<Set<string>> => {
@@ -74,7 +100,7 @@ Deno.serve(async (req) => {
     if (action === "create") {
       const { email, password, roles } = body as { email?: string; password?: string; roles?: string[] };
       if (!email || !password) return json({ error: "email y contraseña son requeridos" }, 400);
-      if (password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+      if (password.length < 12) return json({ error: "La contraseña debe tener al menos 12 caracteres" }, 400);
 
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email,
@@ -102,36 +128,15 @@ Deno.serve(async (req) => {
     if (action === "set_password") {
       const { user_id, password } = body as { user_id?: string; password?: string };
       if (!user_id || !password) return json({ error: "user_id y contraseña son requeridos" }, 400);
-      if (password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+      if (password.length < 12) return json({ error: "La contraseña debe tener al menos 12 caracteres" }, 400);
       const { error: pErr } = await admin.auth.admin.updateUserById(user_id, { password });
       if (pErr) throw pErr;
       return json({ ok: true });
     }
 
     if (action === "set_base_password_all") {
-      const { password } = body as { password?: string };
-      if (!password || password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
-
-      const permanent = await getPermanentAdminEmails();
-      const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      if (listErr) throw listErr;
-
-      let updated = 0;
-      let skipped = 0;
-      const errors: string[] = [];
-      for (const u of list?.users ?? []) {
-        if (u.email && permanent.has(u.email.toLowerCase())) {
-          skipped++;
-          continue;
-        }
-        const { error: pErr } = await admin.auth.admin.updateUserById(u.id, { password });
-        if (pErr) {
-          errors.push(`${u.email}: ${pErr.message}`);
-        } else {
-          updated++;
-        }
-      }
-      return json({ ok: true, updated, skipped, errors });
+      // Desactivado: reset masivo sin auditoría ni re-auth es vector de insider threat.
+      return json({ error: "Acción deshabilitada. Usa la consola de Supabase para operaciones masivas." }, 410);
     }
 
     if (action === "link_doctor_user") {
@@ -144,7 +149,7 @@ Deno.serve(async (req) => {
       let userId = existing_user_id;
       if (!userId) {
         if (!email || !password) return json({ error: "email y contraseña requeridos para crear cuenta" }, 400);
-        if (password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+        if (password.length < 12) return json({ error: "La contraseña debe tener al menos 12 caracteres" }, 400);
         // Si ya existe un usuario con ese email, reutilízalo
         const { data: existing } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
         const found = existing?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
