@@ -150,7 +150,8 @@ export default function PuntoDeVenta({
       return;
     }
     const t = setTimeout(async () => {
-      const q = patientSearch.trim();
+      const q = patientSearch.trim().replace(/[%(),]/g, "");
+      if (!q) return;
       const { data } = await supabase
         .from("patients")
         .select("id, nombre, apellidos")

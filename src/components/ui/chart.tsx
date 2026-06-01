@@ -75,7 +75,9 @@ ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    const safeKey = /^[a-z0-9-]+$/i.test(key) ? key : null;
+    const safeColor = color && /^(#[0-9a-fA-F]{3,8}|[a-z][a-z0-9-]*)$/.test(color) ? color : null;
+    return safeKey && safeColor ? `  --color-${safeKey}: ${safeColor};` : null;
   })
   .join("\n")}
 }
