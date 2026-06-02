@@ -236,6 +236,10 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
   }
 
   const sesion = await obtenerSesion(conv.id);
+  if (sesion?.flow_step === "await_confirm") {
+    await enviarTelegram(chatId, "Usa los botones de arriba para confirmar o cancelar tu cita.");
+    return mostrarConfirmacion(chatId, conv);
+  }
   if (sesion?.flow_step && pasoEsperaTexto(sesion.flow_step)) {
     return manejarTextoWizard(chatId, conv, sesion, text);
   }
