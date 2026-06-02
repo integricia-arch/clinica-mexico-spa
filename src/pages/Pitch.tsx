@@ -41,7 +41,6 @@ const PITCH_STYLES = `
   .pr-nav-links{display:flex!important;}
   .pr-mob-btn{display:none!important;}
   .pr-hero-grid{grid-template-columns:1fr 1fr!important;}
-  .pr-hero-card{display:block!important;}
   .pr-stats-grid{grid-template-columns:repeat(4,1fr)!important;}
   .pr-mod-grid{grid-template-columns:repeat(3,1fr)!important;}
   .pr-farm-grid{grid-template-columns:repeat(3,1fr)!important;}
@@ -52,6 +51,7 @@ const PITCH_STYLES = `
   .pr-tech-grid{grid-template-columns:1fr 1fr!important;}
   .pr-testi-grid{grid-template-columns:repeat(2,1fr)!important;}
 }
+.pr-hero-card{display:block;}
 `;
 
 // ── AnimatedCounter ────────────────────────────────────────────────────────────
@@ -358,7 +358,7 @@ export default function Pitch() {
             </motion.div>
 
             {/* Right: dashboard mockup */}
-            <motion.div className="pr-hero-card" style={{ display: "none" }}
+            <motion.div className="pr-hero-card"
               initial={{ opacity: 0, x: 32 }} animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             >

@@ -347,11 +347,11 @@ export async function requestStepOverride(
 export async function authorizeStepOverride(
   overrideId: string,
 ): Promise<JourneyServiceResult> {
-  const { data, error } = await supabase.rpc("authorize_step_override", {
+  const { data, error } = await (supabase.rpc as any)("authorize_step_override", {
     p_override_id: overrideId,
   });
   if (error) return { ok: false, error: error.message };
-  return (data as JourneyServiceResult) ?? { ok: false, error: "Sin respuesta del servidor" };
+  return (data as unknown as JourneyServiceResult) ?? { ok: false, error: "Sin respuesta del servidor" };
 }
 
 /** 8. Asignar responsable */
