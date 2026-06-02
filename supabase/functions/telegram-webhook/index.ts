@@ -123,7 +123,7 @@ async function procesarUpdate(update: any) {
 async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
   const identidad = await obtenerOCrearIdentidad(chatId, rawMsg.from);
 
-  if (text === "/nueva") {
+  if (text === "/nueva" || text === "/nuevo") {
     const { data: conv, error } = await supabase
       .from("conversaciones").insert({ identidad_canal_id: identidad.id }).select("*").single();
     if (error) throw error;
@@ -159,7 +159,7 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     await supabase.from("conversaciones").update(updates).eq("id", conv.id);
 
     let triage = detectarUrgencia(text ?? "");
-    if (!triage.urgente) {
+    if (!triage.urgente && (text ?? "").trim().length >= 10) {
       const llm = await triageLLM(text ?? "");
       if (llm.urgente) triage = { urgente: true, motivo: llm.motivo, dolor: triage.dolor, tipo: llm.tipo };
     }
@@ -217,7 +217,7 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
 
   // Triage en ruta activa (conv no escalada)
   let triageActivo = detectarUrgencia(text ?? "");
-  if (!triageActivo.urgente) {
+  if (!triageActivo.urgente && (text ?? "").trim().length >= 10) {
     const llm = await triageLLM(text ?? "");
     if (llm.urgente) triageActivo = { urgente: true, motivo: llm.motivo, dolor: triageActivo.dolor, tipo: llm.tipo };
   }
@@ -993,10 +993,14 @@ async function ejecutarAgenteLoop(conv: any, chatId: string, messages: any[]): P
       const toolUses = resp.content.filter((b: any) => b.type === "tool_use");
       messages.push({ role: "assistant", content: resp.content });
       const toolResults: any[] = [];
+      let menuEnviado = false;
       for (const tu of toolUses) {
         const result = await ejecutarToolClaude(tu.name, tu.input, conv, chatId);
         toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result), is_error: !!result.error });
+        if (tu.name === "mostrar_menu_principal" || tu.name === "mostrar_menu_categorias") menuEnviado = true;
       }
+      // Menu tools send their own Telegram message — don't let agent add text on top
+      if (menuEnviado) return "";
       messages.push({ role: "user", content: toolResults });
       continue;
     }
