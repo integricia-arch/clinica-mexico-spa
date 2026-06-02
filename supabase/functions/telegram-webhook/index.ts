@@ -727,7 +727,25 @@ async function iniciarCapturaPaciente(chatId: string, conv: any, slotKey: string
   const nuevoData = { ...(sesion?.flow_data ?? {}), fecha_local: slot.fecha_local, doctor_nombre: slot.doctor_nombre, slot_fecha_iso: slot.fecha_inicio };
   delete (nuevoData as any).slots;
 
-  await upsertSesion(conv.id, { doctor_id: slot.doctor_id, slot_propuesto: slot.fecha_inicio, flow_step: "await_nombre", flow_data: nuevoData });
+  await upsertSesion(conv.id, { doctor_id: slot.doctor_id, slot_propuesto: slot.fecha_inicio, flow_data: nuevoData });
+
+  // Si ya conocemos al paciente, pre-llenar y saltar al consentimiento
+  const { data: identidad } = await supabase.from("identidades_canal").select("patient_id").eq("id", conv.identidad_canal_id).single();
+  if (identidad?.patient_id) {
+    const { data: pac } = await supabase.from("patients").select("nombre, apellidos, fecha_nacimiento, sexo").eq("id", identidad.patient_id).single();
+    if (pac?.nombre && pac?.apellidos) {
+      const borrador = { nombre: pac.nombre, apellidos: pac.apellidos, fecha_nacimiento: pac.fecha_nacimiento ?? null, sexo: pac.sexo ?? null };
+      await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_consent" });
+      const resumenPac = `*${pac.nombre} ${pac.apellidos}*${pac.fecha_nacimiento ? ` · ${formatFechaMX(pac.fecha_nacimiento)}` : ""}${pac.sexo ? ` · ${pac.sexo}` : ""}`;
+      return enviarTelegramConBotones(
+        chatId,
+        `Reservado: *${nuevoData.fecha_local}* con *${nuevoData.doctor_nombre}*.\n\n✅ Te reconocemos: ${resumenPac}\n\nTus datos se usan únicamente para tu atención médica, conforme a la NOM-004-SSA3-2012 y la LFPDPPP. ¿Aceptas?`,
+        [[{ text: "✅ Sí, acepto", callback_data: "consent:yes" }, { text: "❌ No", callback_data: "consent:no" }]]
+      );
+    }
+  }
+
+  await upsertSesion(conv.id, { flow_step: "await_nombre" });
   await enviarTelegramConBotones(
     chatId,
     `Reservado: *${nuevoData.fecha_local}* con *${nuevoData.doctor_nombre}*.\n\nNecesito 4 datos. Primero: ¿cuál es tu *nombre*?`,
@@ -746,13 +764,18 @@ async function manejarTextoWizard(chatId: string, conv: any, sesion: any, text: 
   switch (sesion.flow_step) {
     case "await_nombre": {
       const v = text.trim();
-      if (v.length < 2) return enviarTelegram(chatId, "Necesito un nombre válido.");
+      const palabras = v.split(/\s+/);
+      const pareceNombre = v.length >= 2 && v.length <= 30 && palabras.length <= 3 && /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s\-']+$/i.test(v);
+      if (!pareceNombre) return enviarTelegramConBotones(chatId, "Solo escribe tu *nombre*, por ejemplo: María\n¿Cuál es tu nombre?", [[{ text: "❌ Cancelar", callback_data: "menu_principal:" }]]);
       borrador.nombre = v;
       await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_apellidos" });
       return enviarTelegram(chatId, "Gracias. ¿Tus *apellidos*?");
     }
     case "await_apellidos": {
       const v = text.trim();
+      const palabrasAp = v.split(/\s+/);
+      const pareceApellido = v.length >= 2 && v.length <= 40 && palabrasAp.length <= 3 && /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s\-']+$/i.test(v);
+      if (!pareceApellido) return enviarTelegram(chatId, "Solo escribe tus *apellidos*, por ejemplo: García López");
       if (v.length < 2) return enviarTelegram(chatId, "Necesito apellidos válidos.");
       borrador.apellidos = v;
       await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_fecha", flow_data: { ...data, fecha_intentos: 0 } });
@@ -1239,14 +1262,25 @@ const MESES_ES: Record<string, number> = {
 };
 
 function inferirAño(yy: number): number {
+  // Para fechas de nacimiento: 2-digit year → siempre 19xx
+  // Excepción: 00-09 podría ser 2000-2009 para pacientes menores de 26 años
   const añoActual = new Date().getFullYear();
-  return yy <= (añoActual % 100) + 1 ? 2000 + yy : 1900 + yy;
+  const como2000 = 2000 + yy;
+  const como1900 = 1900 + yy;
+  // Si 2000+yy daría edad negativa o menos de 6 meses, usar 1900+yy
+  if (como2000 > añoActual - 1) return como1900;
+  // Para yy 00-09 (2000-2009) el paciente tendría 17-26 años → válido
+  if (yy <= 9) return como2000;
+  // Para yy 10-99 usar 1900+yy siempre (pacientes de 26+ años)
+  return como1900;
 }
 
 function validarYFormatear(dd: number, mm: number, yyyy: number): string | null {
   if (!Number.isInteger(dd) || !Number.isInteger(mm) || !Number.isInteger(yyyy)) return null;
   if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
-  if (yyyy < 1900 || yyyy > new Date().getFullYear()) return null;
+  // Fecha de nacimiento: mínimo 1 año de antigüedad, máximo 120 años
+  const añoActual = new Date().getFullYear();
+  if (yyyy < añoActual - 120 || yyyy > añoActual - 1) return null;
   const d = new Date(Date.UTC(yyyy, mm - 1, dd));
   if (d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 || d.getUTCDate() !== dd) return null;
   return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
