@@ -78,8 +78,10 @@ export function QuickPatientDialog({
         .limit(8);
       const filters: string[] = [];
       if (tel.length >= 6) filters.push(`telefono.ilike.%${tel}%`);
-      if (nombre.trim().length >= 2) filters.push(`nombre.ilike.%${nombre.trim()}%`);
-      if (apellidos.trim().length >= 2) filters.push(`apellidos.ilike.%${apellidos.trim()}%`);
+      const safeNombre = nombre.trim().replace(/[%(),]/g, "");
+      const safeApellidos = apellidos.trim().replace(/[%(),]/g, "");
+      if (safeNombre.length >= 2) filters.push(`nombre.ilike.%${safeNombre}%`);
+      if (safeApellidos.length >= 2) filters.push(`apellidos.ilike.%${safeApellidos}%`);
       if (filters.length) q = q.or(filters.join(","));
       const { data } = await q;
       setMatches((data ?? []) as PatientMatch[]);

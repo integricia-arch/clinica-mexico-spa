@@ -46,9 +46,12 @@ export async function restInsert(table: string, body: object) {
   return Array.isArray(data) ? data[0] : data;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function restUpdate(table: string, id: string, body: object) {
+  if (!UUID_RE.test(id)) throw new Error("Invalid id");
   const headers = await getHeaders();
-  const res = await fetch(buildUrl(table, `id=eq.${id}`), {
+  const res = await fetch(buildUrl(table, `id=eq.${encodeURIComponent(id)}`), {
     method: "PATCH",
     headers,
     body: JSON.stringify(body),
