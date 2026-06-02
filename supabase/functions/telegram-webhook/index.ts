@@ -37,12 +37,16 @@ const CATEGORIAS: Record<string, { label: string; especialidades: string[] }> = 
   lab:    { label: "🔬 Estudios y laboratorio", especialidades: ["Laboratorio", "Imagenología"] },
 };
 
-const SYSTEM_PROMPT = `Eres el asistente virtual de ClínicaMX, una clínica multiespecialidad en México.
+const SYSTEM_PROMPT = `Eres el asistente virtual de AGENDAMIENTO de ClínicaMX, una clínica multiespecialidad en México.
+
+TU ROL: Ayudar a agendar citas, informar horarios/precios/ubicación y conectar con recepción. NO eres médico ni personal de salud. No puedes ni debes dar consejos, diagnósticos ni interpretaciones médicas.
 
 REGLAS DURAS:
 - Hablas español mexicano natural, cálido y profesional. Mensajes cortos (1-3 oraciones).
-- NUNCA das consejo médico. Si el paciente describe síntomas: "Eso lo valora mejor el doctor en consulta. ¿Te ayudo a agendar?"
-- Urgencia (dolor severo, sangrado, reacción alérgica): usa escalar_a_humano y pide llamar al 911.
+- NUNCA das consejo, diagnóstico ni interpretación médica. Si alguien describe síntomas: "Para eso necesitas hablar con el doctor en consulta. ¿Te ayudo a agendar?"
+- Si preguntan si tienen X enfermedad, si un medicamento es correcto, o qué significa un resultado: "Eso solo puede responderlo tu médico. ¿Te agendo una consulta?"
+- Si alguien te pregunta si eres humano o médico: responde siempre que eres un asistente virtual de agendamiento, no personal médico.
+- Si la situación parece urgente o la persona necesita apoyo humano inmediato: usa escalar_a_humano y dile que recepción la contactará.
 - Para agendar: llama mostrar_menu_categorias. NO listes servicios en texto plano.
 - Para texto libre como "limpieza", "muela": busca con buscar_servicios y propón con botones.
 - Para consultas generales (precios, horarios, ubicación, preparación): responde 1-2 oraciones y ofrece opciones.
@@ -197,7 +201,7 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
   if (text === "/start") {
     await guardarMensajeUsuario(conv.id, text, rawMsg);
     await limpiarSesion(conv.id);
-    const bienvenida = "¡Hola! Soy el asistente de ClínicaMX. Te ayudo 24/7. ¿En qué te puedo ayudar hoy?";
+    const bienvenida = "¡Hola! Soy el asistente virtual de agendamiento de ClínicaMX 🤖\n\nPuedo ayudarte a agendar citas, consultar horarios y precios, y conectarte con recepción. No soy médico ni puedo dar consejos de salud.\n\n¿En qué te puedo ayudar hoy?";
     await guardarMensajeAsistente(conv.id, bienvenida);
     await enviarMenuPrincipal(chatId, bienvenida);
     return;
@@ -355,9 +359,9 @@ Criterios:
 
 function mensajeContencion(tipo: TipoUrgencia | undefined): string {
   if (tipo === "mental") {
-    return "Entiendo que estás pasando por un momento muy difícil. No estás solo/a — recepción ya fue notificada y te contactará de inmediato.\n\n🆘 Si estás en crisis ahora mismo, puedes llamar a SAPTEL: 55 5259-8121 (24 horas, gratuito).";
+    return "Recepción ya fue notificada y te contactará en breve para orientarte.\n\n🆘 Si necesitas hablar con alguien ahora mismo: SAPTEL 55 5259-8121 (24 hrs, gratuito) — son especialistas que pueden ayudarte.\n\nEste asistente es solo de agendamiento y no puede darte atención médica.";
   }
-  return "Si el dolor es intenso o tienes síntomas graves, llama al 911. Recepción ya está atendiendo tu caso.";
+  return "Recepción ya fue notificada y te contactará en breve. Si tienes una emergencia médica, llama al 911. Este asistente es solo de agendamiento.";
 }
 
 async function registrarAudit(conv: any, accion: string, datos: any) {
