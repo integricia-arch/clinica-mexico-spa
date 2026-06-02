@@ -1,13 +1,11 @@
 // =================================================================
-// supabase/functions/telegram-webhook/index.ts  (v8)
+// supabase/functions/telegram-webhook/index.ts  (v9)
 //
-// v8: Mejoras de UX basadas en mejores modelos de atención a clientes
-//     - Menú principal expandido: consulta abierta + otro + ver cita + cancelar
-//     - Botón "🧑 Hablar con alguien" en TODAS las pantallas
-//     - Consulta abierta: Claude sin forzar flujo de booking
-//     - Opción "Otro" siempre disponible → Claude / escalación
-//     - Ver mi cita: consulta estado de citas activas
-//     - Cancelar cita: cancela desde el bot
+// v9: Triage de salud mental + LLM safety net
+//     - Regex de crisis mental: voces, autolesión, ideación suicida
+//     - detectarUrgencia retorna tipo "fisica" | "mental"
+//     - Mensajes de contención diferenciados por tipo
+//     - LLM triage como safety net cuando regex no dispara
 // =================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -156,15 +154,21 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     }
     await supabase.from("conversaciones").update(updates).eq("id", conv.id);
 
-    const triage = detectarUrgencia(text ?? "");
+    let triage = detectarUrgencia(text ?? "");
+    if (!triage.urgente) {
+      const llm = await triageLLM(text ?? "");
+      if (llm.urgente) triage = { urgente: true, motivo: llm.motivo, dolor: triage.dolor, tipo: llm.tipo };
+    }
     if (triage.urgente) {
       const yaUrgente = conv.prioridad === "urgente" || flow.urgent_notice_sent === true;
       if (!yaUrgente) {
         await supabase.from("conversaciones").update({
-          prioridad: "urgente", motivo_resumen: triage.motivo ?? null, dolor_intensidad: triage.dolor ?? null,
+          prioridad: "urgente",
+          motivo_resumen: triage.motivo ?? null,
+          dolor_intensidad: triage.dolor ?? null,
         }).eq("id", conv.id);
-        await registrarAudit(conv, "prioridad_urgente", { motivo: triage.motivo, dolor: triage.dolor });
-        const aviso = "Si el dolor es intenso o tienes síntomas graves, llama al 911. Recepción ya está atendiendo tu caso.";
+        await registrarAudit(conv, "prioridad_urgente", { motivo: triage.motivo, dolor: triage.dolor, tipo: triage.tipo });
+        const aviso = mensajeContencion(triage.tipo);
         await guardarMensajeAsistente(conv.id, aviso);
         await enviarTelegram(chatId, aviso);
         await supabase.from("conversaciones").update({ last_bot_ack_at: new Date().toISOString() }).eq("id", conv.id);
@@ -206,6 +210,26 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
   }
 
   await guardarMensajeUsuario(conv.id, text, rawMsg);
+
+  // Triage en ruta activa (conv no escalada)
+  let triageActivo = detectarUrgencia(text ?? "");
+  if (!triageActivo.urgente) {
+    const llm = await triageLLM(text ?? "");
+    if (llm.urgente) triageActivo = { urgente: true, motivo: llm.motivo, dolor: triageActivo.dolor, tipo: llm.tipo };
+  }
+  if (triageActivo.urgente) {
+    await escalarConversacion(conv, { razon: triageActivo.motivo ?? "triage automático" });
+    await supabase.from("conversaciones").update({
+      prioridad: "urgente",
+      motivo_resumen: triageActivo.motivo ?? null,
+      dolor_intensidad: triageActivo.dolor ?? null,
+    }).eq("id", conv.id);
+    await registrarAudit(conv, "prioridad_urgente_activo", { motivo: triageActivo.motivo, tipo: triageActivo.tipo });
+    const aviso = mensajeContencion(triageActivo.tipo);
+    await guardarMensajeAsistente(conv.id, aviso);
+    await enviarTelegram(chatId, aviso);
+    return;
+  }
 
   const sesion = await obtenerSesion(conv.id);
   if (sesion?.flow_step && pasoEsperaTexto(sesion.flow_step)) {
@@ -266,7 +290,7 @@ async function enviarMenuCategorias(chatId: string, header: string) {
 // ============================================================
 // TRIAGE
 // ============================================================
-const URGENCIA_REGEX = [
+const URGENCIA_REGEX_FISICA = [
   /\bdificultad (para )?respirar\b/i, /\bme cuesta respirar\b/i, /\bno puedo respirar\b/i,
   /\bdolor (en el|de) pecho\b/i, /\bdolor tor[áa]cico\b/i, /\bsangrad[oa]\b/i,
   /\bme estoy desmayando\b/i, /\bperd[ií] (la )?conciencia\b/i, /\bdesmay[oé]\b/i,
@@ -274,7 +298,21 @@ const URGENCIA_REGEX = [
   /\bno puedo hablar\b/i, /\bvis[ií]on borrosa\b/i, /\bse me duerme (medio )?cuerpo\b/i,
 ];
 
-function detectarUrgencia(text: string): { urgente: boolean; motivo?: string; dolor?: number } {
+const URGENCIA_REGEX_MENTAL = [
+  /\bescucho voces\b/i, /\bveo cosas\b/i, /\bme hablan (en la cabeza|voces)\b/i,
+  /\bme quiero (morir|matar|suicidar)\b/i, /\bquiero morirme\b/i, /\bno quiero vivir\b/i,
+  /\bpensando en (suicidarme|matarme|morirme)\b/i, /\bideaci[oó]n suicida\b/i,
+  /\bme quiero hacer da[ñn]o\b/i, /\bme (voy|voy a) (lastimar|cortar|hacer da[ñn]o)\b/i,
+  /\bya no (aguanto|puedo m[aá]s|soporto)\b/i, /\bno (tengo|encuentro|veo) salida\b/i,
+  /\btodo se (acabó|acab[oó])\b/i, /\bme siento (muy mal|terrible|desesperado)\b/i,
+  /\bcrisis (de ansiedad|de p[aá]nico|nerviosa)\b/i,
+  /\bme estoy volviendo loco\b/i, /\bperd[ií] (la )?raz[oó]n\b/i,
+  /\bno (sé|se) quien soy\b/i, /\bestoy disociado\b/i,
+];
+
+type TipoUrgencia = "fisica" | "mental";
+
+function detectarUrgencia(text: string): { urgente: boolean; motivo?: string; dolor?: number; tipo?: TipoUrgencia } {
   const t = (text ?? "").toLowerCase();
   let dolor: number | undefined;
   const m1 = t.match(/\b(?:dolor|intensidad|nivel)\D{0,8}(\d{1,2})\b/);
@@ -282,9 +320,44 @@ function detectarUrgencia(text: string): { urgente: boolean; motivo?: string; do
   const m3 = t.match(/^\s*(\d{1,2})\s*$/);
   const cand = m1?.[1] ?? m2?.[1] ?? m3?.[1];
   if (cand) { const n = parseInt(cand, 10); if (n >= 0 && n <= 10) dolor = n; }
-  if (dolor !== undefined && dolor >= 8) return { urgente: true, motivo: `Dolor reportado ${dolor}/10`, dolor };
-  for (const rx of URGENCIA_REGEX) { const m = t.match(rx); if (m) return { urgente: true, motivo: m[0], dolor }; }
+  if (dolor !== undefined && dolor >= 8) return { urgente: true, motivo: `Dolor reportado ${dolor}/10`, dolor, tipo: "fisica" };
+  for (const rx of URGENCIA_REGEX_MENTAL) { const m = t.match(rx); if (m) return { urgente: true, motivo: m[0], dolor, tipo: "mental" }; }
+  for (const rx of URGENCIA_REGEX_FISICA) { const m = t.match(rx); if (m) return { urgente: true, motivo: m[0], dolor, tipo: "fisica" }; }
   return { urgente: false, dolor };
+}
+
+async function triageLLM(text: string): Promise<{ urgente: boolean; tipo?: TipoUrgencia; motivo?: string }> {
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 100,
+        system: `Eres un sistema de triage médico. Analiza si el mensaje indica una emergencia médica o crisis de salud mental.
+Responde SOLO con JSON válido: {"urgente": true/false, "tipo": "fisica"|"mental"|null, "motivo": "frase breve o null"}
+Criterios:
+- urgente=true FÍSICA: dolor severo, dificultad respirar, sangrado, pérdida conciencia, síntomas neurológicos agudos
+- urgente=true MENTAL: ideación suicida, autolesión, alucinaciones activas, crisis disociativa, pánico severo
+- urgente=false: todo lo demás`,
+        messages: [{ role: "user", content: `Mensaje del paciente: "${text.slice(0, 300)}"` }],
+      }),
+    });
+    if (!res.ok) return { urgente: false };
+    const data = await res.json();
+    const raw = data.content?.[0]?.text ?? "{}";
+    const parsed = JSON.parse(raw);
+    return { urgente: !!parsed.urgente, tipo: parsed.tipo ?? undefined, motivo: parsed.motivo ?? undefined };
+  } catch {
+    return { urgente: false };
+  }
+}
+
+function mensajeContencion(tipo: TipoUrgencia | undefined): string {
+  if (tipo === "mental") {
+    return "Entiendo que estás pasando por un momento muy difícil. No estás solo/a — recepción ya fue notificada y te contactará de inmediato.\n\n🆘 Si estás en crisis ahora mismo, puedes llamar a SAPTEL: 55 5259-8121 (24 horas, gratuito).";
+  }
+  return "Si el dolor es intenso o tienes síntomas graves, llama al 911. Recepción ya está atendiendo tu caso.";
 }
 
 async function registrarAudit(conv: any, accion: string, datos: any) {
