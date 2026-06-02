@@ -21,7 +21,6 @@ export default function ResetPassword() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Detectar error en el hash (link expirado, inválido, etc.)
     const hash = window.location.hash;
     if (hash.includes("error=") || hash.includes("error_code=")) {
       const params = new URLSearchParams(hash.replace("#", ""));
@@ -32,10 +31,17 @@ export default function ResetPassword() {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setStatus("ready");
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setStatus("ready");
     });
 
-    // Timeout: si en 5s no llega PASSWORD_RECOVERY, mostrar error
+    // Si el hash contiene tokens (magiclink o recovery), establecer sesión manualmente
+    const hashParams = new URLSearchParams(hash.replace("#", ""));
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+    if (accessToken && refreshToken) {
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    }
+
     const t = setTimeout(() => {
       setStatus((s) => s === "checking" ? "error" : s);
       setErrorMsg("No se pudo verificar el enlace. Solicita uno nuevo.");
@@ -46,8 +52,8 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast({ variant: "destructive", title: "Error", description: "La contraseña debe tener al menos 6 caracteres." });
+    if (password.length < 12) {
+      toast({ variant: "destructive", title: "Error", description: "La contraseña debe tener al menos 12 caracteres." });
       return;
     }
     if (password !== confirm) {
