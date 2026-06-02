@@ -358,7 +358,7 @@ export default function Pitch() {
             </motion.div>
 
             {/* Right: dashboard mockup */}
-            <motion.div className="pr-hero-card" style={{ display: "none" }}
+            <motion.div className="pr-hero-card"
               initial={{ opacity: 0, x: 32 }} animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             >
