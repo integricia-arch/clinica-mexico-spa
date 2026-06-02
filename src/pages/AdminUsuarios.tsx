@@ -221,8 +221,8 @@ export default function AdminUsuarios() {
     if (!createEmail || !createPassword) {
       toast.error("Correo y contraseña requeridos"); return;
     }
-    if (createPassword.length < 8) {
-      toast.error("La contraseña debe tener al menos 8 caracteres"); return;
+    if (createPassword.length < 12) {
+      toast.error("La contraseña debe tener al menos 12 caracteres"); return;
     }
     setCreating(true);
     const { data, error } = await supabase.functions.invoke("admin-users", {
@@ -257,7 +257,7 @@ export default function AdminUsuarios() {
 
   const handleSetPassword = async () => {
     if (!pwUser || !pwValue) return;
-    if (pwValue.length < 8) { toast.error("Mínimo 8 caracteres"); return; }
+    if (pwValue.length < 12) { toast.error("Mínimo 12 caracteres"); return; }
     setSavingPw(true);
     const { data, error } = await supabase.functions.invoke("admin-users", {
       body: { action: "set_password", user_id: pwUser.id, password: pwValue },
@@ -288,7 +288,7 @@ export default function AdminUsuarios() {
   };
 
   const handleApplyBase = async () => {
-    if (basePw.length < 8) { toast.error("Mínimo 8 caracteres"); return; }
+    if (basePw.length < 12) { toast.error("Mínimo 12 caracteres"); return; }
     setApplyingBase(true);
     const { data, error } = await supabase.functions.invoke("admin-users", {
       body: { action: "set_base_password_all", password: basePw },
@@ -327,7 +327,7 @@ export default function AdminUsuarios() {
       if (!linkExistingUserId) { setLinking(false); toast.error("Selecciona un usuario"); return; }
       payload.existing_user_id = linkExistingUserId;
     } else {
-      if (!linkEmail || linkPassword.length < 8) { setLinking(false); toast.error("Correo y contraseña (8+) requeridos"); return; }
+      if (!linkEmail || linkPassword.length < 12) { setLinking(false); toast.error("Correo y contraseña (mínimo 12 caracteres) requeridos"); return; }
       payload.email = linkEmail;
       payload.password = linkPassword;
     }
@@ -903,7 +903,7 @@ export default function AdminUsuarios() {
                 </div>
                 <div>
                   <Label>Contraseña inicial</Label>
-                  <Input type="text" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="mínimo 8 caracteres" />
+                  <Input type="text" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="mínimo 12 caracteres" />
                 </div>
               </>
             ) : (
@@ -943,7 +943,7 @@ export default function AdminUsuarios() {
             </div>
             <div>
               <Label>Contraseña inicial</Label>
-              <Input type="text" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="mínimo 8 caracteres" />
+              <Input type="text" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="mínimo 12 caracteres" />
             </div>
             <div>
               <Label>Rol</Label>
@@ -999,7 +999,7 @@ export default function AdminUsuarios() {
           <div className="space-y-3">
             <div>
               <Label>Nueva contraseña</Label>
-              <Input type="text" value={pwValue} onChange={(e) => setPwValue(e.target.value)} placeholder="mínimo 8 caracteres" />
+              <Input type="text" value={pwValue} onChange={(e) => setPwValue(e.target.value)} placeholder="mínimo 12 caracteres" />
             </div>
           </div>
           <DialogFooter>
@@ -1022,7 +1022,7 @@ export default function AdminUsuarios() {
           <div className="space-y-3">
             <div>
               <Label>Contraseña base</Label>
-              <Input type="text" value={basePw} onChange={(e) => setBasePw(e.target.value)} placeholder="mínimo 8 caracteres" />
+              <Input type="text" value={basePw} onChange={(e) => setBasePw(e.target.value)} placeholder="mínimo 12 caracteres" />
             </div>
           </div>
           <DialogFooter>
