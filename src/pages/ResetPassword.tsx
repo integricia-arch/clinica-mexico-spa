@@ -105,13 +105,13 @@ export default function ResetPassword() {
                 <div className="space-y-2">
                   <Label htmlFor="password">Nueva contraseña</Label>
                   <Input id="password" type="password" placeholder="••••••••"
-                    value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} />
+                    value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                   <PasswordStrengthMeter password={password} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm">Confirmar contraseña</Label>
                   <Input id="confirm" type="password" placeholder="••••••••"
-                    value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={12} />
+                    value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Guardando..." : "Guardar nueva contraseña"}

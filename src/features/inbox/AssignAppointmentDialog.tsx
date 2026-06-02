@@ -182,12 +182,12 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 pb-3 border-b border-border shrink-0">
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
           <DialogTitle>Asignar cita desde Inbox</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto px-6 py-4 flex-1 min-h-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Servicio</Label>
             <Select value={servicioId} onValueChange={setServicioId}>
@@ -258,7 +258,7 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
           </div>
         </div>
 
-        <DialogFooter className="p-4 border-t border-border shrink-0 bg-background">
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
           <Button onClick={submit} disabled={saving || !patientId || !servicioId || !doctorId || !roomId || !slotIso}>
             {saving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}

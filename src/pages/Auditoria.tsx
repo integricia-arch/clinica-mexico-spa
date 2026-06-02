@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { ShieldCheck, Filter } from "lucide-react";
 
 type AuditRow = {
@@ -40,7 +39,6 @@ const TABLA_LABEL: Record<string, { modulo: string; nombre: string }> = {
 const MODULOS = ["Todos", "Agenda", "Expedientes", "Farmacia", "Facturación"] as const;
 
 export default function Auditoria() {
-  const { hasRole } = useAuth();
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modulo, setModulo] = useState<(typeof MODULOS)[number]>("Todos");
@@ -57,14 +55,6 @@ export default function Auditoria() {
       setLoading(false);
     })();
   }, []);
-
-  if (!hasRole("admin")) {
-    return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        Acceso restringido a administradores.
-      </div>
-    );
-  }
 
   const filtradas = rows.filter((r) => {
     if (modulo === "Todos") return true;

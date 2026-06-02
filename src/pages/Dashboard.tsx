@@ -2,12 +2,12 @@ import { CalendarDays, Users, Receipt, Clock, TrendingUp, AlertCircle } from "lu
 import StatCard from "@/components/StatCard";
 
 const citasHoy = [
-  { hora: "09:00", paciente: "Paciente Demo 1", medico: "Dr. Demo A", tipo: "Consulta general", estado: "Confirmada" },
-  { hora: "09:30", paciente: "Paciente Demo 2", medico: "Dra. Demo B", tipo: "Seguimiento", estado: "Confirmada por paciente" },
-  { hora: "10:00", paciente: "Paciente Demo 3", medico: "Dr. Demo A", tipo: "Primera vez", estado: "Pendiente de formulario" },
-  { hora: "10:30", paciente: "Paciente Demo 4", medico: "Dra. Demo C", tipo: "Estudios", estado: "Recordatorio enviado" },
-  { hora: "11:00", paciente: "Paciente Demo 5", medico: "Dra. Demo B", tipo: "Consulta general", estado: "Solicitada" },
-  { hora: "11:30", paciente: "Paciente Demo 6", medico: "Dr. Demo A", tipo: "Seguimiento", estado: "Confirmada" },
+  { hora: "09:00", paciente: "María González Hernández", medico: "Dr. Carlos Mendoza", tipo: "Consulta general", estado: "Confirmada" },
+  { hora: "09:30", paciente: "José Luis Pérez Vargas", medico: "Dra. Ana Ramírez", tipo: "Seguimiento", estado: "Confirmada por paciente" },
+  { hora: "10:00", paciente: "Guadalupe Torres Reyes", medico: "Dr. Carlos Mendoza", tipo: "Primera vez", estado: "Pendiente de formulario" },
+  { hora: "10:30", paciente: "Roberto Sánchez Díaz", medico: "Dra. Laura Ortiz", tipo: "Estudios", estado: "Recordatorio enviado" },
+  { hora: "11:00", paciente: "Fernanda Castillo López", medico: "Dra. Ana Ramírez", tipo: "Consulta general", estado: "Solicitada" },
+  { hora: "11:30", paciente: "Miguel Ángel Ruiz Flores", medico: "Dr. Carlos Mendoza", tipo: "Seguimiento", estado: "Confirmada" },
 ];
 
 const estadoColor: Record<string, string> = {

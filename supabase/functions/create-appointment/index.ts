@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": Deno.env.get("CORS_ALLOWED_ORIGIN") ?? "*",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -31,9 +31,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify JWT first with anon key — service client only after auth passes
-    const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
+    // Verify JWT
+    const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!);
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
       authHeader.replace("Bearer ", "")
     );
@@ -43,8 +45,6 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Check role: only admin, receptionist, or patient can create
     const { data: userRoles } = await supabase
@@ -175,12 +175,8 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (insertError) {
-      console.error("create-appointment insert error:", insertError.code, insertError.message);
-      const msg = insertError.code === "23P01"
-        ? "El horario solicitado ya fue reservado. Elige otro horario."
-        : "No se pudo crear la cita. Intenta de nuevo.";
       return new Response(
-        JSON.stringify({ error: msg }),
+        JSON.stringify({ error: "Error al crear la cita: " + insertError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

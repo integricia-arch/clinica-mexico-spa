@@ -27,10 +27,7 @@ export default function BillingForm({ stepId, stepStatus, existingData, onSaved 
   const closed = isClosed(stepStatus);
 
   const handleConfirm = async () => {
-    const montoNum = parseFloat(monto);
-    if (!monto || isNaN(montoNum) || montoNum <= 0 || montoNum > 999999) {
-      toast.error("Monto inválido (debe ser entre $0.01 y $999,999 MXN)"); return;
-    }
+    if (!monto) { toast.error("Capture el monto cobrado"); return; }
     if (requiereFactura && (!rfc || !razonSocial)) { toast.error("RFC y razón social son obligatorios para factura"); return; }
     setSaving(true);
     const s = await saveJourneyStepData(stepId, {

@@ -12,7 +12,7 @@ interface Rule {
 }
 
 const RULES: Rule[] = [
-  { label: "Mínimo 12 caracteres", test: (p) => p.length >= 12 },
+  { label: "Mínimo 8 caracteres", test: (p) => p.length >= 8 },
   { label: "Una mayúscula (A-Z)", test: (p) => /[A-Z]/.test(p) },
   { label: "Una minúscula (a-z)", test: (p) => /[a-z]/.test(p) },
   { label: "Un número (0-9)", test: (p) => /\d/.test(p) },

@@ -7,7 +7,6 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ActiveClinicProvider } from "@/hooks/useActiveClinic";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Login from "@/pages/Login";
 import ResetPassword from "@/pages/ResetPassword";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -60,7 +59,6 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <AppLayout>
-                      <ErrorBoundary>
                       <Routes>
                         <Route path="/" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
                         <Route path="/pacientes" element={<ProtectedRoute allowedRoles={["admin","receptionist","doctor","nurse"]}><PacientesLista /></ProtectedRoute>} />
@@ -93,7 +91,6 @@ const App = () => (
 
                         <Route path="*" element={<NotFound />} />
                       </Routes>
-                      </ErrorBoundary>
                     </AppLayout>
                   </ProtectedRoute>
                 }
