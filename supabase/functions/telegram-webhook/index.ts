@@ -1,13 +1,13 @@
 // =================================================================
-// supabase/functions/telegram-webhook/index.ts  (v7)
+// supabase/functions/telegram-webhook/index.ts  (v8)
 //
-// v7: Flujo guiado con inline keyboards de Telegram (botones).
-//     - 9 categorías → servicios filtrados por doctor disponible
-//     - 25 servicios nuevos catalogados por especialidad
-//     - Captura ECE mínima (nombre, apellidos, fecha_nac, sexo)
-//     - Datos opcionales con [Saltar] en cada paso
-//     - Consentimiento y confirmación con botones
-//     - Texto libre sigue cayendo en Claude (fuzzy match → botones)
+// v8: Mejoras de UX basadas en mejores modelos de atención a clientes
+//     - Menú principal expandido: consulta abierta + otro + ver cita + cancelar
+//     - Botón "🧑 Hablar con alguien" en TODAS las pantallas
+//     - Consulta abierta: Claude sin forzar flujo de booking
+//     - Opción "Otro" siempre disponible → Claude / escalación
+//     - Ver mi cita: consulta estado de citas activas
+//     - Cancelar cita: cancela desde el bot
 // =================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -27,7 +27,6 @@ const MX_TZ_OFFSET_MS = -6 * 3600000;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// ============== CATEGORÍAS DEL MENÚ ==============
 const CATEGORIAS: Record<string, { label: string; especialidades: string[] }> = {
   medgen: { label: "🩺 Medicina general", especialidades: ["Medicina general"] },
   odo:    { label: "🦷 Odontología", especialidades: ["Odontología"] },
@@ -40,31 +39,35 @@ const CATEGORIAS: Record<string, { label: string; especialidades: string[] }> = 
   lab:    { label: "🔬 Estudios y laboratorio", especialidades: ["Laboratorio", "Imagenología"] },
 };
 
-const SYSTEM_PROMPT = `Eres el asistente virtual de ClínicaMX, una clínica multiespecialidad en México (odontología, dermatología, estética, medicina general, pediatría, ginecología, cardiología, nutrición, psicología y estudios).
+const SYSTEM_PROMPT = `Eres el asistente virtual de ClínicaMX, una clínica multiespecialidad en México.
 
 REGLAS DURAS:
 - Hablas español mexicano natural, cálido y profesional. Mensajes cortos (1-3 oraciones).
 - NUNCA das consejo médico. Si el paciente describe síntomas: "Eso lo valora mejor el doctor en consulta. ¿Te ayudo a agendar?"
 - Urgencia (dolor severo, sangrado, reacción alérgica): usa escalar_a_humano y pide llamar al 911.
-- DEFAULT: siempre que el paciente quiera agendar, llama mostrar_menu_categorias para que el sistema le envíe los botones del catálogo. NO listes servicios en texto plano.
-- Si el paciente escribe texto libre como "limpieza", "muela", "lunar", busca con buscar_servicios y propón los candidatos en texto breve (1-2 líneas) pidiéndole que pulse el botón que enviará el sistema.
+- Para agendar: llama mostrar_menu_categorias. NO listes servicios en texto plano.
+- Para texto libre como "limpieza", "muela": busca con buscar_servicios y propón con botones.
+- Para consultas generales (precios, horarios, ubicación, preparación): responde 1-2 oraciones y ofrece opciones.
+- Cuando termines una respuesta de consulta: llama mostrar_menu_principal.
 
-LAS 9 CATEGORÍAS del menú:
-🩺 Medicina general | 🦷 Odontología | ✨ Dermatología/Estética | 👶 Pediatría | ♀️ Ginecología | ❤️ Cardiología | 🥗 Nutrición | 🧠 Psicología | 🔬 Estudios y laboratorio
+Especialidades: Medicina general, Odontología, Dermatología, Estética, Pediatría, Ginecología, Cardiología, Nutrición, Psicología, Laboratorio, Imagenología.
 
-CUANDO NO ESTÁS SEGURO de qué quiere el paciente, llama mostrar_menu_categorias.
-
-Para hablar con persona: OFRECE escalar_a_humano y espera confirmación textual antes de invocarla.`;
+Si no sabes qué quiere el paciente: llama mostrar_menu_principal.`;
 
 const TOOLS = [
   {
+    name: "mostrar_menu_principal",
+    description: "Envía el menú principal completo. Usar cuando el paciente no sepa qué quiere o termine una consulta.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "mostrar_menu_categorias",
-    description: "Le pide al sistema enviar el menú de 9 categorías como botones inline. Úsala siempre que el paciente quiera agendar o pedir información de servicios sin haber elegido categoría.",
+    description: "Envía el menú de 9 especialidades como botones. Usar cuando el paciente quiera agendar.",
     input_schema: { type: "object", properties: {} },
   },
   {
     name: "buscar_servicios",
-    description: "Busca servicios por palabra clave (ej: 'limpieza', 'muela', 'lunar', 'embarazo'). Devuelve hasta 5 candidatos para proponer al paciente.",
+    description: "Busca servicios por palabra clave. Devuelve hasta 5 candidatos.",
     input_schema: {
       type: "object",
       properties: { query: { type: "string" } },
@@ -73,7 +76,7 @@ const TOOLS = [
   },
   {
     name: "escalar_a_humano",
-    description: "Marca la conversación para recepcionista humano. Solo con confirmación del paciente o urgencia real.",
+    description: "Marca conversación para recepcionista. Solo con confirmación o urgencia.",
     input_schema: {
       type: "object",
       properties: { razon: { type: "string" } },
@@ -87,7 +90,7 @@ const TOOLS = [
 // ============================================================
 Deno.serve(async (req) => {
   if (!WEBHOOK_SECRET) {
-    console.error("WEBHOOK_SECRET no está configurado");
+    console.error("WEBHOOK_SECRET no configurado");
     return new Response("misconfigured", { status: 500 });
   }
   const got = req.headers.get("x-telegram-bot-api-secret-token");
@@ -97,9 +100,7 @@ Deno.serve(async (req) => {
   try { update = await req.json(); }
   catch { return new Response("bad json", { status: 400 }); }
 
-  const work = procesarUpdate(update).catch((err) =>
-    console.error("procesarUpdate error:", err)
-  );
+  const work = procesarUpdate(update).catch((err) => console.error("procesarUpdate error:", err));
   // @ts-ignore
   if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(work);
   else await work;
@@ -122,76 +123,48 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
 
   if (text === "/nueva") {
     const { data: conv, error } = await supabase
-      .from("conversaciones")
-      .insert({ identidad_canal_id: identidad.id })
-      .select("*").single();
+      .from("conversaciones").insert({ identidad_canal_id: identidad.id }).select("*").single();
     if (error) throw error;
     await limpiarSesion(conv.id);
-    const m = "Nueva consulta iniciada.";
-    await guardarMensajeAsistente(conv.id, m);
-    await enviarMenuCategorias(chatId, m + " ¿Qué necesitas hoy?");
+    await guardarMensajeAsistente(conv.id, "Nueva consulta iniciada.");
+    await enviarMenuPrincipal(chatId, "Nueva consulta iniciada. ¿En qué te puedo ayudar hoy?");
     return;
   }
 
   const conv = await obtenerOCrearConversacion(identidad.id);
 
-  // === Conversación escalada: el bot NO interfiere ===
-  // Guardamos el mensaje, detectamos insistencia y aplicamos throttle
-  // para no spamear con respuestas automáticas.
+  // Conversación escalada: bot NO interfiere
   if (conv.status === "escalada") {
     await guardarMensajeUsuario(conv.id, text, rawMsg);
     await registrarAudit(conv, "msg_durante_escalamiento", { texto: text?.slice(0, 200) ?? "" });
 
     const sesion = await obtenerSesion(conv.id);
     const flow = sesion?.flow_data ?? {};
-
-    // Detección de insistencia por frases comunes
     const lower = (text ?? "").toLowerCase();
     const FRASES_INSISTENCIA = [
       "no me contestan", "no me responden", "no me han contestado",
       "nadie me responde", "nadie contesta", "puede mandar otra vez",
-      "puedes mandar otra vez", "manden otra vez", "manda otra vez",
-      "urge", "urgente", "sigo esperando", "sigo aqui", "sigo aquí",
-      "hola?", "hola??", "hello?", "ya?"
+      "puedes mandar otra vez", "urge", "urgente", "sigo esperando",
+      "sigo aqui", "sigo aquí", "hola?", "hola??", "ya?"
     ];
     const esInsistencia = FRASES_INSISTENCIA.some((f) => lower.includes(f));
-
-    // Incrementar contador de seguimientos y marcar insistencia
     const nuevoCount = (conv.escalated_followup_count ?? 0) + 1;
-    const updates: any = {
-      escalated_followup_count: nuevoCount,
-      last_patient_followup_at: new Date().toISOString(),
-    };
+    const updates: any = { escalated_followup_count: nuevoCount, last_patient_followup_at: new Date().toISOString() };
     if (esInsistencia && !conv.insiste) {
       updates.insiste = true;
       if (conv.prioridad !== "urgente") updates.prioridad = "alta";
     }
     await supabase.from("conversaciones").update(updates).eq("id", conv.id);
 
-    await registrarAudit(conv, "patient_followed_up_after_escalation", {
-      count: nuevoCount, insiste: esInsistencia, texto: text?.slice(0, 200) ?? "",
-    });
-    if (esInsistencia && !conv.insiste) {
-      await registrarAudit(conv, "patient_insistence_detected", { texto: text?.slice(0, 200) ?? "" });
-    }
-
-    // Triage de señales rojas (siempre prioritario, throttled aparte)
     const triage = detectarUrgencia(text ?? "");
     if (triage.urgente) {
       const yaUrgente = conv.prioridad === "urgente" || flow.urgent_notice_sent === true;
       if (!yaUrgente) {
-        await supabase
-          .from("conversaciones")
-          .update({
-            prioridad: "urgente",
-            motivo_resumen: triage.motivo ?? null,
-            dolor_intensidad: triage.dolor ?? null,
-          })
-          .eq("id", conv.id);
-        await registrarAudit(conv, "prioridad_urgente", {
-          motivo: triage.motivo, dolor: triage.dolor,
-        });
-        const aviso = "Si el dolor es intenso, empeora o tienes síntomas graves, acude a urgencias o llama al 911. Recepción ya está atendiendo tu caso.";
+        await supabase.from("conversaciones").update({
+          prioridad: "urgente", motivo_resumen: triage.motivo ?? null, dolor_intensidad: triage.dolor ?? null,
+        }).eq("id", conv.id);
+        await registrarAudit(conv, "prioridad_urgente", { motivo: triage.motivo, dolor: triage.dolor });
+        const aviso = "Si el dolor es intenso o tienes síntomas graves, llama al 911. Recepción ya está atendiendo tu caso.";
         await guardarMensajeAsistente(conv.id, aviso);
         await enviarTelegram(chatId, aviso);
         await supabase.from("conversaciones").update({ last_bot_ack_at: new Date().toISOString() }).eq("id", conv.id);
@@ -200,12 +173,10 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
       return;
     }
 
-    // Throttle: máximo un acuse cada 15 minutos
     const THROTTLE_MS = 15 * 60 * 1000;
     const lastAck = conv.last_bot_ack_at ? new Date(conv.last_bot_ack_at).getTime() : 0;
-    const ahoraMs = Date.now();
     const yaSaludado = flow.greeted_during_escalation === true;
-    const pasaronXMin = ahoraMs - lastAck > THROTTLE_MS;
+    const pasaronXMin = Date.now() - lastAck > THROTTLE_MS;
 
     if (!yaSaludado || (esInsistencia && pasaronXMin)) {
       const aviso = esInsistencia
@@ -215,38 +186,35 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
       await enviarTelegram(chatId, aviso);
       await supabase.from("conversaciones").update({ last_bot_ack_at: new Date().toISOString() }).eq("id", conv.id);
       await upsertSesion(conv.id, { flow_data: { ...flow, greeted_during_escalation: true } });
-      if (esInsistencia) {
-        await registrarAudit(conv, "reception_notified_again", { count: nuevoCount });
-      }
     }
     return;
   }
 
-
   if (text === "/start") {
     await guardarMensajeUsuario(conv.id, text, rawMsg);
     await limpiarSesion(conv.id);
-    const bienvenida = "¡Hola! Soy el asistente de ClínicaMX. Te ayudo a agendar tu cita 24/7. Elige una categoría:";
+    const bienvenida = "¡Hola! Soy el asistente de ClínicaMX. Te ayudo 24/7. ¿En qué te puedo ayudar hoy?";
     await guardarMensajeAsistente(conv.id, bienvenida);
-    await enviarMenuCategorias(chatId, bienvenida);
+    await enviarMenuPrincipal(chatId, bienvenida);
     return;
   }
   if (text === "/humano") {
     await guardarMensajeUsuario(conv.id, text, rawMsg);
     await escalarConversacion(conv, { razon: "Solicitado con /humano" });
-    await enviarTelegram(chatId, "Listo, recepción te contactará en breve.\nCuando quieras iniciar una nueva consulta escribe /nueva.");
+    await enviarTelegram(chatId, "Listo, recepción te contactará en breve.\nEscribe /nueva cuando quieras iniciar otra consulta.");
     return;
   }
 
   await guardarMensajeUsuario(conv.id, text, rawMsg);
 
-  // ¿Estamos en medio del wizard de captura?
   const sesion = await obtenerSesion(conv.id);
   if (sesion?.flow_step && pasoEsperaTexto(sesion.flow_step)) {
     return manejarTextoWizard(chatId, conv, sesion, text);
   }
+  if (sesion?.flow_step === "consulta_abierta") {
+    return manejarConsultaAbierta(chatId, conv, text);
+  }
 
-  // Fallback: Claude
   let respuesta = "";
   try {
     respuesta = await correrAgente(conv, chatId);
@@ -261,64 +229,74 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
 }
 
 // ============================================================
-// TRIAGE (heurística simple, NO diagnóstico)
+// MENÚS
+// ============================================================
+async function enviarMenuPrincipal(chatId: string, header: string) {
+  await enviarTelegramConBotones(chatId, header, [
+    [
+      { text: "🗓 Agendar cita", callback_data: "menu_agendar:" },
+      { text: "💬 Consulta / Pregunta", callback_data: "consulta:" },
+    ],
+    [
+      { text: "📋 Ver mi cita", callback_data: "ver_cita:" },
+      { text: "❌ Cancelar cita", callback_data: "cancelar_cita:" },
+    ],
+    [
+      { text: "🧑 Hablar con alguien", callback_data: "humano:" },
+      { text: "❓ Otro", callback_data: "otro:" },
+    ],
+  ]);
+}
+
+async function enviarMenuCategorias(chatId: string, header: string) {
+  const keys = Object.keys(CATEGORIAS);
+  const rows: any[] = [];
+  for (let i = 0; i < keys.length; i += 2) {
+    const row = [{ text: CATEGORIAS[keys[i]].label, callback_data: `cat:${keys[i]}` }];
+    if (keys[i + 1]) row.push({ text: CATEGORIAS[keys[i + 1]].label, callback_data: `cat:${keys[i + 1]}` });
+    rows.push(row);
+  }
+  rows.push([
+    { text: "← Menú principal", callback_data: "menu_principal:" },
+    { text: "🧑 Hablar con alguien", callback_data: "humano:" },
+  ]);
+  await enviarTelegramConBotones(chatId, header, rows);
+}
+
+// ============================================================
+// TRIAGE
 // ============================================================
 const URGENCIA_REGEX = [
-  /\bdificultad (para )?respirar\b/i,
-  /\bme cuesta respirar\b/i,
-  /\bno puedo respirar\b/i,
-  /\bdolor (en el|de) pecho\b/i,
-  /\bdolor tor[áa]cico\b/i,
-  /\bsangrad[oa]\b/i,
-  /\bme estoy desmayando\b/i,
-  /\bperd[ií] (la )?conciencia\b/i,
-  /\bdesmay[oé]\b/i,
-  /\bconvuls/i,
-  /\bno siento (mi |el )?(brazo|pierna|cara|cuerpo)\b/i,
-  /\bno puedo hablar\b/i,
-  /\bvis[ií]on borrosa\b/i,
-  /\bse me duerme (medio )?cuerpo\b/i,
+  /\bdificultad (para )?respirar\b/i, /\bme cuesta respirar\b/i, /\bno puedo respirar\b/i,
+  /\bdolor (en el|de) pecho\b/i, /\bdolor tor[áa]cico\b/i, /\bsangrad[oa]\b/i,
+  /\bme estoy desmayando\b/i, /\bperd[ií] (la )?conciencia\b/i, /\bdesmay[oé]\b/i,
+  /\bconvuls/i, /\bno siento (mi |el )?(brazo|pierna|cara|cuerpo)\b/i,
+  /\bno puedo hablar\b/i, /\bvis[ií]on borrosa\b/i, /\bse me duerme (medio )?cuerpo\b/i,
 ];
 
 function detectarUrgencia(text: string): { urgente: boolean; motivo?: string; dolor?: number } {
   const t = (text ?? "").toLowerCase();
-  // dolor numérico 8-10 (formato "dolor 9", "9/10", "10", "intensidad 8")
   let dolor: number | undefined;
   const m1 = t.match(/\b(?:dolor|intensidad|nivel)\D{0,8}(\d{1,2})\b/);
   const m2 = t.match(/\b(\d{1,2})\s*\/\s*10\b/);
   const m3 = t.match(/^\s*(\d{1,2})\s*$/);
   const cand = m1?.[1] ?? m2?.[1] ?? m3?.[1];
-  if (cand) {
-    const n = parseInt(cand, 10);
-    if (n >= 0 && n <= 10) dolor = n;
-  }
-  if (dolor !== undefined && dolor >= 8) {
-    return { urgente: true, motivo: `Dolor reportado ${dolor}/10`, dolor };
-  }
-  for (const rx of URGENCIA_REGEX) {
-    const m = t.match(rx);
-    if (m) return { urgente: true, motivo: m[0], dolor };
-  }
+  if (cand) { const n = parseInt(cand, 10); if (n >= 0 && n <= 10) dolor = n; }
+  if (dolor !== undefined && dolor >= 8) return { urgente: true, motivo: `Dolor reportado ${dolor}/10`, dolor };
+  for (const rx of URGENCIA_REGEX) { const m = t.match(rx); if (m) return { urgente: true, motivo: m[0], dolor }; }
   return { urgente: false, dolor };
 }
 
 async function registrarAudit(conv: any, accion: string, datos: any) {
   try {
     await supabase.from("audit_logs").insert({
-      tabla: "conversaciones",
-      registro_id: conv.id,
-      accion,
-      datos_nuevos: datos,
-      clinic_id: conv.clinic_id ?? null,
+      tabla: "conversaciones", registro_id: conv.id, accion, datos_nuevos: datos, clinic_id: conv.clinic_id ?? null,
     });
-  } catch (e) {
-    console.error("audit insert error:", e);
-  }
+  } catch (e) { console.error("audit insert error:", e); }
 }
 
-
 // ============================================================
-// CALLBACK QUERIES (botones)
+// CALLBACK QUERIES
 // ============================================================
 async function manejarCallback(cq: any) {
   const chatId = String(cq.message?.chat?.id);
@@ -326,29 +304,42 @@ async function manejarCallback(cq: any) {
   const from = cq.from;
 
   await answerCallback(cq.id);
-
   if (!chatId) return;
+
   const identidad = await obtenerOCrearIdentidad(chatId, from);
   const conv = await obtenerOCrearConversacion(identidad.id);
-  if (conv.status === "escalada") return;
+
+  if (conv.status === "escalada") {
+    await enviarTelegram(chatId, "Tu caso está con recepción. Espera su respuesta o escribe /nueva para una consulta nueva.");
+    return;
+  }
 
   const [tag, ...rest] = data.split(":");
   const arg = rest.join(":");
-
   await guardarMensajeUsuario(conv.id, `[botón] ${data}`, cq);
 
   switch (tag) {
-    case "menu":      return enviarMenuCategorias(chatId, "Elige una categoría:");
-    case "cat":       return enviarServiciosDeCategoria(chatId, conv, arg);
-    case "srv":       return enviarHorariosDeServicio(chatId, conv, arg);
-    case "slot":      return iniciarCapturaPaciente(chatId, conv, arg);
-    case "sex":       return wizardSetSexo(chatId, conv, arg);
-    case "extra":     return wizardDecisionExtra(chatId, conv, arg);
-    case "skip":      return wizardSkip(chatId, conv, arg);
-    case "alergias":  return wizardAlergias(chatId, conv, arg);
-    case "consent":   return wizardConsent(chatId, conv, arg);
-    case "confirm":   return wizardConfirm(chatId, conv, arg);
-    default:          return;
+    case "menu_principal":  return enviarMenuPrincipal(chatId, "¿En qué más te puedo ayudar?");
+    case "menu_agendar":    return enviarMenuCategorias(chatId, "Elige la especialidad:");
+    case "menu":            return enviarMenuCategorias(chatId, "Elige una categoría:");
+    case "cat":             return enviarServiciosDeCategoria(chatId, conv, arg);
+    case "srv":             return enviarHorariosDeServicio(chatId, conv, arg);
+    case "slot":            return iniciarCapturaPaciente(chatId, conv, arg);
+    case "sex":             return wizardSetSexo(chatId, conv, arg);
+    case "extra":           return wizardDecisionExtra(chatId, conv, arg);
+    case "skip":            return wizardSkip(chatId, conv, arg);
+    case "alergias":        return wizardAlergias(chatId, conv, arg);
+    case "consent":         return wizardConsent(chatId, conv, arg);
+    case "confirm":         return wizardConfirm(chatId, conv, arg);
+    case "consulta":        return iniciarConsultaAbierta(chatId, conv);
+    case "consulta_tema":   return manejarTemaCon(chatId, conv, arg);
+    case "otro":            return manejarOtro(chatId, conv);
+    case "humano":          return manejarSolicitudHumano(chatId, conv);
+    case "humano_razon":    return manejarSolicitudHumanoConRazon(chatId, conv, arg);
+    case "ver_cita":        return verMiCita(chatId, conv);
+    case "cancelar_cita":   return iniciarCancelacionCita(chatId, conv);
+    case "cancelar_id":     return confirmarCancelacionCita(chatId, conv, arg);
+    default:                return;
   }
 }
 
@@ -361,24 +352,223 @@ async function answerCallback(callback_query_id: string) {
 }
 
 // ============================================================
-// MENÚS
+// v8: CONSULTA ABIERTA
 // ============================================================
-async function enviarMenuCategorias(chatId: string, header: string) {
-  const keys = Object.keys(CATEGORIAS);
-  const rows: any[] = [];
-  for (let i = 0; i < keys.length; i += 2) {
-    const row = [{ text: CATEGORIAS[keys[i]].label, callback_data: `cat:${keys[i]}` }];
-    if (keys[i + 1]) row.push({ text: CATEGORIAS[keys[i + 1]].label, callback_data: `cat:${keys[i + 1]}` });
-    rows.push(row);
-  }
-  await enviarTelegramConBotones(chatId, header, rows);
+async function iniciarConsultaAbierta(chatId: string, conv: any) {
+  await upsertSesion(conv.id, { flow_step: "consulta_abierta" });
+  await enviarTelegramConBotones(
+    chatId,
+    "Cuéntame en qué te puedo ayudar. Puedes preguntarme sobre servicios, precios, preparación para estudios, o lo que necesites 💬",
+    [
+      [
+        { text: "💊 Precios", callback_data: "consulta_tema:precios" },
+        { text: "📍 Ubicación / Horarios", callback_data: "consulta_tema:ubicacion" },
+      ],
+      [
+        { text: "🗓 Mejor agendar cita", callback_data: "menu_agendar:" },
+        { text: "🧑 Hablar con alguien", callback_data: "humano:" },
+      ],
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]
+  );
 }
 
+async function manejarTemaCon(chatId: string, conv: any, tema: string) {
+  const textoTema = tema === "precios"
+    ? "Quiero saber sobre precios y servicios disponibles"
+    : "Quiero saber la ubicación y horarios de la clínica";
+  await guardarMensajeUsuario(conv.id, textoTema, { type: "button" });
+  await manejarConsultaAbierta(chatId, conv, textoTema);
+}
+
+async function manejarConsultaAbierta(chatId: string, conv: any, text: string) {
+  let respuesta = "";
+  try {
+    respuesta = await correrAgenteConsulta(conv, chatId, text);
+  } catch (err) {
+    console.error("consulta abierta error:", err);
+    respuesta = "No pude procesar tu consulta. ¿Te ayudo a agendar una cita?";
+  }
+  if (respuesta) {
+    await guardarMensajeAsistente(conv.id, respuesta);
+    await enviarTelegramConBotones(chatId, respuesta, [
+      [
+        { text: "🗓 Agendar cita", callback_data: "menu_agendar:" },
+        { text: "🧑 Hablar con alguien", callback_data: "humano:" },
+      ],
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
+  }
+}
+
+// ============================================================
+// v8: OTRO
+// ============================================================
+async function manejarOtro(chatId: string, conv: any) {
+  await enviarTelegramConBotones(chatId, "¿En qué te puedo ayudar?", [
+    [
+      { text: "📝 Cambiar mi cita", callback_data: "humano_razon:cambio_cita" },
+      { text: "💳 Información de pagos", callback_data: "humano_razon:pagos" },
+    ],
+    [
+      { text: "📋 Resultados de estudios", callback_data: "humano_razon:resultados" },
+      { text: "🔁 Receta / Medicamentos", callback_data: "humano_razon:receta" },
+    ],
+    [
+      { text: "💬 Escribir mi consulta", callback_data: "consulta:" },
+      { text: "🧑 Hablar con alguien", callback_data: "humano:" },
+    ],
+    [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+  ]);
+}
+
+// ============================================================
+// v8: HABLAR CON HUMANO
+// ============================================================
+async function manejarSolicitudHumano(chatId: string, conv: any) {
+  await escalarConversacion(conv, { razon: "Solicitado por botón" });
+  await guardarMensajeAsistente(conv.id, "Listo, recepción te contactará en breve.");
+  await enviarTelegram(chatId, "✅ Listo. Recepción te contactará en breve.\n\nEscribe /nueva si quieres iniciar otra consulta.");
+}
+
+async function manejarSolicitudHumanoConRazon(chatId: string, conv: any, razon: string) {
+  const razones: Record<string, string> = {
+    cambio_cita: "Paciente quiere cambiar una cita",
+    pagos: "Consulta sobre pagos",
+    resultados: "Solicita resultados de estudios",
+    receta: "Solicita receta o información de medicamentos",
+  };
+  await escalarConversacion(conv, { razon: razones[razon] ?? razon });
+  await guardarMensajeAsistente(conv.id, "Listo, recepción te contactará en breve.");
+  await enviarTelegram(chatId, "✅ Listo. Recepción te contactará en breve.\n\nEscribe /nueva si quieres iniciar otra consulta.");
+}
+
+// ============================================================
+// v8: VER MI CITA
+// ============================================================
+async function verMiCita(chatId: string, conv: any) {
+  const { data: identidad } = await supabase
+    .from("identidades_canal").select("patient_id").eq("id", conv.identidad_canal_id).single();
+
+  if (!identidad?.patient_id) {
+    return enviarTelegramConBotones(chatId, "No encontré citas registradas a tu nombre.", [
+      [{ text: "🗓 Agendar cita", callback_data: "menu_agendar:" }],
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
+  }
+
+  const { data: citas } = await supabase
+    .from("appointments")
+    .select("id, fecha_inicio, status, doctors(nombre, apellidos), servicios(nombre)")
+    .eq("patient_id", identidad.patient_id)
+    .gte("fecha_inicio", new Date().toISOString())
+    .not("status", "in", "(cancelada,cancelado,no_show)")
+    .order("fecha_inicio", { ascending: true })
+    .limit(3);
+
+  if (!citas || citas.length === 0) {
+    return enviarTelegramConBotones(chatId, "No tienes citas próximas registradas.", [
+      [{ text: "🗓 Agendar nueva cita", callback_data: "menu_agendar:" }],
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
+  }
+
+  let msg = "*Tus próximas citas:*\n\n";
+  for (const c of citas) {
+    const fecha = new Date(c.fecha_inicio).toLocaleString("es-MX", {
+      timeZone: "America/Mexico_City",
+      weekday: "short", day: "numeric", month: "short",
+      hour: "2-digit", minute: "2-digit",
+    });
+    const doc = c.doctors ? `Dr. ${(c.doctors as any).nombre} ${(c.doctors as any).apellidos}` : "—";
+    msg += `📅 ${fecha}\n🩺 ${(c.servicios as any)?.nombre ?? "—"}\n👨‍⚕️ ${doc}\nEstado: *${c.status}*\n\n`;
+  }
+
+  await enviarTelegramConBotones(chatId, msg, [
+    [
+      { text: "🗓 Agendar otra cita", callback_data: "menu_agendar:" },
+      { text: "🧑 Cambiar / Cancelar", callback_data: "humano:" },
+    ],
+    [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+  ]);
+}
+
+// ============================================================
+// v8: CANCELAR CITA
+// ============================================================
+async function iniciarCancelacionCita(chatId: string, conv: any) {
+  const { data: identidad } = await supabase
+    .from("identidades_canal").select("patient_id").eq("id", conv.identidad_canal_id).single();
+
+  if (!identidad?.patient_id) {
+    return enviarTelegramConBotones(chatId, "No encontré citas a tu nombre.", [
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
+  }
+
+  const { data: citas } = await supabase
+    .from("appointments")
+    .select("id, fecha_inicio, servicios(nombre)")
+    .eq("patient_id", identidad.patient_id)
+    .gte("fecha_inicio", new Date().toISOString())
+    .not("status", "in", "(cancelada,cancelado,no_show)")
+    .order("fecha_inicio", { ascending: true })
+    .limit(3);
+
+  if (!citas || citas.length === 0) {
+    return enviarTelegramConBotones(chatId, "No tienes citas próximas para cancelar.", [
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
+  }
+
+  const rows = citas.map((c: any) => {
+    const fecha = new Date(c.fecha_inicio).toLocaleString("es-MX", {
+      timeZone: "America/Mexico_City", day: "numeric", month: "short",
+      hour: "2-digit", minute: "2-digit",
+    });
+    return [{ text: `❌ ${fecha} — ${c.servicios?.nombre ?? "Cita"}`, callback_data: `cancelar_id:${c.id}` }];
+  });
+  rows.push([{ text: "← Menú principal", callback_data: "menu_principal:" }]);
+
+  await enviarTelegramConBotones(chatId, "¿Qué cita quieres cancelar?", rows);
+}
+
+async function confirmarCancelacionCita(chatId: string, conv: any, citaId: string) {
+  const { data: identidad } = await supabase
+    .from("identidades_canal").select("patient_id").eq("id", conv.identidad_canal_id).single();
+  const { data: cita } = await supabase
+    .from("appointments").select("id, patient_id, fecha_inicio, servicios(nombre)").eq("id", citaId).single();
+
+  if (!cita || cita.patient_id !== identidad?.patient_id) {
+    return enviarTelegram(chatId, "No encontré esa cita.");
+  }
+
+  const { error } = await supabase.from("appointments").update({ status: "cancelada" }).eq("id", citaId);
+  if (error) return enviarTelegram(chatId, "No pude cancelar. Por favor llama a recepción.");
+
+  await registrarAudit(conv, "cita_cancelada_bot", { cita_id: citaId });
+
+  const fecha = new Date(cita.fecha_inicio).toLocaleString("es-MX", {
+    timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short",
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  await enviarTelegramConBotones(chatId,
+    `✅ Cita cancelada:\n📅 ${fecha}\n🩺 ${(cita.servicios as any)?.nombre ?? "—"}\n\n¿Quieres agendar otra?`,
+    [
+      [{ text: "🗓 Agendar nueva cita", callback_data: "menu_agendar:" }],
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]
+  );
+}
+
+// ============================================================
+// SERVICIOS
+// ============================================================
 async function enviarServiciosDeCategoria(chatId: string, conv: any, catKey: string) {
   const cat = CATEGORIAS[catKey];
-  if (!cat) return enviarMenuCategorias(chatId, "Categoría no reconocida. Elige una:");
+  if (!cat) return enviarMenuCategorias(chatId, "Categoría no reconocida:");
 
-  // Solo servicios que tengan al menos un doctor activo asignado
   const { data: servicios } = await supabase
     .from("servicios")
     .select("id, nombre, duracion_minutos, precio_centavos, especialidad, doctor_servicios!inner(doctor_id, doctors!inner(activo))")
@@ -386,7 +576,6 @@ async function enviarServiciosDeCategoria(chatId: string, conv: any, catKey: str
     .in("especialidad", cat.especialidades)
     .eq("doctor_servicios.doctors.activo", true);
 
-  // Dedupe por id
   const vistos = new Set<string>();
   const lista = (servicios ?? []).filter((s: any) => {
     if (vistos.has(s.id)) return false;
@@ -396,7 +585,8 @@ async function enviarServiciosDeCategoria(chatId: string, conv: any, catKey: str
 
   if (lista.length === 0) {
     return enviarTelegramConBotones(chatId, "No hay servicios disponibles en esta categoría ahora.", [
-      [{ text: "← Volver al menú", callback_data: "menu:" }],
+      [{ text: "← Volver", callback_data: "menu_agendar:" }],
+      [{ text: "🧑 Hablar con alguien", callback_data: "humano:" }],
     ]);
   }
 
@@ -404,34 +594,37 @@ async function enviarServiciosDeCategoria(chatId: string, conv: any, catKey: str
     const precio = s.precio_centavos ? `$${(s.precio_centavos / 100).toLocaleString("es-MX")}` : "—";
     return [{ text: `${s.nombre} — ${s.duracion_minutos} min / ${precio}`, callback_data: `srv:${s.id}` }];
   });
-  rows.push([{ text: "← Volver al menú", callback_data: "menu:" }]);
+  rows.push([
+    { text: "← Volver", callback_data: "menu_agendar:" },
+    { text: "🧑 Hablar con alguien", callback_data: "humano:" },
+  ]);
 
   await enviarTelegramConBotones(chatId, `${cat.label}\nElige un servicio:`, rows);
 }
 
 async function enviarHorariosDeServicio(chatId: string, conv: any, servicioId: string) {
   const result = await listarHorariosDisponibles({ servicio_id: servicioId, dias_adelante: 14 });
-  if ((result as any).error) {
-    return enviarTelegram(chatId, "Tuve un error consultando horarios. Intenta de nuevo.");
-  }
+  if ((result as any).error) return enviarTelegram(chatId, "Error consultando horarios. Intenta de nuevo.");
+
   const horarios = (result as any).horarios ?? [];
   if (horarios.length === 0) {
     return enviarTelegramConBotones(chatId, "No encontré horarios disponibles en los próximos 14 días.", [
-      [{ text: "← Volver al menú", callback_data: "menu:" }],
+      [{ text: "← Volver", callback_data: "menu_agendar:" }],
+      [{ text: "🧑 Hablar con alguien", callback_data: "humano:" }],
     ]);
   }
 
-  // Guarda servicio elegido + mapa de slots en flow_data temporal (clave: índice corto)
-  const { data: svc } = await supabase
-    .from("servicios").select("nombre, duracion_minutos").eq("id", servicioId).single();
-
+  const { data: svc } = await supabase.from("servicios").select("nombre, duracion_minutos").eq("id", servicioId).single();
   const slotMap: Record<string, any> = {};
   const rows = horarios.slice(0, 8).map((h: any, idx: number) => {
     const key = String(idx);
     slotMap[key] = { fecha_inicio: h.fecha_inicio, doctor_id: h.doctor_id, doctor_nombre: h.doctor_nombre, fecha_local: h.fecha_local };
     return [{ text: `${h.fecha_local} · ${h.doctor_nombre}`, callback_data: `slot:${key}` }];
   });
-  rows.push([{ text: "← Volver al menú", callback_data: "menu:" }]);
+  rows.push([
+    { text: "← Volver", callback_data: "menu_agendar:" },
+    { text: "🧑 Hablar con alguien", callback_data: "humano:" },
+  ]);
 
   await upsertSesion(conv.id, {
     servicio_id: servicioId,
@@ -439,35 +632,26 @@ async function enviarHorariosDeServicio(chatId: string, conv: any, servicioId: s
     flow_data: { servicio_nombre: svc?.nombre, slots: slotMap },
   });
 
-  await enviarTelegramConBotones(chatId, `Horarios disponibles para *${svc?.nombre}*. Elige uno:`, rows);
+  await enviarTelegramConBotones(chatId, `Horarios para *${svc?.nombre}*:`, rows);
 }
 
 // ============================================================
-// WIZARD DE CAPTURA DEL PACIENTE
+// WIZARD DE CAPTURA
 // ============================================================
 async function iniciarCapturaPaciente(chatId: string, conv: any, slotKey: string) {
   const sesion = await obtenerSesion(conv.id);
   const slot = sesion?.flow_data?.slots?.[slotKey];
-  if (!slot) {
-    return enviarMenuCategorias(chatId, "Ese horario ya no está disponible. Elige otra categoría:");
-  }
+  if (!slot) return enviarMenuCategorias(chatId, "Horario no disponible. Elige otra categoría:");
 
-  const nuevoData = {
-    ...(sesion?.flow_data ?? {}),
-    fecha_local: slot.fecha_local,
-    doctor_nombre: slot.doctor_nombre,
-    slot_fecha_iso: slot.fecha_inicio,
-  };
+  const nuevoData = { ...(sesion?.flow_data ?? {}), fecha_local: slot.fecha_local, doctor_nombre: slot.doctor_nombre, slot_fecha_iso: slot.fecha_inicio };
   delete (nuevoData as any).slots;
 
-  await upsertSesion(conv.id, {
-    doctor_id: slot.doctor_id,
-    slot_propuesto: slot.fecha_inicio,
-    flow_step: "await_nombre",
-    flow_data: nuevoData,
-  });
-
-  await enviarTelegram(chatId, `Reservado tentativamente: *${nuevoData.fecha_local}* con *${nuevoData.doctor_nombre}*.\n\nPara confirmar necesito 4 datos. Primero: ¿cuál es tu *nombre* (solo nombre, sin apellidos)?`);
+  await upsertSesion(conv.id, { doctor_id: slot.doctor_id, slot_propuesto: slot.fecha_inicio, flow_step: "await_nombre", flow_data: nuevoData });
+  await enviarTelegramConBotones(
+    chatId,
+    `Reservado: *${nuevoData.fecha_local}* con *${nuevoData.doctor_nombre}*.\n\nNecesito 4 datos. Primero: ¿cuál es tu *nombre*?`,
+    [[{ text: "❌ Cancelar", callback_data: "menu_principal:" }]]
+  );
 }
 
 function pasoEsperaTexto(step: string): boolean {
@@ -481,17 +665,17 @@ async function manejarTextoWizard(chatId: string, conv: any, sesion: any, text: 
   switch (sesion.flow_step) {
     case "await_nombre": {
       const v = text.trim();
-      if (v.length < 2) return enviarTelegram(chatId, "Necesito un nombre válido. ¿Cuál es tu nombre?");
+      if (v.length < 2) return enviarTelegram(chatId, "Necesito un nombre válido.");
       borrador.nombre = v;
       await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_apellidos" });
       return enviarTelegram(chatId, "Gracias. ¿Tus *apellidos*?");
     }
     case "await_apellidos": {
       const v = text.trim();
-      if (v.length < 2) return enviarTelegram(chatId, "Necesito apellidos válidos. ¿Cuáles son?");
+      if (v.length < 2) return enviarTelegram(chatId, "Necesito apellidos válidos.");
       borrador.apellidos = v;
       await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_fecha", flow_data: { ...data, fecha_intentos: 0 } });
-      return enviarTelegram(chatId, "¿Tu *fecha de nacimiento*? Puedes escribirla en cualquier formato: 12/10/1981, 12-10-81, 12 de octubre 1981, 121081, etc.");
+      return enviarTelegram(chatId, "¿Tu *fecha de nacimiento*? Formato libre: 12/10/1981, 12 de octubre 1981, etc.");
     }
     case "await_fecha": {
       const iso = await parseFechaFlexible(text);
@@ -499,14 +683,10 @@ async function manejarTextoWizard(chatId: string, conv: any, sesion: any, text: 
       if (!iso) {
         if (intentos >= 3) {
           await upsertSesion(conv.id, { flow_data: { ...data, fecha_intentos: intentos } });
-          return enviarTelegramConBotones(chatId, "No logré entender la fecha después de varios intentos. Continuemos sin ella:", [
-            [{ text: "⏭️ Prefiero no decir", callback_data: "skip:fecha" }],
-          ]);
+          return enviarTelegramConBotones(chatId, "No logré entender la fecha. Continuemos sin ella:", [[{ text: "⏭️ Omitir", callback_data: "skip:fecha" }]]);
         }
         await upsertSesion(conv.id, { flow_data: { ...data, fecha_intentos: intentos } });
-        return enviarTelegramConBotones(chatId, "No entendí esa fecha. Puedes escribirla como 12/10/1981 o '12 de octubre de 1981'.", [
-          [{ text: "⏭️ Prefiero no decir", callback_data: "skip:fecha" }],
-        ]);
+        return enviarTelegramConBotones(chatId, "No entendí esa fecha. Intenta: 12/10/1981", [[{ text: "⏭️ Omitir", callback_data: "skip:fecha" }]]);
       }
       borrador.fecha_nacimiento = iso;
       await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_sexo" });
@@ -521,9 +701,7 @@ async function manejarTextoWizard(chatId: string, conv: any, sesion: any, text: 
     }
     case "await_email": {
       const v = text.trim();
-      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
-        borrador.email = v;
-      }
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) borrador.email = v;
       await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_alergias_choice" });
       return preguntarAlergias(chatId);
     }
@@ -549,26 +727,20 @@ async function wizardSetSexo(chatId: string, conv: any, val: string) {
   const borrador = sesion?.borrador_paciente ?? {};
   if (val !== "skip") borrador.sexo = val;
   await upsertSesion(conv.id, { borrador_paciente: borrador, flow_step: "await_optional_decision" });
-  await enviarTelegramConBotones(chatId, "¿Quieres agregar más datos opcionales a tu expediente? Es voluntario — también puedes hacerlo en la consulta.", [[
+  await enviarTelegramConBotones(chatId, "¿Quieres agregar datos opcionales a tu expediente?", [[
     { text: "➕ Agregar más datos", callback_data: "extra:yes" },
     { text: "⏭️ Más tarde", callback_data: "extra:no" },
   ]]);
 }
 
 async function wizardDecisionExtra(chatId: string, conv: any, val: string) {
-  if (val === "no") {
-    return preguntarConsentimiento(chatId, conv);
-  }
+  if (val === "no") return preguntarConsentimiento(chatId, conv);
   await upsertSesion(conv.id, { flow_step: "await_ciudad" });
-  await enviarTelegramConBotones(chatId, "¿En qué *ciudad* vives?", [[
-    { text: "Saltar", callback_data: "skip:ciudad" },
-  ]]);
+  await enviarTelegramConBotones(chatId, "¿En qué *ciudad* vives?", [[{ text: "Saltar", callback_data: "skip:ciudad" }]]);
 }
 
 async function preguntarEmail(chatId: string) {
-  await enviarTelegramConBotones(chatId, "¿Cuál es tu *email*?", [[
-    { text: "Saltar", callback_data: "skip:email" },
-  ]]);
+  await enviarTelegramConBotones(chatId, "¿Cuál es tu *email*?", [[{ text: "Saltar", callback_data: "skip:email" }]]);
 }
 
 async function preguntarAlergias(chatId: string) {
@@ -580,61 +752,37 @@ async function preguntarAlergias(chatId: string) {
 }
 
 async function wizardSkip(chatId: string, conv: any, campo: string) {
-  const sesion = await obtenerSesion(conv.id);
   switch (campo) {
-    case "fecha":
-      await upsertSesion(conv.id, { flow_step: "await_sexo" });
-      return preguntarSexo(chatId);
-    case "ciudad":
-      await upsertSesion(conv.id, { flow_step: "await_email" });
-      return preguntarEmail(chatId);
-    case "email":
-      await upsertSesion(conv.id, { flow_step: "await_alergias_choice" });
-      return preguntarAlergias(chatId);
-    case "alergias":
-      return preguntarConsentimiento(chatId, conv);
+    case "fecha":    await upsertSesion(conv.id, { flow_step: "await_sexo" }); return preguntarSexo(chatId);
+    case "ciudad":   await upsertSesion(conv.id, { flow_step: "await_email" }); return preguntarEmail(chatId);
+    case "email":    await upsertSesion(conv.id, { flow_step: "await_alergias_choice" }); return preguntarAlergias(chatId);
+    case "alergias": return preguntarConsentimiento(chatId, conv);
   }
 }
 
 async function wizardAlergias(chatId: string, conv: any, val: string) {
   const sesion = await obtenerSesion(conv.id);
   const borrador = sesion?.borrador_paciente ?? {};
-  if (val === "none") {
-    borrador.alergias = "Sin alergias";
-    await upsertSesion(conv.id, { borrador_paciente: borrador });
-    return preguntarConsentimiento(chatId, conv);
-  }
-  if (val === "skip") {
-    return preguntarConsentimiento(chatId, conv);
-  }
-  // yes
+  if (val === "none") { borrador.alergias = "Sin alergias"; await upsertSesion(conv.id, { borrador_paciente: borrador }); return preguntarConsentimiento(chatId, conv); }
+  if (val === "skip") return preguntarConsentimiento(chatId, conv);
   await upsertSesion(conv.id, { flow_step: "await_alergias_texto" });
-  return enviarTelegramConBotones(chatId, "Cuéntame qué alergias tienes:", [[
-    { text: "Saltar", callback_data: "skip:alergias" },
-  ]]);
+  return enviarTelegramConBotones(chatId, "Cuéntame qué alergias tienes:", [[{ text: "Saltar", callback_data: "skip:alergias" }]]);
 }
 
 async function preguntarConsentimiento(chatId: string, conv: any) {
   await upsertSesion(conv.id, { flow_step: "await_consent" });
   await enviarTelegramConBotones(chatId,
     "Tus datos se usan únicamente para tu atención médica, conforme a la NOM-004-SSA3-2012 y la LFPDPPP. ¿Aceptas?",
-    [[
-      { text: "✅ Sí, acepto", callback_data: "consent:yes" },
-      { text: "❌ No", callback_data: "consent:no" },
-    ]]
+    [[{ text: "✅ Sí, acepto", callback_data: "consent:yes" }, { text: "❌ No", callback_data: "consent:no" }]]
   );
 }
 
 async function wizardConsent(chatId: string, conv: any, val: string) {
   if (val === "no") {
     await limpiarSesion(conv.id);
-    return enviarTelegram(chatId, "Entendido. Sin tu consentimiento no puedo agendar. Si cambias de opinión escribe /start.");
+    return enviarTelegram(chatId, "Entendido. Sin consentimiento no puedo agendar. Escribe /start si cambias de opinión.");
   }
-  await upsertSesion(conv.id, {
-    consentimiento_dado: true,
-    consentimiento_fecha: new Date().toISOString(),
-    flow_step: "await_confirm",
-  });
+  await upsertSesion(conv.id, { consentimiento_dado: true, consentimiento_fecha: new Date().toISOString(), flow_step: "await_confirm" });
   return mostrarConfirmacion(chatId, conv);
 }
 
@@ -643,15 +791,12 @@ async function mostrarConfirmacion(chatId: string, conv: any) {
   const d = sesion?.flow_data ?? {};
   const b = sesion?.borrador_paciente ?? {};
   const resumen =
-    `*Resumen de tu cita*\n\n` +
-    `🩺 Servicio: ${d.servicio_nombre}\n` +
-    `👨‍⚕️ Doctor: ${d.doctor_nombre}\n` +
-    `📅 Fecha: ${d.fecha_local}\n\n` +
-    `👤 Paciente: ${b.nombre} ${b.apellidos}\n` +
-    (b.fecha_nacimiento ? `🎂 Nacimiento: ${formatFechaMX(b.fecha_nacimiento)}\n` : "") +
-    (b.sexo ? `⚧ Sexo: ${b.sexo}\n` : "");
+    `*Resumen de tu cita*\n\n🩺 ${d.servicio_nombre}\n👨‍⚕️ ${d.doctor_nombre}\n📅 ${d.fecha_local}\n\n` +
+    `👤 ${b.nombre} ${b.apellidos}\n` +
+    (b.fecha_nacimiento ? `🎂 ${formatFechaMX(b.fecha_nacimiento)}\n` : "") +
+    (b.sexo ? `⚧ ${b.sexo}\n` : "");
   await enviarTelegramConBotones(chatId, resumen, [[
-    { text: "✅ Confirmar cita", callback_data: "confirm:yes" },
+    { text: "✅ Confirmar", callback_data: "confirm:yes" },
     { text: "❌ Cancelar", callback_data: "confirm:no" },
   ]]);
 }
@@ -659,15 +804,23 @@ async function mostrarConfirmacion(chatId: string, conv: any) {
 async function wizardConfirm(chatId: string, conv: any, val: string) {
   if (val === "no") {
     await limpiarSesion(conv.id);
-    return enviarTelegram(chatId, "Cita cancelada. Escribe /start si quieres intentar de nuevo.");
+    return enviarTelegramConBotones(chatId, "Cita cancelada. ¿Qué más puedo hacer por ti?", [
+      [{ text: "🗓 Agendar otra", callback_data: "menu_agendar:" }],
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
   }
-
   const result = await crearCitaDesdeSesion(conv);
   if ((result as any).error) {
-    return enviarTelegram(chatId, `No pude crear la cita: ${(result as any).error}. Escribe /start para intentar de nuevo.`);
+    return enviarTelegramConBotones(chatId, `No pude crear la cita: ${(result as any).error}.`, [
+      [{ text: "🔄 Intentar de nuevo", callback_data: "menu_agendar:" }],
+      [{ text: "🧑 Hablar con alguien", callback_data: "humano:" }],
+    ]);
   }
   await limpiarSesion(conv.id);
-  await enviarTelegram(chatId, "✅ Listo, tu cita queda como *SOLICITADA*. Recepción la confirma en breve. Si necesitas cambiar algo, escríbeme aquí mismo.");
+  await enviarTelegramConBotones(chatId,
+    "✅ Tu cita queda como *SOLICITADA*. Recepción la confirma en breve.",
+    [[{ text: "← Menú principal", callback_data: "menu_principal:" }]]
+  );
 }
 
 async function crearCitaDesdeSesion(conv: any) {
@@ -676,95 +829,80 @@ async function crearCitaDesdeSesion(conv: any) {
   if (!sesion.consentimiento_dado) return { error: "Falta consentimiento" };
   const b = sesion.borrador_paciente ?? {};
   if (!b.nombre || !b.apellidos) return { error: "Faltan datos básicos" };
-  if (!sesion.servicio_id || !sesion.doctor_id || !sesion.slot_propuesto) {
-    return { error: "Faltan datos de la cita" };
-  }
+  if (!sesion.servicio_id || !sesion.doctor_id || !sesion.slot_propuesto) return { error: "Faltan datos de la cita" };
 
-  const { data: identidad } = await supabase
-    .from("identidades_canal").select("*").eq("id", conv.identidad_canal_id).single();
+  const { data: identidad } = await supabase.from("identidades_canal").select("*").eq("id", conv.identidad_canal_id).single();
 
   let patientId = identidad.patient_id;
   if (!patientId) {
-    const { data: nuevoPaciente, error: ep } = await supabase
-      .from("patients").insert({
-        nombre:             b.nombre,
-        apellidos:          b.apellidos,
-        fecha_nacimiento:   b.fecha_nacimiento ?? null,
-        sexo:               b.sexo ?? null,
-        email:              b.email ?? null,
-        domicilio_ciudad:   b.domicilio_ciudad ?? null,
-        alergias:           b.alergias ?? null,
-      }).select("id").single();
+    const { data: nuevoPaciente, error: ep } = await supabase.from("patients").insert({
+      nombre: b.nombre, apellidos: b.apellidos, fecha_nacimiento: b.fecha_nacimiento ?? null,
+      sexo: b.sexo ?? null, email: b.email ?? null, domicilio_ciudad: b.domicilio_ciudad ?? null, alergias: b.alergias ?? null,
+    }).select("id").single();
     if (ep) return { error: "No pude crear paciente: " + ep.message };
     patientId = nuevoPaciente.id;
     await supabase.from("identidades_canal").update({ patient_id: patientId }).eq("id", identidad.id);
     await supabase.from("consentimientos").insert({
-      patient_id: patientId,
-      identidad_canal_id: identidad.id,
-      tipo: "aviso_privacidad",
-      version_texto: AVISO_PRIVACIDAD_VERSION,
-      otorgado: true,
-      otorgado_at: sesion.consentimiento_fecha,
+      patient_id: patientId, identidad_canal_id: identidad.id, tipo: "aviso_privacidad",
+      version_texto: AVISO_PRIVACIDAD_VERSION, otorgado: true, otorgado_at: sesion.consentimiento_fecha,
     });
   }
 
-  const { data: svc } = await supabase
-    .from("servicios").select("duracion_minutos").eq("id", sesion.servicio_id).single();
+  const { data: svc } = await supabase.from("servicios").select("duracion_minutos").eq("id", sesion.servicio_id).single();
   if (!svc) return { error: "Servicio no encontrado" };
 
   const inicio = new Date(sesion.slot_propuesto);
   const fin    = new Date(inicio.getTime() + svc.duracion_minutos * 60000);
 
   const { data: cita, error: ea } = await supabase.from("appointments").insert({
-    patient_id:     patientId,
-    doctor_id:      sesion.doctor_id,
-    servicio_id:    sesion.servicio_id,
-    fecha_inicio:   inicio.toISOString(),
-    fecha_fin:      fin.toISOString(),
-    origen:         "telegram",
-    creada_por_bot: true,
+    patient_id: patientId, doctor_id: sesion.doctor_id, servicio_id: sesion.servicio_id,
+    fecha_inicio: inicio.toISOString(), fecha_fin: fin.toISOString(), origen: "telegram", creada_por_bot: true,
   }).select("id, fecha_inicio").single();
 
   if (ea) {
-    if (ea.code === "23P01" || /exclude|exclusion/i.test(ea.message)) {
-      return { error: "El horario ya fue tomado" };
-    }
+    if (ea.code === "23P01" || /exclude|exclusion/i.test(ea.message)) return { error: "El horario ya fue tomado" };
     return { error: ea.message };
   }
 
-  // Recordatorios T-24h y T-2h
   try {
-    const ahora    = new Date();
-    const inicioMs = inicio.getTime();
+    const ahora = new Date();
     const rows: any[] = [];
-    const rec24h = new Date(inicioMs - 24 * 3600000);
-    const rec2h  = new Date(inicioMs -  2 * 3600000);
+    const rec24h = new Date(inicio.getTime() - 24 * 3600000);
+    const rec2h  = new Date(inicio.getTime() -  2 * 3600000);
     if (rec24h > ahora) rows.push({ appointment_id: cita.id, identidad_canal_id: conv.identidad_canal_id, programado_para: rec24h.toISOString(), tipo: "t24h", status: "pendiente" });
     if (rec2h  > ahora) rows.push({ appointment_id: cita.id, identidad_canal_id: conv.identidad_canal_id, programado_para: rec2h.toISOString(),  tipo: "t2h",  status: "pendiente" });
     if (rows.length) await supabase.from("recordatorios_cita").insert(rows);
-  } catch (e) {
-    console.error("recordatorios:", e);
-  }
+  } catch (e) { console.error("recordatorios:", e); }
 
   return { ok: true, appointment_id: cita.id };
 }
 
 // ============================================================
-// AGENTE CLAUDE (fallback para texto libre)
+// AGENTE CLAUDE
 // ============================================================
 async function correrAgente(conv: any, chatId: string): Promise<string> {
   const messages = await cargarHistorialParaAnthropic(conv.id);
+  return ejecutarAgenteLoop(conv, chatId, messages);
+}
 
+async function correrAgenteConsulta(conv: any, chatId: string, texto: string): Promise<string> {
+  const messages = await cargarHistorialParaAnthropic(conv.id);
+  if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
+    messages.push({ role: "user", content: texto });
+  }
+  return ejecutarAgenteLoop(conv, chatId, messages);
+}
+
+async function ejecutarAgenteLoop(conv: any, chatId: string, messages: any[]): Promise<string> {
   for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
     const resp = await llamarClaude(messages);
 
     if (resp.stop_reason === "end_turn" || resp.stop_reason === "stop_sequence") {
       const text = resp.content.find((b: any) => b.type === "text")?.text?.trim();
       if (text) return text;
-      const hasBlocks = (resp.content?.length ?? 0) > 0;
-      if (hasBlocks) {
+      if ((resp.content?.length ?? 0) > 0) {
         messages.push({ role: "assistant", content: resp.content });
-        messages.push({ role: "user", content: "Continúa con el siguiente paso." });
+        messages.push({ role: "user", content: "Continúa." });
         continue;
       }
       break;
@@ -773,16 +911,10 @@ async function correrAgente(conv: any, chatId: string): Promise<string> {
     if (resp.stop_reason === "tool_use") {
       const toolUses = resp.content.filter((b: any) => b.type === "tool_use");
       messages.push({ role: "assistant", content: resp.content });
-
       const toolResults: any[] = [];
       for (const tu of toolUses) {
         const result = await ejecutarToolClaude(tu.name, tu.input, conv, chatId);
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: tu.id,
-          content: JSON.stringify(result),
-          is_error: !!result.error,
-        });
+        toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result), is_error: !!result.error });
       }
       messages.push({ role: "user", content: toolResults });
       continue;
@@ -795,9 +927,12 @@ async function correrAgente(conv: any, chatId: string): Promise<string> {
 async function ejecutarToolClaude(name: string, input: any, conv: any, chatId: string) {
   try {
     switch (name) {
+      case "mostrar_menu_principal":
+        await enviarMenuPrincipal(chatId, "¿En qué más te puedo ayudar?");
+        return { ok: true, accion: "menú principal enviado" };
       case "mostrar_menu_categorias":
-        await enviarMenuCategorias(chatId, "Aquí está el menú de servicios:");
-        return { ok: true, accion: "menú enviado al paciente con botones" };
+        await enviarMenuCategorias(chatId, "Elige la especialidad:");
+        return { ok: true, accion: "menú especialidades enviado" };
       case "buscar_servicios":
         return await buscarServicios(input.query, chatId);
       case "escalar_a_humano":
@@ -813,55 +948,40 @@ async function ejecutarToolClaude(name: string, input: any, conv: any, chatId: s
 async function buscarServicios(query: string, chatId: string) {
   const q = (query ?? "").trim().toLowerCase();
   if (!q) return { error: "query vacía" };
-  const { data } = await supabase
-    .from("servicios")
-    .select("id, nombre, especialidad, duracion_minutos, precio_centavos")
-    .eq("activo", true);
+  const { data } = await supabase.from("servicios").select("id, nombre, especialidad, duracion_minutos, precio_centavos").eq("activo", true);
   const filtrados = (data ?? []).filter((s: any) =>
-    s.nombre.toLowerCase().includes(q) ||
-    (s.especialidad ?? "").toLowerCase().includes(q)
+    s.nombre.toLowerCase().includes(q) || (s.especialidad ?? "").toLowerCase().includes(q)
   ).slice(0, 5);
 
   if (filtrados.length === 0) {
-    await enviarMenuCategorias(chatId, `No encontré "${query}". Elige una categoría:`);
-    return { ok: true, candidatos: 0, accion: "menú enviado" };
+    await enviarMenuCategorias(chatId, `No encontré "${query}". Elige una especialidad:`);
+    return { ok: true, candidatos: 0 };
   }
 
   const rows = filtrados.map((s: any) => {
     const precio = s.precio_centavos ? `$${(s.precio_centavos / 100).toLocaleString("es-MX")}` : "—";
     return [{ text: `${s.nombre} — ${s.duracion_minutos} min / ${precio}`, callback_data: `srv:${s.id}` }];
   });
-  rows.push([{ text: "← Ver todas las categorías", callback_data: "menu:" }]);
-  await enviarTelegramConBotones(chatId, `Encontré esto para "${query}":`, rows);
-  return { ok: true, candidatos: filtrados.length, accion: "botones enviados" };
+  rows.push([{ text: "← Ver todas las categorías", callback_data: "menu_agendar:" }]);
+  await enviarTelegramConBotones(chatId, `Encontré para "${query}":`, rows);
+  return { ok: true, candidatos: filtrados.length };
 }
 
 async function llamarClaude(messages: any[]) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: {
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      tools: TOOLS,
-      messages,
-    }),
+    headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1024, system: SYSTEM_PROMPT, tools: TOOLS, messages }),
   });
   if (!res.ok) throw new Error("Anthropic " + res.status + ": " + (await res.text()));
   return await res.json();
 }
 
 // ============================================================
-// LISTAR HORARIOS (reusada)
+// LISTAR HORARIOS
 // ============================================================
 async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any) {
   dias_adelante = Math.min(dias_adelante, 30);
-
   const { data: ds, error: e1 } = await supabase
     .from("doctor_servicios")
     .select("doctor_id, doctor:doctors(id, nombre, apellidos, horario_inicio, horario_fin, activo)")
@@ -871,8 +991,7 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
   const doctores = (ds ?? []).filter((r: any) => r.doctor?.activo);
   if (doctores.length === 0) return { horarios: [] };
 
-  const { data: svc, error: e2 } = await supabase
-    .from("servicios").select("duracion_minutos").eq("id", servicio_id).single();
+  const { data: svc, error: e2 } = await supabase.from("servicios").select("duracion_minutos").eq("id", servicio_id).single();
   if (e2) return { error: e2.message };
   const durMin: number = svc.duracion_minutos;
 
@@ -881,17 +1000,10 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
   const docIds = doctores.map((d: any) => d.doctor_id);
 
   const { data: existentes } = await supabase
-    .from("appointments")
-    .select("doctor_id, fecha_inicio, fecha_fin, status")
-    .in("doctor_id", docIds)
-    .gte("fecha_inicio", ahora.toISOString())
-    .lte("fecha_inicio", finRango.toISOString());
+    .from("appointments").select("doctor_id, fecha_inicio, fecha_fin, status")
+    .in("doctor_id", docIds).gte("fecha_inicio", ahora.toISOString()).lte("fecha_inicio", finRango.toISOString());
 
-  const ocupadas = (existentes ?? []).filter((a: any) => {
-    const s = String(a.status).toLowerCase();
-    return !["cancelada", "cancelado", "no_show", "no_asistio"].includes(s);
-  });
-
+  const ocupadas = (existentes ?? []).filter((a: any) => !["cancelada", "cancelado", "no_show", "no_asistio"].includes(String(a.status).toLowerCase()));
   const horarios: any[] = [];
   const ahoraMxMs = ahora.getTime() + MX_TZ_OFFSET_MS;
 
@@ -899,8 +1011,8 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
     const diaMx = new Date(ahoraMxMs + d * 86400000);
     if (!DIAS_LABORALES.includes(diaMx.getUTCDay())) continue;
     const yyyy = diaMx.getUTCFullYear();
-    const mm   = String(diaMx.getUTCMonth() + 1).padStart(2, "0");
-    const dd   = String(diaMx.getUTCDate()).padStart(2, "0");
+    const mm = String(diaMx.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(diaMx.getUTCDate()).padStart(2, "0");
 
     for (const doc of doctores) {
       const [sh, sm] = doc.doctor.horario_inicio.split(":").map(Number);
@@ -915,19 +1027,15 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
         const slotFin = new Date(t + durMin * 60000);
         if (slotIni < ahora) continue;
         const conflicto = ocupadas.find((a: any) =>
-          a.doctor_id === doc.doctor_id &&
-          new Date(a.fecha_inicio) < slotFin &&
-          new Date(a.fecha_fin)   > slotIni
+          a.doctor_id === doc.doctor_id && new Date(a.fecha_inicio) < slotFin && new Date(a.fecha_fin) > slotIni
         );
         if (conflicto) continue;
-
         horarios.push({
           doctor_id: doc.doctor_id,
           doctor_nombre: doc.doctor.nombre + " " + doc.doctor.apellidos,
           fecha_inicio: slotIni.toISOString(),
           fecha_local: slotIni.toLocaleString("es-MX", {
-            timeZone: "America/Mexico_City",
-            weekday: "short", day: "numeric", month: "short",
+            timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short",
             hour: "2-digit", minute: "2-digit",
           }),
         });
@@ -936,14 +1044,11 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
       if (horarios.length >= 16) break;
     }
   }
-
   return { horarios: horarios.slice(0, 8) };
 }
 
 async function escalarConversacion(conv: any, { razon }: { razon: string }) {
-  await supabase.from("conversaciones")
-    .update({ status: "escalada", intencion_actual: "escalada" })
-    .eq("id", conv.id);
+  await supabase.from("conversaciones").update({ status: "escalada", intencion_actual: "escalada" }).eq("id", conv.id);
   await registrarAudit(conv, "conv_escalada", { razon });
   return { ok: true, escalada: true, razon };
 }
@@ -952,8 +1057,7 @@ async function escalarConversacion(conv: any, { razon }: { razon: string }) {
 // SESIÓN HELPERS
 // ============================================================
 async function obtenerSesion(convId: string) {
-  const { data } = await supabase
-    .from("bot_sesiones").select("*").eq("conversacion_id", convId).maybeSingle();
+  const { data } = await supabase.from("bot_sesiones").select("*").eq("conversacion_id", convId).maybeSingle();
   return data;
 }
 
@@ -976,64 +1080,43 @@ async function limpiarSesion(convId: string) {
 // IDENTIDAD / CONVERSACIÓN / MENSAJES
 // ============================================================
 async function obtenerOCrearIdentidad(chatId: string, from: any) {
-  const { data: existente } = await supabase
-    .from("identidades_canal").select("*")
+  const { data: existente } = await supabase.from("identidades_canal").select("*")
     .eq("canal_id", "telegram").eq("external_id", chatId).maybeSingle();
   if (existente) return existente;
 
   const display = [from?.first_name, from?.last_name].filter(Boolean).join(" ") || from?.username || "Anónimo";
-  const { data: nueva, error } = await supabase
-    .from("identidades_canal").insert({
-      canal_id:     "telegram",
-      external_id:  chatId,
-      display_name: display,
-      metadata:     { telegram_user: from },
-    }).select("*").single();
+  const { data: nueva, error } = await supabase.from("identidades_canal").insert({
+    canal_id: "telegram", external_id: chatId, display_name: display, metadata: { telegram_user: from },
+  }).select("*").single();
   if (error) throw error;
   return nueva;
 }
 
 async function obtenerOCrearConversacion(identidadId: string) {
-  const { data: existente } = await supabase
-    .from("conversaciones").select("*")
-    .eq("identidad_canal_id", identidadId)
-    .in("status", ["activa", "escalada"])
-    .order("created_at", { ascending: false })
-    .limit(1).maybeSingle();
+  const { data: existente } = await supabase.from("conversaciones").select("*")
+    .eq("identidad_canal_id", identidadId).in("status", ["activa", "escalada"])
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (existente) return existente;
 
-  const { data: nueva, error } = await supabase
-    .from("conversaciones").insert({ identidad_canal_id: identidadId })
-    .select("*").single();
+  const { data: nueva, error } = await supabase.from("conversaciones").insert({ identidad_canal_id: identidadId }).select("*").single();
   if (error) throw error;
   return nueva;
 }
 
 async function guardarMensajeUsuario(conversacionId: string, text: string, raw: any) {
-  await supabase.from("mensajes").insert({
-    conversacion_id: conversacionId, rol: "user", contenido: text, raw_payload: raw,
-  });
-  await supabase.from("conversaciones")
-    .update({ last_message_at: new Date().toISOString() })
-    .eq("id", conversacionId);
+  await supabase.from("mensajes").insert({ conversacion_id: conversacionId, rol: "user", contenido: text, raw_payload: raw });
+  await supabase.from("conversaciones").update({ last_message_at: new Date().toISOString() }).eq("id", conversacionId);
 }
 
 async function guardarMensajeAsistente(conversacionId: string, text: string) {
-  await supabase.from("mensajes").insert({
-    conversacion_id: conversacionId, rol: "assistant", contenido: text,
-  });
+  await supabase.from("mensajes").insert({ conversacion_id: conversacionId, rol: "assistant", contenido: text });
 }
 
 async function cargarHistorialParaAnthropic(conversacionId: string) {
-  const { data } = await supabase
-    .from("mensajes").select("rol, contenido")
-    .eq("conversacion_id", conversacionId)
-    .in("rol", ["user", "assistant"])
-    .order("created_at", { ascending: false })
-    .limit(40);
-  let messages = (data ?? []).reverse().map((m: any) => ({
-    role: m.rol, content: m.contenido ?? "",
-  }));
+  const { data } = await supabase.from("mensajes").select("rol, contenido")
+    .eq("conversacion_id", conversacionId).in("rol", ["user", "assistant"])
+    .order("created_at", { ascending: false }).limit(40);
+  let messages = (data ?? []).reverse().map((m: any) => ({ role: m.rol, content: m.contenido ?? "" }));
   while (messages.length > 0 && messages[0].role !== "user") messages.shift();
   return messages;
 }
@@ -1054,96 +1137,54 @@ async function enviarTelegramConBotones(chatId: string, text: string, inlineKeyb
   const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "Markdown",
-      reply_markup: { inline_keyboard: inlineKeyboard },
-    }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", reply_markup: { inline_keyboard: inlineKeyboard } }),
   });
   if (!res.ok) console.error("Telegram send buttons error:", await res.text());
 }
 
 // ============================================================
-// UTILS
+// UTILS — Parser de fecha flexible
 // ============================================================
-// ---------- Fecha de nacimiento: parser flexible ----------
 const MESES_ES: Record<string, number> = {
-  enero: 1, ene: 1,
-  febrero: 2, feb: 2,
-  marzo: 3, mar: 3,
-  abril: 4, abr: 4,
-  mayo: 5, may: 5,
-  junio: 6, jun: 6,
-  julio: 7, jul: 7,
-  agosto: 8, ago: 8,
+  enero: 1, ene: 1, febrero: 2, feb: 2, marzo: 3, mar: 3,
+  abril: 4, abr: 4, mayo: 5, may: 5, junio: 6, jun: 6,
+  julio: 7, jul: 7, agosto: 8, ago: 8,
   septiembre: 9, setiembre: 9, sep: 9, sept: 9,
-  octubre: 10, oct: 10,
-  noviembre: 11, nov: 11,
-  diciembre: 12, dic: 12,
+  octubre: 10, oct: 10, noviembre: 11, nov: 11, diciembre: 12, dic: 12,
 };
 
 function inferirAño(yy: number): number {
   const añoActual = new Date().getFullYear();
-  const yyActual = añoActual % 100;
-  return yy <= yyActual + 1 ? 2000 + yy : 1900 + yy;
+  return yy <= (añoActual % 100) + 1 ? 2000 + yy : 1900 + yy;
 }
 
 function validarYFormatear(dd: number, mm: number, yyyy: number): string | null {
   if (!Number.isInteger(dd) || !Number.isInteger(mm) || !Number.isInteger(yyyy)) return null;
   if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
-  const añoActual = new Date().getFullYear();
-  if (yyyy < 1900 || yyyy > añoActual) return null;
+  if (yyyy < 1900 || yyyy > new Date().getFullYear()) return null;
   const d = new Date(Date.UTC(yyyy, mm - 1, dd));
   if (d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 || d.getUTCDate() !== dd) return null;
   return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
 }
 
 function parseFechaRegex(input: string): string | null {
-  const s = input.trim().toLowerCase()
-    .replace(/\bdel?\b/g, " ")
-    .replace(/\bde\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // 8 dígitos pegados: ddmmyyyy
+  const s = input.trim().toLowerCase().replace(/\bdel?\b/g, " ").replace(/\bde\b/g, " ").replace(/\s+/g, " ").trim();
   let m = s.match(/^(\d{2})(\d{2})(\d{4})$/);
   if (m) return validarYFormatear(+m[1], +m[2], +m[3]);
-
-  // 6 dígitos pegados: ddmmyy
   m = s.match(/^(\d{2})(\d{2})(\d{2})$/);
   if (m) return validarYFormatear(+m[1], +m[2], inferirAño(+m[3]));
-
-  // dd[sep]mm[sep]yy(yy)
   m = s.match(/^(\d{1,2})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{2}|\d{4})$/);
-  if (m) {
-    const yy = +m[3];
-    const yyyy = m[3].length === 2 ? inferirAño(yy) : yy;
-    return validarYFormatear(+m[1], +m[2], yyyy);
-  }
-
-  // dd <mes-texto> yy(yy)   ej: "12 octubre 1981"
+  if (m) return validarYFormatear(+m[1], +m[2], m[3].length === 2 ? inferirAño(+m[3]) : +m[3]);
   m = s.match(/^(\d{1,2})\s+([a-záéíóú]+)\s+(\d{2}|\d{4})$/i);
   if (m) {
-    const mes = MESES_ES[m[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
-    if (mes) {
-      const yy = +m[3];
-      const yyyy = m[3].length === 2 ? inferirAño(yy) : yy;
-      return validarYFormatear(+m[1], mes, yyyy);
-    }
+    const mes = MESES_ES[m[2].normalize("NFD").replace(/[̀-ͯ]/g, "")];
+    if (mes) return validarYFormatear(+m[1], mes, m[3].length === 2 ? inferirAño(+m[3]) : +m[3]);
   }
-
-  // <mes-texto> dd yy(yy)   ej: "octubre 12 1981"
   m = s.match(/^([a-záéíóú]+)\s+(\d{1,2})\s+(\d{2}|\d{4})$/i);
   if (m) {
-    const mes = MESES_ES[m[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
-    if (mes) {
-      const yy = +m[3];
-      const yyyy = m[3].length === 2 ? inferirAño(yy) : yy;
-      return validarYFormatear(+m[2], mes, yyyy);
-    }
+    const mes = MESES_ES[m[1].normalize("NFD").replace(/[̀-ͯ]/g, "")];
+    if (mes) return validarYFormatear(+m[2], mes, m[3].length === 2 ? inferirAño(+m[3]) : +m[3]);
   }
-
   return null;
 }
 
@@ -1152,29 +1193,11 @@ async function parseFechaConClaude(input: string): Promise<string | null> {
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 256,
-        system: "Eres un parser de fechas en español de México. Devuelve la fecha de nacimiento entendida usando la herramienta devolver_fecha. Si la fecha no se entiende con razonable certeza, devuelve ok=false.",
-        tools: [{
-          name: "devolver_fecha",
-          description: "Devuelve la fecha de nacimiento parseada.",
-          input_schema: {
-            type: "object",
-            properties: {
-              ok: { type: "boolean" },
-              dia: { type: "integer" },
-              mes: { type: "integer" },
-              anio: { type: "integer" },
-            },
-            required: ["ok"],
-          },
-        }],
+        model: ANTHROPIC_MODEL, max_tokens: 256,
+        system: "Parser de fechas en español. Devuelve con devolver_fecha. Si no entiendes, ok=false.",
+        tools: [{ name: "devolver_fecha", description: "Fecha parseada.", input_schema: { type: "object", properties: { ok: { type: "boolean" }, dia: { type: "integer" }, mes: { type: "integer" }, anio: { type: "integer" } }, required: ["ok"] } }],
         tool_choice: { type: "tool", name: "devolver_fecha" },
         messages: [{ role: "user", content: input }],
       }),
@@ -1186,15 +1209,11 @@ async function parseFechaConClaude(input: string): Promise<string | null> {
     let { dia, mes, anio } = tool.input;
     if (typeof anio === "number" && anio < 100) anio = inferirAño(anio);
     return validarYFormatear(Number(dia), Number(mes), Number(anio));
-  } catch (_e) {
-    return null;
-  }
+  } catch (_e) { return null; }
 }
 
 async function parseFechaFlexible(input: string): Promise<string | null> {
-  const r = parseFechaRegex(input);
-  if (r) return r;
-  return await parseFechaConClaude(input);
+  return parseFechaRegex(input) ?? await parseFechaConClaude(input);
 }
 
 function formatFechaMX(iso: string): string {
