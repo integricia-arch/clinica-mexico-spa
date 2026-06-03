@@ -1,7 +1,5 @@
 project_id = "mqmnnvnkwfwtfmnoevrt"
 
-[functions.telegram-webhook]
-verify_jwt = false
 
 [functions.enviar-recordatorios]
 verify_jwt = false
