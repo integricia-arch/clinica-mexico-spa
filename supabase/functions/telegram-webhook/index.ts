@@ -411,7 +411,16 @@ async function manejarCallback(cq: any) {
     case "skip":            return wizardSkip(chatId, conv, arg);
     case "alergias":        return wizardAlergias(chatId, conv, arg);
     case "consent":         return wizardConsent(chatId, conv, arg);
-    case "confirm":         return wizardConfirm(chatId, conv, arg);
+    case "confirm": {
+      try { return await wizardConfirm(chatId, conv, arg); }
+      catch (err: any) {
+        console.error("wizardConfirm error:", err);
+        return enviarTelegramConBotones(chatId,
+          `No pude crear la cita: ${err?.message ?? "error inesperado"}. Escribe /nueva e intenta de nuevo.`,
+          [[{ text: "🔄 Intentar de nuevo", callback_data: "menu_agendar:" }]]
+        );
+      }
+    }
     case "consulta":        return iniciarConsultaAbierta(chatId, conv);
     case "consulta_tema":   return manejarTemaCon(chatId, conv, arg);
     case "otro":            return manejarOtro(chatId, conv);
@@ -952,8 +961,8 @@ async function crearCitaDesdeSesion(conv: any) {
     });
   }
 
-  const { data: svc } = await supabase.from("servicios").select("duracion_minutos").eq("id", sesion.servicio_id).single();
-  if (!svc) return { error: "Servicio no encontrado" };
+  const { data: svc, error: esvc } = await supabase.from("servicios").select("duracion_minutos").eq("id", sesion.servicio_id).single();
+  if (!svc) { console.error("servicio no encontrado:", sesion.servicio_id, esvc?.message); return { error: "Servicio no encontrado: " + (esvc?.message ?? sesion.servicio_id) }; }
 
   const inicio = new Date(sesion.slot_propuesto);
   const fin    = new Date(inicio.getTime() + svc.duracion_minutos * 60000);
