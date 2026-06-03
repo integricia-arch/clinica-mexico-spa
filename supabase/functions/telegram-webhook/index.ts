@@ -958,7 +958,7 @@ async function crearCitaDesdeSesion(conv: any) {
   if (!patientId) {
     const { data: nuevoPaciente, error: ep } = await supabase.from("patients").insert({
       nombre: b.nombre, apellidos: b.apellidos, fecha_nacimiento: b.fecha_nacimiento ?? null,
-      sexo: normalizeSexo(b.sexo), email: b.email ?? null, domicilio_ciudad: b.domicilio_ciudad ?? null, alergias: b.alergias ?? null,
+      sexo: normalizeSexo(b.sexo), email: b.email ?? null, municipio: b.domicilio_ciudad ?? null, alergias: b.alergias ?? null,
     }).select("id").single();
     if (ep) return { error: "No pude crear paciente: " + ep.message };
     patientId = nuevoPaciente.id;
@@ -1249,22 +1249,35 @@ async function cargarHistorialParaAnthropic(conversacionId: string) {
 // ============================================================
 // TELEGRAM SEND
 // ============================================================
+async function telegramSendMessage(payload: Record<string, unknown>, label: string) {
+  // First attempt with Markdown. If Telegram rejects malformed entities (400),
+  // retry as plain text so dynamic values (names, fechas, errores) never silence the bot.
+  const send = (body: Record<string, unknown>) =>
+    fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  let res = await send({ ...payload, parse_mode: "Markdown" });
+  if (res.ok) return;
+
+  const errText = await res.text();
+  console.error(`${label} (markdown) error, retrying as plain text:`, errText);
+
+  res = await send(payload);
+  if (!res.ok) console.error(`${label} (plain) error:`, await res.text());
+}
+
 async function enviarTelegram(chatId: string, text: string) {
-  const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
-  });
-  if (!res.ok) console.error("Telegram send error:", await res.text());
+  await telegramSendMessage({ chat_id: chatId, text }, "Telegram send");
 }
 
 async function enviarTelegramConBotones(chatId: string, text: string, inlineKeyboard: any[][]) {
-  const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", reply_markup: { inline_keyboard: inlineKeyboard } }),
-  });
-  if (!res.ok) console.error("Telegram send buttons error:", await res.text());
+  await telegramSendMessage(
+    { chat_id: chatId, text, reply_markup: { inline_keyboard: inlineKeyboard } },
+    "Telegram send buttons",
+  );
 }
 
 // ============================================================
