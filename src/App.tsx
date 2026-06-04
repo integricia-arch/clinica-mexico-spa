@@ -37,7 +37,7 @@ import CaminoPaciente from "@/pages/CaminoPaciente";
 import PanelDoctor from "@/pages/PanelDoctor";
 import CajaConfiguracion from "@/pages/CajaConfiguracion";
 import CajaTurno from "@/pages/CajaTurno";
-import AjustesPlataforma from "@/pages/AjustesPlataforma";
+import AjustesPlataforma from "@/pages/ajustes/AjustesPlataforma";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
