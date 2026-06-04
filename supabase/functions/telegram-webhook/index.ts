@@ -118,6 +118,41 @@ async function procesarUpdate(update: any) {
 }
 
 // ============================================================
+// INTENCIÓN EN LENGUAJE NATURAL
+// El cliente no debería memorizar comandos. Entendemos lo que QUIERE decir.
+// ============================================================
+function normalizarTexto(t: string): string {
+  return (t ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+}
+
+// Saludos / intención de iniciar. Anclados para no capturar frases largas del wizard.
+function esSaludo(t: string): boolean {
+  const s = normalizarTexto(t);
+  if (!s) return false;
+  const saludos = [
+    "hola", "holi", "ola", "buenas", "buenos dias", "buen dia",
+    "buenas tardes", "buenas noches", "que tal", "que hay", "hey",
+    "menu", "inicio", "empezar", "comenzar", "volver al inicio",
+  ];
+  return saludos.some((g) => s === g || s.startsWith(g + " ") || s.startsWith(g + ",") || s.startsWith(g + "!"));
+}
+
+// Cliente pide explícitamente atención de una persona. Es la ÚNICA razón para escalar a humano.
+function pideHumano(t: string): boolean {
+  const s = normalizarTexto(t);
+  if (!s) return false;
+  const frases = [
+    "hablar con alguien", "hablar con una persona", "hablar con un humano",
+    "hablar con humano", "con un humano", "con una persona", "con alguien mas",
+    "quiero un humano", "necesito un humano", "atencion humana", "una persona real",
+    "agente", "asesor", "ejecutivo", "operador", "recepcion", "recepcionista",
+    "que me entienda", "alguien que me entienda", "nadie me entiende",
+    "quiero ayuda", "necesito ayuda", "me pueden ayudar", "ayuda por favor",
+  ];
+  return frases.some((f) => s.includes(f));
+}
+
+// ============================================================
 // MENSAJES DE TEXTO
 // ============================================================
 async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
@@ -198,19 +233,25 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     return;
   }
 
-  if (text === "/start") {
+  // Cliente pide una persona (en sus propias palabras o con /humano). Única razón para escalar.
+  if (text === "/humano" || pideHumano(text)) {
     await guardarMensajeUsuario(conv.id, text, rawMsg);
-    await limpiarSesion(conv.id);
-    const bienvenida = "¡Hola! Soy el asistente virtual de agendamiento de ClínicaMX 🤖\n\nPuedo ayudarte a agendar citas, consultar horarios y precios, y conectarte con recepción. No soy médico ni puedo dar consejos de salud.\n\n¿En qué te puedo ayudar hoy?";
-    await guardarMensajeAsistente(conv.id, bienvenida);
-    await enviarMenuPrincipal(chatId, bienvenida);
+    await escalarConversacion(conv, { razon: "El cliente pidió hablar con una persona" });
+    await enviarTelegram(chatId, "Claro 🙌 En un momento una persona de nuestro equipo te atiende por aquí.\nCuando quieras agendar una cita, solo escríbeme \"hola\".");
     return;
   }
-  if (text === "/humano") {
-    await guardarMensajeUsuario(conv.id, text, rawMsg);
-    await escalarConversacion(conv, { razon: "Solicitado con /humano" });
-    await enviarTelegram(chatId, "Listo, recepción te contactará en breve.\nEscribe /nueva cuando quieras iniciar otra consulta.");
-    return;
+  // Saludo o intención de iniciar (en sus palabras o con /start). No interrumpe una cita en curso.
+  if (text === "/start" || esSaludo(text)) {
+    const sesionActual = await obtenerSesion(conv.id);
+    const enWizard = !!sesionActual?.flow_step && sesionActual.flow_step !== "consulta_abierta";
+    if (text === "/start" || !enWizard) {
+      await guardarMensajeUsuario(conv.id, text, rawMsg);
+      await limpiarSesion(conv.id);
+      const bienvenida = "¡Hola! 👋 Soy el asistente de ClínicaMX. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo. No soy médico ni puedo dar consejos de salud.\n\n¿En qué te puedo ayudar hoy?";
+      await guardarMensajeAsistente(conv.id, bienvenida);
+      await enviarMenuPrincipal(chatId, bienvenida);
+      return;
+    }
   }
 
   await guardarMensajeUsuario(conv.id, text, rawMsg);
