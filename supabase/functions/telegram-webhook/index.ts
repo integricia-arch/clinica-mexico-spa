@@ -17,6 +17,7 @@ const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
+const ANTHROPIC_MODEL_MEMORIA = "claude-haiku-4-5-20251001"; // barato: resumen de memoria del paciente
 const MAX_AGENT_ITERATIONS = 8;
 const AVISO_PRIVACIDAD_VERSION = "v1.0";
 const DIAS_LABORALES = [1, 2, 3, 4, 5];
@@ -37,7 +38,7 @@ const CATEGORIAS: Record<string, { label: string; especialidades: string[] }> = 
   lab:    { label: "🔬 Estudios y laboratorio", especialidades: ["Laboratorio", "Imagenología"] },
 };
 
-const SYSTEM_PROMPT = `Eres el asistente virtual de AGENDAMIENTO de ClínicaMX, una clínica multiespecialidad en México.
+const SYSTEM_PROMPT_BASE = `Eres el asistente virtual de AGENDAMIENTO de ClínicaMX, una clínica multiespecialidad en México.
 
 TU ROL: Ayudar a agendar citas, informar horarios/precios/ubicación y conectar con recepción. NO eres médico ni personal de salud. No puedes ni debes dar consejos, diagnósticos ni interpretaciones médicas.
 
@@ -54,7 +55,25 @@ REGLAS DURAS:
 
 Especialidades: Medicina general, Odontología, Dermatología, Estética, Pediatría, Ginecología, Cardiología, Nutrición, Psicología, Laboratorio, Imagenología.
 
+ENTENDER A LA PERSONA (no solo sus palabras):
+- Lee la INTENCIÓN y el ESTADO EMOCIONAL detrás del mensaje, no palabras sueltas. "ya me cansé de esperar", "olvídalo", "no sé qué hacer" expresan frustración o duda: reconócelo con calidez antes de ofrecer la acción.
+- Si la persona suena confundida, asustada o frustrada: valida brevemente ("entiendo, vamos a resolverlo juntos") y luego guía con un paso claro.
+- Adáptate a cómo escribe cada quien (formal, coloquial, con errores de dedo). Interpreta la necesidad real aunque no use las palabras "exactas".
+- No repitas el menú como robot. Responde a lo que la persona realmente necesita en ese momento.
+- Si pide hablar con una persona, expresa molestia repetida, o el caso rebasa el agendamiento: usa escalar_a_humano.
+
 Si no sabes qué quiere el paciente: llama mostrar_menu_principal.`;
+
+// Memoria del paciente (lo aprendido en conversaciones previas) se inyecta aquí.
+// Mantiene al bot con contexto humano entre sesiones, no solo dentro de un chat.
+function buildSystemPrompt(memoria: any): string {
+  const resumen = (memoria?.resumen ?? "").toString().trim();
+  if (!resumen) return SYSTEM_PROMPT_BASE;
+  return `${SYSTEM_PROMPT_BASE}
+
+LO QUE YA SABES DE ESTA PERSONA (de conversaciones anteriores; úsalo con naturalidad, no lo recites):
+${resumen}`;
+}
 
 const TOOLS = [
   {
@@ -314,6 +333,8 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     await guardarMensajeAsistente(conv.id, respuesta);
     await enviarTelegram(chatId, respuesta);
   }
+  // Aprende de esta interacción (segundo plano lógico: ya respondimos al usuario)
+  await actualizarMemoria(conv.identidad_canal_id, conv.id);
 }
 
 // ============================================================
@@ -545,6 +566,7 @@ async function manejarConsultaAbierta(chatId: string, conv: any, text: string) {
       [{ text: "← Menú principal", callback_data: "menu_principal:" }],
     ]);
   }
+  await actualizarMemoria(conv.identidad_canal_id, conv.id);
 }
 
 // ============================================================
@@ -1075,8 +1097,10 @@ async function correrAgenteConsulta(conv: any, chatId: string, texto: string): P
 }
 
 async function ejecutarAgenteLoop(conv: any, chatId: string, messages: any[]): Promise<string> {
+  const memoria = await cargarMemoria(conv.identidad_canal_id);
+  const systemPrompt = buildSystemPrompt(memoria);
   for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
-    const resp = await llamarClaude(messages);
+    const resp = await llamarClaude(messages, systemPrompt);
 
     if (resp.stop_reason === "end_turn" || resp.stop_reason === "stop_sequence") {
       const text = resp.content.find((b: any) => b.type === "text")?.text?.trim();
@@ -1152,11 +1176,11 @@ async function buscarServicios(query: string, chatId: string) {
   return { ok: true, candidatos: filtrados.length };
 }
 
-async function llamarClaude(messages: any[]) {
+async function llamarClaude(messages: any[], systemPrompt: string = SYSTEM_PROMPT_BASE) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1024, system: SYSTEM_PROMPT, tools: TOOLS, messages }),
+    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1024, system: systemPrompt, tools: TOOLS, messages }),
   });
   if (!res.ok) throw new Error("Anthropic " + res.status + ": " + (await res.text()));
   return await res.json();
@@ -1295,6 +1319,62 @@ async function guardarMensajeUsuario(conversacionId: string, text: string, raw: 
 
 async function guardarMensajeAsistente(conversacionId: string, text: string) {
   await supabase.from("mensajes").insert({ conversacion_id: conversacionId, rol: "assistant", contenido: text });
+}
+
+// ============================================================
+// MEMORIA DEL PACIENTE (cross-sesión, en identidades_canal.metadata.memoria)
+// El bot "aprende" lo que la persona necesita y lo recuerda entre chats.
+// ============================================================
+async function cargarMemoria(identidadId: string): Promise<any> {
+  if (!identidadId) return null;
+  const { data } = await supabase.from("identidades_canal").select("metadata").eq("id", identidadId).maybeSingle();
+  return data?.metadata?.memoria ?? null;
+}
+
+async function guardarMemoria(identidadId: string, memoria: any) {
+  if (!identidadId) return;
+  const { data } = await supabase.from("identidades_canal").select("metadata").eq("id", identidadId).maybeSingle();
+  const metadata = { ...(data?.metadata ?? {}), memoria };
+  await supabase.from("identidades_canal").update({ metadata }).eq("id", identidadId);
+}
+
+// Resume la conversación reciente y la fusiona con lo aprendido antes.
+// Llamar en segundo plano (waitUntil) para no agregar latencia a la respuesta.
+async function actualizarMemoria(identidadId: string, conversacionId: string) {
+  try {
+    if (!identidadId || !conversacionId) return;
+    const { data } = await supabase.from("mensajes").select("rol, contenido")
+      .eq("conversacion_id", conversacionId).in("rol", ["user", "assistant"])
+      .order("created_at", { ascending: false }).limit(20);
+    const msgs = (data ?? []).reverse();
+    if (msgs.length < 2) return;
+
+    const previo = await cargarMemoria(identidadId);
+    const resumenPrevio = (previo?.resumen ?? "").toString().trim();
+    const transcript = msgs.map((m: any) => `${m.rol === "user" ? "Paciente" : "Bot"}: ${(m.contenido ?? "").slice(0, 300)}`).join("\n");
+
+    const sys = `Eres un componente de memoria de un asistente de agendamiento de clínica. Mantienes una nota breve (máx 6 líneas) sobre UNA persona: sus necesidades, preferencias (horarios, especialidad, doctor), tono, y datos útiles para atenderla mejor la próxima vez. NUNCA incluyas datos clínicos sensibles ni diagnósticos. Devuelve SOLO la nota actualizada en español, sin preámbulos.`;
+    const input = `NOTA ACTUAL:\n${resumenPrevio || "(vacía)"}\n\nCONVERSACIÓN RECIENTE:\n${transcript}\n\nDevuelve la NOTA ACTUALIZADA (fusiona lo relevante, descarta lo trivial, máx 6 líneas):`;
+
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: ANTHROPIC_MODEL_MEMORIA, max_tokens: 400, system: sys, messages: [{ role: "user", content: input }] }),
+    });
+    if (!res.ok) { console.error("actualizarMemoria Anthropic", res.status, await res.text()); return; }
+    const json = await res.json();
+    const nuevoResumen = json.content?.find((b: any) => b.type === "text")?.text?.trim();
+    if (!nuevoResumen) return;
+
+    const memoria = {
+      resumen: nuevoResumen.slice(0, 1200),
+      datos: { ...(previo?.datos ?? {}), interacciones: ((previo?.datos?.interacciones ?? 0) + 1) },
+      updated_at: new Date().toISOString(),
+    };
+    await guardarMemoria(identidadId, memoria);
+  } catch (err) {
+    console.error("actualizarMemoria error:", err);
+  }
 }
 
 async function cargarHistorialParaAnthropic(conversacionId: string) {
