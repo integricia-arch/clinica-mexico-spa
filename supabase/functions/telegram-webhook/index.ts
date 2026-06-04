@@ -247,7 +247,7 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     if (text === "/start" || !enWizard) {
       await guardarMensajeUsuario(conv.id, text, rawMsg);
       await limpiarSesion(conv.id);
-      const bienvenida = "¡Hola! 👋 Soy el asistente de ClínicaMX. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo. No soy médico ni puedo dar consejos de salud.\n\n¿En qué te puedo ayudar hoy?";
+      const bienvenida = "¡Hola! 👋 Soy el asistente de ClínicaMX. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo.\n\n¿En qué te puedo ayudar hoy?";
       await guardarMensajeAsistente(conv.id, bienvenida);
       await enviarMenuPrincipal(chatId, bienvenida);
       return;
