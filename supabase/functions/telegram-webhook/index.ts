@@ -51,7 +51,9 @@ REGLAS DURAS:
 - Para agendar: llama mostrar_menu_categorias. NO listes servicios en texto plano.
 - Para texto libre como "limpieza", "muela": busca con buscar_servicios y propón con botones.
 - Para consultas generales (precios, horarios, ubicación, preparación): responde 1-2 oraciones y ofrece opciones.
-- Cuando termines una respuesta de consulta: llama mostrar_menu_principal.
+- Llama mostrar_menu_principal SOLO cuando la persona necesita elegir una acción y no sabes qué quiere. NO lo llames después de cada mensaje.
+- CIERRES Y AGRADECIMIENTOS: si la persona se despide o confirma que terminó ("gracias", "ok", "listo", "es todo", "nada más", "ya quedó", "perfecto"): responde UNA despedida breve y cálida (ej. "¡Con gusto! Aquí estoy cuando me necesites 😊") y NO llames ningún menú ni preguntes "¿en qué más te ayudo?".
+- Si la persona expresa una molestia o queja (ej. sobre recordatorios o el servicio): reconócela con empatía y responde concreto. NUNCA respondas a una queja con el menú ni con "¿en qué más te puedo ayudar?".
 
 Especialidades: Medicina general, Odontología, Dermatología, Estética, Pediatría, Ginecología, Cardiología, Nutrición, Psicología, Laboratorio, Imagenología.
 
@@ -62,7 +64,7 @@ ENTENDER A LA PERSONA (no solo sus palabras):
 - No repitas el menú como robot. Responde a lo que la persona realmente necesita en ese momento.
 - Si pide hablar con una persona, expresa molestia repetida, o el caso rebasa el agendamiento: usa escalar_a_humano.
 
-Si no sabes qué quiere el paciente: llama mostrar_menu_principal.`;
+Si genuinamente no sabes qué quiere el paciente y hace falta que elija: llama mostrar_menu_principal. Si ya se despidió o agradeció, NO lo llames.`;
 
 // Memoria del paciente (lo aprendido en conversaciones previas) se inyecta aquí.
 // Mantiene al bot con contexto humano entre sesiones, no solo dentro de un chat.
@@ -1068,12 +1070,14 @@ async function crearCitaDesdeSesion(conv: any) {
   }
 
   try {
+    // Un solo recordatorio por cita (el paciente pidió no recibir varios).
+    // 2 h antes = nudge del mismo día, el de mayor valor contra no-shows.
     const ahora = new Date();
     const rows: any[] = [];
-    const rec24h = new Date(inicio.getTime() - 24 * 3600000);
-    const rec2h  = new Date(inicio.getTime() -  2 * 3600000);
-    if (rec24h > ahora) rows.push({ appointment_id: cita.id, identidad_canal_id: conv.identidad_canal_id, programado_para: rec24h.toISOString(), tipo: "t24h", status: "pendiente" });
-    if (rec2h  > ahora) rows.push({ appointment_id: cita.id, identidad_canal_id: conv.identidad_canal_id, programado_para: rec2h.toISOString(),  tipo: "t2h",  status: "pendiente" });
+    const rec2h = new Date(inicio.getTime() - 2 * 3600000);
+    if (rec2h > ahora) {
+      rows.push({ appointment_id: cita.id, identidad_canal_id: conv.identidad_canal_id, programado_para: rec2h.toISOString(), tipo: "t2h", status: "pendiente" });
+    }
     if (rows.length) await supabase.from("recordatorios_cita").insert(rows);
   } catch (e) { console.error("recordatorios:", e); }
 
