@@ -11,7 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 import { SectionGeneral, SectionHorarios, SectionCitas, SectionRecordatorios } from "./sections/basic";
-import { SectionServicios, SectionDoctores, SectionRecursos, SectionFormularios, SectionChecklists } from "./sections/clinical";
+import { SectionRecursos, SectionFormularios, SectionChecklists } from "./sections/clinical";
+import { SectionServicios } from "./sections/servicios";
+import { SectionDoctores } from "./sections/doctores";
 import { SectionFacturacion, SectionPagos, SectionInventario } from "./sections/finance";
 import { SectionUsuarios, SectionAuditoria } from "./sections/admin";
 import type { SectionSaver } from "./shared";
