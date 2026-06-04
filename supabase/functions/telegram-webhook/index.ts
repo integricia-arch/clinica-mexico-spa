@@ -931,7 +931,7 @@ async function wizardConfirm(chatId: string, conv: any, val: string) {
   }
   await limpiarSesion(conv.id);
   await enviarTelegramConBotones(chatId,
-    "✅ Tu cita queda como *SOLICITADA*. Recepción la confirma en breve.",
+    "✅ ¡Tu cita quedó *CONFIRMADA*! Te enviaremos un recordatorio antes de tu cita.\n\nSi necesitas cambiar algo o hablar con una persona, escribe /humano.",
     [[{ text: "← Menú principal", callback_data: "menu_principal:" }]]
   );
 }
@@ -978,6 +978,10 @@ async function crearCitaDesdeSesion(conv: any) {
   const { data: cita, error: ea } = await supabase.from("appointments").insert({
     patient_id: patientId, doctor_id: sesion.doctor_id, servicio_id: sesion.servicio_id,
     fecha_inicio: inicio.toISOString(), fecha_fin: fin.toISOString(), origen: "telegram", creada_por_bot: true,
+    // Auto-confirmación: el slot ya pasó la validación de disponibilidad (constraint de exclusión
+    // bloquea doble-booking). No requiere intervención humana de recepción — esa es la automatización.
+    // El cliente puede pedir un humano explícitamente vía escalar_a_humano si lo necesita.
+    status: "confirmada",
   }).select("id, fecha_inicio").single();
 
   if (ea) {
