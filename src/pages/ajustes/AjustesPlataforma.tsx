@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Building2, Clock, CalendarDays, Bell, Stethoscope, UserCog, DoorOpen,
@@ -14,6 +14,7 @@ import { SectionGeneral, SectionHorarios, SectionCitas, SectionRecordatorios } f
 import { SectionServicios, SectionDoctores, SectionRecursos, SectionFormularios, SectionChecklists } from "./sections/clinical";
 import { SectionFacturacion, SectionPagos, SectionInventario } from "./sections/finance";
 import { SectionUsuarios, SectionAuditoria } from "./sections/admin";
+import type { SectionSaver } from "./shared";
 
 type SectionId =
   | "general" | "horarios" | "citas" | "recordatorios" | "servicios"
@@ -40,15 +41,47 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon; desc: string }
 export default function AjustesPlataforma() {
   const [active, setActive] = useState<SectionId>("general");
   const [dirty, setDirty] = useState(false);
+  const [saver, setSaver] = useState<SectionSaver>(null);
+  const [saving, setSaving] = useState(false);
   const markDirty = () => setDirty(true);
 
-  const handleSave = () => {
+  // Las secciones con persistencia real registran aquí su guardado; las demo lo ignoran.
+  const registerSave = useCallback((s: SectionSaver) => setSaver(s), []);
+
+  // Cambiar de sección: reset síncrono antes de que monte la nueva sección
+  // (evita carrera con el efecto de registro del hijo, que corre primero).
+  const goToSection = useCallback((id: SectionId) => {
+    setActive(id);
+    setSaver(null);
     setDirty(false);
-    toast.success("Cambios guardados (demo visual)");
+  }, []);
+
+  const handleSave = async () => {
+    if (!saver) {
+      setDirty(false);
+      toast.success("Cambios guardados (demo visual)");
+      return;
+    }
+    setSaving(true);
+    try {
+      await saver.save();
+      setDirty(false);
+      toast.success("Cambios guardados");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudieron guardar los cambios");
+    } finally {
+      setSaving(false);
+    }
   };
+
   const handleCancel = () => {
     setDirty(false);
-    toast.info("Cambios descartados");
+    if (saver?.reset) {
+      saver.reset();
+      toast.info("Cambios descartados");
+    } else {
+      toast.info("Cambios descartados");
+    }
   };
 
   const current = useMemo(() => SECTIONS.find((s) => s.id === active)!, [active]);
@@ -67,11 +100,11 @@ export default function AjustesPlataforma() {
               <AlertCircle className="h-3.5 w-3.5" /> Cambios sin guardar
             </Badge>
           )}
-          <Button variant="outline" size="sm" onClick={handleCancel} disabled={!dirty}>
+          <Button variant="outline" size="sm" onClick={handleCancel} disabled={!dirty || saving}>
             <X className="mr-1.5 h-4 w-4" /> Cancelar
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={!dirty}>
-            <Save className="mr-1.5 h-4 w-4" /> Guardar
+          <Button size="sm" onClick={handleSave} disabled={!dirty || saving}>
+            <Save className="mr-1.5 h-4 w-4" /> {saving ? "Guardando…" : "Guardar"}
           </Button>
         </div>
       </div>
@@ -88,7 +121,7 @@ export default function AjustesPlataforma() {
                   return (
                     <button
                       key={s.id}
-                      onClick={() => setActive(s.id)}
+                      onClick={() => goToSection(s.id)}
                       className={`flex items-start gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors ${
                         isActive
                           ? "bg-primary/10 text-primary font-medium"
@@ -112,7 +145,7 @@ export default function AjustesPlataforma() {
             <p className="text-sm text-muted-foreground">{current.desc}</p>
           </div>
 
-          {active === "general" && <SectionGeneral onChange={markDirty} />}
+          {active === "general" && <SectionGeneral onChange={markDirty} registerSave={registerSave} />}
           {active === "horarios" && <SectionHorarios onChange={markDirty} />}
           {active === "citas" && <SectionCitas onChange={markDirty} />}
           {active === "recordatorios" && <SectionRecordatorios onChange={markDirty} />}

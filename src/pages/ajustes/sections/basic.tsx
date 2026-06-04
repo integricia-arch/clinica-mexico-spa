@@ -1,4 +1,5 @@
-import { Building2, Plus, Trash2, Upload } from "lucide-react";
+import { useEffect } from "react";
+import { Building2, Plus, Trash2, Upload, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,21 +9,67 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field, type SectionProps } from "../shared";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { useClinicGeneral } from "@/hooks/useClinicGeneral";
 
-/* ---------------- 1. General ---------------- */
-export function SectionGeneral({ onChange }: SectionProps) {
+/* ---------------- 1. General (persistencia real → tabla clinics) ---------------- */
+export function SectionGeneral({ onChange, registerSave }: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const { form, setField, loading, error, save, reset } = useClinicGeneral(activeClinicId);
+  const readOnly = !isGlobalAdmin;
+
+  // Registrar guardado/reset en el shell. save/reset cierran sobre el form actual.
+  useEffect(() => {
+    registerSave?.({ save, reset });
+  }, [registerSave, save, reset]);
+
+  // Cambio inmutable + marcar dirty en el shell.
+  const edit = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setField(key, value);
+    onChange();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Cargando datos de la clínica…
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700">
+          <Lock className="h-3.5 w-3.5" /> Solo administradores pueden editar estos datos.
+        </div>
+      )}
+
       <Card>
         <CardHeader><CardTitle className="text-base">Identidad</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field label="Nombre de la clínica"><Input defaultValue="Integriclínica" onChange={onChange} /></Field>
-          <Field label="Razón social"><Input defaultValue="Integriclínica S.A. de C.V." onChange={onChange} /></Field>
-          <Field label="RFC"><Input defaultValue="ICL240101AB1" onChange={onChange} /></Field>
-          <Field label="Teléfono"><Input defaultValue="+52 55 1234 5678" onChange={onChange} /></Field>
-          <Field label="Correo"><Input type="email" defaultValue="contacto@integrika.mx" onChange={onChange} /></Field>
+          <Field label="Nombre de la clínica">
+            <Input value={form.name} disabled={readOnly} onChange={(e) => edit("name", e.target.value)} />
+          </Field>
+          <Field label="Razón social">
+            <Input value={form.legalName} disabled={readOnly} onChange={(e) => edit("legalName", e.target.value)} />
+          </Field>
+          <Field label="RFC">
+            <Input value={form.rfc} disabled={readOnly} onChange={(e) => edit("rfc", e.target.value)} />
+          </Field>
+          <Field label="Teléfono">
+            <Input value={form.phone} disabled={readOnly} onChange={(e) => edit("phone", e.target.value)} />
+          </Field>
+          <Field label="Correo">
+            <Input type="email" value={form.email} disabled={readOnly} onChange={(e) => edit("email", e.target.value)} />
+          </Field>
           <Field label="Zona horaria">
-            <Select defaultValue="cdmx" onValueChange={onChange}>
+            <Select value={form.timezone} disabled={readOnly} onValueChange={(v) => edit("timezone", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="cdmx">América/Ciudad de México (GMT-6)</SelectItem>
@@ -31,17 +78,8 @@ export function SectionGeneral({ onChange }: SectionProps) {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Moneda">
-            <Select defaultValue="mxn" onValueChange={onChange}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mxn">MXN · Peso mexicano</SelectItem>
-                <SelectItem value="usd">USD · Dólar estadounidense</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
           <Field label="Dirección" hint="Calle, número, colonia, municipio, CP">
-            <Input defaultValue="Av. Reforma 123, Col. Juárez, Cuauhtémoc, 06600" onChange={onChange} />
+            <Input value={form.address} disabled={readOnly} onChange={(e) => edit("address", e.target.value)} />
           </Field>
         </CardContent>
       </Card>
@@ -53,10 +91,10 @@ export function SectionGeneral({ onChange }: SectionProps) {
             <Building2 className="h-8 w-8" />
           </div>
           <div className="space-y-1">
-            <Button variant="outline" size="sm" onClick={onChange}>
+            <Button variant="outline" size="sm" disabled>
               <Upload className="mr-1.5 h-4 w-4" /> Subir logotipo
             </Button>
-            <p className="text-[11px] text-muted-foreground">PNG o SVG, mínimo 256×256</p>
+            <p className="text-[11px] text-muted-foreground">Próximamente · PNG o SVG, mínimo 256×256</p>
           </div>
         </CardContent>
       </Card>
