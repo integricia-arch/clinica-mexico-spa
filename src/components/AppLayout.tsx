@@ -123,6 +123,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "manager", "cajero"],
   },
   {
+    to: "/ajustes",
+    icon: Settings,
+    label: "Ajustes de plataforma",
+    roles: ["admin", "doctor"],
+  },
+  {
     to: "/configuracion",
     icon: Settings,
     label: "Configuración",

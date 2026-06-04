@@ -37,6 +37,7 @@ import CaminoPaciente from "@/pages/CaminoPaciente";
 import PanelDoctor from "@/pages/PanelDoctor";
 import CajaConfiguracion from "@/pages/CajaConfiguracion";
 import CajaTurno from "@/pages/CajaTurno";
+import AjustesPlataforma from "@/pages/AjustesPlataforma";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App = () => (
                         <Route path="/expedientes" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Expedientes /></ProtectedRoute>} />
                         <Route path="/farmacia" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Farmacia /></ProtectedRoute>} />
                         <Route path="/configuracion" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><Configuracion /></ProtectedRoute>} />
+                        <Route path="/ajustes" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><AjustesPlataforma /></ProtectedRoute>} />
                         <Route path="/configuracion/camino-paciente" element={<ProtectedRoute allowedRoles={["admin"]}><CaminoPacienteConfig /></ProtectedRoute>} />
                         <Route path="/configuracion/recetas" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><MachoteReceta /></ProtectedRoute>} />
                         <Route path="/receta/:id" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse","receptionist","patient"]}><RecetaImprimir /></ProtectedRoute>} />
