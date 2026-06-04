@@ -148,6 +148,21 @@ function pideHumano(t: string): boolean {
     "agente", "asesor", "ejecutivo", "operador", "recepcion", "recepcionista",
     "que me entienda", "alguien que me entienda", "nadie me entiende",
     "quiero ayuda", "necesito ayuda", "me pueden ayudar", "ayuda por favor",
+    "hablar con alguien", "con alguien", "cambiar mi cita", "cambiar la cita",
+    "cambiar mi consulta", "reagendar", "reprogramar", "mover mi cita",
+  ];
+  return frases.some((f) => s.includes(f));
+}
+
+// Cliente quiere iniciar/reiniciar una consulta en sus propias palabras.
+// Equivale a /nueva: limpia el estado y arranca de cero (también sirve para salir de una escalada).
+function pideNuevaConsulta(t: string): boolean {
+  const s = normalizarTexto(t);
+  if (!s) return false;
+  const frases = [
+    "nueva consulta", "otra consulta", "nueva cita", "otra cita",
+    "agendar otra", "agendar de nuevo", "empezar de nuevo", "empezar de cero",
+    "empezar otra", "reiniciar", "quiero agendar otra",
   ];
   return frases.some((f) => s.includes(f));
 }
@@ -158,7 +173,7 @@ function pideHumano(t: string): boolean {
 async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
   const identidad = await obtenerOCrearIdentidad(chatId, rawMsg.from);
 
-  if (text === "/nueva" || text === "/nuevo") {
+  if (text === "/nueva" || text === "/nuevo" || pideNuevaConsulta(text)) {
     const { data: conv, error } = await supabase
       .from("conversaciones").insert({ identidad_canal_id: identidad.id }).select("*").single();
     if (error) throw error;
@@ -432,7 +447,7 @@ async function manejarCallback(cq: any) {
   const conv = await obtenerOCrearConversacion(identidad.id);
 
   if (conv.status === "escalada") {
-    await enviarTelegram(chatId, "Tu caso está con recepción. Espera su respuesta o escribe /nueva para una consulta nueva.");
+    await enviarTelegram(chatId, "Tu caso está con recepción. Espera su respuesta, o dime \"nueva consulta\" si quieres empezar de nuevo.");
     return;
   }
 
@@ -457,7 +472,7 @@ async function manejarCallback(cq: any) {
       catch (err: any) {
         console.error("wizardConfirm error:", err);
         return enviarTelegramConBotones(chatId,
-          `No pude crear la cita: ${err?.message ?? "error inesperado"}. Escribe /nueva e intenta de nuevo.`,
+          `No pude crear la cita: ${err?.message ?? "error inesperado"}. Toca "Intentar de nuevo" o dime "nueva consulta".`,
           [[{ text: "🔄 Intentar de nuevo", callback_data: "menu_agendar:" }]]
         );
       }
@@ -559,7 +574,7 @@ async function manejarOtro(chatId: string, conv: any) {
 async function manejarSolicitudHumano(chatId: string, conv: any) {
   await escalarConversacion(conv, { razon: "Solicitado por botón" });
   await guardarMensajeAsistente(conv.id, "Listo, recepción te contactará en breve.");
-  await enviarTelegram(chatId, "✅ Listo. Recepción te contactará en breve.\n\nEscribe /nueva si quieres iniciar otra consulta.");
+  await enviarTelegram(chatId, "✅ Listo. Recepción te contactará en breve.\n\nSi quieres iniciar otra consulta, solo dime \"nueva consulta\".");
 }
 
 async function manejarSolicitudHumanoConRazon(chatId: string, conv: any, razon: string) {
@@ -571,7 +586,7 @@ async function manejarSolicitudHumanoConRazon(chatId: string, conv: any, razon: 
   };
   await escalarConversacion(conv, { razon: razones[razon] ?? razon });
   await guardarMensajeAsistente(conv.id, "Listo, recepción te contactará en breve.");
-  await enviarTelegram(chatId, "✅ Listo. Recepción te contactará en breve.\n\nEscribe /nueva si quieres iniciar otra consulta.");
+  await enviarTelegram(chatId, "✅ Listo. Recepción te contactará en breve.\n\nSi quieres iniciar otra consulta, solo dime \"nueva consulta\".");
 }
 
 // ============================================================
@@ -934,7 +949,7 @@ async function preguntarConsentimiento(chatId: string, conv: any) {
 async function wizardConsent(chatId: string, conv: any, val: string) {
   if (val === "no") {
     await limpiarSesion(conv.id);
-    return enviarTelegram(chatId, "Entendido. Sin consentimiento no puedo agendar. Escribe /start si cambias de opinión.");
+    return enviarTelegram(chatId, "Entendido. Sin consentimiento no puedo agendar. Cuando quieras retomar, solo escríbeme \"hola\".");
   }
   await upsertSesion(conv.id, { consentimiento_dado: true, consentimiento_fecha: new Date().toISOString(), flow_step: "await_confirm" });
   return mostrarConfirmacion(chatId, conv);
@@ -972,7 +987,7 @@ async function wizardConfirm(chatId: string, conv: any, val: string) {
   }
   await limpiarSesion(conv.id);
   await enviarTelegramConBotones(chatId,
-    "✅ ¡Tu cita quedó *CONFIRMADA*! Te enviaremos un recordatorio antes de tu cita.\n\nSi necesitas cambiar algo o hablar con una persona, escribe /humano.",
+    "✅ ¡Tu cita quedó *CONFIRMADA*! Te enviaremos un recordatorio antes de tu cita.\n\nSi necesitas cambiar algo o hablar con una persona, solo dímelo.",
     [[{ text: "← Menú principal", callback_data: "menu_principal:" }]]
   );
 }
