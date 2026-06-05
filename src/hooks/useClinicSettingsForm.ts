@@ -26,7 +26,7 @@ interface UseClinicSettingsFormResult<T> {
   reset: () => void;
 }
 
-export function useClinicSettingsForm<T extends object>(
+export function useClinicSettingsForm<T>(
   clinicId: string | null,
   section: SettingsSection,
   defaults: T,
