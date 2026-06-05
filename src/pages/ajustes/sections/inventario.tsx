@@ -217,7 +217,7 @@ function InsumosTab({ clinicId, canEdit, proveedores }: {
 /* ====================================================================== */
 
 const EMPTY_KIT: KitInput = {
-  tratamiento: "", precioMxn: 0, activo: true, items: [],
+  tratamiento: "", precioMxn: 0, margenObjetivo: 50, activo: true, items: [],
 };
 
 function KitsTab({ clinicId, canEdit, insumos }: {
@@ -250,6 +250,9 @@ function KitsTab({ clinicId, canEdit, insumos }: {
   // Costo derivado en vivo de las líneas (mismo cálculo que el hook al cargar).
   const formCosto = form.items.reduce((sum, it) => sum + it.cantidad * insumoCosto(it.insumoId), 0);
   const formMargen = form.precioMxn > 0 ? Math.round(((form.precioMxn - formCosto) / form.precioMxn) * 100) : 0;
+  // Opción B: precio sugerido = costo / (1 - margenObjetivo/100). margen en [0,99].
+  const margenMeta = Math.min(99, Math.max(0, form.margenObjetivo));
+  const precioSugerido = Math.round((formCosto / (1 - margenMeta / 100)) * 100) / 100;
 
   const openNew = () => { setEditing(null); setForm(EMPTY_KIT); setDialogOpen(true); };
   const openEdit = (k: Kit) => {
@@ -257,6 +260,7 @@ function KitsTab({ clinicId, canEdit, insumos }: {
     setForm({
       tratamiento: k.tratamiento,
       precioMxn: k.precioMxn,
+      margenObjetivo: k.margenObjetivo,
       activo: k.activo,
       items: k.items.map((it) => ({ insumoId: it.insumoId, cantidad: it.cantidad })),
     });
@@ -392,9 +396,32 @@ function KitsTab({ clinicId, canEdit, insumos }: {
               )}
             </div>
 
-            <Field label="Precio (MXN)">
-              <Input type="number" min={0} step="0.01" value={form.precioMxn} onChange={(e) => setField("precioMxn", Number(e.target.value))} />
-            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Margen objetivo (%)">
+                <Input
+                  type="number" min={0} max={99}
+                  value={form.margenObjetivo}
+                  onChange={(e) => setField("margenObjetivo", Number(e.target.value))}
+                />
+              </Field>
+              <Field label="Precio (MXN)">
+                <Input type="number" min={0} step="0.01" value={form.precioMxn} onChange={(e) => setField("precioMxn", Number(e.target.value))} />
+              </Field>
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border border-dashed border-border p-3 text-sm">
+              <div>
+                <span className="text-muted-foreground">Precio sugerido</span>
+                <div className="font-medium">{mxn(precioSugerido)}</div>
+              </div>
+              <Button
+                size="sm" variant="outline"
+                onClick={() => setField("precioMxn", precioSugerido)}
+                disabled={formCosto === 0}
+              >
+                Usar sugerido
+              </Button>
+            </div>
 
             <div className="grid grid-cols-3 gap-2 rounded-md border border-border p-3 text-sm">
               <div><span className="text-muted-foreground">Costo</span><div className="font-medium">{mxn(formCosto)}</div></div>

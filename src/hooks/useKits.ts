@@ -26,6 +26,7 @@ export interface Kit {
   id: string;
   tratamiento: string;
   precioMxn: number;
+  margenObjetivo: number; // % meta para sugerir precio (Opción B)
   activo: boolean;
   items: KitItem[];
   numInsumos: number; // derivado: items.length
@@ -40,6 +41,7 @@ export interface KitItemInput {
 export interface KitInput {
   tratamiento: string;
   precioMxn: number;
+  margenObjetivo: number;
   activo: boolean;
   items: KitItemInput[];
 }
@@ -55,6 +57,7 @@ interface KitRow {
   id: string;
   tratamiento: string;
   precio_centavos: number;
+  margen_objetivo: number;
   activo: boolean;
   kit_items: KitItemRow[] | null;
 }
@@ -73,6 +76,7 @@ const toKit = (row: KitRow): Kit => {
     id: row.id,
     tratamiento: row.tratamiento,
     precioMxn: Math.round(row.precio_centavos) / 100,
+    margenObjetivo: row.margen_objetivo ?? 50,
     activo: row.activo,
     items,
     numInsumos: items.length,
@@ -81,12 +85,13 @@ const toKit = (row: KitRow): Kit => {
 };
 
 const KIT_SELECT =
-  "id, tratamiento, precio_centavos, activo, " +
+  "id, tratamiento, precio_centavos, margen_objetivo, activo, " +
   "kit_items(id, insumo_id, cantidad, insumos(nombre, costo_centavos))";
 
 const kitFields = (input: KitInput) => ({
   tratamiento: input.tratamiento.trim(),
   precio_centavos: Math.max(0, Math.round(input.precioMxn * 100)),
+  margen_objetivo: Math.min(99, Math.max(0, Math.round(input.margenObjetivo))),
   activo: input.activo,
 });
 
