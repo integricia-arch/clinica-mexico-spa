@@ -23,3 +23,7 @@ jobs:
 
       - name: Type-check (tsc --noEmit)
         run: npx tsc -p tsconfig.app.json --noEmit
+
+      - name: Lint (eslint)
+        run: npm run lint
+
