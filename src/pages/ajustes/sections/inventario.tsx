@@ -216,8 +216,18 @@ function InsumosTab({ clinicId, canEdit, proveedores }: {
 /* Kits por tratamiento                                                    */
 /* ====================================================================== */
 
+// Margen objetivo = margen sobre el costo de insumos (no margen neto del negocio).
+// Anclas de mercado MX (clínica dental/estética 2025-26): el insumo es 4-15% del
+// precio, así que el margen-sobre-insumo "natural" cae en 60-90%. Rutina alta
+// frecuencia margen menor; estética/premium mayor (blanqueamiento >60%).
+const MARGEN_PRESETS = [
+  { label: "Rutina", value: 60 },
+  { label: "Estética", value: 75 },
+  { label: "Premium", value: 85 },
+] as const;
+
 const EMPTY_KIT: KitInput = {
-  tratamiento: "", precioMxn: 0, margenObjetivo: 50, activo: true, items: [],
+  tratamiento: "", precioMxn: 0, margenObjetivo: 75, activo: true, items: [],
 };
 
 function KitsTab({ clinicId, canEdit, insumos }: {
@@ -253,6 +263,8 @@ function KitsTab({ clinicId, canEdit, insumos }: {
   // Opción B: precio sugerido = costo / (1 - margenObjetivo/100). margen en [0,99].
   const margenMeta = Math.min(99, Math.max(0, form.margenObjetivo));
   const precioSugerido = Math.round((formCosto / (1 - margenMeta / 100)) * 100) / 100;
+  // Insumo como % del precio real: ancla de realidad (mercado MX ≈ 4-15%).
+  const insumoPct = form.precioMxn > 0 ? Math.round((formCosto / form.precioMxn) * 100) : 0;
 
   const openNew = () => { setEditing(null); setForm(EMPTY_KIT); setDialogOpen(true); };
   const openEdit = (k: Kit) => {
@@ -397,12 +409,26 @@ function KitsTab({ clinicId, canEdit, insumos }: {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Margen objetivo (%)">
-                <Input
-                  type="number" min={0} max={99}
-                  value={form.margenObjetivo}
-                  onChange={(e) => setField("margenObjetivo", Number(e.target.value))}
-                />
+              <Field label="Margen objetivo (% sobre insumo)">
+                <div className="space-y-1.5">
+                  <Input
+                    type="number" min={0} max={99}
+                    value={form.margenObjetivo}
+                    onChange={(e) => setField("margenObjetivo", Number(e.target.value))}
+                  />
+                  <div className="flex gap-1">
+                    {MARGEN_PRESETS.map((p) => (
+                      <Button
+                        key={p.label} type="button" size="sm"
+                        variant={form.margenObjetivo === p.value ? "default" : "outline"}
+                        className="h-7 flex-1 px-1 text-xs"
+                        onClick={() => setField("margenObjetivo", p.value)}
+                      >
+                        {p.label} {p.value}%
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               </Field>
               <Field label="Precio (MXN)">
                 <Input type="number" min={0} step="0.01" value={form.precioMxn} onChange={(e) => setField("precioMxn", Number(e.target.value))} />
@@ -422,6 +448,12 @@ function KitsTab({ clinicId, canEdit, insumos }: {
                 Usar sugerido
               </Button>
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              El insumo representa <span className="font-medium">{insumoPct}%</span> del precio.
+              Referencia de mercado MX: el material suele ser 4-15% del precio (margen sobre
+              insumo 60-90%). El margen neto del negocio (tras nómina y gastos) ronda 20-40%.
+            </p>
 
             <div className="grid grid-cols-3 gap-2 rounded-md border border-border p-3 text-sm">
               <div><span className="text-muted-foreground">Costo</span><div className="font-medium">{mxn(formCosto)}</div></div>
