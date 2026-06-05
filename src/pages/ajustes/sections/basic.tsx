@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Field, type SectionProps } from "../shared";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useClinicGeneral } from "@/hooks/useClinicGeneral";
+import { useClinicSettingsForm } from "@/hooks/useClinicSettingsForm";
 
 /* ---------------- 1. General (persistencia real → tabla clinics) ---------------- */
 export function SectionGeneral({ onChange, registerSave }: SectionProps) {
@@ -155,8 +156,59 @@ export function SectionHorarios({ onChange }: SectionProps) {
   );
 }
 
-/* ---------------- 3. Citas ---------------- */
-export function SectionCitas({ onChange }: SectionProps) {
+/* ---------------- 3. Citas (persistencia real → clinic_settings/citas) ---------------- */
+interface CitasForm {
+  duracionDefault: number;
+  anticipacionMin: number;
+  reprogramaciones: number;
+  plazoCancelacion: number;
+  citasEnLinea: boolean;
+  listaEspera: boolean;
+  confirmacionAuto24h: boolean;
+  cobroAnticipo: boolean;
+}
+
+const CITAS_DEFAULTS: CitasForm = {
+  duracionDefault: 30,
+  anticipacionMin: 2,
+  reprogramaciones: 3,
+  plazoCancelacion: 24,
+  citasEnLinea: true,
+  listaEspera: true,
+  confirmacionAuto24h: false,
+  cobroAnticipo: false,
+};
+
+const CITAS_TOGGLES: { key: keyof CitasForm; label: string }[] = [
+  { key: "citasEnLinea", label: "Permitir citas en línea" },
+  { key: "listaEspera", label: "Activar lista de espera" },
+  { key: "confirmacionAuto24h", label: "Confirmación automática 24h antes" },
+  { key: "cobroAnticipo", label: "Cobro de anticipo para reservar" },
+];
+
+export function SectionCitas({ onChange, registerSave }: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const readOnly = !isGlobalAdmin;
+  const { form, setField, loading, error, save, reset } = useClinicSettingsForm<CitasForm>(
+    activeClinicId,
+    "citas",
+    CITAS_DEFAULTS,
+  );
+
+  useEffect(() => {
+    registerSave?.({ save, reset });
+  }, [registerSave, save, reset]);
+
+  const edit = <K extends keyof CitasForm>(key: K, value: CitasForm[K]) => {
+    setField(key, value);
+    onChange();
+  };
+
+  const num = (key: keyof CitasForm, raw: string) => {
+    const n = Number(raw);
+    edit(key, (Number.isFinite(n) ? n : 0) as CitasForm[typeof key]);
+  };
+
   const estados = [
     { k: "pendiente", c: "bg-slate-100 text-slate-700" },
     { k: "confirmada", c: "bg-blue-100 text-blue-700" },
@@ -166,29 +218,52 @@ export function SectionCitas({ onChange }: SectionProps) {
     { k: "no-show", c: "bg-amber-100 text-amber-700" },
     { k: "cancelada", c: "bg-rose-100 text-rose-700" },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Cargando reglas de citas…
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700">
+          <Lock className="h-3.5 w-3.5" /> Solo administradores pueden editar estos datos.
+        </div>
+      )}
+
       <Card>
         <CardHeader><CardTitle className="text-base">Reglas de agenda</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field label="Duración default (min)"><Input type="number" defaultValue={30} onChange={onChange} /></Field>
-          <Field label="Anticipación mínima (horas)"><Input type="number" defaultValue={2} onChange={onChange} /></Field>
-          <Field label="Reprogramaciones permitidas"><Input type="number" defaultValue={3} onChange={onChange} /></Field>
-          <Field label="Plazo para cancelar (horas)"><Input type="number" defaultValue={24} onChange={onChange} /></Field>
+          <Field label="Duración default (min)">
+            <Input type="number" value={form.duracionDefault} disabled={readOnly} onChange={(e) => num("duracionDefault", e.target.value)} />
+          </Field>
+          <Field label="Anticipación mínima (horas)">
+            <Input type="number" value={form.anticipacionMin} disabled={readOnly} onChange={(e) => num("anticipacionMin", e.target.value)} />
+          </Field>
+          <Field label="Reprogramaciones permitidas">
+            <Input type="number" value={form.reprogramaciones} disabled={readOnly} onChange={(e) => num("reprogramaciones", e.target.value)} />
+          </Field>
+          <Field label="Plazo para cancelar (horas)">
+            <Input type="number" value={form.plazoCancelacion} disabled={readOnly} onChange={(e) => num("plazoCancelacion", e.target.value)} />
+          </Field>
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-2">
-          {[
-            ["Permitir citas en línea", true],
-            ["Activar lista de espera", true],
-            ["Confirmación automática 24h antes", false],
-            ["Cobro de anticipo para reservar", false],
-          ].map(([l, v]) => (
-            <div key={l as string} className="flex items-center justify-between rounded-md border border-border p-3">
-              <span className="text-sm">{l}</span>
-              <Switch defaultChecked={v as boolean} onCheckedChange={onChange} />
+          {CITAS_TOGGLES.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between rounded-md border border-border p-3">
+              <span className="text-sm">{label}</span>
+              <Switch checked={form[key] as boolean} disabled={readOnly} onCheckedChange={(v) => edit(key, v as CitasForm[typeof key])} />
             </div>
           ))}
         </CardContent>
@@ -211,19 +286,94 @@ export function SectionCitas({ onChange }: SectionProps) {
   );
 }
 
-/* ---------------- 4. Recordatorios ---------------- */
-export function SectionRecordatorios({ onChange }: SectionProps) {
-  const canales = ["WhatsApp", "SMS", "Email", "Llamada manual"];
-  const tiempos = ["72 horas antes", "24 horas antes", "3 horas antes", "1 hora antes"];
+/* ---------------- 4. Recordatorios (persistencia real → clinic_settings/recordatorios) ---------------- */
+interface RecordatoriosForm {
+  canalWhatsapp: boolean;
+  canalSms: boolean;
+  canalEmail: boolean;
+  canalLlamada: boolean;
+  t72: boolean;
+  t24: boolean;
+  t3: boolean;
+  t1: boolean;
+  asunto: string;
+  mensaje: string;
+}
+
+const RECORDATORIOS_DEFAULTS: RecordatoriosForm = {
+  canalWhatsapp: true,
+  canalSms: true,
+  canalEmail: true,
+  canalLlamada: false,
+  t72: false,
+  t24: true,
+  t3: true,
+  t1: true,
+  asunto: "Recordatorio de su cita en Integriclínica",
+  mensaje:
+    "Hola {{paciente}}, le recordamos su cita el {{fecha}} a las {{hora}} con {{doctor}} en {{consultorio}}. Conteste CONFIRMAR para confirmar o CANCELAR para cancelar.",
+};
+
+const CANALES: { key: keyof RecordatoriosForm; label: string }[] = [
+  { key: "canalWhatsapp", label: "WhatsApp" },
+  { key: "canalSms", label: "SMS" },
+  { key: "canalEmail", label: "Email" },
+  { key: "canalLlamada", label: "Llamada manual" },
+];
+
+const TIEMPOS: { key: keyof RecordatoriosForm; label: string }[] = [
+  { key: "t72", label: "72 horas antes" },
+  { key: "t24", label: "24 horas antes" },
+  { key: "t3", label: "3 horas antes" },
+  { key: "t1", label: "1 hora antes" },
+];
+
+export function SectionRecordatorios({ onChange, registerSave }: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const readOnly = !isGlobalAdmin;
+  const { form, setField, loading, error, save, reset } = useClinicSettingsForm<RecordatoriosForm>(
+    activeClinicId,
+    "recordatorios",
+    RECORDATORIOS_DEFAULTS,
+  );
+
+  useEffect(() => {
+    registerSave?.({ save, reset });
+  }, [registerSave, save, reset]);
+
+  const edit = <K extends keyof RecordatoriosForm>(key: K, value: RecordatoriosForm[K]) => {
+    setField(key, value);
+    onChange();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Cargando recordatorios…
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700">
+          <Lock className="h-3.5 w-3.5" /> Solo administradores pueden editar estos datos.
+        </div>
+      )}
+
       <Card>
         <CardHeader><CardTitle className="text-base">Canales activos</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
-          {canales.map((c, i) => (
-            <div key={c} className="flex items-center justify-between rounded-md border border-border p-3">
-              <span className="text-sm font-medium">{c}</span>
-              <Switch defaultChecked={i < 3} onCheckedChange={onChange} />
+          {CANALES.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between rounded-md border border-border p-3">
+              <span className="text-sm font-medium">{label}</span>
+              <Switch checked={form[key] as boolean} disabled={readOnly} onCheckedChange={(v) => edit(key, v as RecordatoriosForm[typeof key])} />
             </div>
           ))}
         </CardContent>
@@ -232,10 +382,10 @@ export function SectionRecordatorios({ onChange }: SectionProps) {
       <Card>
         <CardHeader><CardTitle className="text-base">Programación</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
-          {tiempos.map((t, i) => (
-            <div key={t} className="flex items-center justify-between rounded-md border border-border p-3">
-              <span className="text-sm">{t}</span>
-              <Switch defaultChecked={i !== 0} onCheckedChange={onChange} />
+          {TIEMPOS.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between rounded-md border border-border p-3">
+              <span className="text-sm">{label}</span>
+              <Switch checked={form[key] as boolean} disabled={readOnly} onCheckedChange={(v) => edit(key, v as RecordatoriosForm[typeof key])} />
             </div>
           ))}
         </CardContent>
@@ -244,13 +394,11 @@ export function SectionRecordatorios({ onChange }: SectionProps) {
       <Card>
         <CardHeader><CardTitle className="text-base">Plantilla de mensaje</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <Field label="Asunto"><Input defaultValue="Recordatorio de su cita en Integriclínica" onChange={onChange} /></Field>
+          <Field label="Asunto">
+            <Input value={form.asunto} disabled={readOnly} onChange={(e) => edit("asunto", e.target.value)} />
+          </Field>
           <Field label="Mensaje" hint="Variables disponibles: {{paciente}} {{fecha}} {{hora}} {{doctor}} {{consultorio}}">
-            <Textarea
-              rows={5}
-              defaultValue={"Hola {{paciente}}, le recordamos su cita el {{fecha}} a las {{hora}} con {{doctor}} en {{consultorio}}. Conteste CONFIRMAR para confirmar o CANCELAR para cancelar."}
-              onChange={onChange}
-            />
+            <Textarea rows={5} value={form.mensaje} disabled={readOnly} onChange={(e) => edit("mensaje", e.target.value)} />
           </Field>
         </CardContent>
       </Card>

@@ -149,8 +149,8 @@ export default function AjustesPlataforma() {
 
           {active === "general" && <SectionGeneral onChange={markDirty} registerSave={registerSave} />}
           {active === "horarios" && <SectionHorarios onChange={markDirty} />}
-          {active === "citas" && <SectionCitas onChange={markDirty} />}
-          {active === "recordatorios" && <SectionRecordatorios onChange={markDirty} />}
+          {active === "citas" && <SectionCitas onChange={markDirty} registerSave={registerSave} />}
+          {active === "recordatorios" && <SectionRecordatorios onChange={markDirty} registerSave={registerSave} />}
           {active === "servicios" && <SectionServicios onChange={markDirty} />}
           {active === "doctores" && <SectionDoctores onChange={markDirty} />}
           {active === "recursos" && <SectionRecursos onChange={markDirty} />}
