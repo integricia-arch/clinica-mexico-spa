@@ -159,8 +159,8 @@ export default function AjustesPlataforma() {
           {active === "facturacion" && <SectionFacturacion onChange={markDirty} registerSave={registerSave} />}
           {active === "pagos" && <SectionPagos onChange={markDirty} registerSave={registerSave} />}
           {active === "inventario" && <SectionInventario onChange={markDirty} />}
-          {active === "usuarios" && <SectionUsuarios onChange={markDirty} />}
-          {active === "auditoria" && <SectionAuditoria onChange={markDirty} />}
+          {active === "usuarios" && <SectionUsuarios onChange={markDirty} registerSave={registerSave} />}
+          {active === "auditoria" && <SectionAuditoria onChange={markDirty} registerSave={registerSave} />}
         </section>
       </div>
     </div>

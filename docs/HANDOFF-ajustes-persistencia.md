@@ -35,8 +35,11 @@ Pagos, Formularios. Mismo patrón para las que faltan:
 `useClinicSettingsForm<T>(clinicId, section, defaults)` + controlar inputs + `registerSave`.
 
 ## Sigue pendiente después
-- **Auditoría** (políticas/toggles) + matriz **Permisos** → section `"auditoria"`/`"permisos"`,
-  mismo patrón (sección admin.tsx).
+- ~~**Auditoría** + matriz **Permisos** → section `"auditoria"`/`"permisos"`~~ ✅ HECHO
+  (`sections/admin.tsx`). Auditoría = toggles trazabilidad + políticas (retención,
+  respaldo, aviso URL, responsable). Permisos = matriz rol×módulo, clic cicla
+  all→read→none, persiste blob completo. Ambas admin-gated + `registerSave`.
+  Migración `clinic_settings` ya aplicada en Lovable (commit `6cdfb9d`).
 - **Horarios** (7 días + excepciones, más pesado; conviene tabla propia, no JSONB).
 - **Checklists** + **Inventario** + **Recursos**: tienen CRUD por-fila (tablas), no JSONB.
   Recursos además ya vive en `/configuracion` (rooms) → NO cablear.
