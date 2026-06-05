@@ -45,7 +45,7 @@ export async function getSection<T = Record<string, unknown>>(
 }
 
 /** Guarda (upsert) el blob de una sección. */
-export async function saveSection<T extends Record<string, unknown>>(
+export async function saveSection<T extends object>(
   clinicId: string,
   section: SettingsSection,
   data: T,
