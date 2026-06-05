@@ -148,7 +148,7 @@ export default function AjustesPlataforma() {
           </div>
 
           {active === "general" && <SectionGeneral onChange={markDirty} registerSave={registerSave} />}
-          {active === "horarios" && <SectionHorarios onChange={markDirty} />}
+          {active === "horarios" && <SectionHorarios onChange={markDirty} registerSave={registerSave} />}
           {active === "citas" && <SectionCitas onChange={markDirty} registerSave={registerSave} />}
           {active === "recordatorios" && <SectionRecordatorios onChange={markDirty} registerSave={registerSave} />}
           {active === "servicios" && <SectionServicios onChange={markDirty} />}

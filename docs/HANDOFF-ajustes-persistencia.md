@@ -40,6 +40,10 @@ Pagos, Formularios. Mismo patrón para las que faltan:
   respaldo, aviso URL, responsable). Permisos = matriz rol×módulo, clic cicla
   all→read→none, persiste blob completo. Ambas admin-gated + `registerSave`.
   Migración `clinic_settings` ya aplicada en Lovable (commit `6cdfb9d`).
-- **Horarios** (7 días + excepciones, más pesado; conviene tabla propia, no JSONB).
+- ~~**Horarios** (7 días + excepciones)~~ ✅ HECHO (`sections/basic.tsx`).
+  Decisión: JSONB en `clinic_settings/horarios` (NO tabla propia) — estructura acotada
+  (7 días fijos + lista chica de excepciones), sin queries relacionales, cero migración.
+  `semana[7]{activo,apertura,cierre,descanso}` + `excepciones[]{id,fecha,motivo,tipo}`.
+  Excepciones add/edit/remove inmutables sobre el array. Admin-gated + `registerSave`.
 - **Checklists** + **Inventario** + **Recursos**: tienen CRUD por-fila (tablas), no JSONB.
   Recursos además ya vive en `/configuracion` (rooms) → NO cablear.

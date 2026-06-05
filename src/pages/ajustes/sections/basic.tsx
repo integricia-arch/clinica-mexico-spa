@@ -104,25 +104,130 @@ export function SectionGeneral({ onChange, registerSave }: SectionProps) {
 }
 
 /* ---------------- 2. Horarios ---------------- */
-export function SectionHorarios({ onChange }: SectionProps) {
-  const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const TIPOS_EXCEPCION = ["Festivo", "Cerrado", "Medio día"];
+
+interface DiaHorario {
+  activo: boolean;
+  apertura: string;
+  cierre: string;
+  descanso: string;
+}
+
+interface Excepcion {
+  id: string;
+  fecha: string;
+  motivo: string;
+  tipo: string;
+}
+
+interface HorariosForm {
+  semana: DiaHorario[];
+  excepciones: Excepcion[];
+}
+
+const HORARIOS_DEFAULTS: HorariosForm = {
+  // Índice 0 = Lunes … 6 = Domingo. Domingo cerrado por defecto.
+  semana: DIAS.map((_, i) => ({
+    activo: i < 6,
+    apertura: "09:00",
+    cierre: "19:00",
+    descanso: "",
+  })),
+  excepciones: [],
+};
+
+const newId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+export function SectionHorarios({ onChange, registerSave }: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const readOnly = !isGlobalAdmin;
+  const { form, setField, loading, error, save, reset } = useClinicSettingsForm<HorariosForm>(
+    activeClinicId,
+    "horarios",
+    HORARIOS_DEFAULTS,
+  );
+
+  useEffect(() => {
+    registerSave?.({ save, reset });
+  }, [registerSave, save, reset]);
+
+  // Edita un día concreto sin mutar el arreglo. onChange marca dirty.
+  const editDia = (idx: number, patch: Partial<DiaHorario>) => {
+    if (readOnly) return;
+    setField("semana", form.semana.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
+    onChange();
+  };
+
+  const addExcepcion = () => {
+    if (readOnly) return;
+    setField("excepciones", [
+      ...form.excepciones,
+      { id: newId(), fecha: "", motivo: "", tipo: "Festivo" },
+    ]);
+    onChange();
+  };
+
+  const editExcepcion = (id: string, patch: Partial<Excepcion>) => {
+    if (readOnly) return;
+    setField("excepciones", form.excepciones.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    onChange();
+  };
+
+  const removeExcepcion = (id: string) => {
+    if (readOnly) return;
+    setField("excepciones", form.excepciones.filter((e) => e.id !== id));
+    onChange();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Cargando horarios…
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700">
+          <Lock className="h-3.5 w-3.5" /> Solo administradores pueden editar estos datos.
+        </div>
+      )}
+
       <Card>
         <CardHeader><CardTitle className="text-base">Horario semanal</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {dias.map((d, i) => (
-              <div key={d} className="grid grid-cols-1 items-center gap-3 rounded-md border border-border p-3 sm:grid-cols-[140px_1fr_1fr_1fr]">
-                <div className="flex items-center gap-3">
-                  <Switch defaultChecked={i < 6} onCheckedChange={onChange} />
-                  <span className="text-sm font-medium">{d}</span>
+            {DIAS.map((d, i) => {
+              const dia = form.semana[i] ?? HORARIOS_DEFAULTS.semana[i];
+              return (
+                <div key={d} className="grid grid-cols-1 items-center gap-3 rounded-md border border-border p-3 sm:grid-cols-[140px_1fr_1fr_1fr]">
+                  <div className="flex items-center gap-3">
+                    <Switch checked={dia.activo} disabled={readOnly} onCheckedChange={(v) => editDia(i, { activo: v })} />
+                    <span className="text-sm font-medium">{d}</span>
+                  </div>
+                  <Field label="Apertura">
+                    <Input type="time" value={dia.apertura} disabled={readOnly || !dia.activo} onChange={(e) => editDia(i, { apertura: e.target.value })} />
+                  </Field>
+                  <Field label="Cierre">
+                    <Input type="time" value={dia.cierre} disabled={readOnly || !dia.activo} onChange={(e) => editDia(i, { cierre: e.target.value })} />
+                  </Field>
+                  <Field label="Descanso">
+                    <Input placeholder="14:00 – 15:00" value={dia.descanso} disabled={readOnly || !dia.activo} onChange={(e) => editDia(i, { descanso: e.target.value })} />
+                  </Field>
                 </div>
-                <Field label="Apertura"><Input type="time" defaultValue="09:00" onChange={onChange} /></Field>
-                <Field label="Cierre"><Input type="time" defaultValue="19:00" onChange={onChange} /></Field>
-                <Field label="Descanso"><Input placeholder="14:00 – 15:00" onChange={onChange} /></Field>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -130,22 +235,38 @@ export function SectionHorarios({ onChange }: SectionProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Días cerrados y excepciones</CardTitle>
-          <Button size="sm" variant="outline" onClick={onChange}><Plus className="mr-1.5 h-4 w-4" /> Agregar</Button>
+          <Button size="sm" variant="outline" disabled={readOnly} onClick={addExcepcion}><Plus className="mr-1.5 h-4 w-4" /> Agregar</Button>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Motivo</TableHead><TableHead>Tipo</TableHead><TableHead></TableHead></TableRow></TableHeader>
             <TableBody>
-              {[
-                { f: "16/09/2026", m: "Independencia", t: "Festivo" },
-                { f: "12/12/2026", m: "Virgen de Guadalupe", t: "Cerrado" },
-                { f: "24/12/2026", m: "Nochebuena", t: "Medio día" },
-              ].map((r) => (
-                <TableRow key={r.f}>
-                  <TableCell>{r.f}</TableCell>
-                  <TableCell>{r.m}</TableCell>
-                  <TableCell><Badge variant="secondary">{r.t}</Badge></TableCell>
-                  <TableCell className="text-right"><Button size="icon" variant="ghost" onClick={onChange}><Trash2 className="h-4 w-4" /></Button></TableCell>
+              {form.excepciones.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">
+                    Sin excepciones. Usa “Agregar” para registrar festivos o cierres.
+                  </TableCell>
+                </TableRow>
+              )}
+              {form.excepciones.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>
+                    <Input type="date" value={r.fecha} disabled={readOnly} onChange={(e) => editExcepcion(r.id, { fecha: e.target.value })} />
+                  </TableCell>
+                  <TableCell>
+                    <Input placeholder="Motivo" value={r.motivo} disabled={readOnly} onChange={(e) => editExcepcion(r.id, { motivo: e.target.value })} />
+                  </TableCell>
+                  <TableCell>
+                    <Select value={r.tipo} disabled={readOnly} onValueChange={(v) => editExcepcion(r.id, { tipo: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {TIPOS_EXCEPCION.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button size="icon" variant="ghost" disabled={readOnly} onClick={() => removeExcepcion(r.id)}><Trash2 className="h-4 w-4" /></Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
