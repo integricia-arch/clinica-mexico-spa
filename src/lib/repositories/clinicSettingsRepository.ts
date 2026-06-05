@@ -23,10 +23,9 @@ export type SettingsSection =
   | "permisos";
 
 // La tabla aún no está en los tipos generados; acceso casteado y aislado aquí.
-const settingsTable = () =>
-  (supabase as unknown as {
-    from: (t: string) => ReturnType<typeof supabase.from>;
-  }).from("clinic_settings");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const settingsTable = (): any =>
+  (supabase as unknown as { from: (t: string) => any }).from("clinic_settings");
 
 /** Lee el blob de una sección. Devuelve null si no existe todavía. */
 export async function getSection<T = Record<string, unknown>>(
