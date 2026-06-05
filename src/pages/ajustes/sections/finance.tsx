@@ -1,4 +1,5 @@
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect } from "react";
+import { Plus, Trash2, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -8,11 +9,88 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Field, type SectionProps } from "../shared";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { useClinicSettingsForm } from "@/hooks/useClinicSettingsForm";
 
-/* ---------------- 10. Facturación y Fiscal MX ---------------- */
-export function SectionFacturacion({ onChange }: SectionProps) {
+/* ---------------- 10. Facturación y Fiscal MX (persistencia → clinic_settings/facturacion) ---------------- */
+interface FacturacionForm {
+  regimenFiscal: string;
+  usoCfdi: string;
+  metodoPago: string;
+  formaPago: string;
+  serie: string;
+  folioInicial: number;
+  cancelacionMotivoSat: boolean;
+  notasCredito: boolean;
+  validarRfc: boolean;
+  envioAutomatico: boolean;
+  pac: string;
+  usuarioPac: string;
+  ambiente: string;
+}
+
+const FACTURACION_DEFAULTS: FacturacionForm = {
+  regimenFiscal: "601",
+  usoCfdi: "d01",
+  metodoPago: "pue",
+  formaPago: "01",
+  serie: "A",
+  folioInicial: 1001,
+  cancelacionMotivoSat: true,
+  notasCredito: true,
+  validarRfc: true,
+  envioAutomatico: true,
+  pac: "placeholder",
+  usuarioPac: "",
+  ambiente: "pruebas",
+};
+
+const FACTURACION_TOGGLES: { key: keyof FacturacionForm; label: string }[] = [
+  { key: "cancelacionMotivoSat", label: "Permitir cancelación con motivo SAT" },
+  { key: "notasCredito", label: "Emitir notas de crédito" },
+  { key: "validarRfc", label: "Validar RFC del receptor en tiempo real" },
+  { key: "envioAutomatico", label: "Envío automático de XML y PDF al paciente" },
+];
+
+export function SectionFacturacion({ onChange, registerSave }: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const readOnly = !isGlobalAdmin;
+  const { form, setField, loading, error, save, reset } = useClinicSettingsForm<FacturacionForm>(
+    activeClinicId,
+    "facturacion",
+    FACTURACION_DEFAULTS,
+  );
+
+  useEffect(() => {
+    registerSave?.({ save, reset });
+  }, [registerSave, save, reset]);
+
+  const edit = <K extends keyof FacturacionForm>(key: K, value: FacturacionForm[K]) => {
+    setField(key, value);
+    onChange();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Cargando configuración fiscal…
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700">
+          <Lock className="h-3.5 w-3.5" /> Solo administradores pueden editar estos datos.
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -22,7 +100,7 @@ export function SectionFacturacion({ onChange }: SectionProps) {
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <Field label="Régimen fiscal">
-            <Select defaultValue="601" onValueChange={onChange}>
+            <Select value={form.regimenFiscal} disabled={readOnly} onValueChange={(v) => edit("regimenFiscal", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="601">601 · General de Ley Personas Morales</SelectItem>
@@ -32,7 +110,7 @@ export function SectionFacturacion({ onChange }: SectionProps) {
             </Select>
           </Field>
           <Field label="Uso CFDI">
-            <Select defaultValue="d01" onValueChange={onChange}>
+            <Select value={form.usoCfdi} disabled={readOnly} onValueChange={(v) => edit("usoCfdi", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="d01">D01 · Honorarios médicos, dentales y hospitalarios</SelectItem>
@@ -42,7 +120,7 @@ export function SectionFacturacion({ onChange }: SectionProps) {
             </Select>
           </Field>
           <Field label="Método de pago">
-            <Select defaultValue="pue" onValueChange={onChange}>
+            <Select value={form.metodoPago} disabled={readOnly} onValueChange={(v) => edit("metodoPago", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="pue">PUE · Pago en una sola exhibición</SelectItem>
@@ -51,7 +129,7 @@ export function SectionFacturacion({ onChange }: SectionProps) {
             </Select>
           </Field>
           <Field label="Forma de pago">
-            <Select defaultValue="01" onValueChange={onChange}>
+            <Select value={form.formaPago} disabled={readOnly} onValueChange={(v) => edit("formaPago", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="01">01 · Efectivo</SelectItem>
@@ -61,23 +139,27 @@ export function SectionFacturacion({ onChange }: SectionProps) {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Serie"><Input defaultValue="A" onChange={onChange} /></Field>
-          <Field label="Folio inicial"><Input type="number" defaultValue={1001} onChange={onChange} /></Field>
+          <Field label="Serie">
+            <Input value={form.serie} disabled={readOnly} onChange={(e) => edit("serie", e.target.value)} />
+          </Field>
+          <Field label="Folio inicial">
+            <Input
+              type="number"
+              value={form.folioInicial}
+              disabled={readOnly}
+              onChange={(e) => edit("folioInicial", Number(e.target.value) || 0)}
+            />
+          </Field>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader><CardTitle className="text-base">Operaciones</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
-          {[
-            ["Permitir cancelación con motivo SAT", true],
-            ["Emitir notas de crédito", true],
-            ["Validar RFC del receptor en tiempo real", true],
-            ["Envío automático de XML y PDF al paciente", true],
-          ].map(([l, v]) => (
-            <div key={l as string} className="flex items-center justify-between rounded-md border border-border p-3">
-              <span className="text-sm">{l}</span>
-              <Switch defaultChecked={v as boolean} onCheckedChange={onChange} />
+          {FACTURACION_TOGGLES.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between rounded-md border border-border p-3">
+              <span className="text-sm">{label}</span>
+              <Switch checked={form[key] as boolean} disabled={readOnly} onCheckedChange={(v) => edit(key, v as FacturacionForm[typeof key])} />
             </div>
           ))}
         </CardContent>
@@ -87,7 +169,7 @@ export function SectionFacturacion({ onChange }: SectionProps) {
         <CardHeader><CardTitle className="text-base">Proveedor PAC</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           <Field label="PAC">
-            <Select defaultValue="placeholder" onValueChange={onChange}>
+            <Select value={form.pac} disabled={readOnly} onValueChange={(v) => edit("pac", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="placeholder">Seleccionar PAC…</SelectItem>
@@ -97,9 +179,11 @@ export function SectionFacturacion({ onChange }: SectionProps) {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Usuario PAC"><Input placeholder="usuario@pac" onChange={onChange} /></Field>
+          <Field label="Usuario PAC">
+            <Input value={form.usuarioPac} disabled={readOnly} placeholder="usuario@pac" onChange={(e) => edit("usuarioPac", e.target.value)} />
+          </Field>
           <Field label="Ambiente">
-            <Select defaultValue="pruebas" onValueChange={onChange}>
+            <Select value={form.ambiente} disabled={readOnly} onValueChange={(v) => edit("ambiente", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="pruebas">Pruebas</SelectItem>
@@ -113,21 +197,92 @@ export function SectionFacturacion({ onChange }: SectionProps) {
   );
 }
 
-/* ---------------- 11. Pagos ---------------- */
-export function SectionPagos({ onChange }: SectionProps) {
-  const metodos = [
-    ["Efectivo", true], ["Tarjeta", true], ["Transferencia", true],
-    ["Mercado Pago", false], ["Stripe", false],
-  ];
+/* ---------------- 11. Pagos (persistencia → clinic_settings/pagos) ---------------- */
+interface PagosForm {
+  metEfectivo: boolean;
+  metTarjeta: boolean;
+  metTransferencia: boolean;
+  metMercadoPago: boolean;
+  metStripe: boolean;
+  aceptarAnticipos: boolean;
+  pagosParciales: boolean;
+  reembolsos: boolean;
+  autorizarReembolsoGrande: boolean;
+}
+
+const PAGOS_DEFAULTS: PagosForm = {
+  metEfectivo: true,
+  metTarjeta: true,
+  metTransferencia: true,
+  metMercadoPago: false,
+  metStripe: false,
+  aceptarAnticipos: true,
+  pagosParciales: true,
+  reembolsos: true,
+  autorizarReembolsoGrande: true,
+};
+
+const PAGOS_METODOS: { key: keyof PagosForm; label: string }[] = [
+  { key: "metEfectivo", label: "Efectivo" },
+  { key: "metTarjeta", label: "Tarjeta" },
+  { key: "metTransferencia", label: "Transferencia" },
+  { key: "metMercadoPago", label: "Mercado Pago" },
+  { key: "metStripe", label: "Stripe" },
+];
+
+const PAGOS_POLITICAS: { key: keyof PagosForm; label: string }[] = [
+  { key: "aceptarAnticipos", label: "Aceptar anticipos" },
+  { key: "pagosParciales", label: "Permitir pagos parciales" },
+  { key: "reembolsos", label: "Habilitar reembolsos" },
+  { key: "autorizarReembolsoGrande", label: "Solicitar autorización para reembolso > $1,000" },
+];
+
+export function SectionPagos({ onChange, registerSave }: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const readOnly = !isGlobalAdmin;
+  const { form, setField, loading, error, save, reset } = useClinicSettingsForm<PagosForm>(
+    activeClinicId,
+    "pagos",
+    PAGOS_DEFAULTS,
+  );
+
+  useEffect(() => {
+    registerSave?.({ save, reset });
+  }, [registerSave, save, reset]);
+
+  const edit = <K extends keyof PagosForm>(key: K, value: PagosForm[K]) => {
+    setField(key, value);
+    onChange();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Cargando métodos de pago…
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4">
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700">
+          <Lock className="h-3.5 w-3.5" /> Solo administradores pueden editar estos datos.
+        </div>
+      )}
+
       <Card>
         <CardHeader><CardTitle className="text-base">Métodos de pago</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
-          {metodos.map(([l, v]) => (
-            <div key={l as string} className="flex items-center justify-between rounded-md border border-border p-3">
-              <span className="text-sm font-medium">{l}</span>
-              <Switch defaultChecked={v as boolean} onCheckedChange={onChange} />
+          {PAGOS_METODOS.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between rounded-md border border-border p-3">
+              <span className="text-sm font-medium">{label}</span>
+              <Switch checked={form[key] as boolean} disabled={readOnly} onCheckedChange={(v) => edit(key, v as PagosForm[typeof key])} />
             </div>
           ))}
         </CardContent>
@@ -136,15 +291,10 @@ export function SectionPagos({ onChange }: SectionProps) {
       <Card>
         <CardHeader><CardTitle className="text-base">Políticas</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
-          {[
-            ["Aceptar anticipos", true],
-            ["Permitir pagos parciales", true],
-            ["Habilitar reembolsos", true],
-            ["Solicitar autorización para reembolso > $1,000", true],
-          ].map(([l, v]) => (
-            <div key={l as string} className="flex items-center justify-between rounded-md border border-border p-3">
-              <span className="text-sm">{l}</span>
-              <Switch defaultChecked={v as boolean} onCheckedChange={onChange} />
+          {PAGOS_POLITICAS.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between rounded-md border border-border p-3">
+              <span className="text-sm">{label}</span>
+              <Switch checked={form[key] as boolean} disabled={readOnly} onCheckedChange={(v) => edit(key, v as PagosForm[typeof key])} />
             </div>
           ))}
         </CardContent>
@@ -153,7 +303,7 @@ export function SectionPagos({ onChange }: SectionProps) {
   );
 }
 
-/* ---------------- 12. Inventario y Costos ---------------- */
+/* ---------------- 12. Inventario y Costos (demo visual) ---------------- */
 export function SectionInventario({ onChange }: SectionProps) {
   return (
     <Tabs defaultValue="insumos">

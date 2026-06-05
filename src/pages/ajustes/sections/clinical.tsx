@@ -1,14 +1,16 @@
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect } from "react";
+import { Plus, Trash2, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { type SectionProps } from "../shared";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { useClinicSettingsForm } from "@/hooks/useClinicSettingsForm";
 
-/* ---------------- 7. Consultorios y Recursos ---------------- */
+/* ---------------- 7. Consultorios y Recursos (demo visual) ---------------- */
 export function SectionRecursos({ onChange }: SectionProps) {
   return (
     <Tabs defaultValue="consultorios">
@@ -84,36 +86,95 @@ function ResourceTable({ headers, rows, onChange }: { headers: string[]; rows: s
   );
 }
 
-/* ---------------- 8. Formularios del Paciente ---------------- */
-export function SectionFormularios({ onChange }: SectionProps) {
-  const bloques = [
-    { t: "Datos generales", d: "Nombre, fecha de nacimiento, sexo, CURP, contacto", on: true },
-    { t: "Antecedentes médicos", d: "Personales, familiares, quirúrgicos", on: true },
-    { t: "Alergias", d: "Medicamentos, alimentos, ambientales", on: true },
-    { t: "Medicamentos actuales", d: "Lista activa con posología", on: true },
-    { t: "Contacto de emergencia", d: "Nombre, parentesco, teléfono", on: true },
-    { t: "Consentimientos informados", d: "Vinculados al servicio", on: true },
-    { t: "Preguntas por especialidad", d: "Cuestionarios condicionales", on: false },
-  ];
+/* ---------------- 8. Formularios del Paciente (persistencia → clinic_settings/formularios) ---------------- */
+interface FormulariosForm {
+  datosGenerales: boolean;
+  antecedentes: boolean;
+  alergias: boolean;
+  medicamentos: boolean;
+  contactoEmergencia: boolean;
+  consentimientos: boolean;
+  preguntasEspecialidad: boolean;
+}
+
+const FORMULARIOS_DEFAULTS: FormulariosForm = {
+  datosGenerales: true,
+  antecedentes: true,
+  alergias: true,
+  medicamentos: true,
+  contactoEmergencia: true,
+  consentimientos: true,
+  preguntasEspecialidad: false,
+};
+
+const FORMULARIOS_BLOQUES: { key: keyof FormulariosForm; t: string; d: string }[] = [
+  { key: "datosGenerales", t: "Datos generales", d: "Nombre, fecha de nacimiento, sexo, CURP, contacto" },
+  { key: "antecedentes", t: "Antecedentes médicos", d: "Personales, familiares, quirúrgicos" },
+  { key: "alergias", t: "Alergias", d: "Medicamentos, alimentos, ambientales" },
+  { key: "medicamentos", t: "Medicamentos actuales", d: "Lista activa con posología" },
+  { key: "contactoEmergencia", t: "Contacto de emergencia", d: "Nombre, parentesco, teléfono" },
+  { key: "consentimientos", t: "Consentimientos informados", d: "Vinculados al servicio" },
+  { key: "preguntasEspecialidad", t: "Preguntas por especialidad", d: "Cuestionarios condicionales" },
+];
+
+export function SectionFormularios({ onChange, registerSave }: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const readOnly = !isGlobalAdmin;
+  const { form, setField, loading, error, save, reset } = useClinicSettingsForm<FormulariosForm>(
+    activeClinicId,
+    "formularios",
+    FORMULARIOS_DEFAULTS,
+  );
+
+  useEffect(() => {
+    registerSave?.({ save, reset });
+  }, [registerSave, save, reset]);
+
+  const edit = (key: keyof FormulariosForm, value: boolean) => {
+    setField(key, value);
+    onChange();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Cargando bloques del expediente…
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader><CardTitle className="text-base">Bloques del expediente</CardTitle></CardHeader>
-      <CardContent className="grid gap-3">
-        {bloques.map((b) => (
-          <div key={b.t} className="flex items-start justify-between gap-4 rounded-md border border-border p-3">
-            <div>
-              <p className="text-sm font-medium">{b.t}</p>
-              <p className="text-xs text-muted-foreground">{b.d}</p>
+    <div className="grid gap-4">
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700">
+          <Lock className="h-3.5 w-3.5" /> Solo administradores pueden editar estos datos.
+        </div>
+      )}
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Bloques del expediente</CardTitle></CardHeader>
+        <CardContent className="grid gap-3">
+          {FORMULARIOS_BLOQUES.map((b) => (
+            <div key={b.key} className="flex items-start justify-between gap-4 rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium">{b.t}</p>
+                <p className="text-xs text-muted-foreground">{b.d}</p>
+              </div>
+              <Switch checked={form[b.key]} disabled={readOnly} onCheckedChange={(v) => edit(b.key, v)} />
             </div>
-            <Switch defaultChecked={b.on} onCheckedChange={onChange} />
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
-/* ---------------- 9. Checklists Clínicos ---------------- */
+/* ---------------- 9. Checklists Clínicos (demo visual) ---------------- */
 export function SectionChecklists({ onChange }: SectionProps) {
   const checks = [
     { servicio: "Infiltración", pasos: 5, responsable: "Doctor", bloqueo: true },

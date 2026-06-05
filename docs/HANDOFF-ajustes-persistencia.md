@@ -14,8 +14,11 @@
 - `useClinicSettingsForm.ts` — hook genérico JSONB (mismo shape que `useClinicGeneral`).
 - **Citas** → section `"citas"` (`sections/basic.tsx`, controlado + `registerSave`).
 - **Recordatorios** → section `"recordatorios"` (`sections/basic.tsx`, controlado + `registerSave`).
-  ⚠️ Citas/Recordatorios persisten en `clinic_settings`; requieren la migración aplicada
-  (igual que General).
+- **Facturación** → section `"facturacion"` (`sections/finance.tsx`, selects/inputs/toggles).
+- **Pagos** → section `"pagos"` (`sections/finance.tsx`, toggles métodos + políticas).
+- **Formularios** → section `"formularios"` (`sections/clinical.tsx`, toggles bloques).
+  ⚠️ Todas las secciones JSONB persisten en `clinic_settings`; requieren la migración
+  aplicada en Lovable (igual que General).
 
 ## Patrón establecido
 - `useActiveClinic()` → `activeClinicId`, `isGlobalAdmin` (gate edición a admin).
@@ -26,12 +29,14 @@
 - Config singleton = guardado on-Guardar vía `registerSave`.
 - Errores: `friendlyError` de `lib/errors.ts`. Inmutable: `setForm(prev => ({...prev}))`.
 
-## Próximo paso (barato, sin explorar)
-Citas y Recordatorios ya cableados (ver arriba). Siguiente candidato barato:
-**Formularios/Checklists** (toggles) o **Pagos** (políticas) — mismo patrón:
+## Próximo paso
+Secciones config singleton cableadas: General, Citas, Recordatorios, Facturación,
+Pagos, Formularios. Mismo patrón para las que faltan:
 `useClinicSettingsForm<T>(clinicId, section, defaults)` + controlar inputs + `registerSave`.
 
 ## Sigue pendiente después
-- Horarios (7 días + excepciones, más pesado), Facturación CFDI, Pagos políticas,
-  Formularios/Checklists toggles, Auditoría políticas, matriz Permisos.
-- Recursos: NO cablear, ya vive en `/configuracion` (rooms).
+- **Auditoría** (políticas/toggles) + matriz **Permisos** → section `"auditoria"`/`"permisos"`,
+  mismo patrón (sección admin.tsx).
+- **Horarios** (7 días + excepciones, más pesado; conviene tabla propia, no JSONB).
+- **Checklists** + **Inventario** + **Recursos**: tienen CRUD por-fila (tablas), no JSONB.
+  Recursos además ya vive en `/configuracion` (rooms) → NO cablear.

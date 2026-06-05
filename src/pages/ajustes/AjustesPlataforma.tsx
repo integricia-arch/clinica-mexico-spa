@@ -154,10 +154,10 @@ export default function AjustesPlataforma() {
           {active === "servicios" && <SectionServicios onChange={markDirty} />}
           {active === "doctores" && <SectionDoctores onChange={markDirty} />}
           {active === "recursos" && <SectionRecursos onChange={markDirty} />}
-          {active === "formularios" && <SectionFormularios onChange={markDirty} />}
+          {active === "formularios" && <SectionFormularios onChange={markDirty} registerSave={registerSave} />}
           {active === "checklists" && <SectionChecklists onChange={markDirty} />}
-          {active === "facturacion" && <SectionFacturacion onChange={markDirty} />}
-          {active === "pagos" && <SectionPagos onChange={markDirty} />}
+          {active === "facturacion" && <SectionFacturacion onChange={markDirty} registerSave={registerSave} />}
+          {active === "pagos" && <SectionPagos onChange={markDirty} registerSave={registerSave} />}
           {active === "inventario" && <SectionInventario onChange={markDirty} />}
           {active === "usuarios" && <SectionUsuarios onChange={markDirty} />}
           {active === "auditoria" && <SectionAuditoria onChange={markDirty} />}
