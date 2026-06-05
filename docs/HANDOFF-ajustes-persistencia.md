@@ -45,5 +45,26 @@ Pagos, Formularios. Mismo patrón para las que faltan:
   (7 días fijos + lista chica de excepciones), sin queries relacionales, cero migración.
   `semana[7]{activo,apertura,cierre,descanso}` + `excepciones[]{id,fecha,motivo,tipo}`.
   Excepciones add/edit/remove inmutables sobre el array. Admin-gated + `registerSave`.
-- **Checklists** + **Inventario** + **Recursos**: tienen CRUD por-fila (tablas), no JSONB.
-  Recursos además ya vive en `/configuracion` (rooms) → NO cablear.
+- ~~**Checklists**~~ ✅ HECHO. Tabla `checklists` (`useChecklists.ts`,
+  `sections/clinical.tsx`). CRUD por-fila: servicio, pasos, responsable,
+  bloquear_avance, permitir_justificacion, activo. Admin-gated.
+- ~~**Inventario**~~ ✅ HECHO. 3 pestañas reales (`sections/inventario.tsx`,
+  extraída de `finance.tsx`):
+  - **Insumos** → tabla `insumos` (`useInsumos.ts`): stock/mínimo/caducidad(date)/
+    costo(centavos)/proveedor(FK opcional). Badge "Bajo" si stock < mínimo.
+  - **Kits** → tabla `kits` (`useKits.ts`): v1 plano (costo/precio capturados,
+    sin join a insumos). Margen derivado en UI. Futuro: tabla `kit_items` para
+    calcular costo desde insumos reales.
+  - **Proveedores** → tabla `proveedores` (`useProveedores.ts`).
+  Helper compartido `lib/untypedTable.ts` para `.from()` de tablas aún no
+  presentes en los tipos generados de Supabase (mismo patrón que
+  `clinicSettingsRepository`).
+  **⚠️ PENDIENTE APLICAR EN LOVABLE:** migración
+  `20260605010000_checklists_and_inventario.sql` — prompt
+  `"Apply pending Supabase migrations"`. Hasta aplicarla, las 4 tablas no
+  existen y las secciones muestran error de carga.
+- **Recursos**: ya vive en `/configuracion` (rooms) → NO cablear.
+
+## Estado final (2026-06-05)
+Todas las secciones de /ajustes tienen persistencia real. Solo queda aplicar la
+migración `20260605010000` en Lovable. `tsc` + `eslint` en verde.

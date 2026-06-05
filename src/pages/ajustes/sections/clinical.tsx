@@ -1,14 +1,25 @@
-import { useEffect } from "react";
-import { Plus, Trash2, Loader2, Lock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Trash2, Loader2, Lock, Pencil, Search } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { type SectionProps } from "../shared";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Field, type SectionProps } from "../shared";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useClinicSettingsForm } from "@/hooks/useClinicSettingsForm";
+import { useChecklists, type Checklist, type ChecklistInput } from "@/hooks/useChecklists";
 
 /* ---------------- 7. Consultorios y Recursos (demo visual) ---------------- */
 export function SectionRecursos({ onChange }: SectionProps) {
@@ -174,51 +185,228 @@ export function SectionFormularios({ onChange, registerSave }: SectionProps) {
   );
 }
 
-/* ---------------- 9. Checklists Clínicos (demo visual) ---------------- */
-export function SectionChecklists({ onChange }: SectionProps) {
-  const checks = [
-    { servicio: "Infiltración", pasos: 5, responsable: "Doctor", bloqueo: true },
-    { servicio: "Ultrasonido", pasos: 3, responsable: "Enfermería", bloqueo: false },
-    { servicio: "Cirugía menor", pasos: 8, responsable: "Doctor", bloqueo: true },
-    { servicio: "Toma de muestra", pasos: 4, responsable: "Enfermería", bloqueo: true },
-  ];
+/* ---------------- 9. Checklists Clínicos (persistencia real → tabla checklists) ---------------- */
+const EMPTY_CHECKLIST: ChecklistInput = {
+  servicio: "", pasos: 0, responsable: "", bloquearAvance: false,
+  permitirJustificacion: true, activo: true,
+};
+
+export function SectionChecklists(_: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const { items, loading, error, create, update, toggleActivo, remove } = useChecklists(activeClinicId);
+  const canEdit = isGlobalAdmin;
+
+  const [query, setQuery] = useState("");
+  const [editing, setEditing] = useState<Checklist | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState<ChecklistInput>(EMPTY_CHECKLIST);
+  const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<Checklist | null>(null);
+
+  const filtered = items.filter((c) =>
+    c.servicio.toLowerCase().includes(query.toLowerCase()),
+  );
+
+  const openNew = () => {
+    setEditing(null);
+    setForm(EMPTY_CHECKLIST);
+    setDialogOpen(true);
+  };
+  const openEdit = (c: Checklist) => {
+    setEditing(c);
+    setForm({
+      servicio: c.servicio, pasos: c.pasos, responsable: c.responsable,
+      bloquearAvance: c.bloquearAvance, permitirJustificacion: c.permitirJustificacion,
+      activo: c.activo,
+    });
+    setDialogOpen(true);
+  };
+
+  const setField = <K extends keyof ChecklistInput>(k: K, v: ChecklistInput[K]) =>
+    setForm((prev) => ({ ...prev, [k]: v }));
+
+  const handleSubmit = async () => {
+    if (!form.servicio.trim()) {
+      toast.error("El servicio del checklist es obligatorio.");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editing) {
+        await update(editing.id, form);
+        toast.success("Checklist actualizado");
+      } else {
+        await create(form);
+        toast.success("Checklist creado");
+      }
+      setDialogOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo guardar el checklist");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = async (c: Checklist) => {
+    try {
+      await toggleActivo(c.id, !c.activo);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo cambiar el estado");
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    try {
+      await remove(toDelete.id);
+      toast.success("Checklist eliminado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo eliminar");
+    } finally {
+      setToDelete(null);
+    }
+  };
+
   return (
-    <div className="grid gap-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
           <CardTitle className="text-base">Checklists por servicio</CardTitle>
-          <Button size="sm" onClick={onChange}><Plus className="mr-1.5 h-4 w-4" /> Nuevo checklist</Button>
-        </CardHeader>
-        <CardContent>
+          <CardDescription>Procesos obligatorios antes de avanzar una atención</CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              className="h-9 w-48 pl-8"
+              placeholder="Buscar servicio"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          {canEdit && (
+            <Button size="sm" onClick={openNew}><Plus className="mr-1.5 h-4 w-4" /> Nuevo</Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+        {loading ? (
+          <div className="flex items-center gap-2 p-8 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Cargando checklists…
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className="p-8 text-center text-sm text-muted-foreground">
+            {items.length === 0 ? "Aún no hay checklists registrados." : "Sin resultados."}
+          </p>
+        ) : (
           <Table>
-            <TableHeader><TableRow>
-              <TableHead>Servicio</TableHead><TableHead>Pasos</TableHead>
-              <TableHead>Responsable</TableHead><TableHead>Bloquear avance</TableHead><TableHead></TableHead>
-            </TableRow></TableHeader>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Servicio</TableHead>
+                <TableHead className="text-center">Pasos</TableHead>
+                <TableHead>Responsable</TableHead>
+                <TableHead className="text-center">Bloquear avance</TableHead>
+                <TableHead className="text-center">Activo</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
-              {checks.map((c) => (
-                <TableRow key={c.servicio}>
+              {filtered.map((c) => (
+                <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.servicio}</TableCell>
-                  <TableCell>{c.pasos}</TableCell>
-                  <TableCell><Badge variant="secondary">{c.responsable}</Badge></TableCell>
-                  <TableCell><Switch defaultChecked={c.bloqueo} onCheckedChange={onChange} /></TableCell>
-                  <TableCell className="text-right"><Button size="sm" variant="ghost" onClick={onChange}>Configurar</Button></TableCell>
+                  <TableCell className="text-center">{c.pasos}</TableCell>
+                  <TableCell>{c.responsable ? <Badge variant="secondary">{c.responsable}</Badge> : "—"}</TableCell>
+                  <TableCell className="text-center">
+                    {c.bloquearAvance ? <Lock className="mx-auto h-4 w-4 text-muted-foreground" /> : "—"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Switch checked={c.activo} disabled={!canEdit} onCheckedChange={() => handleToggle(c)} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {canEdit && (
+                      <div className="flex justify-end gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(c)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => setToDelete(c)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </CardContent>
 
-      <Card>
-        <CardContent className="flex items-center justify-between p-4">
-          <div>
-            <p className="text-sm font-medium">Permitir justificación al omitir un paso</p>
-            <p className="text-xs text-muted-foreground">Requiere capturar motivo y queda en auditoría</p>
+      {/* Crear / Editar */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar checklist" : "Nuevo checklist"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <Field label="Servicio">
+              <Input value={form.servicio} onChange={(e) => setField("servicio", e.target.value)} />
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Pasos">
+                <Input
+                  type="number" min={0} value={form.pasos}
+                  onChange={(e) => setField("pasos", Number(e.target.value))}
+                />
+              </Field>
+              <Field label="Responsable">
+                <Input value={form.responsable} onChange={(e) => setField("responsable", e.target.value)} />
+              </Field>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <Label className="text-sm">Bloquear avance hasta completarlo</Label>
+              <Switch checked={form.bloquearAvance} onCheckedChange={(v) => setField("bloquearAvance", v)} />
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div>
+                <Label className="text-sm">Permitir justificación al omitir un paso</Label>
+                <p className="text-[11px] text-muted-foreground">Requiere capturar motivo y queda en auditoría</p>
+              </div>
+              <Switch checked={form.permitirJustificacion} onCheckedChange={(v) => setField("permitirJustificacion", v)} />
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <Label className="text-sm">Activo</Label>
+              <Switch checked={form.activo} onCheckedChange={(v) => setField("activo", v)} />
+            </div>
           </div>
-          <Switch defaultChecked onCheckedChange={onChange} />
-        </CardContent>
-      </Card>
-    </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={saving}>
+              {saving ? "Guardando…" : editing ? "Guardar cambios" : "Crear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar eliminación */}
+      <AlertDialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar el checklist de “{toDelete?.servicio}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Plus, Trash2, Loader2, Lock } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Field, type SectionProps } from "../shared";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useClinicSettingsForm } from "@/hooks/useClinicSettingsForm";
@@ -303,115 +302,4 @@ export function SectionPagos({ onChange, registerSave }: SectionProps) {
   );
 }
 
-/* ---------------- 12. Inventario y Costos (demo visual) ---------------- */
-export function SectionInventario({ onChange }: SectionProps) {
-  return (
-    <Tabs defaultValue="insumos">
-      <TabsList>
-        <TabsTrigger value="insumos">Insumos</TabsTrigger>
-        <TabsTrigger value="kits">Kits por tratamiento</TabsTrigger>
-        <TabsTrigger value="proveedores">Proveedores</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="insumos" className="mt-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Catálogo</CardTitle>
-            <Button size="sm" onClick={onChange}><Plus className="mr-1.5 h-4 w-4" /> Nuevo insumo</Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Insumo</TableHead><TableHead>Stock</TableHead>
-                <TableHead>Mínimo</TableHead><TableHead>Caducidad</TableHead>
-                <TableHead className="text-right">Costo</TableHead><TableHead></TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {[
-                  { nombre: "Jeringa 5ml", stock: "120", minimo: "30", caducidad: "12/2027", costo: 4.5, bajo: false },
-                  { nombre: "Guantes nitrilo M", stock: "20", minimo: "50", caducidad: "06/2027", costo: 3.2, bajo: true },
-                  { nombre: "Lidocaína 2%", stock: "15", minimo: "10", caducidad: "03/2026", costo: 85, bajo: false },
-                  { nombre: "Alcohol 70% 1L", stock: "8", minimo: "5", caducidad: "—", costo: 45, bajo: false },
-                ].map((r) => (
-                  <TableRow key={r.nombre}>
-                    <TableCell className="font-medium">{r.nombre}</TableCell>
-                    <TableCell>
-                      {r.stock}{r.bajo && <Badge variant="destructive" className="ml-2">Bajo stock</Badge>}
-                    </TableCell>
-                    <TableCell>{r.minimo}</TableCell>
-                    <TableCell>{r.caducidad}</TableCell>
-                    <TableCell className="text-right">${r.costo.toLocaleString("es-MX")}</TableCell>
-                    <TableCell className="text-right"><Button size="icon" variant="ghost" onClick={onChange}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="kits" className="mt-4">
-        <Card>
-          <CardContent className="p-4">
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Tratamiento</TableHead><TableHead>Insumos</TableHead>
-                <TableHead className="text-right">Costo</TableHead>
-                <TableHead className="text-right">Precio</TableHead>
-                <TableHead className="text-right">Margen</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {[
-                  { tratamiento: "Infiltración", insumos: 6, costo: 320, precio: 2500 },
-                  { tratamiento: "Curación mayor", insumos: 8, costo: 180, precio: 950 },
-                  { tratamiento: "Toma de muestra", insumos: 4, costo: 65, precio: 650 },
-                ].map((r) => {
-                  const margen = Math.round(((r.precio - r.costo) / r.precio) * 100);
-                  return (
-                    <TableRow key={r.tratamiento}>
-                      <TableCell className="font-medium">{r.tratamiento}</TableCell>
-                      <TableCell>{r.insumos} ítems</TableCell>
-                      <TableCell className="text-right">${r.costo.toLocaleString("es-MX")}</TableCell>
-                      <TableCell className="text-right">${r.precio.toLocaleString("es-MX")}</TableCell>
-                      <TableCell className="text-right"><Badge variant={margen > 50 ? "default" : "secondary"}>{margen}%</Badge></TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="proveedores" className="mt-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Proveedores</CardTitle>
-            <Button size="sm" onClick={onChange}><Plus className="mr-1.5 h-4 w-4" /> Agregar</Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Proveedor</TableHead><TableHead>Contacto</TableHead>
-                <TableHead>Teléfono</TableHead><TableHead>Última compra</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {[
-                  { proveedor: "MediSupply MX", contacto: "Juan Pérez", tel: "55 1111 2222", ultima: "12/05/2026" },
-                  { proveedor: "Farmacéutica del Valle", contacto: "Lucía Soto", tel: "55 3333 4444", ultima: "28/04/2026" },
-                ].map((r) => (
-                  <TableRow key={r.proveedor}>
-                    <TableCell className="font-medium">{r.proveedor}</TableCell>
-                    <TableCell>{r.contacto}</TableCell>
-                    <TableCell>{r.tel}</TableCell>
-                    <TableCell>{r.ultima}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
-  );
-}
+// SectionInventario se movió a ./inventario (CRUD real de insumos/kits/proveedores).

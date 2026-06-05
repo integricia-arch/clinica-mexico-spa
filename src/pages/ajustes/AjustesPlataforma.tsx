@@ -14,7 +14,8 @@ import { SectionGeneral, SectionHorarios, SectionCitas, SectionRecordatorios } f
 import { SectionRecursos, SectionFormularios, SectionChecklists } from "./sections/clinical";
 import { SectionServicios } from "./sections/servicios";
 import { SectionDoctores } from "./sections/doctores";
-import { SectionFacturacion, SectionPagos, SectionInventario } from "./sections/finance";
+import { SectionFacturacion, SectionPagos } from "./sections/finance";
+import { SectionInventario } from "./sections/inventario";
 import { SectionUsuarios, SectionAuditoria } from "./sections/admin";
 import type { SectionSaver } from "./shared";
 
