@@ -380,6 +380,41 @@ export type Database = {
           },
         ]
       }
+      clinic_settings: {
+        Row: {
+          clinic_id: string
+          data: Json
+          id: string
+          section: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          clinic_id: string
+          data?: Json
+          id?: string
+          section: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          data?: Json
+          id?: string
+          section?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
