@@ -22,7 +22,7 @@ import {
 import { Field, type SectionProps } from "../shared";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useInsumos, type Insumo, type InsumoInput } from "@/hooks/useInsumos";
-import { useKits, type Kit, type KitInput } from "@/hooks/useKits";
+import { useKits, type Kit, type KitInput, type KitItemInput } from "@/hooks/useKits";
 import { useProveedores, type Proveedor, type ProveedorInput } from "@/hooks/useProveedores";
 
 const mxn = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -217,10 +217,14 @@ function InsumosTab({ clinicId, canEdit, proveedores }: {
 /* ====================================================================== */
 
 const EMPTY_KIT: KitInput = {
-  tratamiento: "", numInsumos: 0, costoMxn: 0, precioMxn: 0, activo: true,
+  tratamiento: "", precioMxn: 0, activo: true, items: [],
 };
 
-function KitsTab({ clinicId, canEdit }: { clinicId: string | null; canEdit: boolean }) {
+function KitsTab({ clinicId, canEdit, insumos }: {
+  clinicId: string | null;
+  canEdit: boolean;
+  insumos: Insumo[];
+}) {
   const { items, loading, error, create, update, remove } = useKits(clinicId);
   const [editing, setEditing] = useState<Kit | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -231,18 +235,43 @@ function KitsTab({ clinicId, canEdit }: { clinicId: string | null; canEdit: bool
   const setField = <K extends keyof KitInput>(k: K, v: KitInput[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
 
+  // Builder de líneas: alta/baja/edición de cada insumo del kit.
+  const addLine = () =>
+    setForm((prev) => ({ ...prev, items: [...prev.items, { insumoId: "", cantidad: 1 }] }));
+  const updateLine = (idx: number, patch: Partial<KitItemInput>) =>
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((it, i) => (i === idx ? { ...it, ...patch } : it)),
+    }));
+  const removeLine = (idx: number) =>
+    setForm((prev) => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
+
+  const insumoCosto = (id: string) => insumos.find((i) => i.id === id)?.costoMxn ?? 0;
+  // Costo derivado en vivo de las líneas (mismo cálculo que el hook al cargar).
+  const formCosto = form.items.reduce((sum, it) => sum + it.cantidad * insumoCosto(it.insumoId), 0);
+  const formMargen = form.precioMxn > 0 ? Math.round(((form.precioMxn - formCosto) / form.precioMxn) * 100) : 0;
+
   const openNew = () => { setEditing(null); setForm(EMPTY_KIT); setDialogOpen(true); };
   const openEdit = (k: Kit) => {
     setEditing(k);
     setForm({
-      tratamiento: k.tratamiento, numInsumos: k.numInsumos, costoMxn: k.costoMxn,
-      precioMxn: k.precioMxn, activo: k.activo,
+      tratamiento: k.tratamiento,
+      precioMxn: k.precioMxn,
+      activo: k.activo,
+      items: k.items.map((it) => ({ insumoId: it.insumoId, cantidad: it.cantidad })),
     });
     setDialogOpen(true);
   };
 
   const handleSubmit = async () => {
     if (!form.tratamiento.trim()) { toast.error("El tratamiento es obligatorio."); return; }
+    if (form.items.some((it) => !it.insumoId)) {
+      toast.error("Cada línea debe tener un insumo seleccionado."); return;
+    }
+    const ids = form.items.map((it) => it.insumoId);
+    if (new Set(ids).size !== ids.length) {
+      toast.error("Hay insumos repetidos en el kit."); return;
+    }
     setSaving(true);
     try {
       if (editing) { await update(editing.id, form); toast.success("Kit actualizado"); }
@@ -265,7 +294,7 @@ function KitsTab({ clinicId, canEdit }: { clinicId: string | null; canEdit: bool
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-base">Kits por tratamiento</CardTitle>
-          <CardDescription>Margen calculado de costo vs precio</CardDescription>
+          <CardDescription>Costo calculado de los insumos; precio manual</CardDescription>
         </div>
         {canEdit && <Button size="sm" onClick={openNew}><Plus className="mr-1.5 h-4 w-4" /> Nuevo</Button>}
       </CardHeader>
@@ -321,17 +350,61 @@ function KitsTab({ clinicId, canEdit }: { clinicId: string | null; canEdit: bool
             <Field label="Tratamiento">
               <Input value={form.tratamiento} onChange={(e) => setField("tratamiento", e.target.value)} />
             </Field>
-            <Field label="Número de insumos">
-              <Input type="number" min={0} value={form.numInsumos} onChange={(e) => setField("numInsumos", Number(e.target.value))} />
-            </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Costo (MXN)">
-                <Input type="number" min={0} step="0.01" value={form.costoMxn} onChange={(e) => setField("costoMxn", Number(e.target.value))} />
-              </Field>
-              <Field label="Precio (MXN)">
-                <Input type="number" min={0} step="0.01" value={form.precioMxn} onChange={(e) => setField("precioMxn", Number(e.target.value))} />
-              </Field>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <Label className="text-sm">Insumos del kit</Label>
+                <Button size="sm" variant="outline" onClick={addLine} disabled={insumos.length === 0}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" /> Agregar insumo
+                </Button>
+              </div>
+              {insumos.length === 0 ? (
+                <p className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+                  No hay insumos en el catálogo. Crea insumos primero en la pestaña "Insumos".
+                </p>
+              ) : form.items.length === 0 ? (
+                <p className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+                  Sin insumos. Agrega al menos uno para calcular el costo.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {form.items.map((line, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Select value={line.insumoId || undefined} onValueChange={(v) => updateLine(idx, { insumoId: v })}>
+                        <SelectTrigger className="flex-1"><SelectValue placeholder="Selecciona insumo" /></SelectTrigger>
+                        <SelectContent>
+                          {insumos.map((i) => (
+                            <SelectItem key={i.id} value={i.id}>{i.nombre} · {mxn(i.costoMxn)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number" min={1} className="w-20"
+                        value={line.cantidad}
+                        onChange={(e) => updateLine(idx, { cantidad: Number(e.target.value) })}
+                      />
+                      <Button size="icon" variant="ghost" onClick={() => removeLine(idx)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            <Field label="Precio (MXN)">
+              <Input type="number" min={0} step="0.01" value={form.precioMxn} onChange={(e) => setField("precioMxn", Number(e.target.value))} />
+            </Field>
+
+            <div className="grid grid-cols-3 gap-2 rounded-md border border-border p-3 text-sm">
+              <div><span className="text-muted-foreground">Costo</span><div className="font-medium">{mxn(formCosto)}</div></div>
+              <div><span className="text-muted-foreground">Precio</span><div className="font-medium">{mxn(form.precioMxn)}</div></div>
+              <div>
+                <span className="text-muted-foreground">Margen</span>
+                <div><Badge variant={formMargen > 50 ? "default" : "secondary"}>{formMargen}%</Badge></div>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between rounded-md border border-border p-3">
               <Label className="text-sm">Activo</Label>
               <Switch checked={form.activo} onCheckedChange={(v) => setField("activo", v)} />
@@ -505,6 +578,8 @@ export function SectionInventario(_: SectionProps) {
   const canEdit = isGlobalAdmin;
   // Proveedores se cargan a nivel shell para poblar el select de insumos.
   const { items: proveedores } = useProveedores(activeClinicId);
+  // Insumos a nivel shell pueblan el builder de líneas de los kits.
+  const { items: insumos } = useInsumos(activeClinicId);
 
   return (
     <Tabs defaultValue="insumos">
@@ -518,7 +593,7 @@ export function SectionInventario(_: SectionProps) {
         <InsumosTab clinicId={activeClinicId} canEdit={canEdit} proveedores={proveedores} />
       </TabsContent>
       <TabsContent value="kits" className="mt-4">
-        <KitsTab clinicId={activeClinicId} canEdit={canEdit} />
+        <KitsTab clinicId={activeClinicId} canEdit={canEdit} insumos={insumos} />
       </TabsContent>
       <TabsContent value="proveedores" className="mt-4">
         <ProveedoresTab clinicId={activeClinicId} canEdit={canEdit} />
