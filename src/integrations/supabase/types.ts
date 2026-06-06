@@ -342,6 +342,53 @@ export type Database = {
         }
         Relationships: []
       }
+      checklists: {
+        Row: {
+          activo: boolean
+          bloquear_avance: boolean
+          clinic_id: string
+          created_at: string
+          id: string
+          pasos: number
+          permitir_justificacion: boolean
+          responsable: string | null
+          servicio: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          bloquear_avance?: boolean
+          clinic_id: string
+          created_at?: string
+          id?: string
+          pasos?: number
+          permitir_justificacion?: boolean
+          responsable?: string | null
+          servicio: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          bloquear_avance?: boolean
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          pasos?: number
+          permitir_justificacion?: boolean
+          responsable?: string | null
+          servicio?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklists_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_memberships: {
         Row: {
           clinic_id: string
@@ -1011,6 +1058,63 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insumos: {
+        Row: {
+          activo: boolean
+          caducidad: string | null
+          clinic_id: string
+          costo_centavos: number
+          created_at: string
+          id: string
+          nombre: string
+          proveedor_id: string | null
+          stock: number
+          stock_minimo: number
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          caducidad?: string | null
+          clinic_id: string
+          costo_centavos?: number
+          created_at?: string
+          id?: string
+          nombre: string
+          proveedor_id?: string | null
+          stock?: number
+          stock_minimo?: number
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          caducidad?: string | null
+          clinic_id?: string
+          costo_centavos?: number
+          created_at?: string
+          id?: string
+          nombre?: string
+          proveedor_id?: string | null
+          stock?: number
+          stock_minimo?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insumos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
         ]
@@ -1738,6 +1842,105 @@ export type Database = {
             columns: ["template_version_id"]
             isOneToOne: false
             referencedRelation: "journey_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kit_items: {
+        Row: {
+          cantidad: number
+          clinic_id: string
+          created_at: string
+          id: string
+          insumo_id: string
+          kit_id: string
+          updated_at: string
+        }
+        Insert: {
+          cantidad?: number
+          clinic_id: string
+          created_at?: string
+          id?: string
+          insumo_id: string
+          kit_id: string
+          updated_at?: string
+        }
+        Update: {
+          cantidad?: number
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          insumo_id?: string
+          kit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kit_items_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_items_insumo_id_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_items_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "kits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kits: {
+        Row: {
+          activo: boolean
+          clinic_id: string
+          costo_centavos: number
+          created_at: string
+          id: string
+          margen_objetivo: number
+          num_insumos: number
+          precio_centavos: number
+          tratamiento: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          clinic_id: string
+          costo_centavos?: number
+          created_at?: string
+          id?: string
+          margen_objetivo?: number
+          num_insumos?: number
+          precio_centavos?: number
+          tratamiento: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          clinic_id?: string
+          costo_centavos?: number
+          created_at?: string
+          id?: string
+          margen_objetivo?: number
+          num_insumos?: number
+          precio_centavos?: number
+          tratamiento?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kits_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -2854,6 +3057,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "prescriptions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proveedores: {
+        Row: {
+          activo: boolean
+          clinic_id: string
+          contacto: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nombre: string
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          clinic_id: string
+          contacto?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nombre: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          clinic_id?: string
+          contacto?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nombre?: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedores_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
