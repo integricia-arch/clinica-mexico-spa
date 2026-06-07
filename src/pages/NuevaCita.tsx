@@ -91,7 +91,7 @@ export default function NuevaCita() {
         {/* Paciente */}
         <div className="space-y-2">
           <Label>Paciente *</Label>
-          <Select value={form.patient_id} onValueChange={(v) => setForm({ ...form, patient_id: v })}>
+          <Select value={form.patient_id || undefined} onValueChange={(v) => setForm({ ...form, patient_id: v })}>
             <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
             <SelectContent>
               {patients.map((p) => (
@@ -106,7 +106,7 @@ export default function NuevaCita() {
         {/* Médico */}
         <div className="space-y-2">
           <Label>Médico *</Label>
-          <Select value={form.doctor_id} onValueChange={(v) => setForm({ ...form, doctor_id: v })}>
+          <Select value={form.doctor_id || undefined} onValueChange={(v) => setForm({ ...form, doctor_id: v })}>
             <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
             <SelectContent>
               {doctors.map((d) => (
@@ -121,7 +121,7 @@ export default function NuevaCita() {
         {/* Consultorio */}
         <div className="space-y-2">
           <Label>Consultorio</Label>
-          <Select value={form.room_id} onValueChange={(v) => setForm({ ...form, room_id: v })}>
+          <Select value={form.room_id || undefined} onValueChange={(v) => setForm({ ...form, room_id: v })}>
             <SelectTrigger><SelectValue placeholder="Seleccionar consultorio (opcional)" /></SelectTrigger>
             <SelectContent>
               {rooms.map((r) => (
