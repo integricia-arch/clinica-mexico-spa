@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+integrika_sync.config.ps1
 
 # Logs
 logs
