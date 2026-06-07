@@ -106,7 +106,7 @@ export default function NuevaCita() {
         {/* Médico */}
         <div className="space-y-2">
           <Label>Médico *</Label>
-          <Select value={form.doctor_id} onValueChange={(v) => setForm({ ...form, doctor_id: v })}>
+          <Select value={form.doctor_id || undefined} onValueChange={(v) => setForm({ ...form, doctor_id: v })}>
             <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
             <SelectContent>
               {doctors.map((d) => (
