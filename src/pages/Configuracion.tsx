@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal } from "lucide-react";
+import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -111,8 +111,27 @@ export default function Configuracion() {
         </Link>
       )}
 
+      {/* Configuración de cajas */}
+      {(isAdmin || hasRole("manager")) && (
+        <Link
+          to="/configuracion/caja"
+          className="group flex items-center justify-between rounded-xl border border-primary/30 bg-gradient-to-r from-primary/5 to-transparent p-5 shadow-card hover:shadow-elevated transition-shadow"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <CreditCard className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-display font-semibold text-card-foreground">Configuración de cajas</h2>
+              <p className="text-sm text-muted-foreground">Registrar cajas registradoras, fondos de apertura y tipo (general/farmacia).</p>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-primary group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      )}
+
       {/* Consultorios */}
-      
+
       <div className="rounded-xl border border-border bg-card p-5 shadow-card">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
