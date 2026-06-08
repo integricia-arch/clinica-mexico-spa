@@ -69,11 +69,30 @@ export default function PrescriptionEditorModal({
   const [loading, setLoading] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [issuedNumber, setIssuedNumber] = useState<string | null>(null);
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
+
+  async function fetchStockForIds(medIds: string[]) {
+    if (medIds.length === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const { data } = await supabase
+      .from("lotes_medicamento")
+      .select("medicamento_id, existencia")
+      .in("medicamento_id", medIds)
+      .gt("existencia", 0)
+      .gte("fecha_caducidad", today);
+    if (!data) return;
+    const totals: Record<string, number> = {};
+    for (const l of data) {
+      totals[l.medicamento_id] = (totals[l.medicamento_id] ?? 0) + l.existencia;
+    }
+    setStockMap((prev) => ({ ...prev, ...totals }));
+  }
 
   // Cargar receta existente (draft para esta nota) o preparar nueva
   useEffect(() => {
     if (!open) return;
     setIssuedNumber(null);
+    setStockMap({});
     setDraft(EMPTY_ITEM);
     setDiag(diagnosis ?? "");
     (async () => {
@@ -101,6 +120,10 @@ export default function PrescriptionEditorModal({
             .eq("prescription_id", rxId)
             .order("created_at");
           setItems(its ?? []);
+          const existingMedIds = (its ?? [])
+            .map((i: any) => i.medication_id)
+            .filter(Boolean) as string[];
+          if (existingMedIds.length > 0) fetchStockForIds(existingMedIds);
         } else {
           setItems([]);
         }
@@ -199,6 +222,7 @@ export default function PrescriptionEditorModal({
     const m = meds.find((x) => x.id === id);
     if (!m) return;
     setDraft((d) => ({ ...d, medication_id: m.id, generic_name: m.nombre, presentation: m.descripcion ?? d.presentation }));
+    fetchStockForIds([m.id]);
   }
 
   return (
@@ -254,6 +278,24 @@ export default function PrescriptionEditorModal({
                             <p className="mt-1 inline-flex items-center gap-1 text-xs text-destructive">
                               <AlertCircle className="h-3 w-3" /> Controlado {it.controlled_group ? `(${it.controlled_group})` : ""}
                             </p>
+                          )}
+                          {it.medication_id && (
+                            <span className={`mt-1 inline-flex items-center gap-1 text-xs font-medium ${
+                              (stockMap[it.medication_id] ?? 0) >= (it.quantity ?? 1)
+                                ? "text-green-600"
+                                : "text-destructive"
+                            }`}>
+                              {stockMap[it.medication_id] !== undefined ? (
+                                (stockMap[it.medication_id] ?? 0) >= (it.quantity ?? 1)
+                                  ? `🟢 ${stockMap[it.medication_id]} en stock`
+                                  : `🔴 solo ${stockMap[it.medication_id] ?? 0} disponibles`
+                              ) : null}
+                            </span>
+                          )}
+                          {!it.medication_id && (
+                            <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                              🔴 sin ligar a inventario
+                            </span>
                           )}
                         </div>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveItem(it.id)}>
