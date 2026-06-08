@@ -19,6 +19,7 @@ export default function NuevaCita() {
   const [doctors, setDoctors] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -41,6 +42,7 @@ export default function NuevaCita() {
       setDoctors(d.data ?? []);
       setPatients(p.data ?? []);
       setRooms(r.data ?? []);
+      setDataLoaded(true);
     });
   }, []);
 
@@ -91,46 +93,58 @@ export default function NuevaCita() {
         {/* Paciente */}
         <div className="space-y-2">
           <Label>Paciente *</Label>
-          <Select value={form.patient_id || undefined} onValueChange={(v) => setForm({ ...form, patient_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
-            <SelectContent>
-              {patients.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.apellidos}, {p.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {dataLoaded ? (
+            <Select value={form.patient_id || undefined} onValueChange={(v) => setForm({ ...form, patient_id: v })}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
+              <SelectContent>
+                {patients.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.apellidos}, {p.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="h-10 rounded-md border border-input bg-muted animate-pulse" />
+          )}
         </div>
 
         {/* Médico */}
         <div className="space-y-2">
           <Label>Médico *</Label>
-          <Select value={form.doctor_id || undefined} onValueChange={(v) => setForm({ ...form, doctor_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
-            <SelectContent>
-              {doctors.map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  Dr(a). {d.nombre} {d.apellidos} — {d.especialidad}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {dataLoaded ? (
+            <Select value={form.doctor_id || undefined} onValueChange={(v) => setForm({ ...form, doctor_id: v })}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
+              <SelectContent>
+                {doctors.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    Dr(a). {d.nombre} {d.apellidos} — {d.especialidad}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="h-10 rounded-md border border-input bg-muted animate-pulse" />
+          )}
         </div>
 
         {/* Consultorio */}
         <div className="space-y-2">
           <Label>Consultorio</Label>
-          <Select value={form.room_id || undefined} onValueChange={(v) => setForm({ ...form, room_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Seleccionar consultorio (opcional)" /></SelectTrigger>
-            <SelectContent>
-              {rooms.map((r) => (
-                <SelectItem key={r.id} value={r.id}>
-                  {r.nombre} {r.piso ? `(Piso ${r.piso})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {dataLoaded ? (
+            <Select value={form.room_id || undefined} onValueChange={(v) => setForm({ ...form, room_id: v })}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar consultorio (opcional)" /></SelectTrigger>
+              <SelectContent>
+                {rooms.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.nombre} {r.piso ? `(Piso ${r.piso})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="h-10 rounded-md border border-input bg-muted animate-pulse" />
+          )}
         </div>
 
         {/* Fecha y hora */}
