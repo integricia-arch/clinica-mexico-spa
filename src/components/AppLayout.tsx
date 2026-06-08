@@ -5,7 +5,7 @@ import {
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
   CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
   MessageCircle, BellRing, ClipboardList, UserCog, Stethoscope,
-  CreditCard, Timer,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,117 +17,31 @@ interface NavItem {
   icon: React.ElementType;
   label: string;
   roles?: AppRole[];
+  section?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  {
-    to: "/",
-    icon: LayoutDashboard,
-    label: "Panel principal",
-    roles: ["admin", "receptionist", "doctor", "nurse"],
-  },
-  {
-    to: "/recepcion",
-    icon: Headset,
-    label: "Recepción",
-    roles: ["admin", "receptionist"],
-  },
-  {
-    to: "/pacientes",
-    icon: Users,
-    label: "Pacientes",
-    roles: ["admin", "receptionist", "doctor", "nurse"],
-  },
-  {
-    to: "/agenda",
-    icon: CalendarDays,
-    label: "Agenda",
-    roles: ["admin", "receptionist", "doctor", "nurse"],
-  },
-  {
-    to: "/doctor",
-    icon: Stethoscope,
-    label: "Panel del doctor",
-    roles: ["admin", "doctor"],
-  },
-  {
-    to: "/nueva-cita",
-    icon: CalendarPlus,
-    label: "Nueva cita",
-    roles: ["admin", "receptionist", "patient"],
-  },
-  {
-    to: "/mis-recetas",
-    icon: Pill,
-    label: "Mis recetas",
-    roles: ["patient"],
-  },
-  {
-    to: "/expedientes",
-    icon: FileText,
-    label: "Expedientes",
-    roles: ["admin", "doctor", "nurse"],
-  },
-  {
-    to: "/recetas",
-    icon: FileText,
-    label: "Recetas",
-    roles: ["admin", "doctor", "nurse"],
-  },
-  {
-    to: "/farmacia",
-    icon: Pill,
-    label: "Farmacia",
-    roles: ["admin", "nurse", "receptionist"],
-  },
-  {
-    to: "/facturacion",
-    icon: Receipt,
-    label: "Facturación",
-    roles: ["admin", "receptionist"],
-  },
-  {
-    to: "/citas",
-    icon: ClipboardList,
-    label: "Citas",
-    roles: ["admin", "receptionist", "doctor", "nurse"],
-  },
-  {
-    to: "/recordatorios",
-    icon: BellRing,
-    label: "Recordatorios",
-    roles: ["admin", "receptionist", "doctor"],
-  },
-  {
-    to: "/inbox",
-    icon: MessageCircle,
-    label: "Conversaciones",
-    roles: ["admin", "receptionist", "doctor", "nurse"],
-  },
-  {
-    to: "/auditoria",
-    icon: ShieldCheck,
-    label: "Auditoría",
-    roles: ["admin", "receptionist"],
-  },
-  {
-    to: "/configuracion/caja",
-    icon: CreditCard,
-    label: "Caja · Configuración",
-    roles: ["admin", "manager"],
-  },
-  {
-    to: "/caja/turno",
-    icon: Timer,
-    label: "Caja · Turno",
-    roles: ["admin", "manager", "cajero"],
-  },
-  {
-    to: "/configuracion",
-    icon: Settings,
-    label: "Configuración",
-    roles: ["admin", "doctor"],
-  },
+  // ── Clínica ──
+  { section: "Clínica", to: "/", icon: LayoutDashboard, label: "Panel principal", roles: ["admin", "receptionist", "doctor", "nurse"] },
+  { to: "/recepcion", icon: Headset, label: "Recepción", roles: ["admin", "receptionist"] },
+  { to: "/pacientes", icon: Users, label: "Pacientes", roles: ["admin", "receptionist", "doctor", "nurse"] },
+  { to: "/agenda", icon: CalendarDays, label: "Agenda", roles: ["admin", "receptionist", "doctor", "nurse"] },
+  { to: "/nueva-cita", icon: CalendarPlus, label: "Nueva cita", roles: ["admin", "receptionist"] },
+  { to: "/doctor", icon: Stethoscope, label: "Panel del doctor", roles: ["admin", "doctor"] },
+  { to: "/expedientes", icon: FileText, label: "Expedientes", roles: ["admin", "doctor", "nurse"] },
+  { to: "/recetas", icon: FileText, label: "Recetas", roles: ["admin", "doctor", "nurse"] },
+  { to: "/citas", icon: ClipboardList, label: "Citas", roles: ["admin", "receptionist", "doctor", "nurse"] },
+  { to: "/recordatorios", icon: BellRing, label: "Recordatorios", roles: ["admin", "receptionist", "doctor"] },
+  // ── Operaciones ──
+  { section: "Operaciones", to: "/farmacia", icon: Pill, label: "Farmacia", roles: ["admin", "nurse", "receptionist"] },
+  { to: "/caja", icon: CreditCard, label: "Caja", roles: ["admin", "manager", "cajero", "receptionist"] },
+  // ── Admin ──
+  { section: "Admin", to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"] },
+  { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
+  { to: "/auditoria", icon: ShieldCheck, label: "Auditoría", roles: ["admin"] },
+  { to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin", "doctor"] },
+  // patient-only
+  { to: "/mis-recetas", icon: Pill, label: "Mis recetas", roles: ["patient"] },
 ];
 
 const ROLE_LABELS: Record<AppRole, string> = {
@@ -204,30 +118,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {visibleNav.map((item) => {
-            const isActive = location.pathname === item.to;
-            const showBadge = item.to === "/inbox" && escaladasCount > 0;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-primary"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                }`}
-              >
-                <item.icon className="h-[18px] w-[18px]" />
-                <span className="flex-1">{item.label}</span>
-                {showBadge && (
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-red-500 text-white px-1.5">
-                    {escaladasCount}
-                  </span>
-                )}
-              </NavLink>
-            );
-          })}
+          {(() => {
+            let lastSection = "";
+            return visibleNav.map((item) => {
+              const showSection = item.section && item.section !== lastSection;
+              if (item.section) lastSection = item.section;
+              const isActive = location.pathname === item.to;
+              const showBadge = item.to === "/inbox" && escaladasCount > 0;
+              return (
+                <div key={item.to}>
+                  {showSection && (
+                    <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                      {item.section}
+                    </p>
+                  )}
+                  <NavLink
+                    to={item.to}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    }`}
+                  >
+                    <item.icon className="h-[18px] w-[18px]" />
+                    <span className="flex-1">{item.label}</span>
+                    {showBadge && (
+                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-red-500 text-white px-1.5">
+                        {escaladasCount}
+                      </span>
+                    )}
+                  </NavLink>
+                </div>
+              );
+            });
+          })()}
         </nav>
 
         {/* Footer */}
