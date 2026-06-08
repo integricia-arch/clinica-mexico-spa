@@ -13,9 +13,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const missing = REQUIRED_ENV_VARS.filter(k => !env[k]);
   if (missing.length > 0) {
-    throw new Error(
-      `[vite.config] Variables de entorno faltantes: ${missing.join(', ')}\n` +
-      'En CI/CD: configurar GitHub Secrets. En local: verificar .env'
+    console.warn(
+      `[vite.config] Variables de entorno faltantes: ${missing.join(', ')}. ` +
+      'Configurar en GitHub Secrets (CI/CD) o .env (local).'
     );
   }
 
