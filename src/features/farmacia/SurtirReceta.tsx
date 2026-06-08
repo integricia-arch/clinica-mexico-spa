@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, ScanLine, Search, Lock, CheckCircle2, Loader2, X } from "lucide-react";
+import { AlertTriangle, ScanLine, Search, Lock, CheckCircle2, Loader2, X, ChevronDown, ChevronUp, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { friendlyError } from "@/lib/errors";
@@ -88,6 +88,16 @@ type Prescription = {
 type Patient = { nombre: string; apellidos: string };
 type Doctor = { nombre: string; apellidos: string; especialidad: string };
 
+type PendingRx = {
+  id: string;
+  prescription_number: string | null;
+  status: string;
+  issue_date: string | null;
+  diagnosis: string | null;
+  patient_nombre: string;
+  patient_apellidos: string;
+};
+
 /**
  * Extrae el identificador de receta de:
  * - prescription_number plano (ej. RX-20260527-5678-00001)
@@ -139,6 +149,9 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
   const [submitting, setSubmitting] = useState(false);
   const [payment, setPayment] = useState<string>("Efectivo");
   const [notes, setNotes] = useState("");
+  const [pendingRxs, setPendingRxs] = useState<PendingRx[]>([]);
+  const [pendingOpen, setPendingOpen] = useState(true);
+  const [pendingLoading, setPendingLoading] = useState(false);
 
   useEffect(() => {
     if (initialCode && initialCode.trim()) {
@@ -149,6 +162,47 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCode]);
 
+  useEffect(() => {
+    loadPendingPrescriptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeClinicId]);
+
+  async function loadPendingPrescriptions() {
+    setPendingLoading(true);
+    try {
+      let query = supabase
+        .from("prescriptions")
+        .select("id, prescription_number, status, issue_date, diagnosis, patient_id")
+        .in("status", ["issued", "partially_dispensed"])
+        .order("issue_date", { ascending: false })
+        .limit(50);
+      if (activeClinicId) query = query.eq("clinic_id", activeClinicId);
+      const { data: rxRows } = await query;
+      if (!rxRows || rxRows.length === 0) { setPendingRxs([]); return; }
+      const patientIds = Array.from(new Set(rxRows.map((r) => r.patient_id)));
+      const { data: pts } = await supabase
+        .from("patients")
+        .select("id, nombre, apellidos")
+        .in("id", patientIds);
+      const ptMap = new Map((pts ?? []).map((p) => [p.id, p]));
+      setPendingRxs(rxRows.map((r) => {
+        const pt = ptMap.get(r.patient_id);
+        return {
+          id: r.id,
+          prescription_number: r.prescription_number,
+          status: r.status,
+          issue_date: r.issue_date,
+          diagnosis: r.diagnosis,
+          patient_nombre: pt?.nombre ?? "—",
+          patient_apellidos: pt?.apellidos ?? "",
+        };
+      }));
+    } catch {
+      /* non-critical */
+    } finally {
+      setPendingLoading(false);
+    }
+  }
 
   function reset() {
     setRx(null);
@@ -374,6 +428,18 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
       new_status: newStatus,
     }, rx.id);
 
+    // Resolve shortage alerts for dispensed items
+    try {
+      const dispensedItemIds = dispensable.map((d) => d.item.id);
+      await supabase
+        .from("almacen_alertas" as never)
+        .update({ status: "resolved", resolved_at: new Date().toISOString() } as never)
+        .in("prescription_item_id", dispensedItemIds)
+        .eq("status", "pending");
+    } catch {
+      /* best-effort */
+    }
+
     toast({
       title: "Surtido registrado",
       description: `Folio venta ${String(saleId).slice(0, 8)} · ${formatMXN(totalMoney)} · Receta: ${newStatus ?? rx.status}`,
@@ -389,12 +455,75 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
       // recargar la misma receta
       await loadPrescription(rx.prescription_number ?? rx.id);
     }
+    loadPendingPrescriptions();
   }
 
   const hasInsufficient = items.some((d) => d.pending > 0 && d.stock < d.pending);
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {/* Recetas pendientes */}
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-muted/40 transition-colors"
+          onClick={() => setPendingOpen((v) => !v)}
+        >
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-sm">
+              Recetas pendientes
+              {pendingRxs.length > 0 && (
+                <Badge variant="secondary" className="ml-2">{pendingRxs.length}</Badge>
+              )}
+            </span>
+          </div>
+          {pendingOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+        {pendingOpen && (
+          <div className="border-t border-border">
+            {pendingLoading ? (
+              <div className="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
+              </div>
+            ) : pendingRxs.length === 0 ? (
+              <p className="p-6 text-sm text-muted-foreground text-center">No hay recetas pendientes.</p>
+            ) : (
+              <div className="divide-y divide-border max-h-64 overflow-y-auto">
+                {pendingRxs.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-muted/40 transition-colors text-sm"
+                    onClick={() => {
+                      const target = r.prescription_number ?? r.id;
+                      setCode(target);
+                      loadPrescription(target);
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-mono text-xs text-muted-foreground truncate">{r.prescription_number ?? r.id.slice(0, 8)}</p>
+                      <p className="font-medium truncate">{r.patient_nombre} {r.patient_apellidos}</p>
+                      {r.diagnosis && <p className="text-xs text-muted-foreground truncate">{r.diagnosis}</p>}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <Badge variant={r.status === "partially_dispensed" ? "secondary" : "default"} className="text-xs">
+                        {r.status === "partially_dispensed" ? "Parcial" : "Emitida"}
+                      </Badge>
+                      {r.issue_date && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {format(new Date(r.issue_date), "dd/MM/yy", { locale: es })}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Escáner */}
       <form
         onSubmit={onSubmitCode}

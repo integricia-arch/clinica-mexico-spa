@@ -76,7 +76,7 @@ export async function removePrescriptionItem(itemId: string): Promise<RxResult> 
 export async function issuePrescription(prescription_id: string): Promise<RxResult<{ number: string }>> {
   const { data: rx } = await supabase
     .from("prescriptions")
-    .select("id, patient_id, doctor_id, status")
+    .select("id, patient_id, doctor_id, status, clinic_id")
     .eq("id", prescription_id)
     .maybeSingle();
   if (!rx) return { ok: false, error: "Receta no encontrada" };
@@ -104,7 +104,7 @@ export async function issuePrescription(prescription_id: string): Promise<RxResu
   // Validar al menos un item
   const { data: items } = await supabase
     .from("prescription_items")
-    .select("id, generic_name, dose, route, frequency, duration, instructions")
+    .select("id, generic_name, dose, route, frequency, duration, instructions, medication_id, quantity")
     .eq("prescription_id", prescription_id);
   if (!items || items.length === 0) {
     return { ok: false, error: "La receta no tiene medicamentos" };
@@ -163,6 +163,39 @@ export async function issuePrescription(prescription_id: string): Promise<RxResu
     })
     .eq("id", prescription_id);
   if (error) return { ok: false, error: error.message };
+
+  // Best-effort: insert shortage alerts for items with insufficient stock
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    for (const item of items as Array<{ id: string; generic_name: string; medication_id: string | null; quantity: number | null }>) {
+      const needed = Number(item.quantity ?? 0);
+      if (needed <= 0) continue;
+      let stockActual = 0;
+      if (item.medication_id) {
+        const { data: lotes } = await supabase
+          .from("lotes_medicamento")
+          .select("existencia")
+          .eq("medicamento_id", item.medication_id)
+          .gt("existencia", 0)
+          .gte("fecha_caducidad", today);
+        stockActual = (lotes ?? []).reduce((s, l: { existencia: number }) => s + l.existencia, 0);
+      }
+      if (stockActual < needed) {
+        await supabase.from("almacen_alertas" as never).insert({
+          clinic_id: (rx as unknown as { clinic_id: string | null }).clinic_id ?? null,
+          tipo: "faltante_receta",
+          medicamento_id: item.medication_id ?? null,
+          generic_name: item.medication_id ? null : item.generic_name,
+          quantity_needed: needed,
+          quantity_available: stockActual,
+          prescription_id,
+          prescription_item_id: item.id,
+        });
+      }
+    }
+  } catch {
+    /* best-effort — never blocks prescription issuance */
+  }
 
   return { ok: true, data: { number: prescription_number } };
 }
