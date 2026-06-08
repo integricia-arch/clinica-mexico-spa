@@ -1,0 +1,91 @@
+<h2>¿Cómo reorganizar los módulos de Farmacia, Caja y Recetas?</h2>
+<p class="subtitle">El menú actual mezcla módulos de operación, farmacia y administración sin agrupar. Elige la estructura que mejor se adapta a tu flujo.</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Grupos visuales en menú lateral</h3>
+      <p>Mismos módulos, agrupados con separadores y encabezados de sección. Sin cambios de ruta ni arquitectura.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Sidebar</div>
+        <div class="mockup-body" style="padding:8px;font-size:11px;line-height:1.8">
+          <div style="color:var(--muted-foreground);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Clínica</div>
+          <div>📋 Panel principal</div>
+          <div>🏥 Recepción</div>
+          <div>👥 Pacientes · Agenda · Citas</div>
+          <div>🩺 Doctor · Expedientes</div>
+          <div style="color:var(--muted-foreground);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin:6px 0 2px">Farmacia</div>
+          <div>💊 <strong>Farmacia</strong> (POS · Surtir · Inventario · Corte)</div>
+          <div>📝 Recetas</div>
+          <div>⏱ Caja · Turno</div>
+          <div style="color:var(--muted-foreground);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin:6px 0 2px">Administración</div>
+          <div>⚙ Configuración (incluye Caja)</div>
+          <div>🔒 Auditoría</div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Mínimo cambio de código</li><li>Rutas existentes sin romper</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>No resuelve la confusión de 2 sistemas de turno</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Farmacia absorbe todo su ecosistema</h3>
+      <p>Un módulo Farmacia con tabs: POS · Surtir Receta · Inventario · Corte · <strong>Configuración de Cajas · Turno</strong>. CajaConfiguracion y CajaTurno desaparecen del menú.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Sidebar simplificado</div>
+        <div class="mockup-body" style="padding:8px;font-size:11px;line-height:1.8">
+          <div>📋 Panel principal</div>
+          <div>🏥 Recepción</div>
+          <div>👥 Pacientes</div>
+          <div>📅 Agenda</div>
+          <div>🩺 Panel Doctor · Expedientes · Recetas</div>
+          <div style="background:var(--accent);border-radius:4px;padding:2px 6px;margin:4px 0">
+            💊 <strong>Farmacia</strong> ← todo aquí
+          </div>
+          <div style="font-size:9px;color:var(--muted-foreground);padding-left:20px">POS · Surtir · Inventario · Corte · Turno · Config Cajas</div>
+          <div>🧾 Facturación</div>
+          <div>⚙ Configuración</div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Todo en un lugar para cajero/enfermera</li><li>Menú más limpio</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Farmacia.tsx se vuelve muy grande</li><li>Rol cajero sin acceso a nada más</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Módulo Caja unificado + Farmacia enfocada</h3>
+      <p>Un módulo <strong>Caja</strong> maneja: abrir/cerrar turno general + abrir/cerrar turno farmacia + corte. Farmacia solo maneja POS, Surtir e Inventario.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Sidebar</div>
+        <div class="mockup-body" style="padding:8px;font-size:11px;line-height:1.8">
+          <div style="color:var(--muted-foreground);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Clínica</div>
+          <div>📋 Panel · Recepción · Pacientes · Agenda</div>
+          <div>🩺 Doctor · Expedientes · Recetas</div>
+          <div style="color:var(--muted-foreground);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin:6px 0 2px">Operaciones</div>
+          <div style="background:var(--accent);border-radius:4px;padding:2px 6px">💊 <strong>Farmacia</strong> — POS · Surtir · Inventario</div>
+          <div style="background:var(--accent);border-radius:4px;padding:2px 6px;margin-top:2px">🏧 <strong>Caja</strong> — Turno · Corte · Configuración</div>
+          <div style="font-size:9px;color:var(--muted-foreground);padding-left:20px">turno general + turno farmacia unificados</div>
+          <div style="color:var(--muted-foreground);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin:6px 0 2px">Admin</div>
+          <div>⚙ Configuración · Auditoría</div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Elimina la confusión de 2 sistemas de turno</li><li>Cajero tiene su propio módulo claro</li><li>Mejor trazabilidad Caja → Ventas Farmacia</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Requiere refactor de CajaTurno + CorteCaja</li><li>Más trabajo de desarrollo</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px">💡 Contexto: actualmente existen DOS sistemas de turno paralelos — <code>turnos</code> (caja general) y <code>pharmacy_cash_shifts</code> (POS farmacia) — que se vinculan automáticamente pero son confusos de operar.</p>

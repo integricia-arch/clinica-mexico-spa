@@ -1,0 +1,100 @@
+<h2>Flujo de trazabilidad completo — Enfoque incremental</h2>
+<p class="subtitle">Desde prescripción hasta bitácora de faltantes</p>
+
+<div style="overflow-x:auto">
+<div style="display:flex;gap:0;align-items:stretch;min-width:700px;font-size:11px">
+
+  <!-- FASE 1 -->
+  <div style="flex:1;border:2px solid #6366f1;border-radius:8px;padding:12px;background:rgba(99,102,241,.06)">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6366f1;margin-bottom:8px">FASE 1 · Menú + Caja</div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px">
+      <div style="font-weight:600">🏧 /caja (nuevo)</div>
+      <div style="color:var(--muted-foreground);margin-top:3px">Tab Turno — abrir/cerrar<br>Tab Corte — resumen ventas<br><span style="color:#6366f1">↳ absorbe CajaTurno + CorteCaja</span></div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px">
+      <div style="font-weight:600">⚙ /configuracion</div>
+      <div style="color:var(--muted-foreground);margin-top:3px">+ Tab Cajas<br><span style="color:#6366f1">↳ absorbe CajaConfiguracion</span></div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px">
+      <div style="font-weight:600">💊 /farmacia</div>
+      <div style="color:var(--muted-foreground);margin-top:3px">POS · Surtir · Inventario<br><span style="color:#6366f1">↳ Corte de Caja tab eliminado</span></div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;padding:0 6px;font-size:18px;color:var(--muted-foreground)">→</div>
+
+  <!-- FASE 2 -->
+  <div style="flex:1.2;border:2px solid #10b981;border-radius:8px;padding:12px;background:rgba(16,185,129,.06)">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#10b981;margin-bottom:8px">FASE 2 · Stock check + Pendientes</div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px">
+      <div style="font-weight:600">🩺 Doctor emite receta</div>
+      <div style="color:var(--muted-foreground);margin-top:3px">Selecciona med del catálogo<br>
+        <span style="color:#10b981">→ check stock en tiempo real</span><br>
+        <span style="color:#ef4444">🔴 rojo si stock &lt; cantidad o sin catálogo</span><br>
+        Info solo · no bloquea
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted-foreground);margin:4px 0">↓</div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px">
+      <div style="font-weight:600">💊 Farmacia › Surtir Receta</div>
+      <div style="color:var(--muted-foreground);margin-top:3px">
+        <span style="color:#10b981">NUEVO: Lista de pendientes</span><br>
+        Recetas issued / partial · con stock status<br>
+        Click → precarga receta<br>
+        + scanner QR existente
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted-foreground);margin:4px 0">↓</div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px">
+      <div style="font-weight:600">✅ Paciente llega · surtir rápido</div>
+      <div style="color:var(--muted-foreground);margin-top:3px">Stock ya validado · FIFO lotes<br>Cobro · actualiza status receta<br>Descuenta inventario</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;padding:0 6px;font-size:18px;color:var(--muted-foreground)">→</div>
+
+  <!-- FASE 3 -->
+  <div style="flex:1;border:2px solid #f59e0b;border-radius:8px;padding:12px;background:rgba(245,158,11,.06)">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin-bottom:8px">FASE 3 · Bitácora faltantes</div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px">
+      <div style="font-weight:600">📋 Al emitir receta</div>
+      <div style="color:var(--muted-foreground);margin-top:3px">Items con stock &lt; qty<br>→ insertar en <code>almacen_alertas</code><br>tipo: faltante_receta<br>ref: prescription_id</div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted-foreground);margin:4px 0">↓</div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px">
+      <div style="font-weight:600">🏪 Al surtir</div>
+      <div style="color:var(--muted-foreground);margin-top:3px">Alerta marcada como resuelta<br>Si faltante real → queda pendiente</div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted-foreground);margin:4px 0">↓</div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px">
+      <div style="font-weight:600">💊 Farmacia › Inventario</div>
+      <div style="color:var(--muted-foreground);margin-top:3px"><span style="color:#f59e0b">NUEVO: Sub-tab Faltantes</span><br>Lista consolidada por med<br>Cuántas recetas lo piden<br>Vs stock actual</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div style="margin-top:16px;padding:12px;background:var(--muted);border-radius:8px;font-size:11px">
+  <strong>Tabla de roles actualizada:</strong><br>
+  <span style="color:var(--muted-foreground)">
+    admin · nurse → /farmacia + /caja<br>
+    receptionist → /farmacia (POS · Surtir) · /caja (Turno)<br>
+    cajero → /caja (Turno · Corte) solo<br>
+    doctor → /recetas (con stock indicators)<br>
+    manager · admin → /configuracion (incluye Cajas)
+  </span>
+</div>

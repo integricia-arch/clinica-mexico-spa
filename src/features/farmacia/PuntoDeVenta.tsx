@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ScanLine, Plus, Minus, Trash2, AlertTriangle, Lock, ShoppingCart,
   Clock, Building2, User as UserIcon, PauseCircle, XCircle, Receipt,
+  LayoutGrid,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -121,6 +122,8 @@ export default function PuntoDeVenta({
   const [breakdown, setBreakdown] = useState<PaymentBreakdown>(() => emptyBreakdown(0));
   const [shift, setShift] = useState<Shift | null>(null);
   const [shiftLoading, setShiftLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"scanner" | "catalogo">("scanner");
+  const [catalogSearch, setCatalogSearch] = useState("");
 
   async function refreshShift() {
     setShiftLoading(true);
@@ -177,6 +180,17 @@ export default function PuntoDeVenta({
 
   // TODO: cambiar a "más vendidos" cuando exista índice de ventas frecuentes.
   const frecuentes = useMemo(() => meds.slice(0, 12), [meds]);
+
+  const catalogFiltered = useMemo(() => {
+    const q = catalogSearch.trim().toLowerCase();
+    if (!q) return meds.slice(0, 30);
+    return meds.filter((m) =>
+      [m.nombre, m.categoria,
+       (m as Med & { laboratorio?: string | null }).laboratorio ?? "",
+       (m as Med & { principio_activo?: string | null }).principio_activo ?? ""]
+        .some((f) => (f ?? "").toLowerCase().includes(q))
+    ).slice(0, 30);
+  }, [meds, catalogSearch]);
 
   function norm(v: string | null | undefined) {
     return (v ?? "").trim().toLowerCase();
@@ -481,31 +495,53 @@ export default function PuntoDeVenta({
         <ShiftBadge shift={shift} />
       </div>
 
+      {/* Toggle de modo */}
+      <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1 w-fit">
+        <button
+          type="button"
+          onClick={() => setViewMode("scanner")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+            viewMode === "scanner" ? "bg-background shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <ScanLine className="h-4 w-4" />Escáner
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode("catalogo")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+            viewMode === "catalogo" ? "bg-background shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <LayoutGrid className="h-4 w-4" />Catálogo
+        </button>
+      </div>
+
       {/* Sin turno → solo se permite abrir turno; el resto del POS se oculta */}
       {!shiftLoading && !shift && (
         <OpenShiftCard onOpened={(s) => setShift(s)} />
       )}
       {shift && (<>
-      {/* Scanner unificado */}
+      {/* Scanner (modo escáner) */}
+      {viewMode === "scanner" && (
+        <form onSubmit={onScanSubmit} className="flex gap-2">
+          <div className="relative flex-1">
+            <ScanLine className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
+            <Input
+              ref={inputRef}
+              autoFocus
+              value={scanText}
+              onChange={(e) => setScanText(e.target.value)}
+              placeholder="Escanear producto, buscar medicamento o escanear receta…"
+              className="h-14 pl-10 text-base"
+            />
+          </div>
+          <Button type="submit" size="lg" className="h-14 px-6">Buscar</Button>
+        </form>
+      )}
 
-      {/* Scanner unificado */}
-      <form onSubmit={onScanSubmit} className="flex gap-2">
-        <div className="relative flex-1">
-          <ScanLine className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
-          <Input
-            ref={inputRef}
-            autoFocus
-            value={scanText}
-            onChange={(e) => setScanText(e.target.value)}
-            placeholder="Escanear producto, buscar medicamento o escanear receta…"
-            className="h-14 pl-10 text-base"
-          />
-        </div>
-        <Button type="submit" size="lg" className="h-14 px-6">Buscar</Button>
-      </form>
-
-      {/* Selector de coincidencias múltiples */}
-      {matches.length > 1 && (
+      {/* Coincidencias múltiples (modo escáner) */}
+      {viewMode === "scanner" && matches.length > 1 && (
         <div className="rounded-xl border border-border bg-card p-3 space-y-2">
           <p className="text-xs text-muted-foreground">Varias coincidencias — selecciona:</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -525,32 +561,75 @@ export default function PuntoDeVenta({
       )}
 
       <div className="grid gap-4 lg:grid-cols-[220px_1fr_360px]">
-        {/* Frecuentes */}
+        {/* Panel izquierdo: Frecuentes (escáner) o Catálogo */}
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Frecuentes</h3>
-          {loading ? (
-            <p className="text-xs text-muted-foreground">Cargando…</p>
+          {viewMode === "scanner" ? (
+            <>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Frecuentes</h3>
+              {loading ? (
+                <p className="text-xs text-muted-foreground">Cargando…</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {frecuentes.map((m) => {
+                    const blocked = !!blockReasonForDirectSale(m);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        disabled={blocked}
+                        onClick={() => addToCart(m)}
+                        className="w-full text-left rounded-md border border-border bg-card px-3 py-2 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <p className="text-sm font-medium truncate">{m.nombre}</p>
+                        <p className="text-[11px] text-muted-foreground flex justify-between">
+                          <span>{formatMXN(m.precio_unitario)}</span>
+                          <span>Stock {stockOf(m.id)}</span>
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           ) : (
-            <div className="space-y-1.5">
-              {frecuentes.map((m) => {
-                const blocked = !!blockReasonForDirectSale(m);
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    disabled={blocked}
-                    onClick={() => addToCart(m)}
-                    className="w-full text-left rounded-md border border-border bg-card px-3 py-2 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <p className="text-sm font-medium truncate">{m.nombre}</p>
-                    <p className="text-[11px] text-muted-foreground flex justify-between">
-                      <span>{formatMXN(m.precio_unitario)}</span>
-                      <span>Stock {stockOf(m.id)}</span>
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+            <>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Catálogo</h3>
+              <Input
+                placeholder="Buscar por nombre, categoría…"
+                value={catalogSearch}
+                onChange={(e) => setCatalogSearch(e.target.value)}
+                className="h-9"
+              />
+              <div className="space-y-1.5 max-h-[60vh] overflow-auto">
+                {loading ? (
+                  <p className="text-xs text-muted-foreground">Cargando…</p>
+                ) : catalogFiltered.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sin resultados.</p>
+                ) : (
+                  catalogFiltered.map((m) => {
+                    const blocked = !!blockReasonForDirectSale(m);
+                    const stock = stockOf(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        disabled={blocked || stock === 0}
+                        onClick={() => addToCart(m)}
+                        className="w-full text-left rounded-md border border-border bg-card px-3 py-2 hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <p className="text-sm font-medium truncate">{m.nombre}</p>
+                        <p className="text-[10px] text-muted-foreground">{m.categoria}</p>
+                        <p className="text-[11px] text-muted-foreground flex justify-between">
+                          <span>{formatMXN(m.precio_unitario)}</span>
+                          <span className={stock === 0 ? "text-destructive" : ""}>Stock {stock}</span>
+                        </p>
+                        {blocked && <p className="text-[10px] text-destructive">Requiere receta</p>}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </>
           )}
         </div>
 
@@ -594,7 +673,7 @@ export default function PuntoDeVenta({
                           </div>
                         </details>
                       )}
-                      <div className="flex items-center gap-2 pt-1">
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
                         <Button size="icon" variant="outline" className="h-9 w-9" onClick={() => updateQty(i, -1)}>
                           <Minus className="h-4 w-4" />
                         </Button>
@@ -602,7 +681,19 @@ export default function PuntoDeVenta({
                         <Button size="icon" variant="outline" className="h-9 w-9" onClick={() => updateQty(i, 1)}>
                           <Plus className="h-4 w-4" />
                         </Button>
-                        <span className="text-xs text-muted-foreground ml-2">{formatMXN(c.unit_price)} c/u</span>
+                        <span className="text-xs text-muted-foreground ml-1">{formatMXN(c.unit_price)} c/u</span>
+                        {perms.canPosDiscount && (
+                          <div className="flex items-center gap-1 ml-auto">
+                            <span className="text-[10px] text-muted-foreground">Desc.</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={c.discount}
+                              onChange={(e) => setCart((prev) => prev.map((x, j) => j === i ? { ...x, discount: Math.max(0, Number(e.target.value) || 0) } : x))}
+                              className="h-7 w-20 text-xs text-right"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">

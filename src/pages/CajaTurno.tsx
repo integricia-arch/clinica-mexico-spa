@@ -13,6 +13,7 @@ interface Caja {
   id: string;
   nombre: string;
   fondo_default: number;
+  es_farmacia: boolean;
 }
 
 interface Turno {
@@ -43,7 +44,7 @@ const ACTION_LABELS: Record<string, { label: string; tone: string }> = {
   manual_unlink: { label: "Desenlace manual", tone: "text-amber-700 bg-amber-50" },
 };
 
-export default function CajaTurno() {
+export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => void } = {}) {
   const { user } = useAuth();
   const { activeClinic } = useActiveClinic();
 
@@ -61,7 +62,7 @@ export default function CajaTurno() {
     setLoading(true);
 
     const [{ data: cajasData }, { data: turnoData }, { data: auditData }] = await Promise.all([
-      supabase.from("cajas").select("id, nombre, fondo_default").eq("clinic_id", activeClinic.id).eq("activo", true).order("nombre"),
+      supabase.from("cajas").select("id, nombre, fondo_default, es_farmacia").eq("clinic_id", activeClinic.id).eq("activo", true).order("nombre"),
       supabase.from("turnos").select("*").eq("clinic_id", activeClinic.id).eq("cajero_user_id", user.id).eq("estado", "abierto").maybeSingle(),
       (supabase as any).from("turno_pharmacy_link_audit")
         .select("id, turno_id, caja_id, pharmacy_shift_id, action, reason, created_at")
@@ -94,16 +95,34 @@ export default function CajaTurno() {
     if (!cajaId) { toast.error("Selecciona una caja"); return; }
     if (!activeClinic?.id || !user?.id) return;
     setSaving(true);
-    const { error } = await supabase.from("turnos").insert({
+
+    const { data: newTurno, error } = await supabase.from("turnos").insert({
       clinic_id: activeClinic.id,
       caja_id: cajaId,
       cajero_user_id: user.id,
       monto_apertura: montoApertura,
       notas_apertura: notas.trim() || null,
       estado: "abierto",
-    });
+    }).select("id").single();
+
+    if (error) { setSaving(false); toast.error(`No se pudo abrir el turno: ${error.message}`); return; }
+
+    // Auto-open pharmacy shift for farmacia cajas
+    const selectedCaja = cajas.find((c) => c.id === cajaId);
+    if (selectedCaja?.es_farmacia && newTurno) {
+      const { data: shiftId, error: shiftError } = await supabase.rpc("pharmacy_open_shift", {
+        p_clinic_id: activeClinic.id,
+        p_opening_amount: montoApertura,
+        p_notes: notas.trim() || null,
+      } as never);
+      if (!shiftError && shiftId) {
+        await supabase.from("turnos").update({ pharmacy_shift_id: shiftId }).eq("id", newTurno.id);
+      } else if (shiftError) {
+        toast.warning(`Turno abierto, pero no se pudo abrir turno POS Farmacia: ${shiftError.message}`);
+      }
+    }
+
     setSaving(false);
-    if (error) { toast.error("No se pudo abrir el turno"); return; }
     toast.success("Turno abierto");
     setNotas("");
     load();
@@ -118,9 +137,10 @@ export default function CajaTurno() {
       .eq("id", turnoActivo.id);
     setSaving(false);
     if (error) { toast.error("No se pudo cerrar el turno"); return; }
-    toast.success("Turno cerrado");
+    toast.success("Turno cerrado — revisa el corte en la pestaña Corte de caja");
     setNotas("");
     load();
+    onTurnoCerrado?.();
   };
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Cargando…</div>;

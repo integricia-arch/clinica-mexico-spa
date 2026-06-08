@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { CreditCard, Plus, ToggleLeft, ToggleRight } from "lucide-react";
+import { CreditCard, Plus, ToggleLeft, ToggleRight, PlayCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -21,6 +22,7 @@ interface Caja {
 export default function CajaConfiguracion() {
   const { hasRole } = useAuth();
   const { activeClinic } = useActiveClinic();
+  const navigate = useNavigate();
   const canWrite = hasRole("admin") || hasRole("manager" as any);
 
   const [cajas, setCajas] = useState<Caja[]>([]);
@@ -37,7 +39,7 @@ export default function CajaConfiguracion() {
       .select("*")
       .eq("clinic_id", activeClinic.id)
       .order("nombre");
-    if (error) toast.error("No se pudieron cargar las cajas");
+    if (error) { toast.error(`Error cargando cajas: ${error.message}`); }
     else setCajas((data as Caja[]) ?? []);
     setLoading(false);
   };
@@ -65,8 +67,8 @@ export default function CajaConfiguracion() {
       es_farmacia: form.es_farmacia,
     });
     setSaving(false);
-    if (error) { toast.error("No se pudo crear la caja"); return; }
-    toast.success("Caja creada");
+    if (error) { toast.error(`No se pudo crear la caja: ${error.message}`); return; }
+    toast.success("Caja creada — ve a Caja → Turno para abrirla", { duration: 6000 });
     setModalOpen(false);
     setForm({ nombre: "", descripcion: "", fondo_default: 0, es_farmacia: false });
     load();
@@ -115,6 +117,11 @@ export default function CajaConfiguracion() {
                   <span className={`text-xs font-medium px-2 py-0.5 rounded ${caja.activo ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                     {caja.activo ? "Activa" : "Inactiva"}
                   </span>
+                  {caja.activo && (
+                    <Button size="sm" variant="default" onClick={() => navigate("/caja")}>
+                      <PlayCircle className="h-4 w-4 mr-1" /> Abrir turno
+                    </Button>
+                  )}
                   {canWrite && (
                     <Button size="sm" variant="outline" onClick={() => toggleActivo(caja)}>
                       {caja.activo ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}

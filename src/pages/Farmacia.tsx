@@ -15,7 +15,6 @@ import { es } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import VentaDirecta from "@/features/farmacia/VentaDirecta";
 import SurtirReceta from "@/features/farmacia/SurtirReceta";
 import PuntoDeVenta from "@/features/farmacia/PuntoDeVenta";
 
@@ -301,9 +300,8 @@ export default function Farmacia() {
     <div className="space-y-6">
       <Tabs value={tab} onValueChange={setTab} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="pos">Punto de venta</TabsTrigger>
+          <TabsTrigger value="pos">Punto de Venta</TabsTrigger>
           <TabsTrigger value="surtir">Surtir receta</TabsTrigger>
-          <TabsTrigger value="venta">Venta directa</TabsTrigger>
           <TabsTrigger value="inventario">Inventario</TabsTrigger>
         </TabsList>
         <TabsContent value="pos">
@@ -314,7 +312,6 @@ export default function Farmacia() {
         <TabsContent value="surtir">
           <SurtirReceta initialCode={prescriptionScan ?? undefined} />
         </TabsContent>
-        <TabsContent value="venta"><VentaDirecta /></TabsContent>
         <TabsContent value="inventario" className="space-y-6">
 
       {/* Sub-view toggle */}
