@@ -45,3 +45,77 @@ Prod project ref: **kyfkvdyxpvpiacyymldc**.
 
 - Supabase service role key and Telegram bot token are **env-only**. Never commit.
 - If a Supabase access token is exposed during debugging, **revoke and rotate it**.
+
+---
+
+## Lovable Security Fix Protocol
+
+### El problema
+
+Lovable aplica fixes de seguridad automáticamente (ej. `throw new Error()` en `src/integrations/supabase/client.ts` si `VITE_*` vars son undefined). Si GitHub Actions no tiene esos secrets configurados, el siguiente deploy bake `undefined` en el bundle → React no monta → **site en blanco**.
+
+### Síntoma
+
+- Cambio en Lovable mergeado a `main`
+- GitHub Actions deploy completa sin error
+- `https://integrika.mx` muestra pantalla en blanco
+- DevTools: error tipo `Error: VITE_SUPABASE_URL is not defined` antes de que React monte
+
+### Diagnóstico rápido
+
+```powershell
+# Ver el último Worker desplegado
+wrangler tail clinica-mexico-spa --format pretty
+
+# O build local para ver si el error es de env vars
+cd C:\Users\pablo\clinica-mexico-spa
+npm run build 2>&1 | head -20
+```
+
+Si el build local pasa pero el site está en blanco → el problema está en CI (secrets faltantes).
+
+### Fix inmediato (deploy manual)
+
+```powershell
+cd C:\Users\pablo\clinica-mexico-spa
+git pull origin main
+npm run build          # requiere .env con las 3 VITE_* vars
+wrangler deploy
+```
+
+Requiere `.env` local con:
+```
+VITE_SUPABASE_URL="https://kyfkvdyxpvpiacyymldc.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOi..."
+VITE_SUPABASE_PROJECT_ID="kyfkvdyxpvpiacyymldc"
+```
+
+Ver valores completos en `.claude/project-context.md`.
+
+### Fix permanente (GitHub Actions secrets)
+
+Configurar en: **Settings → Secrets → Actions** del repo GitHub.
+
+Secrets requeridos:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_SUPABASE_PROJECT_ID`
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Una vez configurados, los deploys automáticos de Lovable funcionarán sin intervención.
+
+### Regla general post-Lovable
+
+Después de cualquier mensaje de seguridad en Lovable (especialmente en `src/integrations/supabase/client.ts`):
+
+1. Verificar `https://integrika.mx` inmediatamente después del merge
+2. Si blanco → ejecutar fix inmediato (arriba)
+3. Si se repite → configurar GitHub secrets (fix permanente)
+
+---
+
+## Contexto de proyecto (credenciales)
+
+Ver `.claude/project-context.md` — IDs de Cloudflare, Supabase URLs, rutas, pendientes de desarrollo.
+El archivo está gitignoreado (`.claude/` en `.gitignore`).
