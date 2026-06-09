@@ -1,0 +1,1 @@
+-- Applied directly by Lovable to remote DB. Schema already exists in production.
