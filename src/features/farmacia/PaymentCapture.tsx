@@ -31,6 +31,7 @@ export type TransferPayment = {
 
 export type PaymentBreakdown = {
   efectivo: number;
+  monto_recibido: number;
   tarjeta: number;
   transferencia: number;
   card: CardPayment;
@@ -53,6 +54,7 @@ export function looksLikeFullCardNumber(s: string): boolean {
 export function emptyBreakdown(total = 0): PaymentBreakdown {
   return {
     efectivo: total,
+    monto_recibido: total,
     tarjeta: 0,
     transferencia: 0,
     card: { amount: 0, card_type: "credito", card_brand: "Visa", card_last4: "", authorization_code: "", terminal_id: "", acquirer: "" },
@@ -70,7 +72,7 @@ export function validatePayment(
   if (method === "pendiente") return { ok: true };
 
   if (method === "efectivo") {
-    if (bd.efectivo + 0.01 < total) return { ok: false, error: "Efectivo no cubre el total" };
+    if (bd.monto_recibido + 0.01 < total) return { ok: false, error: "Monto recibido no cubre el total" };
     return { ok: true };
   }
 
@@ -110,7 +112,12 @@ export function paymentsToRows(method: Method, bd: PaymentBreakdown) {
   if (method === "pendiente") return [];
   const rows: Array<Record<string, unknown>> = [];
   const pushCash = (amount: number) => {
-    if (amount > 0) rows.push({ payment_method: "efectivo", amount });
+    if (amount > 0) rows.push({
+      payment_method: "efectivo",
+      amount,
+      monto_recibido: bd.monto_recibido > 0 ? bd.monto_recibido : amount,
+      cambio_entregado: bd.monto_recibido > amount ? bd.monto_recibido - amount : 0,
+    });
   };
   const pushCard = (amount: number) => {
     if (amount > 0) {
@@ -175,15 +182,28 @@ export function PaymentCapture({
     <div className="space-y-3 rounded-md border border-border bg-muted/30 p-2.5">
       {showCash && (
         <div className="space-y-1">
-          <Label className="text-xs">Efectivo</Label>
+          <Label className="text-xs">Monto recibido (efectivo)</Label>
           <Input
             type="number" min={0} step="0.01"
-            value={value.efectivo}
-            onChange={(e) => onChange({ ...value, efectivo: Number(e.target.value) || 0 })}
+            value={value.monto_recibido}
+            onChange={(e) => onChange({ ...value, monto_recibido: Number(e.target.value) || 0, efectivo: method === "mixto" ? value.efectivo : Number(e.target.value) || 0 })}
             className="h-9"
           />
-          {method === "efectivo" && value.efectivo > total && (
-            <p className="text-[11px] text-muted-foreground">Cambio: {formatMXN(value.efectivo - total)}</p>
+          {method !== "mixto" && value.monto_recibido >= total && (
+            <p className="text-[11px] font-semibold text-green-700 dark:text-green-400">
+              Cambio a entregar: {formatMXN(value.monto_recibido - total)}
+            </p>
+          )}
+          {method === "mixto" && (
+            <div className="space-y-1 mt-1">
+              <Label className="text-xs text-muted-foreground">Efectivo en la venta (mixto)</Label>
+              <Input
+                type="number" min={0} step="0.01"
+                value={value.efectivo}
+                onChange={(e) => onChange({ ...value, efectivo: Number(e.target.value) || 0 })}
+                className="h-9"
+              />
+            </div>
           )}
         </div>
       )}

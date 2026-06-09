@@ -17,6 +17,8 @@ import { es } from "date-fns/locale";
 import { posPermissions } from "./permissions";
 import { CloseShiftDialog, CorteXDialog, FondoMovimientoDialog, type Shift } from "./ShiftPanel";
 import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
+import { ReturnDialog } from "./ReturnDialog";
+import { LibroControl } from "./LibroControl";
 
 const formatMXN = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -70,9 +72,11 @@ export default function CorteCaja() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [items, setItems] = useState<SaleItem[]>([]);
   const [meds, setMeds] = useState<Record<string, string>>({});
+  const [fondos, setFondos] = useState<{ tipo: "egreso" | "ingreso"; monto: number }[]>([]);
   const [closeOpen, setCloseOpen] = useState(false);
   const [corteXOpen, setCorteXOpen] = useState(false);
   const [fondoOpen, setFondoOpen] = useState(false);
+  const [returnOpen, setReturnOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [ticketOpen, setTicketOpen] = useState(false);
@@ -93,16 +97,18 @@ export default function CorteCaja() {
 
   async function loadShiftDetail(shift: Shift) {
     setLoading(true);
-    const [{ data: s }, { data: p }] = await Promise.all([
+    const [{ data: s }, { data: p }, { data: fm }] = await Promise.all([
       supabase.from("pharmacy_sales").select("*").eq("shift_id", shift.id),
       supabase
         .from("pharmacy_sale_payments")
         .select("*")
         .in("sale_id", (await supabase.from("pharmacy_sales").select("id").eq("shift_id", shift.id)).data?.map((r: { id: string }) => r.id) ?? []),
+      (supabase as any).from("fondos_movimientos").select("tipo,monto").eq("pharmacy_shift_id", shift.id),
     ]);
     const salesList = (s ?? []) as unknown as Sale[];
     setSales(salesList);
     setPayments((p ?? []) as unknown as Payment[]);
+    setFondos(((fm ?? []) as { tipo: "egreso" | "ingreso"; monto: number }[]));
     if (salesList.length > 0) {
       const { data: it } = await supabase
         .from("pharmacy_sale_items")
@@ -139,7 +145,9 @@ export default function CorteCaja() {
     const mixtoSales = active.filter((s) => s.payment_method === "mixto");
     const mixto = mixtoSales.reduce((a, s) => a + Number(s.total), 0);
 
-    const efectivoEsperado = Number(selected?.opening_amount ?? 0) + efectivo;
+    const fondoEgresos = fondos.filter((f) => f.tipo === "egreso").reduce((a, f) => a + Number(f.monto), 0);
+    const fondoIngresos = fondos.filter((f) => f.tipo === "ingreso").reduce((a, f) => a + Number(f.monto), 0);
+    const efectivoEsperado = Number(selected?.opening_amount ?? 0) + efectivo + fondoIngresos - fondoEgresos;
     const efectivoContado = selected?.closing_cash_count != null ? Number(selected.closing_cash_count) : null;
     const diferencia = selected?.cash_difference != null ? Number(selected.cash_difference) : null;
 
@@ -164,9 +172,10 @@ export default function CorteCaja() {
       cancelled: cancelled.length,
       promedio: tickets > 0 ? totalVentas / tickets : 0,
       efectivoEsperado, efectivoContado, diferencia,
+      fondoEgresos, fondoIngresos,
       byBrand, byTerminal, cardPayments, transferRefs,
     };
-  }, [sales, payments, selected]);
+  }, [sales, payments, selected, fondos]);
 
   function reimprimir(sale: Sale) {
     const itemRows = items.filter((i) => i.sale_id === sale.id);
@@ -269,7 +278,12 @@ export default function CorteCaja() {
                   </p>
                 </div>
                 {canCloseSelected && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    {perms.isManager && (
+                      <Button size="sm" variant="outline" onClick={() => setReturnOpen(true)}>
+                        <span className="text-xs">Devolución</span>
+                      </Button>
+                    )}
                     <Button size="sm" variant="outline" onClick={() => setFondoOpen(true)}>
                       <span className="text-xs">Fondo</span>
                     </Button>
@@ -294,6 +308,8 @@ export default function CorteCaja() {
                 <Stat label="Pendiente" value={formatMXN(resumen.pendiente)} />
                 <Stat label="Mixto (ventas)" value={formatMXN(resumen.mixto)} />
                 <Stat label="Canceladas" value={String(resumen.cancelled)} />
+                {resumen.fondoEgresos > 0 && <Stat label="Retiros de fondo" value={`-${formatMXN(resumen.fondoEgresos)}`} />}
+                {resumen.fondoIngresos > 0 && <Stat label="Ingresos de fondo" value={`+${formatMXN(resumen.fondoIngresos)}`} />}
                 <Stat label="Efectivo esperado" value={formatMXN(resumen.efectivoEsperado)} />
                 <Stat
                   label="Efectivo contado"
@@ -425,6 +441,13 @@ export default function CorteCaja() {
         )}
       </div>
 
+      {perms.isManager && activeClinicId && (
+        <div className="border rounded-lg p-4 space-y-3">
+          <h3 className="font-semibold text-sm">Libro de control COFEPRIS</h3>
+          <LibroControl clinicId={activeClinicId} clinicName={activeClinic?.name} />
+        </div>
+      )}
+
       <CloseShiftDialog
         open={closeOpen}
         shift={selected}
@@ -442,6 +465,13 @@ export default function CorteCaja() {
         onClose={() => setFondoOpen(false)}
       />
       <TicketInterno open={ticketOpen} onClose={() => setTicketOpen(false)} data={ticketData} />
+      {activeClinicId && (
+        <ReturnDialog
+          open={returnOpen}
+          onClose={() => { setReturnOpen(false); selected && loadShiftDetail(selected); }}
+          clinicId={activeClinicId}
+        />
+      )}
     </div>
   );
 }

@@ -15,6 +15,8 @@ export type TicketPaymentLine = {
   terminal_id?: string | null;
   transfer_reference?: string | null;
   bank_name?: string | null;
+  monto_recibido?: number | null;
+  cambio_entregado?: number | null;
 };
 
 export type TicketData = {
@@ -31,6 +33,7 @@ export type TicketData = {
   subtotal: number;
   descuento: number;
   total: number;
+  totalIva?: number;
 };
 
 export function TicketInterno({
@@ -72,6 +75,17 @@ export function TicketInterno({
           </div>
           <div className="border-t border-dashed pt-2 space-y-0.5">
             <div className="flex justify-between"><span>Subtotal</span><span>{formatMXN(data.subtotal)}</span></div>
+            {data.totalIva != null && data.totalIva > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>IVA incl. 16%</span><span>{formatMXN(data.totalIva)}</span>
+              </div>
+            )}
+            {data.totalIva != null && data.subtotal - data.totalIva < data.subtotal && (
+              <div className="flex justify-between text-muted-foreground text-[10px]">
+                <span>Base grav. 16%</span>
+                <span>{formatMXN(data.subtotal - (data.totalIva ?? 0))}</span>
+              </div>
+            )}
             {data.descuento > 0 && (
               <div className="flex justify-between"><span>Descuento</span><span>-{formatMXN(data.descuento)}</span></div>
             )}
@@ -88,6 +102,11 @@ export function TicketInterno({
                     <span className="capitalize">{p.method}</span>
                     <span>{formatMXN(p.amount)}</span>
                   </div>
+                  {p.method === "efectivo" && p.monto_recibido != null && p.monto_recibido > p.amount && (
+                    <p className="pl-2 text-[10px] opacity-80">
+                      Recibió: {formatMXN(p.monto_recibido)} · Cambio: {formatMXN(p.cambio_entregado ?? (p.monto_recibido - p.amount))}
+                    </p>
+                  )}
                   {p.method === "tarjeta" && (
                     <p className="pl-2 text-[10px] opacity-80">
                       {p.card_brand ?? ""} ****{p.card_last4 ?? "----"}

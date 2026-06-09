@@ -61,6 +61,7 @@ export type Med = {
   regulatory_notes?: string | null;
   fuente_info?: string | null;
   equivalence_group_key?: string | null;
+  tasa_iva?: number | null;
 };
 
 export const DEMO_INFO_LEGEND =

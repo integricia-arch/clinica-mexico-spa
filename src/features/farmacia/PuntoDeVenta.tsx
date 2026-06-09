@@ -330,11 +330,17 @@ export default function PuntoDeVenta({
   const itemsDiscount = cart.reduce((s, c) => s + c.discount, 0);
   const globalDiscount = perms.canPosDiscount ? Number(discount) || 0 : 0;
   const total = Math.max(0, subtotal - itemsDiscount - globalDiscount);
+  const totalIva = cart.reduce((s, c) => {
+    const tasa = c.med.tasa_iva ?? 0.16;
+    const itemSub = c.quantity * c.unit_price - c.discount;
+    const base = tasa > 0 ? itemSub / (1 + tasa) : itemSub;
+    return s + (itemSub - base);
+  }, 0);
 
   // Sincroniza montos por defecto según método y total.
   useEffect(() => {
     setBreakdown((bd) => {
-      if (payment === "efectivo") return { ...bd, efectivo: total, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
+      if (payment === "efectivo") return { ...bd, efectivo: total, monto_recibido: total, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
       if (payment === "tarjeta") return { ...bd, efectivo: 0, tarjeta: total, transferencia: 0, card: { ...bd.card, amount: total }, transfer: { ...bd.transfer, amount: 0 } };
       if (payment === "transferencia") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: total, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: total } };
       if (payment === "pendiente") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
@@ -468,6 +474,8 @@ export default function PuntoDeVenta({
       terminal_id: (r as { terminal_id?: string }).terminal_id ?? null,
       transfer_reference: (r as { transfer_reference?: string }).transfer_reference ?? null,
       bank_name: (r as { bank_name?: string }).bank_name ?? null,
+      monto_recibido: (r as { monto_recibido?: number }).monto_recibido ?? null,
+      cambio_entregado: (r as { cambio_entregado?: number }).cambio_entregado ?? null,
     }));
 
     const cajeroNombre = user?.user_metadata?.full_name ?? user?.email ?? "Cajero";
@@ -481,7 +489,7 @@ export default function PuntoDeVenta({
       metodoPago: PAYMENT_LABEL[payment],
       payments: ticketPayments,
       items: cart.map((c) => ({ nombre: c.med.nombre, cantidad: c.quantity, precio: c.unit_price })),
-      subtotal, descuento: itemsDiscount + globalDiscount, total,
+      subtotal, descuento: itemsDiscount + globalDiscount, total, totalIva,
     });
     setTicketOpen(true);
 
