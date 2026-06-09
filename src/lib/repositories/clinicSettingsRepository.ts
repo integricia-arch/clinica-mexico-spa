@@ -20,7 +20,8 @@ export type SettingsSection =
   | "facturacion"
   | "pagos"
   | "auditoria"
-  | "permisos";
+  | "permisos"
+  | "caja";
 
 // La tabla aún no está en los tipos generados; acceso casteado y aislado aquí.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

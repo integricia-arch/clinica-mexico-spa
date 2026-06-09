@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Printer, Lock, RefreshCw, ReceiptText, FileText } from "lucide-react";
+import { Printer, Lock, RefreshCw, ReceiptText, FileText, TrendingDown, TrendingUp, Minus, ArrowUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { posPermissions } from "./permissions";
@@ -61,6 +61,33 @@ type SaleItem = {
   medicamento_id: string;
 };
 
+type FondoMovimiento = {
+  id: string;
+  tipo: "egreso" | "ingreso";
+  monto: number;
+  motivo: string;
+  registrado_by: string;
+  created_at: string;
+};
+
+type CorteRow = {
+  id: string;
+  tipo: "Z" | "X";
+  folio_secuencial: number | null;
+  created_at: string;
+  efectivo_esperado: number | null;
+  conteo_ciego: number | null;
+  diferencia: number | null;
+  requiere_autorizacion: boolean;
+  autorizado_by: string | null;
+  total_efectivo: number;
+  total_tarjeta: number;
+  total_transferencia: number;
+  total_otros: number;
+  total_general: number;
+  conteo_movimientos: number;
+};
+
 export default function CorteCaja() {
   const { user, roles } = useAuth();
   const { activeClinic, activeClinicId } = useActiveClinic();
@@ -72,7 +99,8 @@ export default function CorteCaja() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [items, setItems] = useState<SaleItem[]>([]);
   const [meds, setMeds] = useState<Record<string, string>>({});
-  const [fondos, setFondos] = useState<{ tipo: "egreso" | "ingreso"; monto: number }[]>([]);
+  const [fondos, setFondos] = useState<FondoMovimiento[]>([]);
+  const [cortes, setCortes] = useState<CorteRow[]>([]);
   const [closeOpen, setCloseOpen] = useState(false);
   const [corteXOpen, setCorteXOpen] = useState(false);
   const [fondoOpen, setFondoOpen] = useState(false);
@@ -97,18 +125,28 @@ export default function CorteCaja() {
 
   async function loadShiftDetail(shift: Shift) {
     setLoading(true);
+    setCortes([]);
     const [{ data: s }, { data: p }, { data: fm }] = await Promise.all([
       supabase.from("pharmacy_sales").select("*").eq("shift_id", shift.id),
       supabase
         .from("pharmacy_sale_payments")
         .select("*")
         .in("sale_id", (await supabase.from("pharmacy_sales").select("id").eq("shift_id", shift.id)).data?.map((r: { id: string }) => r.id) ?? []),
-      (supabase as any).from("fondos_movimientos").select("tipo,monto").eq("pharmacy_shift_id", shift.id),
+      (supabase as any).from("fondos_movimientos")
+        .select("id,tipo,monto,motivo,registrado_by,created_at")
+        .eq("pharmacy_shift_id", shift.id)
+        .order("created_at", { ascending: true }),
     ]);
     const salesList = (s ?? []) as unknown as Sale[];
     setSales(salesList);
     setPayments((p ?? []) as unknown as Payment[]);
-    setFondos(((fm ?? []) as { tipo: "egreso" | "ingreso"; monto: number }[]));
+    setFondos((fm ?? []) as FondoMovimiento[]);
+    // Load cortes for this shift
+    const { data: ct } = await (supabase as any).from("cortes")
+      .select("id,tipo,folio_secuencial,created_at,efectivo_esperado,conteo_ciego,diferencia,requiere_autorizacion,autorizado_by,total_efectivo,total_tarjeta,total_transferencia,total_otros,total_general,conteo_movimientos")
+      .eq("pharmacy_shift_id", shift.id)
+      .order("created_at", { ascending: true });
+    setCortes((ct ?? []) as CorteRow[]);
     if (salesList.length > 0) {
       const { data: it } = await supabase
         .from("pharmacy_sale_items")
@@ -147,6 +185,7 @@ export default function CorteCaja() {
 
     const fondoEgresos = fondos.filter((f) => f.tipo === "egreso").reduce((a, f) => a + Number(f.monto), 0);
     const fondoIngresos = fondos.filter((f) => f.tipo === "ingreso").reduce((a, f) => a + Number(f.monto), 0);
+    const fondoMovimientos = fondos;
     const efectivoEsperado = Number(selected?.opening_amount ?? 0) + efectivo + fondoIngresos - fondoEgresos;
     const efectivoContado = selected?.closing_cash_count != null ? Number(selected.closing_cash_count) : null;
     const diferencia = selected?.cash_difference != null ? Number(selected.cash_difference) : null;
@@ -172,7 +211,7 @@ export default function CorteCaja() {
       cancelled: cancelled.length,
       promedio: tickets > 0 ? totalVentas / tickets : 0,
       efectivoEsperado, efectivoContado, diferencia,
-      fondoEgresos, fondoIngresos,
+      fondoEgresos, fondoIngresos, fondoMovimientos,
       byBrand, byTerminal, cardPayments, transferRefs,
     };
   }, [sales, payments, selected, fondos]);
@@ -382,6 +421,109 @@ export default function CorteCaja() {
                 </table>
               )}
             </div>
+
+            {/* Movimientos de fondo */}
+            {resumen.fondoMovimientos.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <ArrowUpDown className="h-4 w-4" />Movimientos de fondo
+                </h3>
+                <table className="w-full text-xs">
+                  <thead className="text-muted-foreground">
+                    <tr>
+                      <th className="text-left py-1">Hora</th>
+                      <th className="text-left">Tipo</th>
+                      <th className="text-left">Motivo</th>
+                      <th className="text-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {resumen.fondoMovimientos.map((f) => (
+                      <tr key={f.id}>
+                        <td className="py-1 text-muted-foreground whitespace-nowrap">
+                          {format(new Date(f.created_at), "HH:mm", { locale: es })}
+                        </td>
+                        <td>
+                          <span className={`font-medium ${f.tipo === "egreso" ? "text-destructive" : "text-success"}`}>
+                            {f.tipo === "egreso" ? "Retiro" : "Depósito"}
+                          </span>
+                        </td>
+                        <td className="max-w-[200px] truncate">{f.motivo}</td>
+                        <td className={`text-right font-mono ${f.tipo === "egreso" ? "text-destructive" : "text-success"}`}>
+                          {f.tipo === "egreso" ? "-" : "+"}{formatMXN(Number(f.monto))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Cortes del turno (Z y X) */}
+            {cortes.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <FileText className="h-4 w-4" />Cortes del turno
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="text-muted-foreground bg-muted/50">
+                      <tr>
+                        <th className="text-left px-2 py-1.5">Folio</th>
+                        <th className="text-left px-2 py-1.5">Tipo</th>
+                        <th className="text-left px-2 py-1.5">Fecha</th>
+                        <th className="text-right px-2 py-1.5">Efectivo</th>
+                        <th className="text-right px-2 py-1.5">Tarjeta</th>
+                        <th className="text-right px-2 py-1.5">Total</th>
+                        <th className="text-right px-2 py-1.5">Esperado</th>
+                        <th className="text-right px-2 py-1.5">Contado</th>
+                        <th className="text-right px-2 py-1.5">Diferencia</th>
+                        <th className="text-center px-2 py-1.5">Tickets</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {cortes.map((c) => {
+                        const diff = c.diferencia != null ? Number(c.diferencia) : null;
+                        const diffColor = diff == null ? "" : diff === 0 ? "text-green-600" : diff > 0 ? "text-amber-600" : "text-destructive";
+                        const DiffIcon = diff == null ? null : diff === 0 ? Minus : diff > 0 ? TrendingUp : TrendingDown;
+                        return (
+                          <tr key={c.id} className="hover:bg-muted/30">
+                            <td className="px-2 py-1.5 font-mono font-semibold">
+                              {c.tipo}-{String(c.folio_secuencial ?? 0).padStart(6, "0")}
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                c.tipo === "Z" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                              }`}>{c.tipo === "Z" ? "Corte Z" : "Corte X"}</span>
+                            </td>
+                            <td className="px-2 py-1.5 whitespace-nowrap text-muted-foreground">
+                              {format(new Date(c.created_at), "dd/MM HH:mm", { locale: es })}
+                            </td>
+                            <td className="px-2 py-1.5 text-right">{formatMXN(c.total_efectivo)}</td>
+                            <td className="px-2 py-1.5 text-right">{formatMXN(c.total_tarjeta)}</td>
+                            <td className="px-2 py-1.5 text-right font-semibold">{formatMXN(c.total_general)}</td>
+                            <td className="px-2 py-1.5 text-right">{c.efectivo_esperado != null ? formatMXN(c.efectivo_esperado) : "—"}</td>
+                            <td className="px-2 py-1.5 text-right">{c.conteo_ciego != null ? formatMXN(c.conteo_ciego) : "—"}</td>
+                            <td className={`px-2 py-1.5 text-right font-medium ${diffColor}`}>
+                              {diff != null ? (
+                                <span className="flex items-center justify-end gap-1">
+                                  {DiffIcon && <DiffIcon className="h-3 w-3" />}
+                                  {formatMXN(diff)}
+                                  {c.requiere_autorizacion && (
+                                    <span className="ml-1 rounded-full bg-amber-500/20 text-amber-700 text-[9px] px-1">Auth</span>
+                                  )}
+                                </span>
+                              ) : "—"}
+                            </td>
+                            <td className="px-2 py-1.5 text-center">{c.conteo_movimientos}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Tabla de ventas */}
             <div className="rounded-xl border border-border bg-card p-4 space-y-2">

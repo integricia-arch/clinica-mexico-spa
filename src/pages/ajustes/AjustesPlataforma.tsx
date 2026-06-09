@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Building2, Clock, CalendarDays, Bell, Stethoscope, UserCog, DoorOpen,
   ClipboardList, ListChecks, Receipt, CreditCard, Boxes, ShieldCheck,
-  FileSignature, Save, X, AlertCircle,
+  FileSignature, Save, X, AlertCircle, Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { SectionGeneral, SectionHorarios, SectionCitas, SectionRecordatorios } f
 import { SectionRecursos, SectionFormularios, SectionChecklists } from "./sections/clinical";
 import { SectionServicios } from "./sections/servicios";
 import { SectionDoctores } from "./sections/doctores";
-import { SectionFacturacion, SectionPagos } from "./sections/finance";
+import { SectionFacturacion, SectionPagos, SectionCaja } from "./sections/finance";
 import { SectionInventario } from "./sections/inventario";
 import { SectionUsuarios, SectionAuditoria } from "./sections/admin";
 import type { SectionSaver } from "./shared";
@@ -22,7 +22,7 @@ import type { SectionSaver } from "./shared";
 type SectionId =
   | "general" | "horarios" | "citas" | "recordatorios" | "servicios"
   | "doctores" | "recursos" | "formularios" | "checklists" | "facturacion"
-  | "pagos" | "inventario" | "usuarios" | "auditoria";
+  | "pagos" | "caja" | "inventario" | "usuarios" | "auditoria";
 
 const SECTIONS: { id: SectionId; label: string; icon: LucideIcon; desc: string }[] = [
   { id: "general", label: "General", icon: Building2, desc: "Datos de la clínica y marca" },
@@ -36,6 +36,7 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon; desc: string }
   { id: "checklists", label: "Checklists clínicos", icon: ListChecks, desc: "Procesos obligatorios" },
   { id: "facturacion", label: "Facturación y fiscal MX", icon: Receipt, desc: "CFDI 4.0 y SAT" },
   { id: "pagos", label: "Pagos", icon: CreditCard, desc: "Métodos y pasarelas" },
+  { id: "caja", label: "Caja y cortes", icon: Banknote, desc: "Umbral diferencia, conteo ciego, arqueos" },
   { id: "inventario", label: "Inventario y costos", icon: Boxes, desc: "Insumos y márgenes" },
   { id: "usuarios", label: "Usuarios y permisos", icon: UserCog, desc: "Roles y accesos" },
   { id: "auditoria", label: "Auditoría y cumplimiento", icon: ShieldCheck, desc: "Trazabilidad" },
@@ -159,6 +160,7 @@ export default function AjustesPlataforma() {
           {active === "checklists" && <SectionChecklists onChange={markDirty} />}
           {active === "facturacion" && <SectionFacturacion onChange={markDirty} registerSave={registerSave} />}
           {active === "pagos" && <SectionPagos onChange={markDirty} registerSave={registerSave} />}
+          {active === "caja" && <SectionCaja onChange={markDirty} registerSave={registerSave} />}
           {active === "inventario" && <SectionInventario onChange={markDirty} />}
           {active === "usuarios" && <SectionUsuarios onChange={markDirty} registerSave={registerSave} />}
           {active === "auditoria" && <SectionAuditoria onChange={markDirty} registerSave={registerSave} />}

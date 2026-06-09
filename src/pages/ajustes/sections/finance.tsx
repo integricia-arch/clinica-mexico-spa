@@ -303,3 +303,92 @@ export function SectionPagos({ onChange, registerSave }: SectionProps) {
 }
 
 // SectionInventario se movió a ./inventario (CRUD real de insumos/kits/proveedores).
+
+/* ---------------- Caja y Corte (persistencia → clinic_settings/caja) ---------------- */
+interface CajaForm {
+  umbral_diferencia: string;
+  fondo_minimo: string;
+  requiere_conteo_ciego: boolean;
+  permite_venta_sin_turno: boolean;
+}
+
+const CAJA_DEFAULTS: CajaForm = {
+  umbral_diferencia: "",
+  fondo_minimo: "",
+  requiere_conteo_ciego: true,
+  permite_venta_sin_turno: false,
+};
+
+export function SectionCaja({ onChange, registerSave }: SectionProps) {
+  const { activeClinicId, isGlobalAdmin } = useActiveClinic();
+  const readOnly = !isGlobalAdmin;
+  const { form, setField, loading, error, save, reset } = useClinicSettingsForm<CajaForm>(
+    activeClinicId,
+    "caja",
+    CAJA_DEFAULTS,
+  );
+
+  useEffect(() => {
+    registerSave({ save, reset });
+  }, [save, reset, registerSave]);
+
+  if (loading) return <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Cargando…</div>;
+
+  return (
+    <div className="space-y-4">
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          <Lock className="h-4 w-4 shrink-0" />Solo admins globales pueden modificar esta sección.
+        </div>
+      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Controles de diferencia de caja</CardTitle>
+          <CardDescription>Define el umbral máximo permitido sin autorización de supervisor.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <Field label="Umbral de diferencia (MXN)" hint="Diferencia |faltante/sobrante| que activa autorización. Vacío = sin límite.">
+            <Input
+              type="number" min={0} step="0.01" placeholder="Sin límite"
+              value={form.umbral_diferencia}
+              onChange={(e) => { setField("umbral_diferencia", e.target.value); onChange(); }}
+              disabled={readOnly}
+            />
+          </Field>
+          <Field label="Fondo mínimo de caja (MXN)" hint="Aviso al abrir turno si el fondo es menor a este valor.">
+            <Input
+              type="number" min={0} step="0.01" placeholder="Sin mínimo"
+              value={form.fondo_minimo}
+              onChange={(e) => { setField("fondo_minimo", e.target.value); onChange(); }}
+              disabled={readOnly}
+            />
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Reglas operativas</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {([
+            { key: "requiere_conteo_ciego" as keyof CajaForm, label: "Conteo ciego obligatorio", desc: "El cajero ingresa el conteo antes de ver el efectivo esperado." },
+            { key: "permite_venta_sin_turno" as keyof CajaForm, label: "Permitir venta sin turno abierto (solo admin/gerente)", desc: "Requiere motivo de override en cada venta." },
+          ] as const).map(({ key, label, desc }) => (
+            <div key={key} className="flex items-start justify-between gap-4 rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium">{label}</p>
+                <p className="text-xs text-muted-foreground">{desc}</p>
+              </div>
+              <Switch
+                checked={form[key] as boolean}
+                disabled={readOnly}
+                onCheckedChange={(v) => { setField(key, v as CajaForm[typeof key]); onChange(); }}
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
