@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ScanLine, Plus, Minus, Trash2, AlertTriangle, Lock, ShoppingCart,
   Clock, Building2, User as UserIcon, PauseCircle, XCircle, Receipt,
-  LayoutGrid,
+  LayoutGrid, Copy, X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -169,6 +169,7 @@ export default function PuntoDeVenta({
   const [shift, setShift] = useState<Shift | null>(null);
   const [shiftLoading, setShiftLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"scanner" | "catalogo">("scanner");
+  const [lastError, setLastError] = useState<string | null>(null);
   const [catalogSearch, setCatalogSearch] = useState("");
 
   async function refreshShift() {
@@ -417,7 +418,7 @@ export default function PuntoDeVenta({
     setSubmitting(true);
     const payload = {
       clinic_id: activeClinicId,
-      sale_type: "direct_sale",
+      sale_type: recetaData !== null ? "prescription_dispense" : "direct_sale",
       receta_capturada: recetaData !== null,
       patient_id: clienteTipo === "paciente" ? patientId || null : null,
       customer_name: clienteTipo === "publico" ? (customerName || "Público general") : null,
@@ -438,12 +439,13 @@ export default function PuntoDeVenta({
     if (error) {
       setSubmitting(false);
       const detail = `${error.message} | code: ${error.code} | hint: ${error.hint ?? ""} | details: ${error.details ?? ""}`;
+      setLastError(detail);
       await Promise.all([
         logPosAudit(activeClinicId, "pos_sale_rpc_error", { error: error.message, code: error.code, hint: error.hint, items: cart.length }, null, user?.id),
         logPosError(activeClinicId, user?.id, "pharmacy_register_sale", error.message, `code:${error.code} hint:${error.hint ?? ""}`, { items: cart.length, payment, total }),
       ]);
       await copyToClipboard(detail);
-      toast({ title: "No se pudo registrar la venta — error copiado al portapapeles", description: detail, variant: "destructive", duration: 20000 });
+      toast({ title: "Error al registrar venta", description: error.message, variant: "destructive", duration: 10000 });
       return;
     }
 
@@ -581,6 +583,28 @@ export default function PuntoDeVenta({
 
   return (
     <div className="space-y-4">
+      {lastError && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5" />Último error de venta
+            </span>
+            <div className="flex gap-1">
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs"
+                onClick={() => copyToClipboard(lastError)}>
+                <Copy className="h-3 w-3 mr-1" />Copiar
+              </Button>
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-xs"
+                onClick={() => setLastError(null)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+          <pre className="text-[11px] font-mono text-destructive bg-destructive/5 rounded p-2 whitespace-pre-wrap break-all select-all cursor-text">
+            {lastError}
+          </pre>
+        </div>
+      )}
       {/* Topbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
         <div className="flex items-center gap-4 text-sm">
