@@ -67,10 +67,12 @@ async function logPosAudit(
   event: string,
   data: Record<string, unknown>,
   registroId: string | null = null,
+  userId?: string | null,
 ) {
   try {
     await supabase.from("audit_logs").insert({
-      accion: "consultar",
+      user_id: userId ?? (await supabase.auth.getUser()).data.user?.id ?? null,
+      accion: event.includes("error") || event.includes("bloqueado") ? "error" : "crear",
       tabla: "pharmacy_sales",
       registro_id: registroId,
       clinic_id: clinicId,
@@ -78,6 +80,25 @@ async function logPosAudit(
     } as never);
   } catch {
     /* best-effort */
+  }
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;opacity:0;top:0;left:0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch {
+      /* clipboard not available */
+    }
   }
 }
 
@@ -395,7 +416,8 @@ export default function PuntoDeVenta({
     if (error) {
       setSubmitting(false);
       const detail = `${error.message} | code: ${error.code} | hint: ${error.hint ?? ""} | details: ${error.details ?? ""}`;
-      navigator.clipboard.writeText(detail).catch(() => {});
+      await logPosAudit(activeClinicId, "pos_sale_rpc_error", { error: error.message, code: error.code, hint: error.hint, items: cart.length }, null, user?.id);
+      await copyToClipboard(detail);
       toast({ title: "No se pudo registrar la venta — error copiado al portapapeles", description: detail, variant: "destructive", duration: 20000 });
       return;
     }
@@ -433,7 +455,7 @@ export default function PuntoDeVenta({
       if (pErr) {
         await logPosAudit(activeClinicId, "diferencia_pago_total", { sale_id: saleId, error: pErr.message }, String(saleId));
         const pDetail = `${pErr.message} | code: ${pErr.code} | hint: ${pErr.hint ?? ""} | details: ${pErr.details ?? ""}`;
-        navigator.clipboard.writeText(pDetail).catch(() => {});
+        await copyToClipboard(pDetail);
         toast({ title: "Venta registrada, falló desglose de pago — error copiado", description: pDetail, variant: "destructive", duration: 20000 });
       } else {
         const auditEvent =
