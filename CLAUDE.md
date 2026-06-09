@@ -115,6 +115,23 @@ Después de cualquier mensaje de seguridad en Lovable (especialmente en `src/int
 
 ---
 
+## Pendientes de desarrollo prioritarios <!-- /aprende 2026-06-08 -->
+
+### Corte de caja (Opción B — aprobada)
+Implementar en este orden:
+1. **Conteo ciego** — ShiftPanel pide conteo físico ANTES de mostrar el esperado
+2. **Folio SEQUENCE + auto-generar corte Z** en tabla `cortes` al cerrar turno farmacia
+3. **Umbral de diferencia** configurable por clínica → bloquea si |diff| > umbral hasta firma supervisor
+4. **Egresos/Ingresos del fondo** durante turno (nueva tabla + UI)
+5. **Corte X** intra-turno sin cerrar
+6. Extender `turnos` generales con reconciliación (cajeros no-farmacia)
+
+Ver memoria: `project_corte-caja-arquitectura.md`
+
+### SQL complejo con supabase CLI <!-- /aprende 2026-06-08 -->
+- **Nunca** pasar SQL con `$function$` inline: `supabase db query --linked "..."` falla
+- **Siempre** escribir a `_tmp_*.sql` y usar: `supabase db query --linked --file archivo.sql`
+
 ## Contexto de proyecto (credenciales)
 
 Ver `.claude/project-context.md` — IDs de Cloudflare, Supabase URLs, rutas, pendientes de desarrollo.

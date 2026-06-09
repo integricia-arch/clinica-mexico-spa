@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Timer, PlayCircle, StopCircle, AlertCircle } from "lucide-react";
+import { Timer, PlayCircle, StopCircle, AlertCircle, Lock, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+
+const formatMXN = (n: number) =>
+  Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
 interface Caja {
   id: string;
@@ -23,6 +28,17 @@ interface Turno {
   monto_apertura: number;
   abierto_at: string;
   pharmacy_shift_id: string | null;
+}
+
+interface CloseResult {
+  folio: number;
+  corte_id: string;
+  opening_amount: number;
+  cash_total: number;
+  expected_cash: number;
+  counted_cash: number;
+  difference: number;
+  supervisor_override: boolean;
 }
 
 interface LinkAudit {
@@ -44,6 +60,194 @@ const ACTION_LABELS: Record<string, { label: string; tone: string }> = {
   manual_unlink: { label: "Desenlace manual", tone: "text-amber-700 bg-amber-50" },
 };
 
+function ResultRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="font-medium text-sm">{value}</p>
+    </div>
+  );
+}
+
+function CloseTurnoDialog({
+  open,
+  turno,
+  onClose,
+  onClosed,
+}: {
+  open: boolean;
+  turno: Turno | null;
+  onClose: () => void;
+  onClosed: () => void;
+}) {
+  const { roles } = useAuth();
+  const [count, setCount] = useState("0");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [overridePrompt, setOverridePrompt] = useState<{ diff: number; umbral: number } | null>(null);
+  const [result, setResult] = useState<CloseResult | null>(null);
+
+  const isManager = roles.includes("admin") || roles.includes("manager");
+
+  function reset() {
+    setCount("0");
+    setNotes("");
+    setSubmitting(false);
+    setOverridePrompt(null);
+    setResult(null);
+  }
+
+  function handleClose() {
+    reset();
+    onClose();
+  }
+
+  function handleClosed() {
+    reset();
+    onClosed();
+  }
+
+  async function submit(supervisorOverride = false) {
+    if (!turno) return;
+    const amount = Number(count);
+    if (Number.isNaN(amount) || amount < 0) {
+      toast.error("Monto inválido");
+      return;
+    }
+    setSubmitting(true);
+    setOverridePrompt(null);
+
+    const { data, error } = await supabase.rpc("turno_close", {
+      p_turno_id: turno.id,
+      p_cash_count: amount,
+      p_notes: notes || null,
+      p_supervisor_override: supervisorOverride,
+    } as never);
+
+    setSubmitting(false);
+
+    if (error) {
+      if (error.message?.startsWith("DIFF_EXCEEDS_THRESHOLD")) {
+        const parts = error.message.split("|");
+        setOverridePrompt({ diff: Number(parts[1] ?? 0), umbral: Number(parts[2] ?? 0) });
+        return;
+      }
+      toast.error(`No se pudo cerrar el turno: ${error.message}`);
+      return;
+    }
+
+    setResult(data as unknown as CloseResult);
+  }
+
+  if (result) {
+    const diffColor =
+      result.difference === 0 ? "text-green-600" :
+      result.difference > 0 ? "text-amber-600" : "text-red-600";
+    const DiffIcon = result.difference === 0 ? Minus : result.difference > 0 ? TrendingUp : TrendingDown;
+
+    return (
+      <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              Turno cerrado — Folio Z-{String(result.folio).padStart(6, "0")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="rounded-lg border border-border bg-muted/40 p-4 grid grid-cols-2 gap-2 text-sm">
+              <ResultRow label="Monto inicial" value={formatMXN(result.opening_amount)} />
+              <ResultRow label="Cobros efectivo" value={formatMXN(result.cash_total)} />
+              <ResultRow label="Esperado" value={formatMXN(result.expected_cash)} />
+              <ResultRow label="Contado" value={formatMXN(result.counted_cash)} />
+            </div>
+            <div className={`flex items-center gap-2 rounded-lg border px-4 py-3 ${
+              result.difference === 0 ? "border-green-500/40 bg-green-500/5" :
+              result.difference > 0 ? "border-amber-500/40 bg-amber-500/5" :
+              "border-red-500/40 bg-red-500/5"
+            }`}>
+              <DiffIcon className={`h-5 w-5 ${diffColor}`} />
+              <div>
+                <p className={`font-semibold text-sm ${diffColor}`}>
+                  {result.difference === 0 ? "Cuadrado" : result.difference > 0 ? "Sobrante" : "Faltante"}:{" "}
+                  {formatMXN(result.difference)}
+                </p>
+                {result.supervisor_override && (
+                  <p className="text-xs text-muted-foreground">Autorizado por supervisor</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleClosed}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Lock className="h-4 w-4" />Cerrar turno
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Cuenta el efectivo físicamente sin revisar el sistema primero.
+            El sistema calculará la diferencia al cierre.
+          </p>
+          <div className="space-y-1">
+            <Label className="text-xs">Efectivo contado físicamente (MXN)</Label>
+            <Input
+              type="number" min={0} step="0.01" value={count}
+              onChange={(e) => setCount(e.target.value)}
+              className="h-11 text-base"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Notas del cierre</Label>
+            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+
+          {overridePrompt && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/8 p-3 space-y-2">
+              <p className="text-sm font-medium text-amber-700">
+                Diferencia de {formatMXN(overridePrompt.diff)} excede el umbral de {formatMXN(overridePrompt.umbral)}.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isManager
+                  ? "Como admin/gerente puedes autorizar el cierre con esta diferencia."
+                  : "Se requiere autorización de un admin o gerente para continuar."}
+              </p>
+              {isManager && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-amber-500 text-amber-700 hover:bg-amber-500/10"
+                  onClick={() => submit(true)}
+                  disabled={submitting}
+                >
+                  Autorizar y cerrar turno
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button onClick={() => submit(false)} disabled={submitting}>
+            {submitting ? "Cerrando…" : "Registrar conteo y cerrar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => void } = {}) {
   const { user } = useAuth();
   const { activeClinic } = useActiveClinic();
@@ -56,6 +260,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
   const [cajaId, setCajaId] = useState("");
   const [montoApertura, setMontoApertura] = useState(0);
   const [notas, setNotas] = useState("");
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
 
   const load = async () => {
     if (!activeClinic?.id || !user?.id) return;
@@ -107,7 +312,6 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
 
     if (error) { setSaving(false); toast.error(`No se pudo abrir el turno: ${error.message}`); return; }
 
-    // Auto-open pharmacy shift for farmacia cajas
     const selectedCaja = cajas.find((c) => c.id === cajaId);
     if (selectedCaja?.es_farmacia && newTurno) {
       const { data: shiftId, error: shiftError } = await supabase.rpc("pharmacy_open_shift", {
@@ -128,17 +332,8 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     load();
   };
 
-  const cerrarTurno = async () => {
-    if (!turnoActivo) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from("turnos")
-      .update({ estado: "cerrado", cerrado_at: new Date().toISOString(), notas_cierre: notas.trim() || null })
-      .eq("id", turnoActivo.id);
-    setSaving(false);
-    if (error) { toast.error("No se pudo cerrar el turno"); return; }
-    toast.success("Turno cerrado — revisa el corte en la pestaña Corte de caja");
-    setNotas("");
+  const handleTurnoCerrado = () => {
+    setCloseDialogOpen(false);
     load();
     onTurnoCerrado?.();
   };
@@ -178,19 +373,14 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
               )}
             </div>
           </div>
-          <div>
-            <Label htmlFor="notas-cierre">Notas de cierre (opcional)</Label>
-            <Input
-              id="notas-cierre"
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              placeholder="Observaciones al cerrar el turno…"
-              className="mt-1"
-            />
-          </div>
-          <Button variant="destructive" onClick={cerrarTurno} disabled={saving} className="w-full sm:w-auto">
+          <Button
+            variant="destructive"
+            onClick={() => setCloseDialogOpen(true)}
+            disabled={saving}
+            className="w-full sm:w-auto"
+          >
             <StopCircle className="h-4 w-4 mr-2" />
-            {saving ? "Cerrando…" : "Cerrar turno"}
+            Cerrar turno
           </Button>
         </div>
       ) : (
@@ -266,6 +456,13 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
           </ul>
         )}
       </div>
+
+      <CloseTurnoDialog
+        open={closeDialogOpen}
+        turno={turnoActivo}
+        onClose={() => setCloseDialogOpen(false)}
+        onClosed={handleTurnoCerrado}
+      />
     </div>
   );
 }

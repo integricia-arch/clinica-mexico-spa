@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ShieldCheck, Filter } from "lucide-react";
+import { ShieldCheck, Filter, Bug, Copy, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+
+type PosErrorRow = {
+  id: string;
+  created_at: string;
+  funcion: string;
+  error_msg: string;
+  error_detail: string | null;
+  payload: any;
+};
 
 type AuditRow = {
   id: string;
@@ -42,6 +52,31 @@ export default function Auditoria() {
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modulo, setModulo] = useState<(typeof MODULOS)[number]>("Todos");
+  const [errors, setErrors] = useState<PosErrorRow[]>([]);
+  const [errLoading, setErrLoading] = useState(false);
+
+  const loadErrors = async () => {
+    setErrLoading(true);
+    const { data } = await (supabase as any)
+      .from("pos_error_logs")
+      .select("id, created_at, funcion, error_msg, error_detail, payload")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setErrors((data ?? []) as PosErrorRow[]);
+    setErrLoading(false);
+  };
+
+  const copyError = (e: PosErrorRow) => {
+    const txt = JSON.stringify({
+      fecha: e.created_at,
+      funcion: e.funcion,
+      error: e.error_msg,
+      sqlstate: e.error_detail,
+      payload: e.payload,
+    }, null, 2);
+    navigator.clipboard.writeText(txt);
+    toast.success("Log copiado al portapapeles");
+  };
 
   useEffect(() => {
     (async () => {
@@ -54,6 +89,7 @@ export default function Auditoria() {
       setRows((data ?? []) as AuditRow[]);
       setLoading(false);
     })();
+    loadErrors();
   }, []);
 
   const filtradas = rows.filter((r) => {
@@ -141,6 +177,47 @@ export default function Auditoria() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Errores POS */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            <Bug className="h-4 w-4 text-destructive" />
+            Errores POS (últimos 20)
+          </h2>
+          <button onClick={loadErrors} disabled={errLoading}
+            className="flex items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:bg-muted">
+            <RefreshCw className={`h-3 w-3 ${errLoading ? "animate-spin" : ""}`} />
+            Actualizar
+          </button>
+        </div>
+        {errors.length === 0 && !errLoading ? (
+          <p className="text-sm text-muted-foreground">Sin errores registrados.</p>
+        ) : (
+          <div className="space-y-2">
+            {errors.map((e) => (
+              <div key={e.id} className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString("es-MX")} · {e.funcion}</p>
+                    <p className="text-sm font-medium text-destructive mt-0.5">{e.error_msg}</p>
+                    {e.error_detail && <p className="text-xs text-muted-foreground font-mono">SQLSTATE: {e.error_detail}</p>}
+                  </div>
+                  <button onClick={() => copyError(e)}
+                    className="shrink-0 flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-muted">
+                    <Copy className="h-3 w-3" /> Copiar
+                  </button>
+                </div>
+                {e.payload && (
+                  <pre className="mt-2 text-[10px] bg-muted rounded p-2 overflow-x-auto max-h-24">
+                    {JSON.stringify(e.payload, null, 2)}
+                  </pre>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

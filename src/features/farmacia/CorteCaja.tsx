@@ -11,11 +11,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Printer, Lock, RefreshCw, ReceiptText } from "lucide-react";
+import { Printer, Lock, RefreshCw, ReceiptText, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { posPermissions } from "./permissions";
-import { CloseShiftDialog, type Shift } from "./ShiftPanel";
+import { CloseShiftDialog, CorteXDialog, FondoMovimientoDialog, type Shift } from "./ShiftPanel";
 import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
 
 const formatMXN = (n: number) =>
@@ -71,6 +71,8 @@ export default function CorteCaja() {
   const [items, setItems] = useState<SaleItem[]>([]);
   const [meds, setMeds] = useState<Record<string, string>>({});
   const [closeOpen, setCloseOpen] = useState(false);
+  const [corteXOpen, setCorteXOpen] = useState(false);
+  const [fondoOpen, setFondoOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [ticketOpen, setTicketOpen] = useState(false);
@@ -267,9 +269,17 @@ export default function CorteCaja() {
                   </p>
                 </div>
                 {canCloseSelected && (
-                  <Button size="sm" onClick={() => setCloseOpen(true)}>
-                    <Lock className="h-4 w-4 mr-1" />Cerrar turno
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setFondoOpen(true)}>
+                      <span className="text-xs">Fondo</span>
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setCorteXOpen(true)}>
+                      <FileText className="h-4 w-4 mr-1" />Corte X
+                    </Button>
+                    <Button size="sm" onClick={() => setCloseOpen(true)}>
+                      <Lock className="h-4 w-4 mr-1" />Cerrar turno
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -420,6 +430,16 @@ export default function CorteCaja() {
         shift={selected}
         onClose={() => setCloseOpen(false)}
         onClosed={() => { setCloseOpen(false); loadShifts().then(() => selected && loadShiftDetail(selected)); }}
+      />
+      <CorteXDialog
+        open={corteXOpen}
+        shift={selected}
+        onClose={() => setCorteXOpen(false)}
+      />
+      <FondoMovimientoDialog
+        open={fondoOpen}
+        shift={selected}
+        onClose={() => setFondoOpen(false)}
       />
       <TicketInterno open={ticketOpen} onClose={() => setTicketOpen(false)} data={ticketData} />
     </div>

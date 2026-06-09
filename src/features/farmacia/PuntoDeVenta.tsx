@@ -28,6 +28,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { friendlyError } from "@/lib/errors";
 import { posPermissions, blockReasonForDirectSale, isPrescriptionScan, DEMO_INFO_LEGEND, type Med } from "./permissions";
+import { RecetaValidacionModal, type RecetaData } from "./RecetaValidacionModal";
 import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
 import { PaymentCapture, emptyBreakdown, validatePayment, paymentsToRows, looksLikeFullCardNumber, type PaymentBreakdown } from "./PaymentCapture";
 import { OpenShiftCard, ShiftBadge, fetchCurrentShift, type Shift } from "./ShiftPanel";
@@ -37,7 +38,7 @@ type Lote = {
   medicamento_id: string;
   numero_lote: string;
   fecha_caducidad: string;
-  fecha_entrada: string;
+  created_at: string;
   existencia: number;
 };
 
@@ -117,6 +118,8 @@ export default function PuntoDeVenta({
   const [patients, setPatients] = useState<{ id: string; nombre: string; apellidos: string }[]>([]);
   const [patientId, setPatientId] = useState<string>("");
 
+  const [recetaModalOpen, setRecetaModalOpen] = useState(false);
+  const [recetaMedsInfo, setRecetaMedsInfo] = useState<{ nombre: string; controlado: boolean }[]>([]);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
   const [breakdown, setBreakdown] = useState<PaymentBreakdown>(() => emptyBreakdown(0));
@@ -139,7 +142,7 @@ export default function PuntoDeVenta({
       setLoading(true);
       const [{ data: m }, { data: l }] = await Promise.all([
         supabase.from("medicamentos").select("*").eq("activo", true).order("nombre"),
-        supabase.from("lotes_medicamento").select("*").gt("existencia", 0).order("fecha_entrada"),
+        supabase.from("lotes_medicamento").select("*").gt("existencia", 0).order("created_at"),
       ]);
       setMeds((m as Med[]) ?? []);
       setLotes((l as Lote[]) ?? []);
@@ -169,7 +172,7 @@ export default function PuntoDeVenta({
   function fifoLote(medId: string, qty: number): Lote | null {
     return lotes
       .filter((l) => l.medicamento_id === medId && l.existencia >= qty && l.fecha_caducidad >= today)
-      .sort((a, b) => a.fecha_entrada.localeCompare(b.fecha_entrada) || a.fecha_caducidad.localeCompare(b.fecha_caducidad))[0] ?? null;
+      .sort((a, b) => a.fecha_caducidad.localeCompare(b.fecha_caducidad) || a.created_at.localeCompare(b.created_at))[0] ?? null;
   }
 
   function stockOf(medId: string) {
@@ -228,12 +231,6 @@ export default function PuntoDeVenta({
   }
 
   function addToCart(m: Med) {
-    const reason = blockReasonForDirectSale(m);
-    if (reason) {
-      logPosAudit(activeClinicId, "pos_blocked_direct_sale", { medicamento_id: m.id, reason });
-      toast({ title: "Venta directa no permitida", description: reason, variant: "destructive" });
-      return;
-    }
     const lote = fifoLote(m.id, 1);
     if (!lote) {
       logPosAudit(activeClinicId, "pos_blocked_no_stock", { medicamento_id: m.id });
@@ -346,7 +343,7 @@ export default function PuntoDeVenta({
   }, [payment, total]);
 
 
-  async function submitSale() {
+  async function submitSale(recetaData: RecetaData | null = null) {
     if (!perms.canPosSell || cart.length === 0) return;
 
     // Bloqueo PCI: nunca aceptar número completo de tarjeta en ningún campo.
@@ -370,7 +367,9 @@ export default function PuntoDeVenta({
 
     setSubmitting(true);
     const payload = {
+      clinic_id: activeClinicId,
       sale_type: "direct_sale",
+      receta_capturada: recetaData !== null,
       patient_id: clienteTipo === "paciente" ? patientId || null : null,
       customer_name: clienteTipo === "publico" ? (customerName || "Público general") : null,
       payment_method: payment,
@@ -389,8 +388,30 @@ export default function PuntoDeVenta({
     const { data: saleId, error } = await supabase.rpc("pharmacy_register_sale", { p_payload: payload as never });
     if (error) {
       setSubmitting(false);
-      toast({ title: "No se pudo registrar la venta", description: friendlyError(error), variant: "destructive" });
+      const detail = `${error.message} | code: ${error.code} | hint: ${error.hint ?? ""} | details: ${error.details ?? ""}`;
+      navigator.clipboard.writeText(detail).catch(() => {});
+      toast({ title: "No se pudo registrar la venta — error copiado al portapapeles", description: detail, variant: "destructive", duration: 20000 });
       return;
+    }
+
+    // Inserta receta capturada si aplica
+    if (recetaData && saleId) {
+      await supabase.from("recetas_capturadas").insert({
+        clinic_id: activeClinicId,
+        sale_id: saleId as unknown as string,
+        nombre_medico: recetaData.nombre_medico,
+        cedula_profesional: recetaData.cedula_profesional,
+        especialidad: recetaData.especialidad || null,
+        fecha_receta: recetaData.fecha_receta,
+        folio_receta: recetaData.folio_receta || null,
+        nombre_paciente: recetaData.nombre_paciente || null,
+        diagnostico: recetaData.diagnostico || null,
+        receta_retenida: recetaData.receta_retenida,
+        grupo: recetaData.grupo,
+        folio_cofepris: recetaData.folio_cofepris || null,
+        notas: recetaData.notas || null,
+        created_by: user?.id ?? null,
+      } as never);
     }
 
     // Inserta el desglose de pagos (pharmacy_sale_payments)
@@ -405,7 +426,9 @@ export default function PuntoDeVenta({
       const { error: pErr } = await supabase.from("pharmacy_sale_payments").insert(rows as never);
       if (pErr) {
         await logPosAudit(activeClinicId, "diferencia_pago_total", { sale_id: saleId, error: pErr.message }, String(saleId));
-        toast({ title: "Venta registrada, falló desglose de pago", description: friendlyError(pErr), variant: "destructive" });
+        const pDetail = `${pErr.message} | code: ${pErr.code} | hint: ${pErr.hint ?? ""} | details: ${pErr.details ?? ""}`;
+        navigator.clipboard.writeText(pDetail).catch(() => {});
+        toast({ title: "Venta registrada, falló desglose de pago — error copiado", description: pDetail, variant: "destructive", duration: 20000 });
       } else {
         const auditEvent =
           payment === "mixto" ? "pago_mixto_registrado"
@@ -472,9 +495,24 @@ export default function PuntoDeVenta({
     setPatientId(""); setPatientSearch(""); setCustomerName("Público general");
     setClienteTipo("publico");
     const { data: l } = await supabase
-      .from("lotes_medicamento").select("*").gt("existencia", 0).order("fecha_entrada");
+      .from("lotes_medicamento").select("*").gt("existencia", 0).order("created_at");
     setLotes((l as Lote[]) ?? []);
     inputRef.current?.focus();
+  }
+
+  function handleCobrar() {
+    const medsNeedingRx = cart.filter(
+      (c) => c.med.requiere_receta || c.med.controlado || c.med.is_controlled || !!blockReasonForDirectSale(c.med),
+    );
+    if (medsNeedingRx.length > 0) {
+      setRecetaMedsInfo(medsNeedingRx.map((c) => ({
+        nombre: c.med.nombre,
+        controlado: !!(c.med.controlado || c.med.is_controlled),
+      })));
+      setRecetaModalOpen(true);
+      return;
+    }
+    submitSale(null);
   }
 
   if (!perms.canPosView) {
@@ -634,7 +672,7 @@ export default function PuntoDeVenta({
         </div>
 
         {/* Carrito */}
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-2 min-h-[300px]">
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-2 min-h-[300px] flex flex-col">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2"><ShoppingCart className="h-4 w-4" />Carrito ({cart.length})</h3>
           </div>
@@ -643,7 +681,7 @@ export default function PuntoDeVenta({
               Escanea o busca un producto para iniciar la venta.
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border overflow-y-auto max-h-[60vh]">
               {cart.map((c, i) => {
                 const reason = blockReasonForDirectSale(c.med);
                 return (
@@ -710,7 +748,7 @@ export default function PuntoDeVenta({
         </div>
 
         {/* Cobro */}
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-3 self-start">
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-3 self-start sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
           <h3 className="font-semibold">Cobro</h3>
 
           <div className="space-y-2">
@@ -798,7 +836,7 @@ export default function PuntoDeVenta({
           <Button
             className="w-full h-14 text-base"
             disabled={cart.length === 0 || submitting || !perms.canPosSell}
-            onClick={submitSale}
+            onClick={handleCobrar}
           >
             <Receipt className="h-5 w-5 mr-2" />
             {submitting ? "Registrando…" : `Cobrar ${formatMXN(total)}`}
@@ -807,6 +845,13 @@ export default function PuntoDeVenta({
       </div>
       </>)}
 
+      {recetaModalOpen && (
+        <RecetaValidacionModal
+          medsConReceta={recetaMedsInfo}
+          onConfirm={(data) => { setRecetaModalOpen(false); submitSale(data); }}
+          onCancel={() => setRecetaModalOpen(false)}
+        />
+      )}
       <TicketInterno open={ticketOpen} onClose={() => setTicketOpen(false)} data={ticketData} />
     </div>
   );
