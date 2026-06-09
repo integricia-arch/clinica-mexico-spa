@@ -83,6 +83,28 @@ async function logPosAudit(
   }
 }
 
+async function logPosError(
+  clinicId: string | null,
+  userId: string | null | undefined,
+  funcion: string,
+  error_msg: string,
+  error_detail: string,
+  payload: Record<string, unknown>,
+) {
+  try {
+    await supabase.from("pos_error_logs").insert({
+      user_id: userId ?? null,
+      clinic_id: clinicId,
+      funcion,
+      error_msg,
+      error_detail,
+      payload,
+    } as never);
+  } catch {
+    /* best-effort */
+  }
+}
+
 async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
@@ -416,7 +438,10 @@ export default function PuntoDeVenta({
     if (error) {
       setSubmitting(false);
       const detail = `${error.message} | code: ${error.code} | hint: ${error.hint ?? ""} | details: ${error.details ?? ""}`;
-      await logPosAudit(activeClinicId, "pos_sale_rpc_error", { error: error.message, code: error.code, hint: error.hint, items: cart.length }, null, user?.id);
+      await Promise.all([
+        logPosAudit(activeClinicId, "pos_sale_rpc_error", { error: error.message, code: error.code, hint: error.hint, items: cart.length }, null, user?.id),
+        logPosError(activeClinicId, user?.id, "pharmacy_register_sale", error.message, `code:${error.code} hint:${error.hint ?? ""}`, { items: cart.length, payment, total }),
+      ]);
       await copyToClipboard(detail);
       toast({ title: "No se pudo registrar la venta — error copiado al portapapeles", description: detail, variant: "destructive", duration: 20000 });
       return;
@@ -453,8 +478,11 @@ export default function PuntoDeVenta({
     if (rows.length > 0) {
       const { error: pErr } = await supabase.from("pharmacy_sale_payments").insert(rows as never);
       if (pErr) {
-        await logPosAudit(activeClinicId, "diferencia_pago_total", { sale_id: saleId, error: pErr.message }, String(saleId));
         const pDetail = `${pErr.message} | code: ${pErr.code} | hint: ${pErr.hint ?? ""} | details: ${pErr.details ?? ""}`;
+        await Promise.all([
+          logPosAudit(activeClinicId, "pos_payments_insert_error", { sale_id: saleId, error: pErr.message }, String(saleId), user?.id),
+          logPosError(activeClinicId, user?.id, "pharmacy_sale_payments.insert", pErr.message, `code:${pErr.code} hint:${pErr.hint ?? ""}`, { sale_id: String(saleId), payment, total }),
+        ]);
         await copyToClipboard(pDetail);
         toast({ title: "Venta registrada, falló desglose de pago — error copiado", description: pDetail, variant: "destructive", duration: 20000 });
       } else {
