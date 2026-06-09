@@ -888,54 +888,85 @@ export type Database = {
       }
       cortes: {
         Row: {
+          autorizado_at: string | null
+          autorizado_by: string | null
           clinic_id: string
+          conteo_ciego: number | null
           conteo_movimientos: number
           created_at: string
           datos_json: Json
+          diferencia: number | null
+          efectivo_esperado: number | null
+          folio_secuencial: number | null
           generado_by: string | null
           id: string
+          pharmacy_shift_id: string | null
+          requiere_autorizacion: boolean
           tipo: string
           total_efectivo: number
           total_general: number
           total_otros: number
           total_tarjeta: number
           total_transferencia: number
-          turno_id: string
+          turno_id: string | null
           updated_at: string
         }
         Insert: {
+          autorizado_at?: string | null
+          autorizado_by?: string | null
           clinic_id: string
+          conteo_ciego?: number | null
           conteo_movimientos?: number
           created_at?: string
           datos_json?: Json
+          diferencia?: number | null
+          efectivo_esperado?: number | null
+          folio_secuencial?: number | null
           generado_by?: string | null
           id?: string
+          pharmacy_shift_id?: string | null
+          requiere_autorizacion?: boolean
           tipo?: string
           total_efectivo?: number
           total_general?: number
           total_otros?: number
           total_tarjeta?: number
           total_transferencia?: number
-          turno_id: string
+          turno_id?: string | null
           updated_at?: string
         }
         Update: {
+          autorizado_at?: string | null
+          autorizado_by?: string | null
           clinic_id?: string
+          conteo_ciego?: number | null
           conteo_movimientos?: number
           created_at?: string
           datos_json?: Json
+          diferencia?: number | null
+          efectivo_esperado?: number | null
+          folio_secuencial?: number | null
           generado_by?: string | null
           id?: string
+          pharmacy_shift_id?: string | null
+          requiere_autorizacion?: boolean
           tipo?: string
           total_efectivo?: number
           total_general?: number
           total_otros?: number
           total_tarjeta?: number
           total_transferencia?: number
-          turno_id?: string
+          turno_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "cortes_pharmacy_shift_id_fkey"
+            columns: ["pharmacy_shift_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_cash_shifts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cortes_turno_id_fkey"
             columns: ["turno_id"]
@@ -1112,6 +1143,47 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: true
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fondos_movimientos: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          monto: number
+          motivo: string
+          pharmacy_shift_id: string
+          registrado_by: string
+          tipo: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          monto: number
+          motivo: string
+          pharmacy_shift_id: string
+          registrado_by: string
+          tipo: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          monto?: number
+          motivo?: string
+          pharmacy_shift_id?: string
+          registrado_by?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fondos_movimientos_pharmacy_shift_id_fkey"
+            columns: ["pharmacy_shift_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_cash_shifts"
             referencedColumns: ["id"]
           },
         ]
@@ -1361,27 +1433,36 @@ export type Database = {
       }
       lotes_medicamento: {
         Row: {
+          clinic_id: string | null
+          costo_unitario: number | null
           created_at: string
           existencia: number
           fecha_caducidad: string
+          fecha_entrada: string
           id: string
           medicamento_id: string
           numero_lote: string
           updated_at: string
         }
         Insert: {
+          clinic_id?: string | null
+          costo_unitario?: number | null
           created_at?: string
           existencia?: number
           fecha_caducidad: string
+          fecha_entrada?: string
           id?: string
           medicamento_id: string
           numero_lote: string
           updated_at?: string
         }
         Update: {
+          clinic_id?: string | null
+          costo_unitario?: number | null
           created_at?: string
           existencia?: number
           fecha_caducidad?: string
+          fecha_entrada?: string
           id?: string
           medicamento_id?: string
           numero_lote?: string
@@ -1400,6 +1481,7 @@ export type Database = {
       medicamentos: {
         Row: {
           activo: boolean
+          allow_direct_sale: boolean
           categoria: string
           clave_cuadro_basico: string | null
           concentracion: string | null
@@ -1409,17 +1491,24 @@ export type Database = {
           forma_farmaceutica: string | null
           grupo_terapeutico: string | null
           id: string
+          is_controlled: boolean
           nombre: string
           precio_unitario: number
           principio_activo: string | null
           registro_cofepris: string | null
+          regulatory_notes: string | null
           requiere_receta: boolean
+          requires_prescription: boolean
+          requires_retained_prescription: boolean
+          requires_special_prescription: boolean
           stock_minimo: number
+          tasa_iva: number
           unidad: string
           updated_at: string
         }
         Insert: {
           activo?: boolean
+          allow_direct_sale?: boolean
           categoria: string
           clave_cuadro_basico?: string | null
           concentracion?: string | null
@@ -1429,17 +1518,24 @@ export type Database = {
           forma_farmaceutica?: string | null
           grupo_terapeutico?: string | null
           id?: string
+          is_controlled?: boolean
           nombre: string
           precio_unitario?: number
           principio_activo?: string | null
           registro_cofepris?: string | null
+          regulatory_notes?: string | null
           requiere_receta?: boolean
+          requires_prescription?: boolean
+          requires_retained_prescription?: boolean
+          requires_special_prescription?: boolean
           stock_minimo?: number
+          tasa_iva?: number
           unidad?: string
           updated_at?: string
         }
         Update: {
           activo?: boolean
+          allow_direct_sale?: boolean
           categoria?: string
           clave_cuadro_basico?: string | null
           concentracion?: string | null
@@ -1449,12 +1545,18 @@ export type Database = {
           forma_farmaceutica?: string | null
           grupo_terapeutico?: string | null
           id?: string
+          is_controlled?: boolean
           nombre?: string
           precio_unitario?: number
           principio_activo?: string | null
           registro_cofepris?: string | null
+          regulatory_notes?: string | null
           requiere_receta?: boolean
+          requires_prescription?: boolean
+          requires_retained_prescription?: boolean
+          requires_special_prescription?: boolean
           stock_minimo?: number
+          tasa_iva?: number
           unidad?: string
           updated_at?: string
         }
@@ -1725,32 +1827,41 @@ export type Database = {
       movimientos_inventario: {
         Row: {
           cantidad: number
+          clinic_id: string | null
           created_at: string
           created_by: string | null
           id: string
           lote_id: string | null
           medicamento_id: string
           motivo: string | null
+          reference_id: string | null
+          reference_type: string | null
           tipo: Database["public"]["Enums"]["movimiento_tipo"]
         }
         Insert: {
           cantidad: number
+          clinic_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           lote_id?: string | null
           medicamento_id: string
           motivo?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           tipo: Database["public"]["Enums"]["movimiento_tipo"]
         }
         Update: {
           cantidad?: number
+          clinic_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           lote_id?: string | null
           medicamento_id?: string
           motivo?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           tipo?: Database["public"]["Enums"]["movimiento_tipo"]
         }
         Relationships: [
@@ -2014,6 +2125,365 @@ export type Database = {
         }
         Relationships: []
       }
+      pharmacy_return_items: {
+        Row: {
+          created_at: string
+          id: string
+          lote_id: string | null
+          medicamento_id: string
+          quantity: number
+          return_id: string
+          sale_item_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lote_id?: string | null
+          medicamento_id: string
+          quantity: number
+          return_id: string
+          sale_item_id: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lote_id?: string | null
+          medicamento_id?: string
+          quantity?: number
+          return_id?: string
+          sale_item_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_return_items_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes_medicamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_return_items_medicamento_id_fkey"
+            columns: ["medicamento_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_returns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_return_items_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_sale_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_returns: {
+        Row: {
+          authorized_by: string
+          clinic_id: string
+          created_at: string
+          created_by: string
+          id: string
+          motivo: string
+          original_sale_id: string
+          refund_method: string
+          shift_id: string | null
+          total_refund: number
+        }
+        Insert: {
+          authorized_by: string
+          clinic_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          motivo: string
+          original_sale_id: string
+          refund_method: string
+          shift_id?: string | null
+          total_refund?: number
+        }
+        Update: {
+          authorized_by?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          motivo?: string
+          original_sale_id?: string
+          refund_method?: string
+          shift_id?: string | null
+          total_refund?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_returns_original_sale_id_fkey"
+            columns: ["original_sale_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_returns_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_cash_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_sale_items: {
+        Row: {
+          base_imponible: number | null
+          clinic_id: string
+          created_at: string
+          discount: number
+          id: string
+          iva_amount: number | null
+          lote_id: string | null
+          medicamento_id: string
+          prescription_item_id: string | null
+          quantity: number
+          sale_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          base_imponible?: number | null
+          clinic_id: string
+          created_at?: string
+          discount?: number
+          id?: string
+          iva_amount?: number | null
+          lote_id?: string | null
+          medicamento_id: string
+          prescription_item_id?: string | null
+          quantity: number
+          sale_id: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Update: {
+          base_imponible?: number | null
+          clinic_id?: string
+          created_at?: string
+          discount?: number
+          id?: string
+          iva_amount?: number | null
+          lote_id?: string | null
+          medicamento_id?: string
+          prescription_item_id?: string | null
+          quantity?: number
+          sale_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_sale_items_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes_medicamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_sale_items_medicamento_id_fkey"
+            columns: ["medicamento_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_sale_payments: {
+        Row: {
+          acquirer: string | null
+          amount: number
+          authorization_code: string | null
+          bank_name: string | null
+          cambio_entregado: number | null
+          card_brand: string | null
+          card_last4: string | null
+          card_type: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          monto_recibido: number | null
+          notes: string | null
+          payment_method: string
+          sale_id: string
+          terminal_id: string | null
+          transfer_reference: string | null
+        }
+        Insert: {
+          acquirer?: string | null
+          amount: number
+          authorization_code?: string | null
+          bank_name?: string | null
+          cambio_entregado?: number | null
+          card_brand?: string | null
+          card_last4?: string | null
+          card_type?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          monto_recibido?: number | null
+          notes?: string | null
+          payment_method: string
+          sale_id: string
+          terminal_id?: string | null
+          transfer_reference?: string | null
+        }
+        Update: {
+          acquirer?: string | null
+          amount?: number
+          authorization_code?: string | null
+          bank_name?: string | null
+          cambio_entregado?: number | null
+          card_brand?: string | null
+          card_last4?: string | null
+          card_type?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          monto_recibido?: number | null
+          notes?: string | null
+          payment_method?: string
+          sale_id?: string
+          terminal_id?: string | null
+          transfer_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_sale_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_sales: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          customer_name: string | null
+          discount: number
+          id: string
+          notes: string | null
+          patient_id: string | null
+          payment_method: string | null
+          payment_status: string
+          prescription_id: string | null
+          requires_invoice: boolean
+          sale_type: string
+          shift_id: string | null
+          status: string
+          subtotal: number
+          total: number
+          total_iva: number
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          discount?: number
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          prescription_id?: string | null
+          requires_invoice?: boolean
+          sale_type: string
+          shift_id?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          total_iva?: number
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          discount?: number
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          prescription_id?: string | null
+          requires_invoice?: boolean
+          sale_type?: string
+          shift_id?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          total_iva?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pos_error_logs: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          error_detail: string | null
+          error_msg: string
+          funcion: string
+          id: string
+          payload: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          error_detail?: string | null
+          error_msg: string
+          funcion: string
+          id?: string
+          payload?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          error_detail?: string | null
+          error_msg?: string
+          funcion?: string
+          id?: string
+          payload?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       proveedores: {
         Row: {
           activo: boolean
@@ -2054,6 +2524,74 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recetas_capturadas: {
+        Row: {
+          cedula_profesional: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          diagnostico: string | null
+          especialidad: string | null
+          fecha_receta: string
+          folio_cofepris: string | null
+          folio_receta: string | null
+          folio_secuencial: number | null
+          grupo: string | null
+          id: string
+          nombre_medico: string
+          nombre_paciente: string | null
+          notas: string | null
+          receta_retenida: boolean
+          sale_id: string | null
+        }
+        Insert: {
+          cedula_profesional: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          diagnostico?: string | null
+          especialidad?: string | null
+          fecha_receta: string
+          folio_cofepris?: string | null
+          folio_receta?: string | null
+          folio_secuencial?: number | null
+          grupo?: string | null
+          id?: string
+          nombre_medico: string
+          nombre_paciente?: string | null
+          notas?: string | null
+          receta_retenida?: boolean
+          sale_id?: string | null
+        }
+        Update: {
+          cedula_profesional?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          diagnostico?: string | null
+          especialidad?: string | null
+          fecha_receta?: string
+          folio_cofepris?: string | null
+          folio_receta?: string | null
+          folio_secuencial?: number | null
+          grupo?: string | null
+          id?: string
+          nombre_medico?: string
+          nombre_paciente?: string | null
+          notas?: string | null
+          receta_retenida?: boolean
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recetas_capturadas_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_sales"
             referencedColumns: ["id"]
           },
         ]
@@ -2297,10 +2835,21 @@ export type Database = {
         }
         Returns: undefined
       }
-      pharmacy_close_shift: {
-        Args: { p_cash_count: number; p_notes?: string; p_shift_id: string }
-        Returns: Json
-      }
+      pharmacy_close_shift:
+        | {
+            Args: { p_cash_count: number; p_notes?: string; p_shift_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cash_count: number
+              p_notes?: string
+              p_shift_id: string
+              p_supervisor_override?: boolean
+            }
+            Returns: Json
+          }
+      pharmacy_corte_x: { Args: { p_shift_id: string }; Returns: Json }
       pharmacy_current_shift: {
         Args: { p_clinic?: string }
         Returns: {
@@ -2328,6 +2877,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pharmacy_fondo_movimiento: {
+        Args: {
+          p_monto: number
+          p_motivo: string
+          p_shift_id: string
+          p_tipo: string
+        }
+        Returns: string
+      }
       pharmacy_open_shift: {
         Args: {
           p_clinic_id: string
@@ -2335,6 +2893,17 @@ export type Database = {
           p_opening_amount: number
         }
         Returns: string
+      }
+      pharmacy_register_return: { Args: { p_payload: Json }; Returns: string }
+      pharmacy_register_sale: { Args: { p_payload: Json }; Returns: string }
+      turno_close: {
+        Args: {
+          p_cash_count: number
+          p_notes?: string
+          p_supervisor_override?: boolean
+          p_turno_id: string
+        }
+        Returns: Json
       }
       user_has_clinic_access: {
         Args: { _clinic_id: string; _user_id: string }
@@ -2367,7 +2936,15 @@ export type Database = {
         | "urgencia"
         | "cirugia"
         | "cronico"
-      movimiento_tipo: "entrada" | "salida" | "ajuste" | "caducidad"
+      movimiento_tipo:
+        | "entrada"
+        | "salida"
+        | "ajuste"
+        | "caducidad"
+        | "salida_venta"
+        | "salida_surtido_receta"
+        | "cancelacion"
+        | "entrada_devolucion"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2526,7 +3103,16 @@ export const Constants = {
         "cirugia",
         "cronico",
       ],
-      movimiento_tipo: ["entrada", "salida", "ajuste", "caducidad"],
+      movimiento_tipo: [
+        "entrada",
+        "salida",
+        "ajuste",
+        "caducidad",
+        "salida_venta",
+        "salida_surtido_receta",
+        "cancelacion",
+        "entrada_devolucion",
+      ],
     },
   },
 } as const

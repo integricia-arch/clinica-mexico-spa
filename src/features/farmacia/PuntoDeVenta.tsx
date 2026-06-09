@@ -91,17 +91,16 @@ async function logPosError(
   error_detail: string,
   payload: Record<string, unknown>,
 ) {
-  try {
-    await supabase.from("pos_error_logs").insert({
-      user_id: userId ?? null,
-      clinic_id: clinicId,
-      funcion,
-      error_msg,
-      error_detail,
-      payload,
-    } as never);
-  } catch {
-    /* best-effort */
+  const { error } = await supabase.from("pos_error_logs").insert({
+    user_id: userId ?? null,
+    clinic_id: clinicId,
+    funcion,
+    error_msg,
+    error_detail,
+    payload,
+  });
+  if (error) {
+    console.error("[logPosError] No se pudo guardar en pos_error_logs:", error.message, error);
   }
 }
 
