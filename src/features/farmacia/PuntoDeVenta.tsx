@@ -179,6 +179,15 @@ export default function PuntoDeVenta({
   }
   useEffect(() => { refreshShift(); }, []);
 
+  // Advertir antes de cerrar/navegar con carrito activo
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (cart.length > 0) { e.preventDefault(); e.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [cart.length]);
+
   useEffect(() => {
     inputRef.current?.focus();
     (async () => {
@@ -373,11 +382,24 @@ export default function PuntoDeVenta({
   const itemsDiscount = cart.reduce((s, c) => s + c.discount, 0);
   const globalDiscount = perms.canPosDiscount ? Number(discount) || 0 : 0;
   const total = Math.max(0, subtotal - itemsDiscount - globalDiscount);
+  // IVA proporcional: precios incluyen IVA; aplicar ratio del descuento global
+  const discountRatio = subtotal > 0 ? total / subtotal : 1;
   const totalIva = cart.reduce((s, c) => {
     const tasa = c.med.tasa_iva ?? 0.16;
-    const itemSub = c.quantity * c.unit_price - c.discount;
-    const base = tasa > 0 ? itemSub / (1 + tasa) : itemSub;
-    return s + (itemSub - base);
+    if (tasa === 0) return s;
+    const itemSub = (c.quantity * c.unit_price - c.discount) * discountRatio;
+    return s + (itemSub - itemSub / (1 + tasa));
+  }, 0);
+  const baseGravable = cart.reduce((s, c) => {
+    const tasa = c.med.tasa_iva ?? 0.16;
+    if (tasa === 0) return s;
+    const itemSub = (c.quantity * c.unit_price - c.discount) * discountRatio;
+    return s + itemSub / (1 + tasa);
+  }, 0);
+  const exento = cart.reduce((s, c) => {
+    const tasa = c.med.tasa_iva ?? 0.16;
+    if (tasa > 0) return s;
+    return s + (c.quantity * c.unit_price - c.discount) * discountRatio;
   }, 0);
 
   // Sincroniza montos por defecto según método y total.
@@ -387,7 +409,8 @@ export default function PuntoDeVenta({
       if (payment === "tarjeta") return { ...bd, efectivo: 0, tarjeta: total, transferencia: 0, card: { ...bd.card, amount: total }, transfer: { ...bd.transfer, amount: 0 } };
       if (payment === "transferencia") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: total, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: total } };
       if (payment === "pendiente") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
-      return bd; // mixto: el usuario captura manualmente
+      // mixto: iniciar en 0/0 para que usuario capture el split explícitamente
+      return { ...bd, efectivo: 0, monto_recibido: 0, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
     });
   }, [payment, total]);
 
@@ -540,7 +563,7 @@ export default function PuntoDeVenta({
       metodoPago: PAYMENT_LABEL[payment],
       payments: ticketPayments,
       items: cart.map((c) => ({ nombre: c.med.nombre, cantidad: c.quantity, precio: c.unit_price })),
-      subtotal, descuento: itemsDiscount + globalDiscount, total, totalIva,
+      subtotal, descuento: itemsDiscount + globalDiscount, total, totalIva, baseGravable, exento,
     });
     setTicketOpen(true);
 
@@ -605,11 +628,11 @@ export default function PuntoDeVenta({
         </div>
       )}
       {/* Topbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
-        <div className="flex items-center gap-4 text-sm">
-          <span className="flex items-center gap-1.5"><UserIcon className="h-4 w-4 text-muted-foreground" /><strong>{cajeroLabel}</strong></span>
-          <span className="flex items-center gap-1.5 text-muted-foreground"><Building2 className="h-4 w-4" />{activeClinic?.name ?? "—"}</span>
-          <span className="flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4" />{format(now, "dd/MM/yyyy HH:mm", { locale: es })}</span>
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3 text-sm min-w-0">
+          <span className="flex items-center gap-1.5 shrink-0"><UserIcon className="h-4 w-4 text-muted-foreground" /><strong className="truncate max-w-[120px] xl:max-w-none">{cajeroLabel}</strong></span>
+          <span className="hidden xl:flex items-center gap-1.5 text-muted-foreground"><Building2 className="h-4 w-4 shrink-0" />{activeClinic?.name ?? "—"}</span>
+          <span className="hidden xl:flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4 shrink-0" />{format(now, "dd/MM/yyyy HH:mm", { locale: es })}</span>
         </div>
         <ShiftBadge shift={shift} />
       </div>
@@ -619,7 +642,7 @@ export default function PuntoDeVenta({
         <button
           type="button"
           onClick={() => setViewMode("scanner")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] text-sm rounded-md transition-colors ${
             viewMode === "scanner" ? "bg-background shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -628,7 +651,7 @@ export default function PuntoDeVenta({
         <button
           type="button"
           onClick={() => setViewMode("catalogo")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] text-sm rounded-md transition-colors ${
             viewMode === "catalogo" ? "bg-background shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -641,6 +664,35 @@ export default function PuntoDeVenta({
         <OpenShiftCard onOpened={(s) => setShift(s)} />
       )}
       {shift && (<>
+      {/* Frecuentes accordion — visible only on tablet (hidden on desktop where left column shows) */}
+      {viewMode === "scanner" && frecuentes.length > 0 && (
+        <details className="xl:hidden rounded-lg border border-border bg-card overflow-hidden">
+          <summary className="flex items-center justify-between px-3 py-2.5 cursor-pointer select-none text-sm font-semibold text-foreground hover:bg-accent transition-colors">
+            <span>Frecuentes</span>
+            <span className="text-xs text-muted-foreground font-normal">{frecuentes.length} productos</span>
+          </summary>
+          <div className="grid grid-cols-2 gap-1.5 p-2 border-t border-border">
+            {frecuentes.map((m) => {
+              const blocked = !!blockReasonForDirectSale(m);
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  disabled={blocked}
+                  onClick={() => addToCart(m)}
+                  className="text-left rounded-md border border-border bg-background px-3 py-3 min-h-[64px] hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <p className="text-sm font-medium truncate leading-tight">{m.nombre}</p>
+                  <p className="text-xs text-muted-foreground flex justify-between mt-1">
+                    <span>{formatMXN(m.precio_unitario)}</span>
+                    <span>Stock {stockOf(m.id)}</span>
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </details>
+      )}
       {/* Scanner (modo escáner) */}
       {viewMode === "scanner" && (
         <form onSubmit={onScanSubmit} className="flex gap-2">
@@ -679,9 +731,9 @@ export default function PuntoDeVenta({
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[220px_1fr_360px]">
+      <div className="grid gap-4 xl:grid-cols-[220px_1fr_360px] md:grid-cols-[1fr_360px] items-start">
         {/* Panel izquierdo: Frecuentes (escáner) o Catálogo */}
-        <div className="space-y-2">
+        <div className="hidden xl:block space-y-2 sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
           {viewMode === "scanner" ? (
             <>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Frecuentes</h3>
@@ -697,13 +749,19 @@ export default function PuntoDeVenta({
                         type="button"
                         disabled={blocked}
                         onClick={() => addToCart(m)}
-                        className="w-full text-left rounded-md border border-border bg-card px-3 py-2 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="w-full text-left rounded-md border border-border bg-card px-3 py-3 min-h-[52px] hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        <p className="text-sm font-medium truncate">{m.nombre}</p>
-                        <p className="text-[11px] text-muted-foreground flex justify-between">
-                          <span>{formatMXN(m.precio_unitario)}</span>
-                          <span>Stock {stockOf(m.id)}</span>
-                        </p>
+                        <p className="text-base font-medium truncate leading-tight">{m.nombre}</p>
+                        <div className="flex items-center justify-between mt-0.5 gap-1">
+                          <span className="text-sm text-muted-foreground">{formatMXN(m.precio_unitario)}</span>
+                          <span className={`text-xs px-1 py-0.5 rounded font-medium ${
+                            stockOf(m.id) === 0
+                              ? "bg-red-100 text-red-800"
+                              : stockOf(m.id) <= 5
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
+                          }`}>Stock {stockOf(m.id)}</span>
+                        </div>
                       </button>
                     );
                   })}
@@ -719,7 +777,7 @@ export default function PuntoDeVenta({
                 onChange={(e) => setCatalogSearch(e.target.value)}
                 className="h-9"
               />
-              <div className="space-y-1.5 max-h-[60vh] overflow-auto">
+              <div className="space-y-1.5 overflow-auto">
                 {loading ? (
                   <p className="text-xs text-muted-foreground">Cargando…</p>
                 ) : catalogFiltered.length === 0 ? (
@@ -734,15 +792,21 @@ export default function PuntoDeVenta({
                         type="button"
                         disabled={blocked || stock === 0}
                         onClick={() => addToCart(m)}
-                        className="w-full text-left rounded-md border border-border bg-card px-3 py-2 hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        className="w-full text-left rounded-md border border-border bg-card px-3 py-3 min-h-[72px] hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
-                        <p className="text-sm font-medium truncate">{m.nombre}</p>
-                        <p className="text-[10px] text-muted-foreground">{m.categoria}</p>
-                        <p className="text-[11px] text-muted-foreground flex justify-between">
-                          <span>{formatMXN(m.precio_unitario)}</span>
-                          <span className={stock === 0 ? "text-destructive" : ""}>Stock {stock}</span>
-                        </p>
-                        {blocked && <p className="text-[10px] text-destructive">Requiere receta</p>}
+                        <p className="text-base font-medium truncate leading-tight">{m.nombre}</p>
+                        <p className="text-xs text-muted-foreground">{m.categoria}</p>
+                        <div className="flex items-center justify-between mt-1 gap-1 flex-wrap">
+                          <span className="text-sm font-semibold text-primary">{formatMXN(m.precio_unitario)}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                            stock === 0
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              : stock <= 5
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          }`}>Stock {stock}</span>
+                        </div>
+                        {blocked && <p className="text-xs text-destructive mt-0.5">Requiere receta</p>}
                       </button>
                     );
                   })
@@ -753,7 +817,7 @@ export default function PuntoDeVenta({
         </div>
 
         {/* Carrito */}
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-2 min-h-[300px] flex flex-col">
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-2 flex flex-col sticky top-4 max-h-[calc(100vh-6rem)]">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2"><ShoppingCart className="h-4 w-4" />Carrito ({cart.length})</h3>
           </div>
@@ -762,11 +826,11 @@ export default function PuntoDeVenta({
               Escanea o busca un producto para iniciar la venta.
             </div>
           ) : (
-            <div className="divide-y divide-border overflow-y-auto max-h-[60vh]">
+            <div className="divide-y divide-border overflow-y-auto flex-1">
               {cart.map((c, i) => {
                 const reason = blockReasonForDirectSale(c.med);
                 return (
-                  <div key={i} className="py-3 grid grid-cols-[1fr_auto] gap-2 items-start">
+                  <div key={i} className="py-3 min-h-[56px] grid grid-cols-[1fr_auto] gap-2 items-start">
                     <div className="space-y-1">
                       <p className="font-medium text-sm">{c.med.nombre}</p>
                       <p className="text-xs text-muted-foreground">
@@ -793,11 +857,11 @@ export default function PuntoDeVenta({
                         </details>
                       )}
                       <div className="flex items-center gap-2 pt-1 flex-wrap">
-                        <Button size="icon" variant="outline" className="h-9 w-9" onClick={() => updateQty(i, -1)}>
+                        <Button size="icon" variant="outline" className="h-10 w-10" onClick={() => updateQty(i, -1)}>
                           <Minus className="h-4 w-4" />
                         </Button>
                         <span className="min-w-[2ch] text-center text-sm font-semibold">{c.quantity}</span>
-                        <Button size="icon" variant="outline" className="h-9 w-9" onClick={() => updateQty(i, 1)}>
+                        <Button size="icon" variant="outline" className="h-10 w-10" onClick={() => updateQty(i, 1)}>
                           <Plus className="h-4 w-4" />
                         </Button>
                         <span className="text-xs text-muted-foreground ml-1">{formatMXN(c.unit_price)} c/u</span>
@@ -829,9 +893,11 @@ export default function PuntoDeVenta({
         </div>
 
         {/* Cobro */}
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-3 self-start sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
-          <h3 className="font-semibold">Cobro</h3>
-
+        <div className="rounded-xl border border-border bg-card shadow-sm self-start sticky top-4 max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+          <div className="p-3 border-b border-border">
+            <h3 className="font-semibold">Cobro</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-3">
           <div className="space-y-2">
             <Label className="text-xs">Cliente</Label>
             <Select value={clienteTipo} onValueChange={(v) => setClienteTipo(v as "publico" | "paciente")}>
@@ -904,24 +970,25 @@ export default function PuntoDeVenta({
             </label>
             <Textarea placeholder="Notas" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="h-12" onClick={suspendSale} disabled={cart.length === 0}>
-              <PauseCircle className="h-4 w-4 mr-1" />Suspender
-            </Button>
-            <Button variant="outline" className="h-12 text-destructive border-destructive/40" onClick={cancelSale} disabled={cart.length === 0}>
-              <XCircle className="h-4 w-4 mr-1" />Cancelar
+          </div>{/* end scrollable content */}
+          <div className="p-3 border-t border-border space-y-2 bg-card">
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" className="h-12" onClick={suspendSale} disabled={cart.length === 0}>
+                <PauseCircle className="h-4 w-4 mr-1" />Suspender
+              </Button>
+              <Button variant="outline" className="h-12 text-destructive border-destructive/40" onClick={cancelSale} disabled={cart.length === 0}>
+                <XCircle className="h-4 w-4 mr-1" />Cancelar
+              </Button>
+            </div>
+            <Button
+              className="w-full h-14 text-base font-semibold"
+              disabled={cart.length === 0 || submitting || !perms.canPosSell}
+              onClick={handleCobrar}
+            >
+              <Receipt className="h-5 w-5 mr-2" />
+              {submitting ? "Registrando…" : `Cobrar ${formatMXN(total)}`}
             </Button>
           </div>
-
-          <Button
-            className="w-full h-14 text-base"
-            disabled={cart.length === 0 || submitting || !perms.canPosSell}
-            onClick={handleCobrar}
-          >
-            <Receipt className="h-5 w-5 mr-2" />
-            {submitting ? "Registrando…" : `Cobrar ${formatMXN(total)}`}
-          </Button>
         </div>
       </div>
       </>)}
