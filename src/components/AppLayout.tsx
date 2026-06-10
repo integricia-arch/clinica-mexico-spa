@@ -5,10 +5,11 @@ import {
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
   CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
   MessageCircle, BellRing, ClipboardList, UserCog, Stethoscope,
-  CreditCard,
+  CreditCard, ChevronLeft,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useSidebarState } from "@/hooks/useSidebarState";
 
 type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient" | "manager" | "cajero";
 
@@ -56,7 +57,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, roles, signOut } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isOpen: sidebarOpen, isCollapsed, toggle: toggleSidebar, close: closeSidebar, isTablet } = useSidebarState();
   const [escaladasCount, setEscaladasCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
@@ -89,18 +90,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {sidebarOpen && (
+      {sidebarOpen && isTablet && (
         <div
-          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm xl:hidden"
+          onClick={closeSidebar}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar transition-transform duration-300 lg:relative lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-300 xl:relative xl:translate-x-0 ${
+          isCollapsed ? "w-16" : "w-64"
+        } ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-2.5 px-5 border-b border-sidebar-border">
@@ -111,7 +112,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-display font-bold text-sm text-sidebar-accent-foreground">ClínicaMX</span>
             <span className="block text-[11px] text-sidebar-foreground/60">Operaciones Clínicas</span>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-sidebar-foreground hover:text-sidebar-accent-foreground">
+          <button onClick={closeSidebar} className="ml-auto xl:hidden text-sidebar-foreground hover:text-sidebar-accent-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -127,23 +128,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               const showBadge = item.to === "/inbox" && escaladasCount > 0;
               return (
                 <div key={item.to}>
-                  {showSection && (
+                  {showSection && !isCollapsed && (
                     <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
                       {item.section}
                     </p>
                   )}
                   <NavLink
                     to={item.to}
-                    onClick={() => setSidebarOpen(false)}
+                    onClick={closeSidebar}
+                    title={isCollapsed ? item.label : undefined}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isCollapsed ? "justify-center px-0" : ""
+                    } ${
                       isActive
                         ? "bg-sidebar-accent text-sidebar-primary"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                   >
-                    <item.icon className="h-[18px] w-[18px]" />
-                    <span className="flex-1">{item.label}</span>
-                    {showBadge && (
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    {!isCollapsed && <span className="flex-1">{item.label}</span>}
+                    {!isCollapsed && showBadge && (
                       <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-red-500 text-white px-1.5">
                         {escaladasCount}
                       </span>
@@ -157,34 +161,46 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Footer */}
         <div className="border-t border-sidebar-border p-4">
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center flex-col gap-1" : ""}`}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-primary text-sm font-semibold">
               {initials}
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-sidebar-accent-foreground">
-                {user?.email || "Usuario"}
-              </p>
-              <p className="truncate text-xs text-sidebar-foreground/60">{roleLabel}</p>
-            </div>
-            <button
-              onClick={() => { signOut(); navigate("/login"); }}
-              className="text-sidebar-foreground hover:text-sidebar-accent-foreground"
-              title="Cerrar sesión"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-sidebar-accent-foreground">
+                  {user?.email || "Usuario"}
+                </p>
+                <p className="truncate text-xs text-sidebar-foreground/60">{roleLabel}</p>
+              </div>
+            )}
+            {!isCollapsed && (
+              <button
+                onClick={() => { signOut(); navigate("/login"); }}
+                className="text-sidebar-foreground hover:text-sidebar-accent-foreground"
+                title="Cerrar sesión"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
           </div>
+          <button
+            onClick={toggleSidebar}
+            className="mt-3 hidden xl:flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+            title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          >
+            <ChevronLeft className={`h-4 w-4 transition-transform ${isCollapsed ? "rotate-180" : ""}`} />
+            {!isCollapsed && <span>Colapsar</span>}
+          </button>
         </div>
       </aside>
 
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 lg:px-6">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-muted-foreground hover:text-foreground">
+          <button onClick={toggleSidebar} className="xl:hidden text-muted-foreground hover:text-foreground">
             <Menu className="h-5 w-5" />
           </button>
-          <div className="hidden lg:block" />
+          <div className="hidden xl:block" />
           <div className="flex items-center gap-3">
             <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Bell className="h-[18px] w-[18px]" />
