@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Timer, PlayCircle, StopCircle, AlertCircle, Lock, TrendingUp, TrendingDown,
-  Minus, ArrowUpDown, FileBarChart2, ChevronDown, ChevronRight,
+  Minus, ArrowUpDown, FileBarChart2, ChevronDown, ChevronRight, Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -136,6 +136,25 @@ function CloseTurnoDialog({
   const [submitting, setSubmitting] = useState(false);
   const [overridePrompt, setOverridePrompt] = useState<{ diff: number; umbral: number } | null>(null);
   const [result, setResult] = useState<CloseResult | null>(null);
+  const [cashRefunds, setCashRefunds] = useState<{ count: number; total: number } | null>(null);
+
+  useEffect(() => {
+    if (!open || !turno) return;
+    setCashRefunds(null);
+    supabase
+      .from("fondos_movimientos")
+      .select("monto")
+      .eq("turno_id", turno.id)
+      .eq("tipo", "egreso")
+      .ilike("motivo", "Reembolso%")
+      .then(({ data }) => {
+        if (!data || data.length === 0) return;
+        setCashRefunds({
+          count: data.length,
+          total: data.reduce((s, r) => s + Number(r.monto), 0),
+        });
+      });
+  }, [open, turno?.id]);
 
   function reset() {
     setCount("0"); setNotes(""); setSubmitting(false);
@@ -225,6 +244,15 @@ function CloseTurnoDialog({
             Cuenta el efectivo físicamente sin revisar el sistema primero.
             El sistema calculará la diferencia al cierre.
           </p>
+          {cashRefunds && (
+            <div className="flex items-start gap-2 rounded-md border border-blue-300/50 bg-blue-50/60 dark:bg-blue-950/20 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                <strong>{cashRefunds.count} devolución{cashRefunds.count !== 1 ? "es" : ""}</strong> en efectivo
+                ({fmt(cashRefunds.total)}) registradas este turno — ya incluidas en el cálculo.
+              </span>
+            </div>
+          )}
           <div className="space-y-1">
             <Label className="text-xs">Efectivo contado físicamente (MXN)</Label>
             <Input type="number" min={0} step="0.01" value={count}

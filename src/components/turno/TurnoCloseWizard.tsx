@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Lock, TrendingUp, TrendingDown, Minus,
-  AlertTriangle, CheckCircle, Heart,
+  AlertTriangle, CheckCircle, Heart, Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { OpenTurno } from "@/components/TurnoGuard";
@@ -42,6 +42,23 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
   const [saving, setSaving] = useState(false);
   const [overrideData, setOverrideData] = useState<{ diff: number; umbral: number } | null>(null);
   const [result, setResult] = useState<CloseResult | null>(null);
+  const [cashRefunds, setCashRefunds] = useState<{ count: number; total: number } | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("fondos_movimientos")
+      .select("monto")
+      .eq("turno_id", turno.id)
+      .eq("tipo", "egreso")
+      .ilike("motivo", "Reembolso%")
+      .then(({ data }) => {
+        if (!data || data.length === 0) return;
+        setCashRefunds({
+          count: data.length,
+          total: data.reduce((s, r) => s + Number(r.monto), 0),
+        });
+      });
+  }, [turno.id]);
 
   async function submit(supervisorOverride = false) {
     const amount = Number(count);
@@ -115,6 +132,16 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
                 El sistema calculará la diferencia al confirmar.
               </p>
             </div>
+            {cashRefunds && (
+              <div className="flex items-start gap-2 rounded-lg border border-blue-300/50 bg-blue-50/60 dark:bg-blue-950/20 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  Se registraron <strong>{cashRefunds.count} devolución{cashRefunds.count !== 1 ? "es" : ""}</strong> en efectivo
+                  por <strong>{fmt(cashRefunds.total)}</strong> durante este turno.
+                  Ya están incluidas en el cálculo esperado.
+                </span>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="close-count">Efectivo contado (MXN)</Label>
               <Input

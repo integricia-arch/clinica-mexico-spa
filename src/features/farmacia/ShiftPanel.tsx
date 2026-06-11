@@ -4,7 +4,7 @@
  * Conteo ciego: el cajero no ve el efectivo esperado antes de contar.
  * El sistema calcula la diferencia en backend (pharmacy_close_shift).
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown } from "lucide-react";
+import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown, Info } from "lucide-react";
 import { friendlyError } from "@/lib/errors";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
 
@@ -149,6 +149,25 @@ export function CloseShiftDialog({
   const [submitting, setSubmitting] = useState(false);
   const [overridePrompt, setOverridePrompt] = useState<{ diff: number; umbral: number } | null>(null);
   const [result, setResult] = useState<CloseResult | null>(null);
+  const [cashRefunds, setCashRefunds] = useState<{ count: number; total: number } | null>(null);
+
+  useEffect(() => {
+    if (!open || !shift) return;
+    setCashRefunds(null);
+    supabase
+      .from("fondos_movimientos")
+      .select("monto")
+      .eq("pharmacy_shift_id", shift.id)
+      .eq("tipo", "egreso")
+      .ilike("motivo", "Reembolso%")
+      .then(({ data }) => {
+        if (!data || data.length === 0) return;
+        setCashRefunds({
+          count: data.length,
+          total: data.reduce((s, r) => s + Number(r.monto), 0),
+        });
+      });
+  }, [open, shift?.id]);
 
   function reset() {
     setCount("0");
@@ -263,6 +282,15 @@ export function CloseShiftDialog({
             Cuenta el efectivo físicamente sin revisar el sistema primero.
             El sistema calculará la diferencia al cierre.
           </p>
+          {cashRefunds && (
+            <div className="flex items-start gap-2 rounded-md border border-blue-300/50 bg-blue-50/60 dark:bg-blue-950/20 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                <strong>{cashRefunds.count} devolución{cashRefunds.count !== 1 ? "es" : ""}</strong> en efectivo
+                ({formatMXN(cashRefunds.total)}) registradas este turno — ya incluidas en el cálculo.
+              </span>
+            </div>
+          )}
           <div className="space-y-1">
             <Label className="text-xs">Efectivo contado físicamente (MXN)</Label>
             <Input
