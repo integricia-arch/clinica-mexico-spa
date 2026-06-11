@@ -259,7 +259,12 @@ export default function AdminUsuarios() {
           p_user_id: newUserId,
           p_pin: createPin,
         } as never);
-        if (pinErr) toast.warning(`Usuario creado pero PIN no se pudo guardar: ${pinErr.message}`);
+        if (pinErr) {
+          setCreating(false);
+          toast.error(`Usuario creado pero PIN no se pudo guardar: ${pinErr.message}. Configura el PIN manualmente desde la lista de usuarios.`);
+          fetchUsers();
+          return;
+        }
       }
     }
     setCreating(false);
