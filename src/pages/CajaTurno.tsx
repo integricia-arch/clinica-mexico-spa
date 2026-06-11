@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { printActaArqueo } from "@/lib/printActaArqueo";
-import TarjetaTpvReconcile from "@/components/turno/TarjetaTpvReconcile";
+import PagoReconcile from "@/components/turno/PagoReconcile";
 
 const fmt = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -305,7 +305,8 @@ function CloseTurnoDialog({
           >
             <Printer className="h-4 w-4" /> Imprimir acta de arqueo
           </Button>
-          <TarjetaTpvReconcile corteId={result.corte_id} />
+          <PagoReconcile corteId={result.corte_id} metodo="tarjeta" />
+          <PagoReconcile corteId={result.corte_id} metodo="transferencia" />
           <DialogFooter><Button onClick={handleClosed}>Cerrar</Button></DialogFooter>
         </DialogContent>
       </Dialog>

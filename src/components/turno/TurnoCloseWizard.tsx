@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import type { OpenTurno } from "@/components/TurnoGuard";
 import { printActaArqueo } from "@/lib/printActaArqueo";
-import TarjetaTpvReconcile from "@/components/turno/TarjetaTpvReconcile";
+import PagoReconcile from "@/components/turno/PagoReconcile";
 
 interface CloseResult {
   corte_id: string;
@@ -351,7 +351,8 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
             >
               <Printer className="h-4 w-4" /> Imprimir acta de arqueo
             </Button>
-            <TarjetaTpvReconcile corteId={result.corte_id} />
+            <PagoReconcile corteId={result.corte_id} metodo="tarjeta" />
+            <PagoReconcile corteId={result.corte_id} metodo="transferencia" />
             <Button onClick={onClosed} className="w-full" size="lg">
               Finalizar
             </Button>
