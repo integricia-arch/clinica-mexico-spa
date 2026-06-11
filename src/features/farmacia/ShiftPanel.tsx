@@ -6,7 +6,6 @@
  */
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown } from "lucide-react";
 import { friendlyError } from "@/lib/errors";
+import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
 
 const formatMXN = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -143,15 +143,12 @@ export function CloseShiftDialog({
   onClose: () => void;
   onClosed: () => void;
 }) {
-  const { roles } = useAuth();
   const { toast } = useToast();
   const [count, setCount] = useState("0");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [overridePrompt, setOverridePrompt] = useState<{ diff: number; umbral: number } | null>(null);
   const [result, setResult] = useState<CloseResult | null>(null);
-
-  const isManager = roles.includes("admin") || roles.includes("manager");
 
   function reset() {
     setCount("0");
@@ -280,29 +277,21 @@ export function CloseShiftDialog({
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
-          {overridePrompt && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/8 p-3 space-y-2">
-              <p className="text-sm font-medium text-amber-700">
-                Diferencia de {formatMXN(overridePrompt.diff)} excede el umbral de {formatMXN(overridePrompt.umbral)}.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {isManager
-                  ? "Como admin/gerente puedes autorizar el cierre con esta diferencia."
-                  : "Se requiere autorización de un admin o gerente para continuar."}
-              </p>
-              {isManager && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-amber-500 text-amber-700 hover:bg-amber-500/10"
-                  onClick={() => submit(true)}
-                  disabled={submitting}
-                >
-                  Autorizar y cerrar turno
-                </Button>
-              )}
-            </div>
-          )}
+          <SupervisorAuthDialog
+            open={!!overridePrompt}
+            turnoId={shift?.id ?? ""}
+            cashCount={Number(count)}
+            notes={notes}
+            diff={overridePrompt?.diff ?? 0}
+            umbral={overridePrompt?.umbral ?? 0}
+            clinicId={shift?.clinic_id ?? ""}
+            mode="pharmacy"
+            onSuccess={(data) => {
+              setResult(data as CloseResult);
+              setOverridePrompt(null);
+            }}
+            onCancel={() => setOverridePrompt(null)}
+          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>Cancelar</Button>
