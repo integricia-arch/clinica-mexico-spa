@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import type { OpenTurno } from "@/components/TurnoGuard";
 
 interface CloseResult {
+  corte_id: string;
   folio: number;
   opening_amount: number;
   cash_total: number;
@@ -43,6 +44,9 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
   const [overrideData, setOverrideData] = useState<{ diff: number; umbral: number } | null>(null);
   const [result, setResult] = useState<CloseResult | null>(null);
   const [cashRefunds, setCashRefunds] = useState<{ count: number; total: number } | null>(null);
+  const [fondoInput, setFondoInput] = useState("");
+  const [fondoGuardado, setFondoGuardado] = useState<{ fondo: number; deposito: number } | null>(null);
+  const [savingFondo, setSavingFondo] = useState(false);
 
   useEffect(() => {
     supabase
@@ -86,7 +90,9 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
       return;
     }
 
-    setResult(data as unknown as CloseResult);
+    const r = data as unknown as CloseResult;
+    setResult(r);
+    setFondoInput(String(r.opening_amount ?? 0));
     setStep("done");
   }
 
@@ -208,7 +214,9 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
               umbral={overrideData.umbral}
               clinicId={activeClinicId ?? ""}
               onSuccess={(data) => {
-                setResult(data as CloseResult);
+                const r = data as CloseResult;
+                setResult(r);
+                setFondoInput(String(r.opening_amount ?? 0));
                 setOverrideData(null);
                 setStep("done");
               }}
@@ -260,6 +268,64 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
                 <p className="text-xs text-muted-foreground">Autorizado por supervisor</p>
               )}
             </div>
+            {fondoGuardado ? (
+              <div className="rounded-lg border border-green-500/40 bg-green-500/5 p-3 space-y-1 text-sm">
+                <p className="font-medium text-green-700 dark:text-green-400 flex items-center gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5" /> Distribución registrada
+                </p>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Fondo siguiente turno</span>
+                  <span className="font-medium text-foreground">{fmt(fondoGuardado.fondo)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Para depósito / caja fuerte</span>
+                  <span className="font-medium text-foreground">{fmt(fondoGuardado.deposito)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                <p className="text-xs font-medium text-foreground">¿Cuánto dejas de fondo para el siguiente cajero?</p>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={fondoInput}
+                  onChange={(e) => setFondoInput(e.target.value)}
+                  className="h-9 text-sm"
+                />
+                {(() => {
+                  const f = Number(fondoInput);
+                  const deposito = isNaN(f) ? null : Math.max(result.counted_cash - f, 0);
+                  return deposito !== null ? (
+                    <p className="text-xs text-muted-foreground">
+                      Para depósito: <span className="font-medium text-foreground">{fmt(deposito)}</span>
+                    </p>
+                  ) : null;
+                })()}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    disabled={savingFondo}
+                    onClick={async () => {
+                      const f = Number(fondoInput);
+                      if (isNaN(f) || f < 0) { toast.error("Monto inválido"); return; }
+                      setSavingFondo(true);
+                      const { error } = await supabase.rpc("corte_set_fondo", {
+                        p_corte_id: result.corte_id,
+                        p_fondo_siguiente: f,
+                      } as never);
+                      setSavingFondo(false);
+                      if (error) { toast.error(`No se pudo guardar: ${error.message}`); return; }
+                      setFondoGuardado({ fondo: f, deposito: Math.max(result.counted_cash - f, 0) });
+                    }}
+                  >
+                    {savingFondo ? "Guardando…" : "Guardar distribución"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={onClosed}>Omitir</Button>
+                </div>
+              </div>
+            )}
             <Button onClick={onClosed} className="w-full" size="lg">
               Finalizar
             </Button>
