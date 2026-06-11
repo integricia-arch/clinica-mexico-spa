@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Lock, TrendingUp, TrendingDown, Minus,
-  AlertTriangle, CheckCircle, Heart, Info,
+  AlertTriangle, CheckCircle, Heart, Info, Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { OpenTurno } from "@/components/TurnoGuard";
+import { printActaArqueo } from "@/lib/printActaArqueo";
 
 interface CloseResult {
   corte_id: string;
@@ -36,7 +38,8 @@ const fmt = (n: number) =>
   Number(n).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
 export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
-  const { activeClinicId } = useActiveClinic();
+  const { activeClinic } = useActiveClinic();
+  const { user } = useAuth();
   const [count, setCount] = useState("0");
   const [notes, setNotes] = useState("");
   const [step, setStep] = useState<Step>("count");
@@ -212,7 +215,7 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
               notes={notes}
               diff={overrideData.diff}
               umbral={overrideData.umbral}
-              clinicId={activeClinicId ?? ""}
+              clinicId={activeClinic?.id ?? ""}
               onSuccess={(data) => {
                 const r = data as CloseResult;
                 setResult(r);
@@ -326,6 +329,27 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
                 </div>
               </div>
             )}
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => printActaArqueo({
+                folio: result.folio,
+                cajaNombre: turno.caja_nombre,
+                clinicName: activeClinic?.name,
+                cajeroName: user?.email ?? undefined,
+                fechaCierre: new Date().toISOString(),
+                openingAmount: result.opening_amount,
+                cashTotal: result.cash_total,
+                expectedCash: result.expected_cash,
+                countedCash: result.counted_cash,
+                difference: result.difference,
+                supervisorOverride: result.supervisor_override,
+                fondoSiguiente: fondoGuardado?.fondo,
+                efectivoDeposito: fondoGuardado?.deposito,
+              })}
+            >
+              <Printer className="h-4 w-4" /> Imprimir acta de arqueo
+            </Button>
             <Button onClick={onClosed} className="w-full" size="lg">
               Finalizar
             </Button>

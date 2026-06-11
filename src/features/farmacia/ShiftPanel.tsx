@@ -14,9 +14,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown, Info, CheckCircle } from "lucide-react";
+import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown, Info, CheckCircle, Printer } from "lucide-react";
 import { friendlyError } from "@/lib/errors";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { printActaArqueo } from "@/lib/printActaArqueo";
 
 const formatMXN = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -144,6 +146,8 @@ export function CloseShiftDialog({
   onClosed: () => void;
 }) {
   const { toast } = useToast();
+  const { activeClinic } = useActiveClinic();
+  const { user } = useAuth();
   const [count, setCount] = useState("0");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -316,6 +320,27 @@ export function CloseShiftDialog({
               </div>
             </div>
           )}
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => printActaArqueo({
+              folio: result.folio,
+              cajaNombre: "Farmacia",
+              clinicName: activeClinic?.name,
+              cajeroName: user?.email ?? undefined,
+              fechaCierre: new Date().toISOString(),
+              openingAmount: result.opening_amount,
+              cashTotal: result.cash_total_sales,
+              expectedCash: result.expected_cash,
+              countedCash: result.counted_cash,
+              difference: result.difference,
+              supervisorOverride: result.supervisor_override,
+              fondoSiguiente: fondoGuardado?.fondo,
+              efectivoDeposito: fondoGuardado?.deposito,
+            })}
+          >
+            <Printer className="h-4 w-4" /> Imprimir acta de arqueo
+          </Button>
           <DialogFooter>
             <Button onClick={handleClosed}>Cerrar</Button>
           </DialogFooter>

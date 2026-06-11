@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Timer, PlayCircle, StopCircle, AlertCircle, Lock, TrendingUp, TrendingDown,
-  Minus, ArrowUpDown, FileBarChart2, ChevronDown, ChevronRight, Info, CheckCircle,
+  Minus, ArrowUpDown, FileBarChart2, ChevronDown, ChevronRight, Info, CheckCircle, Printer,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { printActaArqueo } from "@/lib/printActaArqueo";
 
 const fmt = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -130,7 +131,8 @@ function CloseTurnoDialog({
 }: {
   open: boolean; turno: Turno | null; onClose: () => void; onClosed: () => void;
 }) {
-  const { activeClinicId } = useActiveClinic();
+  const { activeClinic } = useActiveClinic();
+  const { user } = useAuth();
   const [count, setCount] = useState("0");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -281,6 +283,27 @@ function CloseTurnoDialog({
               </div>
             </div>
           )}
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => printActaArqueo({
+              folio: result.folio,
+              cajaNombre: turno?.caja_nombre ?? "Caja",
+              clinicName: activeClinic?.name,
+              cajeroName: user?.email ?? undefined,
+              fechaCierre: new Date().toISOString(),
+              openingAmount: result.opening_amount,
+              cashTotal: result.cash_total,
+              expectedCash: result.expected_cash,
+              countedCash: result.counted_cash,
+              difference: result.difference,
+              supervisorOverride: result.supervisor_override,
+              fondoSiguiente: fondoGuardado?.fondo,
+              efectivoDeposito: fondoGuardado?.deposito,
+            })}
+          >
+            <Printer className="h-4 w-4" /> Imprimir acta de arqueo
+          </Button>
           <DialogFooter><Button onClick={handleClosed}>Cerrar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -325,7 +348,7 @@ function CloseTurnoDialog({
             notes={notes}
             diff={overridePrompt?.diff ?? 0}
             umbral={overridePrompt?.umbral ?? 0}
-            clinicId={turno?.clinic_id ?? activeClinicId ?? ""}
+            clinicId={turno?.clinic_id ?? activeClinic?.id ?? ""}
             onSuccess={(data) => {
               const r = data as CloseResult;
               setResult(r);
