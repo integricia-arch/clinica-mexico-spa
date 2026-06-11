@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import type { OpenTurno } from "@/components/TurnoGuard";
 import { printActaArqueo } from "@/lib/printActaArqueo";
+import TarjetaTpvReconcile from "@/components/turno/TarjetaTpvReconcile";
 
 interface CloseResult {
   corte_id: string;
@@ -350,6 +351,7 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
             >
               <Printer className="h-4 w-4" /> Imprimir acta de arqueo
             </Button>
+            <TarjetaTpvReconcile corteId={result.corte_id} />
             <Button onClick={onClosed} className="w-full" size="lg">
               Finalizar
             </Button>

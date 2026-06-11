@@ -19,6 +19,7 @@ import { friendlyError } from "@/lib/errors";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { printActaArqueo } from "@/lib/printActaArqueo";
+import TarjetaTpvReconcile from "@/components/turno/TarjetaTpvReconcile";
 
 const formatMXN = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -341,6 +342,7 @@ export function CloseShiftDialog({
           >
             <Printer className="h-4 w-4" /> Imprimir acta de arqueo
           </Button>
+          <TarjetaTpvReconcile corteId={result.corte_id} />
           <DialogFooter>
             <Button onClick={handleClosed}>Cerrar</Button>
           </DialogFooter>
