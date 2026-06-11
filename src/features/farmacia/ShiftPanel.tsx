@@ -20,6 +20,7 @@ import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { printActaArqueo } from "@/lib/printActaArqueo";
 import PagoReconcile from "@/components/turno/PagoReconcile";
+import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
 
 const formatMXN = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -158,6 +159,7 @@ export function CloseShiftDialog({
   const [fondoInput, setFondoInput] = useState("");
   const [fondoGuardado, setFondoGuardado] = useState<{ fondo: number; deposito: number } | null>(null);
   const [savingFondo, setSavingFondo] = useState(false);
+  const [denomBreakdown, setDenomBreakdown] = useState<DenomBreakdown>({});
 
   useEffect(() => {
     if (!open || !shift) return;
@@ -338,6 +340,7 @@ export function CloseShiftDialog({
               supervisorOverride: result.supervisor_override,
               fondoSiguiente: fondoGuardado?.fondo,
               efectivoDeposito: fondoGuardado?.deposito,
+              denominaciones: Object.keys(denomBreakdown).length > 0 ? denomBreakdown : undefined,
             })}
           >
             <Printer className="h-4 w-4" /> Imprimir acta de arqueo
@@ -384,6 +387,12 @@ export function CloseShiftDialog({
               autoFocus
             />
           </div>
+          <DenominacionCounter
+            onTotal={(total, breakdown) => {
+              if (total > 0) setCount(String(total));
+              setDenomBreakdown(breakdown);
+            }}
+          />
           <div className="space-y-1">
             <Label className="text-xs">Notas del cierre</Label>
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />

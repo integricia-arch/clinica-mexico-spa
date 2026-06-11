@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { printActaArqueo } from "@/lib/printActaArqueo";
 import PagoReconcile from "@/components/turno/PagoReconcile";
+import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
 
 const fmt = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -143,6 +144,7 @@ function CloseTurnoDialog({
   const [fondoInput, setFondoInput] = useState("");
   const [fondoGuardado, setFondoGuardado] = useState<{ fondo: number; deposito: number } | null>(null);
   const [savingFondo, setSavingFondo] = useState(false);
+  const [denomBreakdown, setDenomBreakdown] = useState<DenomBreakdown>({});
 
   useEffect(() => {
     if (!open || !turno) return;
@@ -301,6 +303,7 @@ function CloseTurnoDialog({
               supervisorOverride: result.supervisor_override,
               fondoSiguiente: fondoGuardado?.fondo,
               efectivoDeposito: fondoGuardado?.deposito,
+              denominaciones: Object.keys(denomBreakdown).length > 0 ? denomBreakdown : undefined,
             })}
           >
             <Printer className="h-4 w-4" /> Imprimir acta de arqueo
@@ -340,6 +343,12 @@ function CloseTurnoDialog({
             <Input type="number" min={0} step="0.01" value={count}
               onChange={(e) => setCount(e.target.value)} className="h-11 text-base" autoFocus />
           </div>
+          <DenominacionCounter
+            onTotal={(total, breakdown) => {
+              if (total > 0) setCount(String(total));
+              setDenomBreakdown(breakdown);
+            }}
+          />
           <div className="space-y-1">
             <Label className="text-xs">Notas del cierre</Label>
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />

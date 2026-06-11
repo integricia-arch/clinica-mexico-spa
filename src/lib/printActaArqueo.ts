@@ -12,6 +12,7 @@ export interface ActaArqueoData {
   supervisorOverride: boolean;
   fondoSiguiente?: number;
   efectivoDeposito?: number;
+  denominaciones?: Record<string, number>; // denomination string → quantity
 }
 
 const mxn = (n: number) =>
@@ -28,6 +29,21 @@ export function printActaArqueo(data: ActaArqueoData): void {
   const folio = `Z-${String(data.folio).padStart(6, "0")}`;
   const diffLabel = data.difference === 0 ? "CUADRADO" : data.difference > 0 ? "SOBRANTE" : "FALTANTE";
   const diffSign = data.difference > 0 ? "+" : "";
+
+  const denomRows = (() => {
+    const d = data.denominaciones;
+    if (!d || Object.keys(d).length === 0) return "";
+    const ORDER = [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, 0.5];
+    const rows = ORDER.filter((k) => d[String(k)] > 0).map((k) => {
+      const qty = d[String(k)];
+      const sub = k * qty;
+      const label = k < 1 ? `$${k.toFixed(2)}` : `$${k.toLocaleString("es-MX")}`;
+      return `<tr><td class="label">${label} × ${qty}</td><td class="num">${mxn(sub)}</td></tr>`;
+    });
+    return rows.length > 0
+      ? `<section><h2>Desglose de denominaciones</h2><table>${rows.join("")}</table></section>`
+      : "";
+  })();
 
   const distribucionRows = data.fondoSiguiente !== undefined
     ? `
@@ -124,6 +140,8 @@ ${data.clinicName ? `<p class="clinic">${data.clinicName}</p>` : ""}
   </table>
   ${data.supervisorOverride ? `<p class="supervisor-note">* Diferencia autorizada por supervisor</p>` : ""}
 </section>
+
+${denomRows}
 
 <section>
   <h2>Distribución del efectivo</h2>

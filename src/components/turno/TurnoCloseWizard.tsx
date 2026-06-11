@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import type { OpenTurno } from "@/components/TurnoGuard";
 import { printActaArqueo } from "@/lib/printActaArqueo";
 import PagoReconcile from "@/components/turno/PagoReconcile";
+import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
 
 interface CloseResult {
   corte_id: string;
@@ -51,6 +52,7 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
   const [fondoInput, setFondoInput] = useState("");
   const [fondoGuardado, setFondoGuardado] = useState<{ fondo: number; deposito: number } | null>(null);
   const [savingFondo, setSavingFondo] = useState(false);
+  const [denomBreakdown, setDenomBreakdown] = useState<DenomBreakdown>({});
 
   useEffect(() => {
     supabase
@@ -165,6 +167,12 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
                 autoFocus
               />
             </div>
+            <DenominacionCounter
+              onTotal={(total, breakdown) => {
+                if (total > 0) setCount(String(total));
+                setDenomBreakdown(breakdown);
+              }}
+            />
             <div className="space-y-1.5">
               <Label htmlFor="close-notes">Notas (opcional)</Label>
               <Textarea
@@ -347,6 +355,7 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
                 supervisorOverride: result.supervisor_override,
                 fondoSiguiente: fondoGuardado?.fondo,
                 efectivoDeposito: fondoGuardado?.deposito,
+                denominaciones: Object.keys(denomBreakdown).length > 0 ? denomBreakdown : undefined,
               })}
             >
               <Printer className="h-4 w-4" /> Imprimir acta de arqueo
