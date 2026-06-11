@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import type { Tables } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
+import { useFieldErrors } from "@/hooks/useFieldErrors";
 
 type Patient = Tables<"patients">;
 
@@ -53,6 +54,7 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const isEdit = !!patient;
+  const { markErrors, clearError, errorClass, resetErrors } = useFieldErrors();
 
   useEffect(() => {
     if (patient) {
@@ -79,14 +81,19 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
     } else {
       setForm(EMPTY_FORM);
     }
+    resetErrors();
   }, [patient, open]);
 
   const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const handleSubmit = async () => {
-    if (!form.nombre.trim() || !form.apellidos.trim()) {
-      toast({ variant: "destructive", title: "Error", description: "Nombre y apellidos son requeridos" });
+    const missing: string[] = [];
+    if (!form.nombre.trim()) missing.push("nombre");
+    if (!form.apellidos.trim()) missing.push("apellidos");
+    if (missing.length) {
+      markErrors(missing);
+      toast({ variant: "destructive", title: "Campos requeridos", description: "Completa los campos marcados en rojo" });
       return;
     }
 
@@ -153,10 +160,22 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
           <Section title="Datos personales">
             <div className="grid grid-cols-2 gap-4">
               <Field label="Nombre *">
-                <Input value={form.nombre} onChange={set("nombre")} placeholder="Juan" />
+                <Input
+                  id="field-nombre"
+                  value={form.nombre}
+                  onChange={(e) => { clearError("nombre"); set("nombre")(e); }}
+                  placeholder="Juan"
+                  className={errorClass("nombre")}
+                />
               </Field>
               <Field label="Apellidos *">
-                <Input value={form.apellidos} onChange={set("apellidos")} placeholder="García López" />
+                <Input
+                  id="field-apellidos"
+                  value={form.apellidos}
+                  onChange={(e) => { clearError("apellidos"); set("apellidos")(e); }}
+                  placeholder="García López"
+                  className={errorClass("apellidos")}
+                />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-4">

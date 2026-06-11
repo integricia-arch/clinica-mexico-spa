@@ -162,6 +162,7 @@ export default function PuntoDeVenta({
 
   const [recetaModalOpen, setRecetaModalOpen] = useState(false);
   const [recetaMedsInfo, setRecetaMedsInfo] = useState<{ nombre: string; controlado: boolean }[]>([]);
+  const [pendingRxSaleId, setPendingRxSaleId] = useState<string | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
   const [breakdown, setBreakdown] = useState<PaymentBreakdown>(() => emptyBreakdown(0));
@@ -415,8 +416,11 @@ export default function PuntoDeVenta({
   }, [payment, total]);
 
 
-  async function submitSale(recetaData: RecetaData | null = null) {
+  async function submitSale() {
     if (!perms.canPosSell || cart.length === 0) return;
+    const rxMeds = cart.filter(
+      (c) => c.med.requiere_receta || c.med.controlado || c.med.is_controlled || !!blockReasonForDirectSale(c.med),
+    );
 
     // Bloqueo PCI: nunca aceptar número completo de tarjeta en ningún campo.
     if (
@@ -440,8 +444,8 @@ export default function PuntoDeVenta({
     setSubmitting(true);
     const payload = {
       clinic_id: activeClinicId,
-      sale_type: recetaData !== null ? "prescription_dispense" : "direct_sale",
-      receta_capturada: recetaData !== null,
+      sale_type: rxMeds.length > 0 ? "prescription_dispense" : "direct_sale",
+      receta_capturada: false,
       patient_id: clienteTipo === "paciente" ? patientId || null : null,
       customer_name: clienteTipo === "publico" ? (customerName || "Público general") : null,
       payment_method: payment,
@@ -469,26 +473,6 @@ export default function PuntoDeVenta({
       await copyToClipboard(detail);
       toast({ title: "Error al registrar venta", description: error.message, variant: "destructive", duration: 10000 });
       return;
-    }
-
-    // Inserta receta capturada si aplica
-    if (recetaData && saleId) {
-      await supabase.from("recetas_capturadas").insert({
-        clinic_id: activeClinicId,
-        sale_id: saleId as unknown as string,
-        nombre_medico: recetaData.nombre_medico,
-        cedula_profesional: recetaData.cedula_profesional,
-        especialidad: recetaData.especialidad || null,
-        fecha_receta: recetaData.fecha_receta,
-        folio_receta: recetaData.folio_receta || null,
-        nombre_paciente: recetaData.nombre_paciente || null,
-        diagnostico: recetaData.diagnostico || null,
-        receta_retenida: recetaData.receta_retenida,
-        grupo: recetaData.grupo,
-        folio_cofepris: recetaData.folio_cofepris || null,
-        notas: recetaData.notas || null,
-        created_by: user?.id ?? null,
-      } as never);
     }
 
     // Inserta el desglose de pagos (pharmacy_sale_payments)
@@ -580,21 +564,40 @@ export default function PuntoDeVenta({
       .from("lotes_medicamento").select("*").gt("existencia", 0).order("created_at");
     setLotes((l as Lote[]) ?? []);
     inputRef.current?.focus();
-  }
 
-  function handleCobrar() {
-    const medsNeedingRx = cart.filter(
-      (c) => c.med.requiere_receta || c.med.controlado || c.med.is_controlled || !!blockReasonForDirectSale(c.med),
-    );
-    if (medsNeedingRx.length > 0) {
-      setRecetaMedsInfo(medsNeedingRx.map((c) => ({
+    if (rxMeds.length > 0) {
+      setPendingRxSaleId(saleId as unknown as string);
+      setRecetaMedsInfo(rxMeds.map((c) => ({
         nombre: c.med.nombre,
         controlado: !!(c.med.controlado || c.med.is_controlled),
       })));
       setRecetaModalOpen(true);
-      return;
     }
-    submitSale(null);
+  }
+
+  async function saveRecetaPostSale(recetaData: RecetaData) {
+    if (!pendingRxSaleId) return;
+    await supabase.from("recetas_capturadas").insert({
+      clinic_id: activeClinicId,
+      sale_id: pendingRxSaleId,
+      nombre_medico: recetaData.nombre_medico,
+      cedula_profesional: recetaData.cedula_profesional,
+      especialidad: recetaData.especialidad || null,
+      fecha_receta: recetaData.fecha_receta,
+      folio_receta: recetaData.folio_receta || null,
+      nombre_paciente: recetaData.nombre_paciente || null,
+      diagnostico: recetaData.diagnostico || null,
+      receta_retenida: recetaData.receta_retenida,
+      grupo: recetaData.grupo,
+      folio_cofepris: recetaData.folio_cofepris || null,
+      notas: recetaData.notas || null,
+      created_by: user?.id ?? null,
+    } as never);
+    setPendingRxSaleId(null);
+  }
+
+  function handleCobrar() {
+    submitSale();
   }
 
   if (!perms.canPosView) {
@@ -673,14 +676,12 @@ export default function PuntoDeVenta({
           </summary>
           <div className="grid grid-cols-2 gap-1.5 p-2 border-t border-border">
             {frecuentes.map((m) => {
-              const blocked = !!blockReasonForDirectSale(m);
               return (
                 <button
                   key={m.id}
                   type="button"
-                  disabled={blocked}
                   onClick={() => addToCart(m)}
-                  className="text-left rounded-md border border-border bg-background px-3 py-3 min-h-[64px] hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="text-left rounded-md border border-border bg-background px-3 py-3 min-h-[64px] hover:bg-accent transition-colors"
                 >
                   <p className="text-sm font-medium truncate leading-tight">{m.nombre}</p>
                   <p className="text-xs text-muted-foreground flex justify-between mt-1">
@@ -742,14 +743,12 @@ export default function PuntoDeVenta({
               ) : (
                 <div className="space-y-1.5">
                   {frecuentes.map((m) => {
-                    const blocked = !!blockReasonForDirectSale(m);
                     return (
                       <button
                         key={m.id}
                         type="button"
-                        disabled={blocked}
                         onClick={() => addToCart(m)}
-                        className="w-full text-left rounded-md border border-border bg-card px-3 py-3 min-h-[52px] hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="w-full text-left rounded-md border border-border bg-card px-3 py-3 min-h-[52px] hover:bg-accent transition-colors"
                       >
                         <p className="text-base font-medium truncate leading-tight">{m.nombre}</p>
                         <div className="flex items-center justify-between mt-0.5 gap-1">
@@ -784,13 +783,12 @@ export default function PuntoDeVenta({
                   <p className="text-xs text-muted-foreground">Sin resultados.</p>
                 ) : (
                   catalogFiltered.map((m) => {
-                    const blocked = !!blockReasonForDirectSale(m);
                     const stock = stockOf(m.id);
                     return (
                       <button
                         key={m.id}
                         type="button"
-                        disabled={blocked || stock === 0}
+                        disabled={stock === 0}
                         onClick={() => addToCart(m)}
                         className="w-full text-left rounded-md border border-border bg-card px-3 py-3 min-h-[72px] hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
@@ -996,8 +994,8 @@ export default function PuntoDeVenta({
       {recetaModalOpen && (
         <RecetaValidacionModal
           medsConReceta={recetaMedsInfo}
-          onConfirm={(data) => { setRecetaModalOpen(false); submitSale(data); }}
-          onCancel={() => setRecetaModalOpen(false)}
+          onConfirm={(data) => { setRecetaModalOpen(false); saveRecetaPostSale(data); }}
+          onCancel={() => { setRecetaModalOpen(false); setPendingRxSaleId(null); }}
         />
       )}
       <TicketInterno open={ticketOpen} onClose={() => setTicketOpen(false)} data={ticketData} />

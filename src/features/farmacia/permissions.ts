@@ -14,7 +14,7 @@ const has = (roles: AppRole[], r: AppRole) => roles.includes(r);
 export const posPermissions = (roles: AppRole[]) => {
   const isAdmin = has(roles, "admin");
   const isManager = isAdmin || has(roles, "manager");
-  const isCashier = isManager || has(roles, "receptionist") || has(roles, "nurse");
+  const isCashier = isManager || has(roles, "cajero") || has(roles, "receptionist") || has(roles, "nurse");
 
   return {
     isAdmin,

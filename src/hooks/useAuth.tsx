@@ -58,11 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          // TOKEN_REFRESHED e INITIAL_SESSION no requieren re-fetch de roles:
+          // evitar setLoading(true) para no desmontar páginas activas y perder estado.
+          if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") return;
           setLoading(true);
-          // Defer para evitar deadlock del cliente de Supabase
           setTimeout(() => {
-            // Solo forzamos refresh manual en USER_UPDATED (cambio de claims).
-            // SIGNED_IN ya trae token fresco y TOKEN_REFRESHED provocaría un bucle infinito.
             if (event === "USER_UPDATED") {
               refreshSessionAndRoles(session.user.id).finally(() => setLoading(false));
             } else {

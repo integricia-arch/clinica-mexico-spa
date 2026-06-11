@@ -33,6 +33,7 @@ export function useSidebarState() {
   }, [isTablet]);
 
   const close = useCallback(() => setIsOpen(false), []);
+  const openDrawer = useCallback(() => setIsOpen(true), []);
 
-  return { isOpen, isCollapsed, toggle, close, isTablet };
+  return { isOpen, isCollapsed, toggle, close, openDrawer, isTablet };
 }
