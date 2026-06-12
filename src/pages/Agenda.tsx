@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/errors";
+import NuevaCitaDialog from "@/components/agenda/NuevaCitaDialog";
 
 const horas = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00"];
 
@@ -79,6 +80,7 @@ export default function Agenda() {
   const [seleccionada, setSeleccionada] = useState<Cita | null>(null);
   const [loading, setLoading] = useState(false);
   const [accion, setAccion] = useState(false);
+  const [showNueva, setShowNueva] = useState(false);
 
   const loadAppointments = async () => {
     setLoading(true);
@@ -138,7 +140,10 @@ export default function Agenda() {
           <h1 className="text-display text-2xl font-bold text-foreground">Agenda</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gestión de citas y consultorios</p>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-lg gradient-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-card hover:opacity-90 transition-opacity">
+        <button
+          onClick={() => setShowNueva(true)}
+          className="inline-flex items-center gap-2 rounded-lg gradient-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-card hover:opacity-90 transition-opacity"
+        >
           <Plus className="h-4 w-4" /> Nueva cita
         </button>
       </div>
@@ -331,6 +336,13 @@ export default function Agenda() {
           )}
         </DialogContent>
       </Dialog>
+
+      <NuevaCitaDialog
+        open={showNueva}
+        defaultDate={fecha.toISOString().slice(0, 10)}
+        onSuccess={() => { setShowNueva(false); loadAppointments(); }}
+        onCancel={() => setShowNueva(false)}
+      />
     </div>
   );
 }

@@ -10,9 +10,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Globe, Send, MessageCircle, Phone } from "lucide-react";
+import { Globe, Send, MessageCircle, Phone, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import NuevaCitaDialog from "@/components/agenda/NuevaCitaDialog";
 
 type Status = "solicitada" | "confirmada" | "cancelada" | "recordatorio_enviado";
 const STATUSES: Status[] = ["solicitada", "confirmada", "recordatorio_enviado", "cancelada"];
@@ -73,6 +74,7 @@ export default function Citas() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Cita | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [showNueva, setShowNueva] = useState(false);
 
   useEffect(() => {
     supabase.from("doctors").select("id,nombre,apellidos,activo").eq("activo", true)
@@ -134,9 +136,14 @@ export default function Citas() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-display text-2xl font-bold">Citas</h1>
-        <p className="text-sm text-muted-foreground">Gestión de citas programadas</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-display text-2xl font-bold">Citas</h1>
+          <p className="text-sm text-muted-foreground">Gestión de citas programadas</p>
+        </div>
+        <Button onClick={() => setShowNueva(true)} className="gap-2">
+          <Plus className="h-4 w-4" /> Nueva cita
+        </Button>
       </div>
 
       {/* Filtros */}
@@ -284,6 +291,12 @@ export default function Citas() {
           )}
         </DialogContent>
       </Dialog>
+
+      <NuevaCitaDialog
+        open={showNueva}
+        onSuccess={() => { setShowNueva(false); fetchCitas(); }}
+        onCancel={() => setShowNueva(false)}
+      />
     </div>
   );
 }
