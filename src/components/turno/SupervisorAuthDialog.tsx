@@ -37,6 +37,7 @@ const fmt = (n: number) =>
 
 export default function SupervisorAuthDialog({
   open, turnoId, cashCount, notes, diff, umbral, clinicId,
+  mode = "turno",
   onSuccess, onCancel,
 }: Props) {
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
@@ -102,16 +103,33 @@ export default function SupervisorAuthDialog({
         setSubmitting(false);
         return;
       }
-      const { data, error: closeErr } = await supabase.rpc("turno_close", {
-        p_turno_id: turnoId,
-        p_cash_count: cashCount,
-        p_notes: notes || null,
-        p_supervisor_override: true,
-      } as never);
+      let closeData: unknown;
+      let closeErr: { message: string } | null;
+      if (mode === "pharmacy") {
+        const res = await supabase.rpc("pharmacy_close_shift", {
+          p_shift_id: turnoId,
+          p_cash_count: cashCount,
+          p_notes: notes || null,
+          p_supervisor_override: true,
+          p_supervisor_id: selected.user_id,
+        } as never);
+        closeData = res.data;
+        closeErr = res.error;
+      } else {
+        const res = await supabase.rpc("turno_close", {
+          p_turno_id: turnoId,
+          p_cash_count: cashCount,
+          p_notes: notes || null,
+          p_supervisor_override: true,
+          p_supervisor_id: selected.user_id,
+        } as never);
+        closeData = res.data;
+        closeErr = res.error;
+      }
       setSubmitting(false);
       if (closeErr) { setError(closeErr.message); return; }
       toast.success("Turno cerrado con autorización de supervisor");
-      onSuccess(data);
+      onSuccess(closeData);
     }
   }
 
