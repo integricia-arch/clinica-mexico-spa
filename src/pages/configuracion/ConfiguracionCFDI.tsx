@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Save, CheckCircle2, AlertCircle, Loader2, Upload } from "lucide-react";
+import {
+  ArrowLeft, FileText, Save, CheckCircle2, AlertCircle, Loader2,
+  Upload, File, X,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
@@ -47,6 +50,8 @@ interface CfdiConfigRow {
   pac_contrasena: string;
   csd_cer_nombre: string;
   csd_key_nombre: string;
+  csd_cer_path: string;
+  csd_key_path: string;
   csd_contrasena: string;
   iva_default: string;
   zona_fronteriza: boolean;
@@ -56,7 +61,8 @@ const EMPTY: CfdiConfigRow = {
   rfc: "", razon_social: "", regimen_fiscal: "601", domicilio_fiscal_cp: "",
   serie_defecto: "A", pac_proveedor: "facturama", pac_ambiente: "sandbox",
   pac_usuario: "", pac_contrasena: "", csd_cer_nombre: "", csd_key_nombre: "",
-  csd_contrasena: "", iva_default: "0.16", zona_fronteriza: false,
+  csd_cer_path: "", csd_key_path: "", csd_contrasena: "",
+  iva_default: "0.16", zona_fronteriza: false,
 };
 
 export default function ConfiguracionCFDI() {
@@ -68,6 +74,11 @@ export default function ConfiguracionCFDI() {
   const [saving, setSaving] = useState(false);
   const [testando, setTestando] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
+  const [cerFile, setCerFile] = useState<File | null>(null);
+  const [keyFile, setKeyFile] = useState<File | null>(null);
+  const [uploadingCsd, setUploadingCsd] = useState(false);
+  const cerInputRef = useRef<HTMLInputElement>(null);
+  const keyInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!activeClinicId) return;
@@ -92,6 +103,8 @@ export default function ConfiguracionCFDI() {
           pac_contrasena: "",
           csd_cer_nombre: (data as any).csd_cer_nombre ?? "",
           csd_key_nombre: (data as any).csd_key_nombre ?? "",
+          csd_cer_path: (data as any).csd_cer_path ?? "",
+          csd_key_path: (data as any).csd_key_path ?? "",
           csd_contrasena: "",
           iva_default: String((data as any).iva_default ?? "0.16"),
           zona_fronteriza: (data as any).zona_fronteriza ?? false,
@@ -112,6 +125,37 @@ export default function ConfiguracionCFDI() {
     if (!form.domicilio_fiscal_cp.trim()) { toast.error("CP del domicilio fiscal es obligatorio"); return; }
 
     setSaving(true);
+    // Upload CSD files if selected
+    let cerPath = form.csd_cer_path;
+    let keyPath = form.csd_key_path;
+    if ((cerFile || keyFile) && activeClinicId) {
+      setUploadingCsd(true);
+      try {
+        if (cerFile) {
+          const path = `${activeClinicId}/emisor.cer`;
+          const { error: upErr } = await supabase.storage
+            .from("csd-files")
+            .upload(path, cerFile, { upsert: true, contentType: "application/octet-stream" });
+          if (upErr) throw new Error("Error subiendo .cer: " + upErr.message);
+          cerPath = path;
+        }
+        if (keyFile) {
+          const path = `${activeClinicId}/emisor.key`;
+          const { error: upErr } = await supabase.storage
+            .from("csd-files")
+            .upload(path, keyFile, { upsert: true, contentType: "application/octet-stream" });
+          if (upErr) throw new Error("Error subiendo .key: " + upErr.message);
+          keyPath = path;
+        }
+      } catch (err: any) {
+        toast.error(err.message);
+        setSaving(false);
+        setUploadingCsd(false);
+        return;
+      }
+      setUploadingCsd(false);
+    }
+
     const payload: Record<string, any> = {
       clinic_id: activeClinicId,
       rfc: form.rfc.toUpperCase().trim(),
@@ -122,8 +166,10 @@ export default function ConfiguracionCFDI() {
       pac_proveedor: form.pac_proveedor,
       pac_ambiente: form.pac_ambiente,
       pac_usuario: form.pac_usuario.trim(),
-      csd_cer_nombre: form.csd_cer_nombre.trim(),
-      csd_key_nombre: form.csd_key_nombre.trim(),
+      csd_cer_nombre: cerFile ? cerFile.name : form.csd_cer_nombre.trim(),
+      csd_key_nombre: keyFile ? keyFile.name : form.csd_key_nombre.trim(),
+      csd_cer_path: cerPath,
+      csd_key_path: keyPath,
       iva_default: parseFloat(form.iva_default) || 0.16,
       zona_fronteriza: form.zona_fronteriza,
     };
@@ -137,7 +183,15 @@ export default function ConfiguracionCFDI() {
     setSaving(false);
     if (error) { toast.error("Error al guardar: " + error.message); return; }
     toast.success("Configuración CFDI guardada");
-    setForm((prev) => ({ ...prev, pac_contrasena: "", csd_contrasena: "" }));
+    setCerFile(null);
+    setKeyFile(null);
+    setForm((prev) => ({
+      ...prev,
+      pac_contrasena: "",
+      csd_contrasena: "",
+      csd_cer_path: cerPath,
+      csd_key_path: keyPath,
+    }));
   };
 
   const handleTestPAC = async () => {
@@ -268,22 +322,74 @@ export default function ConfiguracionCFDI() {
           <h2 className="font-semibold text-card-foreground">Certificado de Sello Digital (CSD)</h2>
         </div>
         <p className="text-xs text-muted-foreground -mt-2">
-          Los archivos .cer y .key los proporciona el SAT. La carga directa de archivos estará disponible en la siguiente versión.
-          Por ahora registra los nombres de los archivos para referencia.
+          Archivos .cer y .key emitidos por el SAT. Se almacenan en un bucket privado cifrado.
         </p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* .cer */}
           <div>
-            <Label htmlFor="csd_cer_nombre">Nombre archivo .cer</Label>
-            <Input id="csd_cer_nombre" value={form.csd_cer_nombre}
-              onChange={(e) => set("csd_cer_nombre", e.target.value)}
-              placeholder="mi_certificado.cer" />
+            <Label>Archivo .cer</Label>
+            <input
+              ref={cerInputRef}
+              type="file"
+              accept=".cer,application/x-x509-ca-cert"
+              className="hidden"
+              onChange={(e) => setCerFile(e.target.files?.[0] ?? null)}
+            />
+            {cerFile ? (
+              <div className="mt-1 flex items-center gap-2 rounded-md border border-success/40 bg-success/5 px-3 py-2 text-sm">
+                <File className="h-4 w-4 text-success shrink-0" />
+                <span className="truncate text-success">{cerFile.name}</span>
+                <button onClick={() => { setCerFile(null); if (cerInputRef.current) cerInputRef.current.value = ""; }}
+                  className="ml-auto text-muted-foreground hover:text-destructive">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => cerInputRef.current?.click()}
+                className="mt-1 flex w-full items-center gap-2 rounded-md border border-dashed border-input px-3 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                {form.csd_cer_path
+                  ? <span className="truncate text-success">{form.csd_cer_nombre || "emisor.cer"} (subido)</span>
+                  : "Seleccionar .cer"}
+              </button>
+            )}
           </div>
+
+          {/* .key */}
           <div>
-            <Label htmlFor="csd_key_nombre">Nombre archivo .key</Label>
-            <Input id="csd_key_nombre" value={form.csd_key_nombre}
-              onChange={(e) => set("csd_key_nombre", e.target.value)}
-              placeholder="mi_llave.key" />
+            <Label>Archivo .key</Label>
+            <input
+              ref={keyInputRef}
+              type="file"
+              accept=".key"
+              className="hidden"
+              onChange={(e) => setKeyFile(e.target.files?.[0] ?? null)}
+            />
+            {keyFile ? (
+              <div className="mt-1 flex items-center gap-2 rounded-md border border-success/40 bg-success/5 px-3 py-2 text-sm">
+                <File className="h-4 w-4 text-success shrink-0" />
+                <span className="truncate text-success">{keyFile.name}</span>
+                <button onClick={() => { setKeyFile(null); if (keyInputRef.current) keyInputRef.current.value = ""; }}
+                  className="ml-auto text-muted-foreground hover:text-destructive">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => keyInputRef.current?.click()}
+                className="mt-1 flex w-full items-center gap-2 rounded-md border border-dashed border-input px-3 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                {form.csd_key_path
+                  ? <span className="truncate text-success">{form.csd_key_nombre || "emisor.key"} (subido)</span>
+                  : "Seleccionar .key"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -294,6 +400,12 @@ export default function ConfiguracionCFDI() {
             placeholder="Deja en blanco para no cambiar" autoComplete="new-password" />
           <p className="mt-1 text-xs text-muted-foreground">Se guarda de forma protegida. Solo déjala en blanco si no quieres modificarla.</p>
         </div>
+
+        {uploadingCsd && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Subiendo archivos CSD…
+          </div>
+        )}
       </section>
 
       {/* PAC */}

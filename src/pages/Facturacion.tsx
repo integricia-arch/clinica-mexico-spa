@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Search, Plus, Download, FileText, MoreHorizontal,
-  ExternalLink, Loader2, RefreshCw, Copy, Check,
+  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { toast } from "sonner";
 import TimbrarCFDIDialog from "@/features/facturacion/TimbrarCFDIDialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface CfdiDoc {
   id: string;
@@ -30,6 +35,13 @@ interface CfdiDoc {
 }
 
 const TIPO_LABEL: Record<string, string> = { I: "Ingreso", E: "Egreso", P: "Pago", N: "Nómina" };
+
+const MOTIVOS_CANCELACION = [
+  { value: "01", label: "01 — Comprobante emitido con errores con relación" },
+  { value: "02", label: "02 — Comprobante emitido con errores sin relación" },
+  { value: "03", label: "03 — No se llevó a cabo la operación" },
+  { value: "04", label: "04 — Operación nominativa relacionada en factura global" },
+];
 const STATUS_COLOR: Record<string, string> = {
   vigente:   "bg-success/10 text-success",
   cancelado: "bg-destructive/10 text-destructive",
@@ -50,6 +62,10 @@ export default function Facturacion() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [cancelDoc, setCancelDoc] = useState<CfdiDoc | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState<string>("02");
+  const [cancelSustitucion, setCancelSustitucion] = useState("");
+  const [canceling, setCanceling] = useState(false);
 
   const load = useCallback(async () => {
     if (!activeClinicId) return;
@@ -128,6 +144,48 @@ export default function Facturacion() {
   const handleSuccess = (_cfdiId: string, uuid: string) => {
     toast.success(`CFDI registrado — UUID: ${uuid}`);
     load();
+  };
+
+  const handleCancelar = async () => {
+    if (!cancelDoc || !activeClinicId) return;
+    setCanceling(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sin sesión");
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cfdi-cancelar`;
+      const body: Record<string, string> = {
+        clinic_id: activeClinicId,
+        cfdi_id: cancelDoc.id,
+        motivo: cancelMotivo,
+      };
+      if (cancelMotivo === "01" && cancelSustitucion.trim()) {
+        body.cfdi_sustitucion = cancelSustitucion.trim();
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
+
+      toast.success("CFDI cancelado correctamente");
+      setCancelDoc(null);
+      setCancelMotivo("02");
+      setCancelSustitucion("");
+      load();
+    } catch (err: any) {
+      toast.error("Error al cancelar: " + err.message);
+    } finally {
+      setCanceling(false);
+    }
   };
 
   return (
@@ -289,6 +347,17 @@ export default function Facturacion() {
                             <Copy className="h-4 w-4" /> Copiar UUID fiscal
                           </DropdownMenuItem>
                         )}
+                        {d.status === "vigente" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => { setCancelDoc(d); setCancelMotivo("02"); setCancelSustitucion(""); }}
+                              className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Ban className="h-4 w-4" /> Cancelar CFDI
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
@@ -307,6 +376,79 @@ export default function Facturacion() {
         onOpenChange={setDialogOpen}
         onSuccess={handleSuccess}
       />
+
+      {/* Dialog cancelación */}
+      <Dialog open={!!cancelDoc} onOpenChange={(o) => { if (!o) setCancelDoc(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Cancelar CFDI
+            </DialogTitle>
+          </DialogHeader>
+
+          {cancelDoc && (
+            <div className="space-y-4 py-1">
+              <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-4 py-3 text-sm space-y-1">
+                <div><span className="font-medium">Folio:</span> {cancelDoc.serie ?? "A"}-{cancelDoc.folio ?? "—"}</div>
+                <div><span className="font-medium">Receptor:</span> {cancelDoc.nombre_receptor}</div>
+                <div><span className="font-medium">Total:</span> {fmt(cancelDoc.total)}</div>
+                {cancelDoc.uuid_fiscal && (
+                  <div className="text-xs text-muted-foreground font-mono">{cancelDoc.uuid_fiscal}</div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Motivo de cancelación *</label>
+                <select
+                  value={cancelMotivo}
+                  onChange={(e) => setCancelMotivo(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/20"
+                >
+                  {MOTIVOS_CANCELACION.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {cancelMotivo === "01" && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    UUID del CFDI sustituto *
+                  </label>
+                  <input
+                    type="text"
+                    value={cancelSustitucion}
+                    onChange={(e) => setCancelSustitucion(e.target.value)}
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring/20"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Requerido para motivo 01: UUID del CFDI que corrige a éste.</p>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Esta acción es irreversible. El CFDI quedará cancelado en el SAT.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCancelDoc(null)} disabled={canceling}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelar}
+              disabled={canceling || (cancelMotivo === "01" && !cancelSustitucion.trim())}
+              className="gap-2"
+            >
+              {canceling && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirmar cancelación
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
