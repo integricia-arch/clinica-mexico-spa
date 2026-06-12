@@ -76,13 +76,11 @@ export default function SupervisorAuthDialog({
         setSubmitting(false);
         return;
       }
-      const { data, error: e } = await supabase.rpc("turno_close_with_pin", {
-        p_turno_id: turnoId,
-        p_supervisor_id: selected.user_id,
-        p_pin: pin,
-        p_cash_count: cashCount,
-        p_notes: notes || null,
-      } as never);
+      const rpcName = mode === "pharmacy" ? "pharmacy_close_shift_with_pin" : "turno_close_with_pin";
+      const rpcParams = mode === "pharmacy"
+        ? { p_shift_id: turnoId, p_supervisor_id: selected.user_id, p_pin: pin, p_cash_count: cashCount, p_notes: notes || null }
+        : { p_turno_id: turnoId, p_supervisor_id: selected.user_id, p_pin: pin, p_cash_count: cashCount, p_notes: notes || null };
+      const { data, error: e } = await supabase.rpc(rpcName, rpcParams as never);
       setSubmitting(false);
       if (e) {
         if (e.message?.includes("PIN_INCORRECT")) setError("PIN incorrecto");
