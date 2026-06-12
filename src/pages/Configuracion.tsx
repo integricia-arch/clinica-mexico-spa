@@ -19,7 +19,8 @@ const secciones: Seccion[] = [
   { icon: Shield, titulo: "Permisos y seguridad", descripcion: "Control de acceso por rol, sesiones activas y políticas de contraseña." },
   { icon: Bell, titulo: "Notificaciones y recordatorios", descripcion: "Configurar recordatorios por WhatsApp, SMS o correo electrónico para citas y seguimientos." },
   { icon: Globe, titulo: "Localización", descripcion: "Zona horaria (Ciudad de México), formato de fecha (dd/mm/aaaa), moneda (MXN), idioma (Español)." },
-  { icon: FileText, titulo: "Facturación y CFDI", descripcion: "Datos del emisor, régimen fiscal, certificados de sello digital y configuración de timbrado." },
+  { icon: FileText, titulo: "Facturación y CFDI", descripcion: "Datos del emisor, régimen fiscal, certificados de sello digital y configuración de timbrado.", to: "/configuracion/facturacion", adminOnly: true },
+  { icon: CreditCard, titulo: "Cobros y pagos digitales", descripcion: "Pasarela de pago: Stripe, OXXO Pay y transferencia SPEI. Terminal física en consultorio.", to: "/configuracion/pagos", adminOnly: true },
 ];
 
 interface Room { id: string; nombre: string; piso: string | null; activo: boolean; capacidad: number }

@@ -1,0 +1,307 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, CreditCard, Save, Loader2, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+
+const METODOS = [
+  { value: "card", label: "Tarjeta de crédito / débito" },
+  { value: "oxxo", label: "OXXO Pay" },
+  { value: "spei", label: "Transferencia SPEI" },
+];
+
+interface PagosForm {
+  proveedor: string;
+  ambiente: string;
+  stripe_publishable_key: string;
+  stripe_terminal_habilitado: boolean;
+  metodos_habilitados: string[];
+}
+
+const EMPTY: PagosForm = {
+  proveedor: "stripe",
+  ambiente: "sandbox",
+  stripe_publishable_key: "",
+  stripe_terminal_habilitado: false,
+  metodos_habilitados: ["card"],
+};
+
+export default function ConfiguracionPagos() {
+  const navigate = useNavigate();
+  const { activeClinicId } = useActiveClinic();
+  const [form, setForm] = useState<PagosForm>(EMPTY);
+  const [existingId, setExistingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
+  const [testando, setTestando] = useState(false);
+
+  useEffect(() => {
+    if (!activeClinicId) return;
+    const load = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("payment_gateway_config" as any)
+        .select("*")
+        .eq("clinic_id", activeClinicId)
+        .maybeSingle();
+      if (data) {
+        setExistingId((data as any).id);
+        setForm({
+          proveedor: (data as any).proveedor ?? "stripe",
+          ambiente: (data as any).ambiente ?? "sandbox",
+          stripe_publishable_key: (data as any).stripe_publishable_key ?? "",
+          stripe_terminal_habilitado: (data as any).stripe_terminal_habilitado ?? false,
+          metodos_habilitados: (data as any).metodos_habilitados ?? ["card"],
+        });
+      }
+      setLoading(false);
+    };
+    load();
+  }, [activeClinicId]);
+
+  const set = <K extends keyof PagosForm>(field: K, value: PagosForm[K]) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const toggleMetodo = (val: string) => {
+    setForm((prev) => ({
+      ...prev,
+      metodos_habilitados: prev.metodos_habilitados.includes(val)
+        ? prev.metodos_habilitados.filter((m) => m !== val)
+        : [...prev.metodos_habilitados, val],
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!activeClinicId) return;
+    if (form.proveedor === "stripe" && form.ambiente === "produccion" && !form.stripe_publishable_key.startsWith("pk_live_")) {
+      toast.error("La llave pública de producción Stripe debe comenzar con pk_live_");
+      return;
+    }
+    if (form.proveedor === "stripe" && form.ambiente === "sandbox" && form.stripe_publishable_key && !form.stripe_publishable_key.startsWith("pk_test_")) {
+      toast.error("La llave pública de pruebas Stripe debe comenzar con pk_test_");
+      return;
+    }
+
+    setSaving(true);
+    const payload = {
+      clinic_id: activeClinicId,
+      proveedor: form.proveedor,
+      ambiente: form.ambiente,
+      stripe_publishable_key: form.stripe_publishable_key.trim() || null,
+      stripe_terminal_habilitado: form.stripe_terminal_habilitado,
+      metodos_habilitados: form.metodos_habilitados,
+      activo: true,
+    };
+
+    const { error } = existingId
+      ? await supabase.from("payment_gateway_config" as any).update(payload).eq("id", existingId)
+      : await supabase.from("payment_gateway_config" as any).insert(payload);
+
+    setSaving(false);
+    if (error) { toast.error("Error al guardar: " + error.message); return; }
+    toast.success("Configuración de pagos guardada");
+  };
+
+  const handleTestStripe = async () => {
+    if (!form.stripe_publishable_key) {
+      toast.error("Ingresa la llave pública de Stripe para probar");
+      return;
+    }
+    setTestando(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("https://api.stripe.com/v1/payment_methods?type=card&limit=1", {
+        headers: { Authorization: `Bearer ${form.stripe_publishable_key}` },
+      });
+      setTestResult(res.status !== 401 ? "ok" : "error");
+      if (res.status !== 401) toast.success("Llave pública Stripe válida");
+      else toast.error("Llave pública inválida o revocada");
+    } catch {
+      setTestResult("error");
+      toast.error("No se pudo contactar a Stripe");
+    }
+    setTestando(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div className="flex items-center gap-3">
+        <button onClick={() => navigate("/configuracion")} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-display text-xl font-bold text-foreground">Cobros y pagos digitales</h1>
+          <p className="text-sm text-muted-foreground">Configura la pasarela de pago para cobros con tarjeta, OXXO y SPEI</p>
+        </div>
+      </div>
+
+      {/* Pasarela */}
+      <section className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <CreditCard className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-card-foreground">Pasarela de pago</h2>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="proveedor">Proveedor</Label>
+            <select
+              id="proveedor"
+              value={form.proveedor}
+              onChange={(e) => set("proveedor", e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+            >
+              <option value="stripe">Stripe (recomendado)</option>
+              <option value="conekta">Conekta</option>
+              <option value="ninguno">Sin pasarela</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="ambiente">Ambiente</Label>
+            <select
+              id="ambiente"
+              value={form.ambiente}
+              onChange={(e) => set("ambiente", e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+            >
+              <option value="sandbox">Sandbox (pruebas)</option>
+              <option value="produccion">Producción</option>
+            </select>
+          </div>
+        </div>
+
+        {form.ambiente === "produccion" && (
+          <div className="rounded-lg bg-warning/10 border border-warning/30 px-4 py-2.5 text-xs text-warning">
+            Ambiente de producción — los cobros realizados serán reales.
+          </div>
+        )}
+
+        {form.proveedor === "conekta" && (
+          <div className="rounded-lg bg-info/10 border border-info/30 px-4 py-2.5 text-xs text-info">
+            Integración con Conekta disponible en próxima versión. Por ahora configura el proveedor y las credenciales se activarán.
+          </div>
+        )}
+      </section>
+
+      {/* Stripe config */}
+      {form.proveedor === "stripe" && (
+        <section className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
+          <h2 className="font-semibold text-card-foreground">Configuración Stripe</h2>
+
+          <div>
+            <Label htmlFor="stripe_publishable_key">
+              Llave pública (Publishable Key)
+              <a
+                href="https://dashboard.stripe.com/apikeys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                Ver en Stripe <ExternalLink className="h-3 w-3" />
+              </a>
+            </Label>
+            <Input
+              id="stripe_publishable_key"
+              value={form.stripe_publishable_key}
+              onChange={(e) => set("stripe_publishable_key", e.target.value)}
+              placeholder={form.ambiente === "sandbox" ? "pk_test_..." : "pk_live_..."}
+              autoComplete="off"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Esta llave es pública y segura para el frontend. La llave secreta (sk_*) solo se configura en las variables de entorno del servidor.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" size="sm" onClick={handleTestStripe} disabled={testando}>
+              {testando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Verificar llave
+            </Button>
+            {testResult === "ok" && (
+              <span className="flex items-center gap-1 text-xs text-success">
+                <CheckCircle2 className="h-4 w-4" /> Llave válida
+              </span>
+            )}
+            {testResult === "error" && (
+              <span className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="h-4 w-4" /> Llave inválida
+              </span>
+            )}
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.stripe_terminal_habilitado}
+                onChange={(e) => set("stripe_terminal_habilitado", e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-input"
+              />
+              <div>
+                <span className="text-sm font-medium text-foreground">Habilitar Stripe Terminal</span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Para cobro presencial con lector físico (Stripe Reader) en el consultorio. Requiere hardware adicional.
+                </p>
+              </div>
+            </label>
+          </div>
+        </section>
+      )}
+
+      {/* Métodos aceptados */}
+      {form.proveedor !== "ninguno" && (
+        <section className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
+          <h2 className="font-semibold text-card-foreground">Métodos de pago aceptados</h2>
+          <div className="space-y-3">
+            {METODOS.map((m) => (
+              <label key={m.value} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.metodos_habilitados.includes(m.value)}
+                  onChange={() => toggleMetodo(m.value)}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <span className="text-sm text-foreground">{m.label}</span>
+                {m.value === "oxxo" && (
+                  <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded">+$8 MXN fijo</span>
+                )}
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Tarjeta aplica comisión 3.6% (IVA incluido). OXXO: $8 MXN fijo + 1.2%. SPEI: sin comisión adicional de Stripe.
+          </p>
+        </section>
+      )}
+
+      {/* Nota sobre secret key */}
+      <div className="rounded-lg bg-muted/60 border border-border px-4 py-3 text-xs text-muted-foreground space-y-1">
+        <p className="font-semibold text-foreground">Seguridad — llave secreta de Stripe</p>
+        <p>
+          La <strong>llave secreta</strong> (sk_live_* / sk_test_*) <strong>nunca</strong> se guarda en base de datos.
+          Se configura como variable de entorno en las Edge Functions del servidor. Contacta al equipo técnico para activar cobros reales.
+        </p>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={saving || form.proveedor === "ninguno"} className="gap-2">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Guardar configuración de pagos
+        </Button>
+      </div>
+    </div>
+  );
+}
