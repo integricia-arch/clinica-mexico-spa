@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { CalendarPlus } from "lucide-react";
 import { friendlyError } from "@/lib/errors";
+import { useFieldErrors } from "@/hooks/useFieldErrors";
 
 export default function NuevaCita() {
   const { session } = useAuth();
@@ -21,6 +22,7 @@ export default function NuevaCita() {
   const [rooms, setRooms] = useState<any[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { markErrors, clearError, errorClass } = useFieldErrors();
 
   const [form, setForm] = useState({
     patient_id: "",
@@ -48,8 +50,15 @@ export default function NuevaCita() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.patient_id || !form.doctor_id || !form.fecha || !form.hora_inicio || !form.hora_fin) {
-      toast({ variant: "destructive", title: "Error", description: "Completa los campos requeridos" });
+    const missing: string[] = [];
+    if (!form.patient_id) missing.push("patient_id");
+    if (!form.doctor_id) missing.push("doctor_id");
+    if (!form.fecha) missing.push("fecha");
+    if (!form.hora_inicio) missing.push("hora_inicio");
+    if (!form.hora_fin) missing.push("hora_fin");
+    if (missing.length) {
+      markErrors(missing);
+      toast({ variant: "destructive", title: "Campos requeridos", description: "Completa los campos marcados en rojo" });
       return;
     }
 
@@ -94,8 +103,8 @@ export default function NuevaCita() {
         <div className="space-y-2">
           <Label>Paciente *</Label>
           {dataLoaded ? (
-            <Select value={form.patient_id || undefined} onValueChange={(v) => setForm({ ...form, patient_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
+            <Select value={form.patient_id || undefined} onValueChange={(v) => { clearError("patient_id"); setForm({ ...form, patient_id: v }); }}>
+              <SelectTrigger id="field-patient_id" className={errorClass("patient_id")}><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
               <SelectContent>
                 {patients.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
@@ -113,8 +122,8 @@ export default function NuevaCita() {
         <div className="space-y-2">
           <Label>Médico *</Label>
           {dataLoaded ? (
-            <Select value={form.doctor_id || undefined} onValueChange={(v) => setForm({ ...form, doctor_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
+            <Select value={form.doctor_id || undefined} onValueChange={(v) => { clearError("doctor_id"); setForm({ ...form, doctor_id: v }); }}>
+              <SelectTrigger id="field-doctor_id" className={errorClass("doctor_id")}><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
               <SelectContent>
                 {doctors.map((d) => (
                   <SelectItem key={d.id} value={d.id}>
@@ -152,29 +161,32 @@ export default function NuevaCita() {
           <div className="space-y-2">
             <Label>Fecha *</Label>
             <Input
+              id="field-fecha"
               type="date"
               value={form.fecha}
-              onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+              onChange={(e) => { clearError("fecha"); setForm({ ...form, fecha: e.target.value }); }}
               min={new Date().toISOString().split("T")[0]}
-              required
+              className={errorClass("fecha")}
             />
           </div>
           <div className="space-y-2">
             <Label>Hora inicio *</Label>
             <Input
+              id="field-hora_inicio"
               type="time"
               value={form.hora_inicio}
-              onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })}
-              required
+              onChange={(e) => { clearError("hora_inicio"); setForm({ ...form, hora_inicio: e.target.value }); }}
+              className={errorClass("hora_inicio")}
             />
           </div>
           <div className="space-y-2">
             <Label>Hora fin *</Label>
             <Input
+              id="field-hora_fin"
               type="time"
               value={form.hora_fin}
-              onChange={(e) => setForm({ ...form, hora_fin: e.target.value })}
-              required
+              onChange={(e) => { clearError("hora_fin"); setForm({ ...form, hora_fin: e.target.value }); }}
+              className={errorClass("hora_fin")}
             />
           </div>
         </div>

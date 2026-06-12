@@ -14,7 +14,7 @@ const has = (roles: AppRole[], r: AppRole) => roles.includes(r);
 export const posPermissions = (roles: AppRole[]) => {
   const isAdmin = has(roles, "admin");
   const isManager = isAdmin || has(roles, "manager");
-  const isCashier = isManager || has(roles, "receptionist") || has(roles, "nurse");
+  const isCashier = isManager || has(roles, "cajero") || has(roles, "receptionist") || has(roles, "nurse");
 
   return {
     isAdmin,
@@ -42,6 +42,8 @@ export type Med = {
   is_controlled: boolean | null;
   requires_prescription: boolean | null;
   allow_direct_sale: boolean | null;
+  controlado?: boolean | null;
+  requiere_receta?: boolean | null;
   descripcion?: string | null;
   barcode?: string | null;
   sku?: string | null;
@@ -59,6 +61,7 @@ export type Med = {
   regulatory_notes?: string | null;
   fuente_info?: string | null;
   equivalence_group_key?: string | null;
+  tasa_iva?: number | null;
 };
 
 export const DEMO_INFO_LEGEND =

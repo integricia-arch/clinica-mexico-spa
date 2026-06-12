@@ -3,12 +3,18 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
-  CalendarPlus, Headset, ShieldCheck, Inbox as InboxIcon,
-  MessageCircle, BellRing, ClipboardList, UserCog, Stethoscope,
-  CreditCard,
+  CalendarPlus, Headset, ShieldCheck,
+  MessageCircle, BellRing, ClipboardList, Stethoscope,
+  CreditCard, Lock, UserRound,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useSidebarState } from "@/hooks/useSidebarState";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import LockScreen from "@/components/LockScreen";
 
 type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient" | "manager" | "cajero";
 
@@ -33,8 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/citas", icon: ClipboardList, label: "Citas", roles: ["admin", "receptionist", "doctor", "nurse"] },
   { to: "/recordatorios", icon: BellRing, label: "Recordatorios", roles: ["admin", "receptionist", "doctor"] },
   // ── Operaciones ──
-  { section: "Operaciones", to: "/farmacia", icon: Pill, label: "Farmacia", roles: ["admin", "nurse", "receptionist"] },
-  { to: "/caja", icon: CreditCard, label: "Caja", roles: ["admin", "manager", "cajero", "receptionist"] },
+  { section: "Operaciones", to: "/farmacia", icon: CreditCard, label: "Caja", roles: ["admin", "nurse", "receptionist", "cajero"] },
   // ── Admin ──
   { section: "Admin", to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"] },
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
@@ -56,10 +61,23 @@ const ROLE_LABELS: Record<AppRole, string> = {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, roles, signOut } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isOpen: sidebarOpen, close: closeSidebar, openDrawer } = useSidebarState();
   const [escaladasCount, setEscaladasCount] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
+
+  const handleSwitchUser = async () => {
+    await signOut();
+    navigate("/login");
+  };
+
+  const handleLock = () => setIsLocked(true);
 
   const visibleNav = NAV_ITEMS.filter((item) => {
     if (!item.roles) return true;
@@ -89,18 +107,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {isLocked && user?.email && (
+        <LockScreen
+          email={user.email}
+          initials={initials}
+          roleLabel={roleLabel}
+          onUnlocked={() => setIsLocked(false)}
+          onSwitchUser={handleSwitchUser}
+        />
+      )}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm"
+          onClick={closeSidebar}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar transition-transform duration-300 lg:relative lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-300 w-64 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-2.5 px-5 border-b border-sidebar-border">
@@ -111,7 +136,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-display font-bold text-sm text-sidebar-accent-foreground">ClínicaMX</span>
             <span className="block text-[11px] text-sidebar-foreground/60">Operaciones Clínicas</span>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-sidebar-foreground hover:text-sidebar-accent-foreground">
+          <button onClick={closeSidebar} className="ml-auto text-sidebar-foreground hover:text-sidebar-accent-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -134,14 +159,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   )}
                   <NavLink
                     to={item.to}
-                    onClick={() => setSidebarOpen(false)}
+                    onClick={closeSidebar}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-sidebar-accent text-sidebar-primary"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                   >
-                    <item.icon className="h-[18px] w-[18px]" />
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
                     <span className="flex-1">{item.label}</span>
                     {showBadge && (
                       <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-red-500 text-white px-1.5">
@@ -181,25 +206,54 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 lg:px-6">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-muted-foreground hover:text-foreground">
+          <button
+            onClick={openDrawer}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
             <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
             </button>
-            <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted transition-colors cursor-pointer">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                {initials}
-              </div>
-              <div className="hidden sm:block text-left">
-                <p className="text-sm font-medium leading-tight">{user?.email?.split("@")[0]}</p>
-                <p className="text-xs text-muted-foreground leading-tight">{roleLabel}</p>
-              </div>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted transition-colors cursor-pointer outline-none">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                    {initials}
+                  </div>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-medium leading-tight">{user?.email?.split("@")[0]}</p>
+                    <p className="text-xs text-muted-foreground leading-tight">{roleLabel}</p>
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <div className="px-3 py-2">
+                  <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
+                  <p className="text-xs text-muted-foreground">{roleLabel}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLock} className="gap-2 cursor-pointer">
+                  <Lock className="h-4 w-4" />
+                  Bloquear pantalla
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSwitchUser} className="gap-2 cursor-pointer">
+                  <UserRound className="h-4 w-4" />
+                  Cambiar de usuario
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Cerrar sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>

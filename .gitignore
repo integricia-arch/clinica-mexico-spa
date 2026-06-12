@@ -48,3 +48,7 @@ dist_integrika.zip
 .claude/
 .agents/
 skills-lock.json
+
+# Obsidian vault memory (local only)
+memoria/
+.obsidian/

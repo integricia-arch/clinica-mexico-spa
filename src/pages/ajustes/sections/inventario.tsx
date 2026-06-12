@@ -24,6 +24,7 @@ import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useInsumos, type Insumo, type InsumoInput } from "@/hooks/useInsumos";
 import { useKits, type Kit, type KitInput, type KitItemInput } from "@/hooks/useKits";
 import { useProveedores, type Proveedor, type ProveedorInput } from "@/hooks/useProveedores";
+import { useFieldErrors } from "@/hooks/useFieldErrors";
 
 const mxn = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -48,6 +49,7 @@ function InsumosTab({ clinicId, canEdit, proveedores }: {
   const [form, setForm] = useState<InsumoInput>(EMPTY_INSUMO);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<Insumo | null>(null);
+  const { markErrors: markInsumoErrors, clearError: clearInsumoError, errorClass: insumoErrorClass, resetErrors: resetInsumoErrors } = useFieldErrors();
 
   const filtered = items.filter((i) => i.nombre.toLowerCase().includes(query.toLowerCase()));
   const proveedorName = (id: string | null) => proveedores.find((p) => p.id === id)?.nombre ?? "";
@@ -55,18 +57,19 @@ function InsumosTab({ clinicId, canEdit, proveedores }: {
   const setField = <K extends keyof InsumoInput>(k: K, v: InsumoInput[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
 
-  const openNew = () => { setEditing(null); setForm(EMPTY_INSUMO); setDialogOpen(true); };
+  const openNew = () => { setEditing(null); setForm(EMPTY_INSUMO); resetInsumoErrors(); setDialogOpen(true); };
   const openEdit = (i: Insumo) => {
     setEditing(i);
     setForm({
       nombre: i.nombre, stock: i.stock, stockMinimo: i.stockMinimo, caducidad: i.caducidad,
       costoMxn: i.costoMxn, proveedorId: i.proveedorId, activo: i.activo,
     });
+    resetInsumoErrors();
     setDialogOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!form.nombre.trim()) { toast.error("El nombre del insumo es obligatorio."); return; }
+    if (!form.nombre.trim()) { markInsumoErrors(["nombre"]); toast.error("El nombre del insumo es obligatorio."); return; }
     setSaving(true);
     try {
       if (editing) { await update(editing.id, form); toast.success("Insumo actualizado"); }
@@ -151,8 +154,13 @@ function InsumosTab({ clinicId, canEdit, proveedores }: {
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? "Editar insumo" : "Nuevo insumo"}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
-            <Field label="Nombre">
-              <Input value={form.nombre} onChange={(e) => setField("nombre", e.target.value)} />
+            <Field label="Nombre *">
+              <Input
+                id="field-nombre"
+                value={form.nombre}
+                onChange={(e) => { clearInsumoError("nombre"); setField("nombre", e.target.value); }}
+                className={insumoErrorClass("nombre")}
+              />
             </Field>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Stock">
@@ -241,6 +249,7 @@ function KitsTab({ clinicId, canEdit, insumos }: {
   const [form, setForm] = useState<KitInput>(EMPTY_KIT);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<Kit | null>(null);
+  const { markErrors: markKitErrors, clearError: clearKitError, errorClass: kitErrorClass, resetErrors: resetKitErrors } = useFieldErrors();
 
   const setField = <K extends keyof KitInput>(k: K, v: KitInput[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -266,7 +275,7 @@ function KitsTab({ clinicId, canEdit, insumos }: {
   // Insumo como % del precio real: ancla de realidad (mercado MX ≈ 4-15%).
   const insumoPct = form.precioMxn > 0 ? Math.round((formCosto / form.precioMxn) * 100) : 0;
 
-  const openNew = () => { setEditing(null); setForm(EMPTY_KIT); setDialogOpen(true); };
+  const openNew = () => { setEditing(null); setForm(EMPTY_KIT); resetKitErrors(); setDialogOpen(true); };
   const openEdit = (k: Kit) => {
     setEditing(k);
     setForm({
@@ -276,11 +285,12 @@ function KitsTab({ clinicId, canEdit, insumos }: {
       activo: k.activo,
       items: k.items.map((it) => ({ insumoId: it.insumoId, cantidad: it.cantidad })),
     });
+    resetKitErrors();
     setDialogOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!form.tratamiento.trim()) { toast.error("El tratamiento es obligatorio."); return; }
+    if (!form.tratamiento.trim()) { markKitErrors(["tratamiento"]); toast.error("El tratamiento es obligatorio."); return; }
     if (form.items.some((it) => !it.insumoId)) {
       toast.error("Cada línea debe tener un insumo seleccionado."); return;
     }
@@ -363,8 +373,13 @@ function KitsTab({ clinicId, canEdit, insumos }: {
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? "Editar kit" : "Nuevo kit"}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
-            <Field label="Tratamiento">
-              <Input value={form.tratamiento} onChange={(e) => setField("tratamiento", e.target.value)} />
+            <Field label="Tratamiento *">
+              <Input
+                id="field-tratamiento"
+                value={form.tratamiento}
+                onChange={(e) => { clearKitError("tratamiento"); setField("tratamiento", e.target.value); }}
+                className={kitErrorClass("tratamiento")}
+              />
             </Field>
 
             <div>
@@ -509,19 +524,21 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
   const [form, setForm] = useState<ProveedorInput>(EMPTY_PROVEEDOR);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<Proveedor | null>(null);
+  const { markErrors: markProvErrors, clearError: clearProvError, errorClass: provErrorClass, resetErrors: resetProvErrors } = useFieldErrors();
 
   const setField = <K extends keyof ProveedorInput>(k: K, v: ProveedorInput[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
 
-  const openNew = () => { setEditing(null); setForm(EMPTY_PROVEEDOR); setDialogOpen(true); };
+  const openNew = () => { setEditing(null); setForm(EMPTY_PROVEEDOR); resetProvErrors(); setDialogOpen(true); };
   const openEdit = (p: Proveedor) => {
     setEditing(p);
     setForm({ nombre: p.nombre, contacto: p.contacto, telefono: p.telefono, email: p.email, activo: p.activo });
+    resetProvErrors();
     setDialogOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!form.nombre.trim()) { toast.error("El nombre del proveedor es obligatorio."); return; }
+    if (!form.nombre.trim()) { markProvErrors(["nombre"]); toast.error("El nombre del proveedor es obligatorio."); return; }
     setSaving(true);
     try {
       if (editing) { await update(editing.id, form); toast.success("Proveedor actualizado"); }
@@ -587,8 +604,13 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? "Editar proveedor" : "Nuevo proveedor"}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
-            <Field label="Nombre">
-              <Input value={form.nombre} onChange={(e) => setField("nombre", e.target.value)} />
+            <Field label="Nombre *">
+              <Input
+                id="field-nombre-prov"
+                value={form.nombre}
+                onChange={(e) => { clearProvError("nombre"); setField("nombre", e.target.value); }}
+                className={provErrorClass("nombre")}
+              />
             </Field>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Contacto">

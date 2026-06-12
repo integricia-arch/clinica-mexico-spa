@@ -18,6 +18,7 @@ import {
 import { Field, type SectionProps } from "../shared";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useServicios, type Servicio, type ServicioInput } from "@/hooks/useServicios";
+import { useFieldErrors } from "@/hooks/useFieldErrors";
 
 const EMPTY: ServicioInput = {
   nombre: "", especialidad: "", duracionMin: 30, precioMxn: 0, activo: true,
@@ -35,6 +36,7 @@ export function SectionServicios(_: SectionProps) {
   const [form, setForm] = useState<ServicioInput>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<Servicio | null>(null);
+  const { markErrors, clearError, errorClass, resetErrors } = useFieldErrors();
 
   const filtered = items.filter((s) =>
     s.nombre.toLowerCase().includes(query.toLowerCase()),
@@ -43,6 +45,7 @@ export function SectionServicios(_: SectionProps) {
   const openNew = () => {
     setEditing(null);
     setForm(EMPTY);
+    resetErrors();
     setDialogOpen(true);
   };
   const openEdit = (s: Servicio) => {
@@ -51,6 +54,7 @@ export function SectionServicios(_: SectionProps) {
       nombre: s.nombre, especialidad: s.especialidad,
       duracionMin: s.duracionMin, precioMxn: s.precioMxn, activo: s.activo,
     });
+    resetErrors();
     setDialogOpen(true);
   };
 
@@ -59,6 +63,7 @@ export function SectionServicios(_: SectionProps) {
 
   const handleSubmit = async () => {
     if (!form.nombre.trim()) {
+      markErrors(["nombre"]);
       toast.error("El nombre del servicio es obligatorio.");
       return;
     }
@@ -182,8 +187,13 @@ export function SectionServicios(_: SectionProps) {
             <DialogTitle>{editing ? "Editar servicio" : "Nuevo servicio"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            <Field label="Nombre">
-              <Input value={form.nombre} onChange={(e) => setField("nombre", e.target.value)} />
+            <Field label="Nombre *">
+              <Input
+                id="field-nombre"
+                value={form.nombre}
+                onChange={(e) => { clearError("nombre"); setField("nombre", e.target.value); }}
+                className={errorClass("nombre")}
+              />
             </Field>
             <Field label="Especialidad / tipo">
               <Input value={form.especialidad} onChange={(e) => setField("especialidad", e.target.value)} />

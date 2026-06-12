@@ -1,0 +1,373 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Lock, TrendingUp, TrendingDown, Minus,
+  AlertTriangle, CheckCircle, Heart, Info, Printer,
+} from "lucide-react";
+import { toast } from "sonner";
+import type { OpenTurno } from "@/components/TurnoGuard";
+import { printActaArqueo } from "@/lib/printActaArqueo";
+import PagoReconcile from "@/components/turno/PagoReconcile";
+import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
+
+interface CloseResult {
+  corte_id: string;
+  folio: number;
+  opening_amount: number;
+  cash_total: number;
+  expected_cash: number;
+  counted_cash: number;
+  difference: number;
+  supervisor_override: boolean;
+}
+
+interface Props {
+  turno: OpenTurno;
+  onClosed: () => void;
+  onCancel: () => void;
+}
+
+type Step = "count" | "diff-alert" | "done";
+
+const fmt = (n: number) =>
+  Number(n).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+
+export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
+  const { activeClinic } = useActiveClinic();
+  const { user } = useAuth();
+  const [count, setCount] = useState("0");
+  const [notes, setNotes] = useState("");
+  const [step, setStep] = useState<Step>("count");
+  const [saving, setSaving] = useState(false);
+  const [overrideData, setOverrideData] = useState<{ diff: number; umbral: number } | null>(null);
+  const [result, setResult] = useState<CloseResult | null>(null);
+  const [cashRefunds, setCashRefunds] = useState<{ count: number; total: number } | null>(null);
+  const [fondoInput, setFondoInput] = useState("");
+  const [fondoGuardado, setFondoGuardado] = useState<{ fondo: number; deposito: number } | null>(null);
+  const [savingFondo, setSavingFondo] = useState(false);
+  const [denomBreakdown, setDenomBreakdown] = useState<DenomBreakdown>({});
+
+  useEffect(() => {
+    supabase
+      .from("fondos_movimientos")
+      .select("monto")
+      .eq("turno_id", turno.id)
+      .eq("tipo", "egreso")
+      .ilike("motivo", "Reembolso%")
+      .then(({ data }) => {
+        if (!data || data.length === 0) return;
+        setCashRefunds({
+          count: data.length,
+          total: data.reduce((s, r) => s + Number(r.monto), 0),
+        });
+      });
+  }, [turno.id]);
+
+  async function submit(supervisorOverride = false) {
+    const amount = Number(count);
+    if (isNaN(amount) || amount < 0) { toast.error("Monto inválido"); return; }
+    setSaving(true);
+    setOverrideData(null);
+
+    const { data, error } = await supabase.rpc("turno_close", {
+      p_turno_id: turno.id,
+      p_cash_count: amount,
+      p_notes: notes.trim() || null,
+      p_supervisor_override: supervisorOverride,
+    } as never);
+
+    setSaving(false);
+
+    if (error) {
+      if (error.message?.startsWith("DIFF_EXCEEDS_THRESHOLD")) {
+        const parts = error.message.split("|");
+        setOverrideData({ diff: Number(parts[1] ?? 0), umbral: Number(parts[2] ?? 0) });
+        setStep("diff-alert");
+        return;
+      }
+      toast.error(`No se pudo cerrar el turno: ${error.message}`);
+      return;
+    }
+
+    const r = data as unknown as CloseResult;
+    setResult(r);
+    setFondoInput(String(r.opening_amount ?? 0));
+    setStep("done");
+  }
+
+  const diff = result?.difference ?? 0;
+  const DiffIcon = diff === 0 ? Minus : diff > 0 ? TrendingUp : TrendingDown;
+  const diffColor = diff === 0 ? "text-green-600" : diff > 0 ? "text-amber-600" : "text-red-600";
+  const diffLabel = diff === 0 ? "Cuadrado" : diff > 0 ? "Sobrante" : "Faltante";
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background p-6">
+      <div className="mb-6 flex flex-col items-center gap-2">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl gradient-primary shadow-elevated">
+          <Heart className="h-6 w-6 text-primary-foreground" />
+        </div>
+        <h1 className="text-display text-lg font-bold text-foreground">Cierre de turno</h1>
+        <p className="text-sm text-muted-foreground">{turno.caja_nombre}</p>
+      </div>
+
+      <div className="mb-6 flex items-center gap-2 text-sm">
+        <span className={step === "count" ? "font-semibold text-primary" : "text-muted-foreground opacity-50"}>
+          1. Conteo
+        </span>
+        <span className="text-muted-foreground">›</span>
+        <span className={step === "diff-alert" ? "font-semibold text-amber-600" : "text-muted-foreground opacity-50"}>
+          2. Diferencia
+        </span>
+        <span className="text-muted-foreground">›</span>
+        <span className={step === "done" ? "font-semibold text-green-600" : "text-muted-foreground opacity-50"}>
+          3. Cerrado
+        </span>
+      </div>
+
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-card space-y-5">
+
+        {step === "count" && (
+          <>
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-card-foreground">
+                <Lock className="h-5 w-5 text-primary" /> Conteo ciego
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Cuenta el efectivo <strong>físicamente</strong> sin revisar el sistema.
+                El sistema calculará la diferencia al confirmar.
+              </p>
+            </div>
+            {cashRefunds && (
+              <div className="flex items-start gap-2 rounded-lg border border-blue-300/50 bg-blue-50/60 dark:bg-blue-950/20 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  Se registraron <strong>{cashRefunds.count} devolución{cashRefunds.count !== 1 ? "es" : ""}</strong> en efectivo
+                  por <strong>{fmt(cashRefunds.total)}</strong> durante este turno.
+                  Ya están incluidas en el cálculo esperado.
+                </span>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="close-count">Efectivo contado (MXN)</Label>
+              <Input
+                id="close-count"
+                type="number"
+                min={0}
+                step="0.01"
+                value={count}
+                onChange={(e) => setCount(e.target.value)}
+                className="h-12 text-xl font-semibold text-center"
+                autoFocus
+              />
+            </div>
+            <DenominacionCounter
+              onTotal={(total, breakdown) => {
+                if (total > 0) setCount(String(total));
+                setDenomBreakdown(breakdown);
+              }}
+            />
+            <div className="space-y-1.5">
+              <Label htmlFor="close-notes">Notas (opcional)</Label>
+              <Textarea
+                id="close-notes"
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Observaciones del cierre…"
+              />
+            </div>
+            <Button onClick={() => submit(false)} className="w-full" size="lg" disabled={saving}>
+              {saving ? "Cerrando turno…" : "Cerrar turno →"}
+            </Button>
+            <button
+              onClick={onCancel}
+              className="w-full text-xs text-muted-foreground hover:text-foreground text-center"
+            >
+              Cancelar — volver a caja
+            </button>
+          </>
+        )}
+
+        {step === "diff-alert" && overrideData && (
+          <>
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-amber-700">
+                <AlertTriangle className="h-5 w-5" /> Diferencia fuera de rango
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Se requiere autorización de un supervisor para continuar.
+              </p>
+            </div>
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/8 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Diferencia</span>
+                <span className={`font-semibold ${overrideData.diff > 0 ? "text-amber-700" : "text-red-700"}`}>
+                  {fmt(overrideData.diff)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Umbral permitido</span>
+                <span className="font-medium">{fmt(overrideData.umbral)}</span>
+              </div>
+            </div>
+            <SupervisorAuthDialog
+              open={step === "diff-alert" && !!overrideData}
+              turnoId={turno.id}
+              cashCount={Number(count)}
+              notes={notes}
+              diff={overrideData.diff}
+              umbral={overrideData.umbral}
+              clinicId={activeClinic?.id ?? ""}
+              onSuccess={(data) => {
+                const r = data as CloseResult;
+                setResult(r);
+                setFondoInput(String(r.opening_amount ?? 0));
+                setOverrideData(null);
+                setStep("done");
+              }}
+              onCancel={() => setStep("count")}
+            />
+            <button
+              onClick={() => setStep("count")}
+              className="w-full text-xs text-muted-foreground hover:text-foreground text-center"
+            >
+              ← Volver a recontar
+            </button>
+          </>
+        )}
+
+        {step === "done" && result && (
+          <>
+            <div className="text-center">
+              <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-3" />
+              <h2 className="text-lg font-semibold text-card-foreground">Turno cerrado</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Folio Z-{String(result.folio).padStart(6, "0")}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fondo inicial</span>
+                <span>{fmt(result.opening_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Cobros efectivo</span>
+                <span>{fmt(result.cash_total)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Esperado</span>
+                <span className="font-medium">{fmt(result.expected_cash)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Contado</span>
+                <span className="font-medium">{fmt(result.counted_cash)}</span>
+              </div>
+              <div className={`flex justify-between border-t border-border pt-2 ${diffColor}`}>
+                <span className="font-semibold flex items-center gap-1">
+                  <DiffIcon className="h-3.5 w-3.5" />
+                  {diffLabel}
+                </span>
+                <span className="font-semibold">{fmt(result.difference)}</span>
+              </div>
+              {result.supervisor_override && (
+                <p className="text-xs text-muted-foreground">Autorizado por supervisor</p>
+              )}
+            </div>
+            {fondoGuardado ? (
+              <div className="rounded-lg border border-green-500/40 bg-green-500/5 p-3 space-y-1 text-sm">
+                <p className="font-medium text-green-700 dark:text-green-400 flex items-center gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5" /> Distribución registrada
+                </p>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Fondo siguiente turno</span>
+                  <span className="font-medium text-foreground">{fmt(fondoGuardado.fondo)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Para depósito / caja fuerte</span>
+                  <span className="font-medium text-foreground">{fmt(fondoGuardado.deposito)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                <p className="text-xs font-medium text-foreground">¿Cuánto dejas de fondo para el siguiente cajero?</p>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={fondoInput}
+                  onChange={(e) => setFondoInput(e.target.value)}
+                  className="h-9 text-sm"
+                />
+                {(() => {
+                  const f = Number(fondoInput);
+                  const deposito = isNaN(f) ? null : Math.max(result.counted_cash - f, 0);
+                  return deposito !== null ? (
+                    <p className="text-xs text-muted-foreground">
+                      Para depósito: <span className="font-medium text-foreground">{fmt(deposito)}</span>
+                    </p>
+                  ) : null;
+                })()}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    disabled={savingFondo}
+                    onClick={async () => {
+                      const f = Number(fondoInput);
+                      if (isNaN(f) || f < 0) { toast.error("Monto inválido"); return; }
+                      setSavingFondo(true);
+                      const { error } = await supabase.rpc("corte_set_fondo", {
+                        p_corte_id: result.corte_id,
+                        p_fondo_siguiente: f,
+                      } as never);
+                      setSavingFondo(false);
+                      if (error) { toast.error(`No se pudo guardar: ${error.message}`); return; }
+                      setFondoGuardado({ fondo: f, deposito: Math.max(result.counted_cash - f, 0) });
+                    }}
+                  >
+                    {savingFondo ? "Guardando…" : "Guardar distribución"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={onClosed}>Omitir</Button>
+                </div>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => printActaArqueo({
+                folio: result.folio,
+                cajaNombre: turno.caja_nombre,
+                clinicName: activeClinic?.name,
+                cajeroName: user?.email ?? undefined,
+                fechaCierre: new Date().toISOString(),
+                openingAmount: result.opening_amount,
+                cashTotal: result.cash_total,
+                expectedCash: result.expected_cash,
+                countedCash: result.counted_cash,
+                difference: result.difference,
+                supervisorOverride: result.supervisor_override,
+                fondoSiguiente: fondoGuardado?.fondo,
+                efectivoDeposito: fondoGuardado?.deposito,
+                denominaciones: Object.keys(denomBreakdown).length > 0 ? denomBreakdown : undefined,
+              })}
+            >
+              <Printer className="h-4 w-4" /> Imprimir acta de arqueo
+            </Button>
+            <PagoReconcile corteId={result.corte_id} metodo="tarjeta" />
+            <PagoReconcile corteId={result.corte_id} metodo="transferencia" />
+            <Button onClick={onClosed} className="w-full" size="lg">
+              Finalizar
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -97,11 +97,11 @@ export default function Facturacion() {
               <th className="px-5 py-3 font-semibold text-muted-foreground">Folio</th>
               <th className="px-5 py-3 font-semibold text-muted-foreground">Fecha</th>
               <th className="px-5 py-3 font-semibold text-muted-foreground hidden md:table-cell">Paciente</th>
-              <th className="px-5 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Concepto</th>
+              <th className="px-5 py-3 font-semibold text-muted-foreground hidden xl:table-cell">Concepto</th>
               <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Total</th>
               <th className="px-5 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Método</th>
               <th className="px-5 py-3 font-semibold text-muted-foreground">Estado</th>
-              <th className="px-5 py-3 font-semibold text-muted-foreground hidden lg:table-cell">CFDI</th>
+              <th className="px-5 py-3 font-semibold text-muted-foreground hidden xl:table-cell">CFDI</th>
               <th className="px-5 py-3" />
             </tr>
           </thead>
@@ -111,7 +111,7 @@ export default function Facturacion() {
                 <td className="px-5 py-3.5 font-medium text-card-foreground">{f.folio}</td>
                 <td className="px-5 py-3.5 text-muted-foreground">{f.fecha}</td>
                 <td className="px-5 py-3.5 hidden md:table-cell text-card-foreground">{f.paciente}</td>
-                <td className="px-5 py-3.5 hidden lg:table-cell text-muted-foreground max-w-[200px] truncate">{f.concepto}</td>
+                <td className="px-5 py-3.5 hidden xl:table-cell text-muted-foreground max-w-[200px] truncate">{f.concepto}</td>
                 <td className="px-5 py-3.5 text-right font-semibold text-card-foreground">{formatMXN(f.total)}</td>
                 <td className="px-5 py-3.5 hidden sm:table-cell text-muted-foreground">{f.metodo}</td>
                 <td className="px-5 py-3.5">
@@ -119,7 +119,7 @@ export default function Facturacion() {
                     {f.estado}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 hidden lg:table-cell">
+                <td className="px-5 py-3.5 hidden xl:table-cell">
                   {f.facturaRequerida ? (
                     <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
                       <FileText className="h-3 w-3" /> Requerida

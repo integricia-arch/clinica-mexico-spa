@@ -31,6 +31,7 @@ export type TransferPayment = {
 
 export type PaymentBreakdown = {
   efectivo: number;
+  monto_recibido: number;
   tarjeta: number;
   transferencia: number;
   card: CardPayment;
@@ -53,6 +54,7 @@ export function looksLikeFullCardNumber(s: string): boolean {
 export function emptyBreakdown(total = 0): PaymentBreakdown {
   return {
     efectivo: total,
+    monto_recibido: total,
     tarjeta: 0,
     transferencia: 0,
     card: { amount: 0, card_type: "credito", card_brand: "Visa", card_last4: "", authorization_code: "", terminal_id: "", acquirer: "" },
@@ -70,7 +72,7 @@ export function validatePayment(
   if (method === "pendiente") return { ok: true };
 
   if (method === "efectivo") {
-    if (bd.efectivo + 0.01 < total) return { ok: false, error: "Efectivo no cubre el total" };
+    if (bd.monto_recibido + 0.01 < total) return { ok: false, error: "Monto recibido no cubre el total" };
     return { ok: true };
   }
 
@@ -110,7 +112,12 @@ export function paymentsToRows(method: Method, bd: PaymentBreakdown) {
   if (method === "pendiente") return [];
   const rows: Array<Record<string, unknown>> = [];
   const pushCash = (amount: number) => {
-    if (amount > 0) rows.push({ payment_method: "efectivo", amount });
+    if (amount > 0) rows.push({
+      payment_method: "efectivo",
+      amount,
+      monto_recibido: bd.monto_recibido > 0 ? bd.monto_recibido : amount,
+      cambio_entregado: bd.monto_recibido > amount ? bd.monto_recibido - amount : 0,
+    });
   };
   const pushCard = (amount: number) => {
     if (amount > 0) {
@@ -163,27 +170,68 @@ export function PaymentCapture({
   const showCard = method === "tarjeta" || method === "mixto";
   const showTransfer = method === "transferencia" || method === "mixto";
 
-  const setCardAmount = (n: number) => {
-    if (method === "tarjeta") onChange({ ...value, tarjeta: n, card: { ...value.card, amount: n } });
-    else onChange({ ...value, tarjeta: n, card: { ...value.card, amount: n } });
+  // Auto-calc helpers for mixto
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const setMixtoEfectivo = (ef: number) => {
+    const restante = Math.max(0, round2(total - ef - value.transferencia));
+    onChange({ ...value, efectivo: ef, monto_recibido: ef, tarjeta: restante, card: { ...value.card, amount: restante } });
   };
-  const setTransferAmount = (n: number) => {
-    onChange({ ...value, transferencia: n, transfer: { ...value.transfer, amount: n } });
+  const setMixtoTarjeta = (card: number) => {
+    const restante = Math.max(0, round2(total - card - value.transferencia));
+    onChange({ ...value, tarjeta: card, card: { ...value.card, amount: card }, efectivo: restante, monto_recibido: restante });
   };
+  const setMixtoTransferencia = (transf: number) => {
+    const restante = Math.max(0, round2(total - value.efectivo - transf));
+    onChange({ ...value, transferencia: transf, transfer: { ...value.transfer, amount: transf }, tarjeta: restante, card: { ...value.card, amount: restante } });
+  };
+
+  const setCardAmount = (n: number) => onChange({ ...value, tarjeta: n, card: { ...value.card, amount: n } });
+  const setTransferAmount = (n: number) => onChange({ ...value, transferencia: n, transfer: { ...value.transfer, amount: n } });
+
+  const mixtoSum = round2(value.efectivo + value.tarjeta + value.transferencia);
+  const mixtoDiff = round2(mixtoSum - total);
 
   return (
     <div className="space-y-3 rounded-md border border-border bg-muted/30 p-2.5">
+      {/* Indicador de diferencia en mixto */}
+      {method === "mixto" && (
+        <>
+          <div className={`flex items-center justify-between rounded px-2 py-1 text-xs font-medium ${
+            Math.abs(mixtoDiff) < 0.01
+              ? "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+              : "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+          }`}>
+            <span>Total: {formatMXN(total)}</span>
+            <span>{Math.abs(mixtoDiff) < 0.01 ? "✓ Cuadrado" : `Pendiente: ${formatMXN(Math.abs(mixtoDiff))}`}</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Ingresa efectivo → tarjeta se calcula sola, o viceversa.</p>
+        </>
+      )}
+
       {showCash && (
         <div className="space-y-1">
-          <Label className="text-xs">Efectivo</Label>
-          <Input
-            type="number" min={0} step="0.01"
-            value={value.efectivo}
-            onChange={(e) => onChange({ ...value, efectivo: Number(e.target.value) || 0 })}
-            className="h-9"
-          />
-          {method === "efectivo" && value.efectivo > total && (
-            <p className="text-[11px] text-muted-foreground">Cambio: {formatMXN(value.efectivo - total)}</p>
+          <Label className="text-xs">{method === "mixto" ? "Efectivo" : "Monto recibido (efectivo)"}</Label>
+          {method === "mixto" ? (
+            <Input
+              type="number" min={0} step="0.01"
+              value={value.efectivo}
+              onChange={(e) => setMixtoEfectivo(Number(e.target.value) || 0)}
+              className="h-11"
+            />
+          ) : (
+            <>
+              <Input
+                type="number" min={0} step="0.01"
+                value={value.monto_recibido}
+                onChange={(e) => onChange({ ...value, monto_recibido: Number(e.target.value) || 0, efectivo: Number(e.target.value) || 0 })}
+                className="h-11"
+              />
+              {value.monto_recibido >= total && (
+                <p className="text-[11px] font-semibold text-green-700 dark:text-green-400">
+                  Cambio a entregar: {formatMXN(value.monto_recibido - total)}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -199,8 +247,8 @@ export function PaymentCapture({
               <Label className="text-[11px]">Monto tarjeta</Label>
               <Input
                 type="number" min={0} step="0.01" value={value.tarjeta}
-                onChange={(e) => setCardAmount(Number(e.target.value) || 0)}
-                className="h-9"
+                onChange={(e) => setMixtoTarjeta(Number(e.target.value) || 0)}
+                className="h-11"
               />
             </div>
           )}
@@ -210,7 +258,7 @@ export function PaymentCapture({
               <Input
                 type="number" min={0} step="0.01" value={value.card.amount}
                 onChange={(e) => setCardAmount(Number(e.target.value) || 0)}
-                className="h-9"
+                className="h-11"
               />
             </div>
           )}
@@ -218,7 +266,7 @@ export function PaymentCapture({
             <div className="space-y-1">
               <Label className="text-[11px]">Tipo</Label>
               <Select value={value.card.card_type} onValueChange={(v) => onChange({ ...value, card: { ...value.card, card_type: v as CardType } })}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="debito">Débito</SelectItem>
                   <SelectItem value="credito">Crédito</SelectItem>
@@ -228,7 +276,7 @@ export function PaymentCapture({
             <div className="space-y-1">
               <Label className="text-[11px]">Marca</Label>
               <Select value={value.card.card_brand} onValueChange={(v) => onChange({ ...value, card: { ...value.card, card_brand: v as CardBrand } })}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Visa">Visa</SelectItem>
                   <SelectItem value="Mastercard">Mastercard</SelectItem>
@@ -247,7 +295,7 @@ export function PaymentCapture({
                 placeholder="1234"
                 value={value.card.card_last4}
                 onChange={(e) => onChange({ ...value, card: { ...value.card, card_last4: onlyDigits(e.target.value).slice(0, 4) } })}
-                className="h-9 font-mono"
+                className="h-11 font-mono"
               />
             </div>
             <div className="space-y-1">
@@ -256,7 +304,7 @@ export function PaymentCapture({
                 placeholder="123456"
                 value={value.card.authorization_code}
                 onChange={(e) => onChange({ ...value, card: { ...value.card, authorization_code: e.target.value.slice(0, 24) } })}
-                className="h-9 font-mono"
+                className="h-11 font-mono"
               />
             </div>
           </div>
@@ -267,7 +315,7 @@ export function PaymentCapture({
                 placeholder="TPV-01"
                 value={value.card.terminal_id}
                 onChange={(e) => onChange({ ...value, card: { ...value.card, terminal_id: e.target.value.slice(0, 40) } })}
-                className="h-9"
+                className="h-11"
               />
             </div>
             <div className="space-y-1">
@@ -276,7 +324,7 @@ export function PaymentCapture({
                 placeholder="Banorte"
                 value={value.card.acquirer}
                 onChange={(e) => onChange({ ...value, card: { ...value.card, acquirer: e.target.value.slice(0, 40) } })}
-                className="h-9"
+                className="h-11"
               />
             </div>
           </div>
@@ -294,8 +342,8 @@ export function PaymentCapture({
               <Label className="text-[11px]">Monto transferencia</Label>
               <Input
                 type="number" min={0} step="0.01" value={value.transferencia}
-                onChange={(e) => setTransferAmount(Number(e.target.value) || 0)}
-                className="h-9"
+                onChange={(e) => setMixtoTransferencia(Number(e.target.value) || 0)}
+                className="h-11"
               />
             </div>
           )}
@@ -305,7 +353,7 @@ export function PaymentCapture({
               <Input
                 type="number" min={0} step="0.01" value={value.transfer.amount}
                 onChange={(e) => setTransferAmount(Number(e.target.value) || 0)}
-                className="h-9"
+                className="h-11"
               />
             </div>
           )}
@@ -315,7 +363,7 @@ export function PaymentCapture({
               <Input
                 value={value.transfer.transfer_reference}
                 onChange={(e) => onChange({ ...value, transfer: { ...value.transfer, transfer_reference: e.target.value.slice(0, 60) } })}
-                className="h-9 font-mono"
+                className="h-11 font-mono"
               />
             </div>
             <div className="space-y-1">
@@ -323,7 +371,7 @@ export function PaymentCapture({
               <Input
                 value={value.transfer.bank_name}
                 onChange={(e) => onChange({ ...value, transfer: { ...value.transfer, bank_name: e.target.value.slice(0, 40) } })}
-                className="h-9"
+                className="h-11"
               />
             </div>
           </div>

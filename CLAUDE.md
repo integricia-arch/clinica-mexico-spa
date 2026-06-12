@@ -115,7 +115,70 @@ Después de cualquier mensaje de seguridad en Lovable (especialmente en `src/int
 
 ---
 
+## Pendientes de desarrollo prioritarios <!-- /aprende 2026-06-08 -->
+
+### Corte de caja (Opción B — aprobada)
+Implementar en este orden:
+1. **Conteo ciego** — ShiftPanel pide conteo físico ANTES de mostrar el esperado
+2. **Folio SEQUENCE + auto-generar corte Z** en tabla `cortes` al cerrar turno farmacia
+3. **Umbral de diferencia** configurable por clínica → bloquea si |diff| > umbral hasta firma supervisor
+4. **Egresos/Ingresos del fondo** durante turno (nueva tabla + UI)
+5. **Corte X** intra-turno sin cerrar
+6. Extender `turnos` generales con reconciliación (cajeros no-farmacia)
+
+Ver memoria: `project_corte-caja-arquitectura.md`
+
+### SQL complejo con supabase CLI <!-- /aprende 2026-06-08 -->
+- **Nunca** pasar SQL con `$function$` inline: `supabase db query --linked "..."` falla
+- **Siempre** escribir a `_tmp_*.sql` y usar: `supabase db query --linked --file archivo.sql`
+
 ## Contexto de proyecto (credenciales)
 
 Ver `.claude/project-context.md` — IDs de Cloudflare, Supabase URLs, rutas, pendientes de desarrollo.
 El archivo está gitignoreado (`.claude/` en `.gitignore`).
+
+---
+
+## Memoria del proyecto (Obsidian vault)
+
+Esta carpeta ES el vault de Obsidian. Toda la memoria persistente del proyecto vive en `memoria/`.
+
+### Al iniciar sesión — SIEMPRE hacer esto primero
+1. Leer `memoria/STATE.md` — estado actual, pendientes, archivos clave
+2. Leer nota más reciente en `memoria/diario/` — contexto de la última sesión
+
+**PROHIBIDO** usar `mem-search`, `get_observations` u otras herramientas de memoria externa al iniciar. Solo 2 `Read` calls. Toda la verdad del proyecto está en `memoria/`.
+
+### Al terminar sesión — SIEMPRE hacer esto (y también tras CUALQUIER cambio significativo)
+1. Actualizar `memoria/STATE.md`: mover completados a "Completado", actualizar "Pendiente"
+2. Crear/actualizar nota en `memoria/diario/YYYY-MM-DD.md` con resumen de la sesión
+
+**NO cerrar sesión ni hacer commit sin actualizar STATE.md primero.**
+
+### Estructura
+```
+memoria/
+├── STATE.md              # estado vivo del proyecto (actualizar cada sesión)
+├── proyectos/            # notas por módulo/proyecto
+├── conceptos/            # decisiones técnicas, patrones, reglas de negocio
+├── referencias/          # info externa (APIs, docs, etc.)
+└── diario/               # notas por sesión (YYYY-MM-DD.md)
+```
+
+### Convenciones
+- Usar `[[wikilinks]]` para conectar notas
+- Una decisión/concepto por nota en `conceptos/`
+- `STATE.md` = verdad actual (siempre al día)
+
+## Learnings (added by /aprende 2026-06-09)
+
+### Responsive / Tailwind
+- Tailwind breakpoints: sm=640 md=768 **lg=1024** **xl=1280** 2xl=1536. Para "desktop ≥1280px" usar `xl:`, NO `lg:`. <!-- /aprende 2026-06-09 -->
+- AppLayout.tsx ya tiene sidebar drawer (`sidebarOpen` state, `lg:hidden`). Para tablet-responsive solo cambiar `lg:` → `xl:` en 4 lugares. NO reconstruir desde cero. <!-- /aprende 2026-06-09 -->
+- POS grid en PuntoDeVenta.tsx usa `lg:grid-cols-[220px_1fr_360px]` — INCORRECTO para tablet. Cambiar a `xl:` (Task 4 del plan farmacia-responsive). <!-- /aprende 2026-06-09 -->
+
+### Formularios
+- Hook `useFieldErrors` en `src/hooks/useFieldErrors.ts`. Inputs requeridos deben tener `id="field-{nombre}"`. Ver reference_usefielderrors-hook.md. <!-- /aprende 2026-06-09 -->
+
+### Diseño pendiente
+- Plan farmacia responsive: `docs/superpowers/plans/2026-06-09-farmacia-responsive.md` — 11 tasks, NO ejecutado. Empezar en Task 1 (useIsTablet). Branch: `feat/pos-criticos-iva-devoluciones`. <!-- /aprende 2026-06-09 -->

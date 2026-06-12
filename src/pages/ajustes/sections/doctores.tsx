@@ -18,6 +18,7 @@ import {
 import { Field, type SectionProps } from "../shared";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useDoctores, type Doctor, type DoctorInput } from "@/hooks/useDoctores";
+import { useFieldErrors } from "@/hooks/useFieldErrors";
 
 const EMPTY: DoctorInput = {
   nombre: "", apellidos: "", especialidad: "", cedula: "", telefono: "",
@@ -35,10 +36,12 @@ export function SectionDoctores(_: SectionProps) {
   const [form, setForm] = useState<DoctorInput>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<Doctor | null>(null);
+  const { markErrors, clearError, errorClass, resetErrors } = useFieldErrors();
 
   const openNew = () => {
     setEditing(null);
     setForm(EMPTY);
+    resetErrors();
     setDialogOpen(true);
   };
   const openEdit = (d: Doctor) => {
@@ -49,6 +52,7 @@ export function SectionDoctores(_: SectionProps) {
       horarioInicio: d.horarioInicio || "09:00", horarioFin: d.horarioFin || "19:00",
       activo: d.activo,
     });
+    resetErrors();
     setDialogOpen(true);
   };
 
@@ -56,12 +60,13 @@ export function SectionDoctores(_: SectionProps) {
     setForm((prev) => ({ ...prev, [k]: v }));
 
   const handleSubmit = async () => {
-    if (!form.nombre.trim() || !form.apellidos.trim()) {
-      toast.error("Nombre y apellidos son obligatorios.");
-      return;
-    }
-    if (!form.especialidad.trim()) {
-      toast.error("La especialidad es obligatoria.");
+    const missing: string[] = [];
+    if (!form.nombre.trim()) missing.push("nombre");
+    if (!form.apellidos.trim()) missing.push("apellidos");
+    if (!form.especialidad.trim()) missing.push("especialidad");
+    if (missing.length) {
+      markErrors(missing);
+      toast.error("Completa los campos obligatorios marcados en rojo.");
       return;
     }
     setSaving(true);
@@ -175,15 +180,30 @@ export function SectionDoctores(_: SectionProps) {
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Nombre">
-                <Input value={form.nombre} onChange={(e) => setField("nombre", e.target.value)} />
+              <Field label="Nombre *">
+                <Input
+                  id="field-nombre"
+                  value={form.nombre}
+                  onChange={(e) => { clearError("nombre"); setField("nombre", e.target.value); }}
+                  className={errorClass("nombre")}
+                />
               </Field>
-              <Field label="Apellidos">
-                <Input value={form.apellidos} onChange={(e) => setField("apellidos", e.target.value)} />
+              <Field label="Apellidos *">
+                <Input
+                  id="field-apellidos"
+                  value={form.apellidos}
+                  onChange={(e) => { clearError("apellidos"); setField("apellidos", e.target.value); }}
+                  className={errorClass("apellidos")}
+                />
               </Field>
             </div>
-            <Field label="Especialidad">
-              <Input value={form.especialidad} onChange={(e) => setField("especialidad", e.target.value)} />
+            <Field label="Especialidad *">
+              <Input
+                id="field-especialidad"
+                value={form.especialidad}
+                onChange={(e) => { clearError("especialidad"); setField("especialidad", e.target.value); }}
+                className={errorClass("especialidad")}
+              />
             </Field>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Cédula profesional">

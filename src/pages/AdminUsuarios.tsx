@@ -19,12 +19,13 @@ import {
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient";
+type AppRole = "admin" | "manager" | "receptionist" | "doctor" | "nurse" | "patient";
 
-const ROLE_OPTIONS: AppRole[] = ["admin", "receptionist", "doctor", "nurse", "patient"];
+const ROLE_OPTIONS: AppRole[] = ["admin", "manager", "receptionist", "doctor", "nurse", "patient"];
 
 const ROLE_LABELS: Record<AppRole, string> = {
   admin: "Administrador",
+  manager: "Gerente",
   receptionist: "Recepción",
   doctor: "Médico",
   nurse: "Enfermería",
@@ -33,6 +34,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
 
 const ROLE_BADGE: Record<AppRole, string> = {
   admin: "bg-primary text-primary-foreground",
+  manager: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
   receptionist: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
   doctor: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   nurse: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
@@ -93,6 +95,13 @@ export default function AdminUsuarios() {
   const [baseOpen, setBaseOpen] = useState(false);
   const [basePw, setBasePw] = useState("");
   const [applyingBase, setApplyingBase] = useState(false);
+
+  const [createPin, setCreatePin] = useState("");
+  const [createPinConfirm, setCreatePinConfirm] = useState("");
+  const [pinUser, setPinUser] = useState<UsuarioRow | null>(null);
+  const [pinValue, setPinValue] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [savingPin, setSavingPin] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -183,7 +192,7 @@ export default function AdminUsuarios() {
   }, [users, unlinkedDoctorRows, doctorByUserId, query, roleFilter]);
 
   const roleCounts = useMemo(() => {
-    const c: Record<string, number> = { all: users.length + unlinkedDoctorRows.length, admin: 0, receptionist: 0, doctor: unlinkedDoctorRows.length, nurse: 0, patient: 0 };
+    const c: Record<string, number> = { all: users.length + unlinkedDoctorRows.length, admin: 0, manager: 0, receptionist: 0, doctor: unlinkedDoctorRows.length, nurse: 0, patient: 0 };
     for (const u of users) {
       for (const r of u.roles) c[r] = (c[r] ?? 0) + 1;
       if (u.roles.length === 0) c.patient += 1;
@@ -224,18 +233,45 @@ export default function AdminUsuarios() {
     if (createPassword.length < 12) {
       toast.error("La contraseña debe tener al menos 12 caracteres"); return;
     }
+    if (["admin", "manager"].includes(createRole)) {
+      if (!createPin || !/^\d{4,6}$/.test(createPin)) {
+        toast.error("PIN de autorización requerido (4-6 dígitos) para este rol");
+        return;
+      }
+      if (createPin !== createPinConfirm) {
+        toast.error("Los PINs no coinciden");
+        return;
+      }
+    }
     setCreating(true);
     const { data, error } = await supabase.functions.invoke("admin-users", {
       body: { action: "create", email: createEmail, password: createPassword, roles: [createRole] },
     });
-    setCreating(false);
     if (error || (data as any)?.error) {
+      setCreating(false);
       toast.error((data as any)?.error || "No se pudo crear el usuario");
       return;
     }
+    if (["admin", "manager"].includes(createRole) && createPin) {
+      const newUserId = (data as any)?.user?.id;
+      if (newUserId) {
+        const { error: pinErr } = await supabase.rpc("set_supervisor_pin", {
+          p_user_id: newUserId,
+          p_pin: createPin,
+        } as never);
+        if (pinErr) {
+          setCreating(false);
+          toast.error(`Usuario creado pero PIN no se pudo guardar: ${pinErr.message}. Configura el PIN manualmente desde la lista de usuarios.`);
+          fetchUsers();
+          return;
+        }
+      }
+    }
+    setCreating(false);
     toast.success("Usuario creado");
     setCreateOpen(false);
     setCreateEmail(""); setCreatePassword(""); setCreateRole("patient");
+    setCreatePin(""); setCreatePinConfirm("");
     fetchUsers();
   };
 
@@ -526,7 +562,7 @@ export default function AdminUsuarios() {
               />
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {(["all", "admin", "receptionist", "doctor", "nurse", "patient"] as const).map((r) => (
+              {(["all", "admin", "manager", "receptionist", "doctor", "nurse", "patient"] as const).map((r) => (
                 <Button
                   key={r}
                   size="sm"
@@ -634,12 +670,20 @@ export default function AdminUsuarios() {
                         {u.roles.length === 0 ? (
                           <span className="text-xs text-muted-foreground">Sin rol</span>
                         ) : (
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-wrap gap-1.5 items-center">
                             {u.roles.map((r) => (
                               <Badge key={r} className={ROLE_BADGE[r as AppRole]}>
                                 {ROLE_LABELS[r as AppRole] ?? r}
                               </Badge>
                             ))}
+                            {(u.roles.includes("admin") || u.roles.includes("manager")) && (
+                              <button
+                                onClick={() => { setPinUser(u); setPinValue(""); setPinConfirm(""); }}
+                                className="inline-flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 underline ml-1"
+                              >
+                                <KeyRound className="h-3 w-3" /> PIN
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>
@@ -961,6 +1005,39 @@ export default function AdminUsuarios() {
                 ))}
               </div>
             </div>
+            {["admin", "manager"].includes(createRole) && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-pin">
+                    PIN de autorización <span className="text-destructive">*</span>
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Requerido para admin/gerente. Se usará para autorizar cierres de turno con diferencia.
+                  </p>
+                  <Input
+                    id="create-pin"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="4-6 dígitos"
+                    value={createPin}
+                    onChange={(e) => setCreatePin(e.target.value.replace(/\D/g, ""))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-pin-confirm">Confirmar PIN</Label>
+                  <Input
+                    id="create-pin-confirm"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="Repite el PIN"
+                    value={createPinConfirm}
+                    onChange={(e) => setCreatePinConfirm(e.target.value.replace(/\D/g, ""))}
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
@@ -1051,6 +1128,71 @@ export default function AdminUsuarios() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Set supervisor PIN */}
+      <Dialog open={!!pinUser} onOpenChange={(v) => !v && setPinUser(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" /> PIN de autorización
+            </DialogTitle>
+            <DialogDescription>
+              Configura el PIN para <strong>{pinUser?.email}</strong>.
+              Déjalo vacío para conservar el PIN actual.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="set-pin">Nuevo PIN (4-6 dígitos)</Label>
+              <Input
+                id="set-pin"
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="4-6 dígitos numéricos"
+                value={pinValue}
+                onChange={(e) => setPinValue(e.target.value.replace(/\D/g, ""))}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="set-pin-confirm">Confirmar PIN</Label>
+              <Input
+                id="set-pin-confirm"
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Repite el PIN"
+                value={pinConfirm}
+                onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPinUser(null)}>Cancelar</Button>
+            <Button
+              disabled={savingPin}
+              onClick={async () => {
+                if (!pinUser) return;
+                if (!pinValue) { toast.error("Ingresa un PIN"); return; }
+                if (!/^\d{4,6}$/.test(pinValue)) { toast.error("PIN debe ser 4-6 dígitos"); return; }
+                if (pinValue !== pinConfirm) { toast.error("Los PINs no coinciden"); return; }
+                setSavingPin(true);
+                const { error } = await supabase.rpc("set_supervisor_pin", {
+                  p_user_id: pinUser.id,
+                  p_pin: pinValue,
+                } as never);
+                setSavingPin(false);
+                if (error) { toast.error(error.message || "No se pudo guardar el PIN"); return; }
+                toast.success("PIN actualizado");
+                setPinUser(null);
+              }}
+            >
+              {savingPin ? "Guardando…" : "Guardar PIN"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -4,12 +4,27 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Printer } from "lucide-react";
+import { RefreshCw, Printer, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 const formatMXN = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+
+type CorteZ = {
+  id: string;
+  folio_secuencial: number | null;
+  efectivo_esperado: number | null;
+  conteo_ciego: number | null;
+  diferencia: number | null;
+  requiere_autorizacion: boolean;
+  autorizado_by: string | null;
+  total_efectivo: number;
+  total_general: number;
+  conteo_movimientos: number;
+  created_at: string;
+  datos_json: Record<string, unknown>;
+};
 
 type TurnoRow = {
   id: string;
@@ -23,6 +38,7 @@ type TurnoRow = {
   abierto_at: string;
   cerrado_at: string | null;
   caja: { nombre: string } | null;
+  corte_z: CorteZ | null;
 };
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -45,19 +61,51 @@ export default function CorteTurno() {
   async function load() {
     if (!activeClinicId || !user?.id) return;
     setLoading(true);
-    const { data } = await supabase
+
+    const { data: turnosData } = await supabase
       .from("turnos")
       .select("id, caja_id, cajero_user_id, estado, monto_apertura, monto_cierre, notas_apertura, notas_cierre, abierto_at, cerrado_at, caja:cajas(nombre)")
       .eq("clinic_id", activeClinicId)
       .order("abierto_at", { ascending: false })
       .limit(30);
-    const list = (data ?? []) as unknown as TurnoRow[];
+
+    const turnosList = (turnosData ?? []) as unknown as Omit<TurnoRow, "corte_z">[];
+
+    if (turnosList.length === 0) {
+      setTurnos([]);
+      setLoading(false);
+      return;
+    }
+
+    const ids = turnosList.map((t) => t.id);
+    const { data: cortesData } = await supabase
+      .from("cortes")
+      .select("id, turno_id, folio_secuencial, efectivo_esperado, conteo_ciego, diferencia, requiere_autorizacion, autorizado_by, total_efectivo, total_general, conteo_movimientos, created_at, datos_json")
+      .in("turno_id", ids)
+      .eq("tipo", "Z")
+      .order("created_at", { ascending: false });
+
+    const corteByTurno = new Map<string, CorteZ>();
+    for (const c of (cortesData ?? []) as unknown as (CorteZ & { turno_id: string })[]) {
+      if (!corteByTurno.has(c.turno_id)) {
+        corteByTurno.set(c.turno_id, c);
+      }
+    }
+
+    const list: TurnoRow[] = turnosList.map((t) => ({
+      ...t,
+      corte_z: corteByTurno.get(t.id) ?? null,
+    }));
+
     setTurnos(list);
-    if (list.length > 0 && !selected) setSelected(list[0]);
-    else if (list.length > 0 && selected) {
+
+    if (list.length > 0 && !selected) {
+      setSelected(list[0]);
+    } else if (list.length > 0 && selected) {
       const updated = list.find((t) => t.id === selected.id);
       if (updated) setSelected(updated);
     }
+
     setLoading(false);
   }
 
@@ -91,7 +139,6 @@ export default function CorteTurno() {
         <p className="text-sm text-muted-foreground">Sin turnos registrados aún.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-          {/* Lista */}
           <div className="rounded-xl border border-border bg-card p-2 space-y-1 max-h-[520px] overflow-auto">
             {loading && <p className="text-xs text-muted-foreground p-3">Cargando…</p>}
             {turnos.map((t) => (
@@ -114,11 +161,13 @@ export default function CorteTurno() {
                   {t.cerrado_at && ` → ${format(new Date(t.cerrado_at), "HH:mm", { locale: es })}`}
                 </p>
                 <p className="text-[11px]">Fondo: {formatMXN(t.monto_apertura)}</p>
+                {t.corte_z?.folio_secuencial && (
+                  <p className="text-[11px] text-primary font-mono">Z-{String(t.corte_z.folio_secuencial).padStart(6, "0")}</p>
+                )}
               </button>
             ))}
           </div>
 
-          {/* Detalle */}
           {selected ? (
             <div id="corte-print" className="space-y-4">
               <div className="rounded-xl border border-border bg-card p-4 space-y-4">
@@ -126,6 +175,11 @@ export default function CorteTurno() {
                   <div>
                     <p className="font-semibold text-base">{selected.caja?.nombre ?? "Caja"}</p>
                     <p className="text-xs text-muted-foreground font-mono">{selected.id.slice(0, 8).toUpperCase()}</p>
+                    {selected.corte_z?.folio_secuencial && (
+                      <p className="text-xs text-primary font-mono mt-0.5">
+                        Folio Z-{String(selected.corte_z.folio_secuencial).padStart(6, "0")}
+                      </p>
+                    )}
                   </div>
                   <Badge variant={selected.estado === "abierto" ? "default" : "outline"}>
                     {selected.estado === "abierto" ? "En curso" : "Cerrado"}
@@ -145,10 +199,49 @@ export default function CorteTurno() {
                       : "—"}
                   />
                   <Stat label="Duración" value={duracion(selected)} />
-                  {selected.monto_cierre != null && (
-                    <Stat label="Fondo cierre" value={formatMXN(selected.monto_cierre)} />
+                  {selected.corte_z?.conteo_movimientos != null && (
+                    <Stat label="Movimientos" value={String(selected.corte_z.conteo_movimientos)} />
                   )}
                 </div>
+
+                {selected.corte_z && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reconciliación de efectivo</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <Stat label="Cobros efectivo" value={formatMXN(selected.corte_z.total_efectivo)} />
+                      {selected.corte_z.efectivo_esperado != null && (
+                        <Stat label="Esperado" value={formatMXN(selected.corte_z.efectivo_esperado)} />
+                      )}
+                      {selected.corte_z.conteo_ciego != null && (
+                        <Stat label="Contado (ciego)" value={formatMXN(selected.corte_z.conteo_ciego)} />
+                      )}
+                    </div>
+
+                    {selected.corte_z.diferencia != null && (() => {
+                      const diff = selected.corte_z!.diferencia!;
+                      const diffColor = diff === 0 ? "text-green-600" : diff > 0 ? "text-amber-600" : "text-red-600";
+                      const DiffIcon = diff === 0 ? Minus : diff > 0 ? TrendingUp : TrendingDown;
+                      return (
+                        <div className={`flex items-center gap-2 rounded-lg border px-4 py-3 ${
+                          diff === 0 ? "border-green-500/40 bg-green-500/5" :
+                          diff > 0 ? "border-amber-500/40 bg-amber-500/5" :
+                          "border-red-500/40 bg-red-500/5"
+                        }`}>
+                          <DiffIcon className={`h-5 w-5 ${diffColor}`} />
+                          <div>
+                            <p className={`font-semibold text-sm ${diffColor}`}>
+                              {diff === 0 ? "Cuadrado" : diff > 0 ? "Sobrante" : "Faltante"}:{" "}
+                              {formatMXN(diff)}
+                            </p>
+                            {selected.corte_z!.requiere_autorizacion && (
+                              <p className="text-xs text-muted-foreground">Autorizado por supervisor</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 {(selected.notas_apertura || selected.notas_cierre) && (
                   <div className="space-y-2 text-sm">

@@ -15,6 +15,8 @@ export type TicketPaymentLine = {
   terminal_id?: string | null;
   transfer_reference?: string | null;
   bank_name?: string | null;
+  monto_recibido?: number | null;
+  cambio_entregado?: number | null;
 };
 
 export type TicketData = {
@@ -31,6 +33,9 @@ export type TicketData = {
   subtotal: number;
   descuento: number;
   total: number;
+  totalIva?: number;
+  baseGravable?: number;
+  exento?: number;
 };
 
 export function TicketInterno({
@@ -45,11 +50,11 @@ export function TicketInterno({
   if (!data) return null;
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Ticket interno</DialogTitle>
         </DialogHeader>
-        <div id="pos-ticket-print" className="font-mono text-xs space-y-2 bg-background p-3 rounded border">
+        <div id="pos-ticket-print" className="font-mono text-xs space-y-2 bg-background p-3 rounded border overflow-y-auto flex-1">
           <div className="text-center space-y-0.5">
             <p className="font-semibold text-sm">{data.clinica}</p>
             <p className="text-muted-foreground">Comprobante interno · no es CFDI</p>
@@ -71,14 +76,30 @@ export function TicketInterno({
             ))}
           </div>
           <div className="border-t border-dashed pt-2 space-y-0.5">
-            <div className="flex justify-between"><span>Subtotal</span><span>{formatMXN(data.subtotal)}</span></div>
             {data.descuento > 0 && (
-              <div className="flex justify-between"><span>Descuento</span><span>-{formatMXN(data.descuento)}</span></div>
+              <>
+                <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>{formatMXN(data.subtotal)}</span></div>
+                <div className="flex justify-between"><span>Descuento</span><span>-{formatMXN(data.descuento)}</span></div>
+              </>
             )}
             <div className="flex justify-between font-semibold text-sm">
               <span>Total</span><span>{formatMXN(data.total)}</span>
             </div>
-            <p>Pago: {data.metodoPago}</p>
+            {/* Desglose IVA */}
+            {(data.baseGravable != null || data.exento != null || data.totalIva != null) && (
+              <div className="border-t border-dashed pt-1 mt-1 space-y-0.5 text-[10px] text-muted-foreground">
+                {data.baseGravable != null && data.baseGravable > 0 && (
+                  <div className="flex justify-between"><span>Base gravable 16%</span><span>{formatMXN(data.baseGravable)}</span></div>
+                )}
+                {data.totalIva != null && data.totalIva > 0 && (
+                  <div className="flex justify-between"><span>IVA 16%</span><span>{formatMXN(data.totalIva)}</span></div>
+                )}
+                {data.exento != null && data.exento > 0 && (
+                  <div className="flex justify-between"><span>Exento</span><span>{formatMXN(data.exento)}</span></div>
+                )}
+              </div>
+            )}
+            <p className="pt-0.5">Pago: {data.metodoPago}</p>
           </div>
           {data.payments && data.payments.length > 0 && (
             <div className="border-t border-dashed pt-2 space-y-0.5">
@@ -88,6 +109,11 @@ export function TicketInterno({
                     <span className="capitalize">{p.method}</span>
                     <span>{formatMXN(p.amount)}</span>
                   </div>
+                  {p.method === "efectivo" && p.monto_recibido != null && p.monto_recibido > p.amount && (
+                    <p className="pl-2 text-[10px] opacity-80">
+                      Recibió: {formatMXN(p.monto_recibido)} · Cambio: {formatMXN(p.cambio_entregado ?? (p.monto_recibido - p.amount))}
+                    </p>
+                  )}
                   {p.method === "tarjeta" && (
                     <p className="pl-2 text-[10px] opacity-80">
                       {p.card_brand ?? ""} ****{p.card_last4 ?? "----"}
