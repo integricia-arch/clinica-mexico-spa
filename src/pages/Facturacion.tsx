@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Search, Plus, Download, FileText, MoreHorizontal,
-  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle,
+  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle, Globe, Receipt,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { toast } from "sonner";
 import TimbrarCFDIDialog from "@/features/facturacion/TimbrarCFDIDialog";
+import RegistrarPagoREPDialog from "@/features/facturacion/RegistrarPagoREPDialog";
+import FacturaGlobalDialog from "@/features/facturacion/FacturaGlobalDialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -66,18 +68,29 @@ export default function Facturacion() {
   const [cancelMotivo, setCancelMotivo] = useState<string>("02");
   const [cancelSustitucion, setCancelSustitucion] = useState("");
   const [canceling, setCanceling] = useState(false);
+  const [repDoc, setRepDoc] = useState<CfdiDoc | null>(null);
+  const [globalOpen, setGlobalOpen] = useState(false);
+  const [cpEmisor, setCpEmisor] = useState("");
 
   const load = useCallback(async () => {
     if (!activeClinicId) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("cfdi_documentos" as any)
-      .select("id,uuid_fiscal,serie,folio,tipo,fecha_emision,rfc_emisor,rfc_receptor,nombre_receptor,subtotal,total,metodo_pago,forma_pago,status,pac_id_externo")
-      .eq("clinic_id", activeClinicId)
-      .order("fecha_emision", { ascending: false })
-      .limit(200);
-    if (error) toast.error("Error al cargar CFDIs: " + error.message);
-    setDocs((data ?? []) as CfdiDoc[]);
+    const [docsRes, cfgRes] = await Promise.all([
+      supabase
+        .from("cfdi_documentos" as any)
+        .select("id,uuid_fiscal,serie,folio,tipo,fecha_emision,rfc_emisor,rfc_receptor,nombre_receptor,subtotal,total,metodo_pago,forma_pago,status,pac_id_externo")
+        .eq("clinic_id", activeClinicId)
+        .order("fecha_emision", { ascending: false })
+        .limit(200),
+      supabase
+        .from("cfdi_config" as any)
+        .select("domicilio_fiscal_cp")
+        .eq("clinic_id", activeClinicId)
+        .maybeSingle(),
+    ]);
+    if (docsRes.error) toast.error("Error al cargar CFDIs: " + docsRes.error.message);
+    setDocs((docsRes.data ?? []) as CfdiDoc[]);
+    if (cfgRes.data) setCpEmisor((cfgRes.data as any).domicilio_fiscal_cp ?? "");
     setLoading(false);
   }, [activeClinicId]);
 
@@ -202,6 +215,14 @@ export default function Facturacion() {
             title="Recargar"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+          <button
+            onClick={() => setGlobalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            title="Factura global público general"
+          >
+            <Globe className="h-4 w-4" />
+            Global
           </button>
           <button
             onClick={() => setDialogOpen(true)}
@@ -347,6 +368,14 @@ export default function Facturacion() {
                             <Copy className="h-4 w-4" /> Copiar UUID fiscal
                           </DropdownMenuItem>
                         )}
+                        {d.status === "vigente" && d.metodo_pago === "PPD" && d.tipo === "I" && (
+                          <DropdownMenuItem
+                            onClick={() => setRepDoc(d)}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <Receipt className="h-4 w-4" /> Registrar pago (REP)
+                          </DropdownMenuItem>
+                        )}
                         {d.status === "vigente" && (
                           <>
                             <DropdownMenuSeparator />
@@ -375,6 +404,24 @@ export default function Facturacion() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSuccess={handleSuccess}
+      />
+
+      {repDoc && (
+        <RegistrarPagoREPDialog
+          open={!!repDoc}
+          onOpenChange={(o) => { if (!o) setRepDoc(null); }}
+          onSuccess={(id, uuid) => { toast.success(`REP timbrado — UUID: ${uuid}`); setRepDoc(null); load(); }}
+          cfdi={repDoc}
+          clinicId={activeClinicId ?? ""}
+        />
+      )}
+
+      <FacturaGlobalDialog
+        open={globalOpen}
+        onOpenChange={setGlobalOpen}
+        onSuccess={(id, uuid) => { toast.success(`Factura global timbrada — UUID: ${uuid}`); load(); }}
+        clinicId={activeClinicId ?? ""}
+        cpEmisor={cpEmisor}
       />
 
       {/* Dialog cancelación */}

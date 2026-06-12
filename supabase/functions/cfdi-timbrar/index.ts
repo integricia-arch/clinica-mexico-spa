@@ -34,6 +34,12 @@ interface Concepto {
   iva_tasa?: number;               // 0.16 | 0.08 | 0.00 cuando objeto_imp=02
 }
 
+interface InformacionGlobal {
+  periodicidad: "01" | "02" | "03" | "04" | "05"; // 01=diario 02=semanal 03=quincenal 04=mensual 05=bimestral
+  meses: string;   // "01"-"12"
+  anio: number;
+}
+
 interface TimbrarRequest {
   clinic_id: string;
   tipo: "I" | "E";
@@ -48,6 +54,7 @@ interface TimbrarRequest {
   conceptos: Concepto[];
   metodo_pago: "PUE" | "PPD";
   forma_pago: string;
+  informacion_global?: InformacionGlobal;
   appointment_id?: string;
   sale_id?: string;
 }
@@ -78,7 +85,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: TimbrarRequest = await req.json();
-    const { clinic_id, tipo = "I", receptor, conceptos, metodo_pago, forma_pago, appointment_id, sale_id } = body;
+    const { clinic_id, tipo = "I", receptor, conceptos, metodo_pago, forma_pago, informacion_global, appointment_id, sale_id } = body;
 
     if (!clinic_id || !receptor?.rfc || !conceptos?.length) {
       return json({ error: "Faltan datos: clinic_id, receptor.rfc y conceptos son obligatorios" }, 400);
@@ -170,6 +177,15 @@ Deno.serve(async (req: Request) => {
     };
 
     if (cfg.serie_defecto) payload.Serie = cfg.serie_defecto;
+
+    // Factura global: InformacionGlobal + receptor XAXX bloqueado
+    if (informacion_global) {
+      payload.InformacionGlobal = {
+        Periodicidad: informacion_global.periodicidad,
+        Meses:        informacion_global.meses.padStart(2, "0"),
+        Año:          informacion_global.anio,
+      };
+    }
 
     if (trasladosMap.size > 0) {
       payload.Impuestos = {
