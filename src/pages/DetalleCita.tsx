@@ -12,12 +12,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock, Route } from "lucide-react";
+import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle, XCircle, Pill, Bell, Plus, CalendarClock, Route, CreditCard } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
 import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 import QuickArrivalModal from "@/features/centro-control/components/QuickArrivalModal";
 import type { JourneyInstanceLite } from "@/features/centro-control/lib/journeyHelpers";
+import StripePaymentModal from "@/features/pagos/StripePaymentModal";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 
 const estadoRecordatorioLabel: Record<string, string> = {
   pendiente: "Pendiente",
@@ -64,6 +66,7 @@ export default function DetalleCita() {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const { toast } = useToast();
+  const { activeClinicId } = useActiveClinic();
   const [appointment, setAppointment] = useState<any>(null);
   const [resources, setResources] = useState<any[]>([]);
   const [servicio, setServicio] = useState<any>(null);
@@ -95,6 +98,11 @@ export default function DetalleCita() {
   const [sendingNow, setSendingNow] = useState<string | null>(null);
 
   const puedeGestionarRecordatorios = hasRole("admin") || hasRole("receptionist");
+
+  // Stripe payment modal
+  const [stripeOpen, setStripeOpen] = useState(false);
+  const [stripeAmountCents, setStripeAmountCents] = useState(0);
+  const [stripeAmountInput, setStripeAmountInput] = useState("");
 
   const reloadRecordatorios = async () => {
     const { data } = await (supabase as any)
@@ -313,6 +321,59 @@ export default function DetalleCita() {
               <Button size="lg" variant="destructive" className="flex-1" onClick={() => updateStatus("cancelada")}>
                 <XCircle className="mr-2 h-4 w-4" /> Cancelar cita
               </Button>
+            </div>
+          )}
+
+        {/* Cobro con tarjeta */}
+        {(hasRole("admin") || hasRole("receptionist")) &&
+          !["cancelada", "liberada"].includes(a.status) &&
+          activeClinicId && (
+            <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium">Cobro con tarjeta</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    placeholder={servicio?.precio_centavos
+                      ? (servicio.precio_centavos / 100).toFixed(2)
+                      : "0.00"}
+                    value={stripeAmountInput}
+                    onChange={(e) => setStripeAmountInput(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/20"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    const raw = stripeAmountInput.trim();
+                    const mxn = raw
+                      ? parseFloat(raw)
+                      : servicio?.precio_centavos
+                        ? servicio.precio_centavos / 100
+                        : 0;
+                    if (!mxn || mxn <= 0) {
+                      toast({ variant: "destructive", title: "Monto requerido", description: "Ingresa el monto a cobrar." });
+                      return;
+                    }
+                    setStripeAmountCents(Math.round(mxn * 100));
+                    setStripeOpen(true);
+                  }}
+                  className="gap-2 shrink-0"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Cobrar con tarjeta
+                </Button>
+              </div>
+              {servicio?.precio_centavos && !stripeAmountInput && (
+                <p className="text-xs text-muted-foreground">
+                  Precio del servicio: ${(servicio.precio_centavos / 100).toFixed(2)} MXN
+                </p>
+              )}
             </div>
           )}
 
@@ -570,6 +631,28 @@ export default function DetalleCita() {
         patientName={a.patients ? `${a.patients.nombre} ${a.patients.apellidos}` : undefined}
         onCompleted={reloadJourney}
       />
+
+      {activeClinicId && (
+        <StripePaymentModal
+          open={stripeOpen}
+          onOpenChange={setStripeOpen}
+          onSuccess={(piId, txnId) => {
+            toast({
+              title: "Pago exitoso",
+              description: `Cobro registrado — PI: ${piId.slice(-8)}`,
+            });
+            setStripeAmountInput("");
+          }}
+          clinicId={activeClinicId}
+          amountCents={stripeAmountCents}
+          description={
+            servicio?.nombre
+              ? `${servicio.nombre} — cita ${id?.slice(0, 8)}`
+              : `Cita ${id?.slice(0, 8)}`
+          }
+          appointmentId={id}
+        />
+      )}
     </div>
   );
 }
