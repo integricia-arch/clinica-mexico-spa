@@ -115,7 +115,7 @@ Deno.serve(async (req: Request) => {
         currency:          "MXN",
         metodo,
         status:            "pending",
-        metadata:          { stripe_client_secret: piData.client_secret, description },
+        metadata:          { description },
       })
       .select("id")
       .single();

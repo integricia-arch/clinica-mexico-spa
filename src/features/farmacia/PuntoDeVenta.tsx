@@ -408,7 +408,7 @@ export default function PuntoDeVenta({
   }
 
   const subtotal = cart.reduce((s, c) => s + c.quantity * c.unit_price, 0);
-  const itemsDiscount = cart.reduce((s, c) => s + c.discount, 0);
+  const itemsDiscount = cart.reduce((s, c) => s + c.discount * c.quantity, 0);
   const globalDiscount = perms.canPosDiscount ? Number(discount) || 0 : 0;
   const total = Math.max(0, subtotal - itemsDiscount - globalDiscount);
   // IVA proporcional: precios incluyen IVA; aplicar ratio del descuento global
@@ -822,6 +822,7 @@ export default function PuntoDeVenta({
                 ) : (
                   catalogFiltered.map((m) => {
                     const stock = stockOf(m.id);
+                    const blockReason = blockReasonForDirectSale(m);
                     return (
                       <button
                         key={m.id}
@@ -842,7 +843,7 @@ export default function PuntoDeVenta({
                               : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                           }`}>Stock {stock}</span>
                         </div>
-                        {blocked && <p className="text-xs text-destructive mt-0.5">Requiere receta</p>}
+                        {blockReason && <p className="text-xs text-destructive mt-0.5">Requiere receta</p>}
                       </button>
                     );
                   })

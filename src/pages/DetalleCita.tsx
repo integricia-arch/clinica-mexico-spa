@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -318,9 +319,27 @@ export default function DetalleCita() {
               <Button size="lg" className="flex-1" onClick={() => updateStatus("confirmada")}>
                 <CheckCircle className="mr-2 h-4 w-4" /> Confirmar cita
               </Button>
-              <Button size="lg" variant="destructive" className="flex-1" onClick={() => updateStatus("cancelada")}>
-                <XCircle className="mr-2 h-4 w-4" /> Cancelar cita
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="lg" variant="destructive" className="flex-1">
+                    <XCircle className="mr-2 h-4 w-4" /> Cancelar cita
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Cancelar esta cita?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción cancelará la cita permanentemente. El paciente deberá reagendar.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Volver</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => updateStatus("cancelada")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Sí, cancelar cita
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
 

@@ -129,9 +129,9 @@ const ACTION_LABELS: Record<string, { label: string; tone: string }> = {
 // ─── CloseTurnoDialog ─────────────────────────────────────────────────────────
 
 function CloseTurnoDialog({
-  open, turno, onClose, onClosed,
+  open, turno, cajaNombre, onClose, onClosed,
 }: {
-  open: boolean; turno: Turno | null; onClose: () => void; onClosed: () => void;
+  open: boolean; turno: Turno | null; cajaNombre?: string; onClose: () => void; onClosed: () => void;
 }) {
   const { activeClinic } = useActiveClinic();
   const { user } = useAuth();
@@ -291,7 +291,7 @@ function CloseTurnoDialog({
             className="w-full gap-2"
             onClick={() => printActaArqueo({
               folio: result.folio,
-              cajaNombre: turno?.caja_nombre ?? "Caja",
+              cajaNombre: cajaNombre ?? "Caja",
               clinicName: activeClinic?.name,
               cajeroName: user?.email ?? undefined,
               fechaCierre: new Date().toISOString(),
@@ -941,6 +941,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
       <CloseTurnoDialog
         open={closeDialogOpen}
         turno={turnoActivo}
+        cajaNombre={cajas.find((c) => c.id === turnoActivo?.caja_id)?.nombre}
         onClose={() => setCloseDialogOpen(false)}
         onClosed={handleTurnoCerrado}
       />

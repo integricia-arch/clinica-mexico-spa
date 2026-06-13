@@ -75,11 +75,15 @@ Deno.serve(async (req: Request) => {
   const svc = createClient(SUPABASE_URL, SUPABASE_SVC);
 
   // Verificar rol admin
-  const { data: roles } = await svc
+  const { data: roles, error: rolesErr } = await svc
     .from("user_roles")
     .select("role")
     .eq("user_id", userData.user.id);
-  if (!(roles ?? []).some((r: any) => r.role === "admin")) {
+  if (rolesErr) {
+    console.error("[cfdi-timbrar] roles query error:", rolesErr.message);
+    return json({ error: "Error interno al verificar permisos" }, 500);
+  }
+  if (!(roles ?? []).some((r: { role: string }) => r.role === "admin")) {
     return json({ error: "Forbidden" }, 403);
   }
 

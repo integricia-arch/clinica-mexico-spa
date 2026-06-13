@@ -92,7 +92,7 @@ export default function Agenda() {
         .gte("fecha_inicio", ini.toISOString())
         .lte("fecha_inicio", fin.toISOString())
         .order("fecha_inicio"),
-      supabase.from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos").limit(3),
+      supabase.from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos"),
     ]);
     if (error) toast.error("Error al cargar citas: " + friendlyError(error));
     setCitas((cdata as any) ?? []);

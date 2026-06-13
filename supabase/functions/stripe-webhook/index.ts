@@ -34,8 +34,12 @@ async function verifyStripeSignature(
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
-  // Constant-time comparison (basic)
-  return computed === v1;
+  if (computed.length !== v1.length) return false;
+  let diff = 0;
+  for (let i = 0; i < computed.length; i++) {
+    diff |= computed.charCodeAt(i) ^ v1.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 Deno.serve(async (req: Request) => {

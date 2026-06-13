@@ -96,9 +96,9 @@ Deno.serve(async (req: Request) => {
     const creds = btoa(`${cfg.pac_usuario}:${cfg.pac_contrasena}`);
 
     // Facturama: DELETE /api/cfdis/issued/{id}?motive={motivo}[&uuidReplacement={uuid}]
-    let cancelUrl = `${facBase}/api/cfdis/issued/${doc.pac_id_externo}?motive=${motivo}`;
+    let cancelUrl = `${facBase}/api/cfdis/issued/${encodeURIComponent(doc.pac_id_externo)}?motive=${motivo}`;
     if (motivo === "01" && cfdi_sustitucion) {
-      cancelUrl += `&uuidReplacement=${cfdi_sustitucion}`;
+      cancelUrl += `&uuidReplacement=${encodeURIComponent(cfdi_sustitucion)}`;
     }
 
     const facRes = await fetch(cancelUrl, {

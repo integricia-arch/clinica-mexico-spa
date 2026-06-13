@@ -14,18 +14,34 @@ interface Props {
   onSwitchUser: () => void;
 }
 
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_MS = 30_000;
+
 export default function LockScreen({ email, initials, roleLabel, onUnlocked, onSwitchUser }: Props) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+
+  const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
+  const secondsLeft = lockedUntil ? Math.ceil((lockedUntil - Date.now()) / 1000) : 0;
 
   async function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
-    if (!password) return;
+    if (!password || isLocked) return;
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast.error("Contraseña incorrecta");
+      const next = attempts + 1;
+      setAttempts(next);
+      if (next >= MAX_ATTEMPTS) {
+        setLockedUntil(Date.now() + LOCKOUT_MS);
+        setAttempts(0);
+        toast.error(`Demasiados intentos. Espera 30 segundos.`);
+      } else {
+        toast.error(`Contraseña incorrecta. ${MAX_ATTEMPTS - next} intento${MAX_ATTEMPTS - next !== 1 ? "s" : ""} restante${MAX_ATTEMPTS - next !== 1 ? "s" : ""}.`);
+      }
       setPassword("");
       return;
     }
@@ -66,8 +82,8 @@ export default function LockScreen({ email, initials, roleLabel, onUnlocked, onS
               className="h-11"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading || !password}>
-            {loading ? "Verificando…" : "Desbloquear"}
+          <Button type="submit" className="w-full" disabled={loading || !password || isLocked}>
+            {isLocked ? `Bloqueado (${secondsLeft}s)` : loading ? "Verificando…" : "Desbloquear"}
           </Button>
         </form>
 

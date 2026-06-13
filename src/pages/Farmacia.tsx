@@ -280,7 +280,12 @@ export default function Farmacia() {
       } else if (loteId) {
         const lote = lotes.find(l => l.id === loteId);
         if (lote) {
-          const nueva = Math.max(0, lote.existencia - cantidad);
+          if (cantidad > lote.existencia) {
+            toast({ variant: "destructive", title: "Stock insuficiente", description: `Solo hay ${lote.existencia} unidades disponibles en el lote seleccionado.` });
+            setSavingMov(false);
+            return;
+          }
+          const nueva = lote.existencia - cantidad;
           await supabase.from("lotes_medicamento").update({ existencia: nueva }).eq("id", lote.id);
           setLotes(p => p.map(l => l.id === lote.id ? { ...l, existencia: nueva } : l));
         }

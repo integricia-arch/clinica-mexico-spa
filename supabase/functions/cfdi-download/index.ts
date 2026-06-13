@@ -49,6 +49,16 @@ Deno.serve(async (req: Request) => {
   if (!cfdiId) {
     return new Response(JSON.stringify({ error: "cfdi_id requerido" }), { status: 400, headers: corsHeaders });
   }
+  if (!["xml", "pdf"].includes(format)) {
+    return new Response(JSON.stringify({ error: "format inválido — usar xml o pdf" }), { status: 400, headers: corsHeaders });
+  }
+
+  // Obtener clinic_id del usuario autenticado para verificar pertenencia
+  const { data: userRolesWithClinic } = await svc
+    .from("clinic_memberships")
+    .select("clinic_id")
+    .eq("user_id", userData.user.id);
+  const userClinicIds = (userRolesWithClinic ?? []).map((m: any) => m.clinic_id);
 
   // Obtener registro del CFDI
   const { data: doc } = await svc
@@ -56,6 +66,10 @@ Deno.serve(async (req: Request) => {
     .select("clinic_id, pac_id_externo, xml_contenido, uuid_fiscal, serie, folio")
     .eq("id", cfdiId)
     .single();
+
+  if (doc && userClinicIds.length > 0 && !userClinicIds.includes(doc.clinic_id)) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
+  }
 
   if (!doc) {
     return new Response(JSON.stringify({ error: "CFDI no encontrado" }), { status: 404, headers: corsHeaders });
