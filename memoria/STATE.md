@@ -241,6 +241,24 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - [x] **TicketInterno**: style de impresión via useEffect+cleanup (no acumula en DOM)
 - [x] **Expedientes**: doctors cargados en mount; nota enriquecida con doctor real; cache siempre refresca
 
+### Fixes 🟢 BAJO completados — commits `9aec1f7`, `e0b1ead`
+- [x] **NuevaCitaDialog**: setSearching(false) en early return (spinner infinito al borrar)
+- [x] **Inbox**: CANAL_META fallback ?? { label: canal_id } (no crash si canal nuevo)
+- [x] **Recetas**: STATUS_LABELS fallback muestra status real (no "Emitida" para desconocidos)
+- [x] **TicketInterno**: llama onClose() si open=true pero data=null
+- [x] **AdminUsuarios**: fetchUsers con try/catch+finally (loading no queda true)
+- [x] **PrescriptionEditorModal**: siempre actualiza diagnosis (permite limpiar)
+- [x] **ErrorBoundary**: muestra error.message + botones "Recargar" y "Reintentar"
+- [x] **Facturacion**: VITE_SUPABASE_URL con .replace(/\/$/, "")
+- [x] **cfdi-cancelar/download/rep/stripe-payment-intent**: (r: any) → (r: { role: string })
+- [x] **useAuth**: setTimeout(0) → queueMicrotask (más predecible)
+- [x] **useActiveClinic**: catch (e: any) → catch (e: unknown)
+- [x] **AppLayout**: eliminar isDesktop sin resize listener (variable no usada)
+- [x] **PuntoDeVenta**: folio slice(0,8) → slice(0,12) (menos colisiones)
+- [x] **CajaTurno**: CorteRow + turno_id; cortesData as CorteRow[] (no any[])
+- [x] **DetalleCita**: RecordatorioCita interface; recordatorios state tipado
+- [x] **cfdi-timbrar**: console.error sin JSON.stringify(facData) completo
+
 ### ALTOS diferidos (no resueltos aún)
 - [ ] **ConfiguracionCFDI**: pac_contrasena/csd_contrasena en texto plano (necesita Vault)
 - [ ] **AdminUsuarios**: doctors insert sin clinic_id; user_roles sin scope; set_base_password_all sin scope
@@ -248,15 +266,19 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - [ ] **restClient.ts**: (supabase as any).supabaseUrl/supabaseKey
 - [ ] **stripe-payment-intent**: no verifica que ambiente config coincide con key en uso
 
+### BAJOs diferidos (trade-off consciente)
+- [ ] **Farmacia**: forceMount en TabsContent "pos" — intencional para preservar carrito, causaría regresión UX si se elimina
+- [ ] **PuntoDeVenta**: "pendiente" disponible para meds controlados — requiere lógica cart+categoría
+- [ ] **Expedientes**: query como string literal en restSelect — inherente al cliente REST
+
 ## Pendiente / Próximo
 
 ### Revisión completa del proyecto
 - [x] Agente revisor → `docs/mejoras-correcciones.md` (sesión 8)
 - [x] Fixes 🔴 CRÍTICO — todos resueltos (sesión 8)
 - [x] Fixes 🟠 ALTO — 13/28 resueltos (5 diferidos por complejidad)
-- [x] Fixes 🟡 MEDIO — 12/23 resueltos, 11 pendientes (UX, tipos, edge cases)
-- [ ] Fixes 🟡 MEDIO restantes (~11)
-- [ ] Fixes 🟢 BAJO (~18)
+- [x] Fixes 🟡 MEDIO — todos resueltos
+- [x] Fixes 🟢 BAJO — 16/18 resueltos (2 diferidos, 1 trade-off consciente)
 
 ### CFDI
 - [ ] Notas de crédito (tipo E)
