@@ -117,9 +117,11 @@ export default function DetalleCita() {
   const abrirNuevoRecordatorio = () => {
     setEditingReminder(null);
     setReminderIdentidadId(identidadesCanal[0]?.id ?? "");
-    const defaultDate = new Date(
-      Math.max(Date.now() + 60 * 60 * 1000, new Date(appointment.fecha_inicio).getTime() - 2 * 60 * 60 * 1000)
-    );
+    const citaMs = new Date(appointment.fecha_inicio).getTime();
+    const defaultDate = new Date(Math.min(
+      Math.max(Date.now() + 60 * 60 * 1000, citaMs - 2 * 60 * 60 * 1000),
+      citaMs - 5 * 60 * 1000  // never schedule a reminder after the appointment starts
+    ));
     setReminderFecha(format(defaultDate, "yyyy-MM-dd'T'HH:mm"));
     setReminderMensaje(
       `Recordatorio: tiene una cita el ${format(new Date(appointment.fecha_inicio), "dd/MM/yyyy 'a las' HH:mm", { locale: es })} hrs.`

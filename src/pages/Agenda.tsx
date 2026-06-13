@@ -117,8 +117,15 @@ export default function Agenda() {
       (filtroStatus === "todos" || c.status === filtroStatus),
     ), [citas, filtroOrigen, filtroStatus]);
 
-  const getCita = (hora: string, doctorId: string) =>
-    citasFiltradas.find((c) => fmtHora(c.fecha_inicio) === hora && c.doctor_id === doctorId);
+  const getCita = (hora: string, doctorId: string) => {
+    const [h, m] = hora.split(":").map(Number);
+    const slotStart = new Date(fecha); slotStart.setHours(h, m, 0, 0);
+    const slotEnd = new Date(slotStart.getTime() + 30 * 60 * 1000);
+    return citasFiltradas.find((c) => {
+      const ini = new Date(c.fecha_inicio).getTime();
+      return c.doctor_id === doctorId && ini >= slotStart.getTime() && ini < slotEnd.getTime();
+    });
+  };
 
   const cambiarStatus = async (id: string, status: Status) => {
     setAccion(true);

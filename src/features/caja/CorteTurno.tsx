@@ -67,7 +67,7 @@ export default function CorteTurno() {
       .select("id, caja_id, cajero_user_id, estado, monto_apertura, monto_cierre, notas_apertura, notas_cierre, abierto_at, cerrado_at, caja:cajas(nombre)")
       .eq("clinic_id", activeClinicId)
       .order("abierto_at", { ascending: false })
-      .limit(30);
+      .limit(100);
 
     const turnosList = (turnosData ?? []) as unknown as Omit<TurnoRow, "corte_z">[];
 

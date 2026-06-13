@@ -17,8 +17,9 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import LockScreen from "@/components/LockScreen";
+import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = "admin" | "receptionist" | "doctor" | "nurse" | "patient" | "manager" | "cajero";
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface NavItem {
   to: string;

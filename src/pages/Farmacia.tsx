@@ -254,6 +254,9 @@ export default function Farmacia() {
     if (movForm.tipo === "entrada" && !movForm.numero_lote) {
       toast({ variant:"destructive", title:"Error", description:"Número de lote requerido para entradas" }); return;
     }
+    if (movForm.tipo === "entrada" && !movForm.fecha_caducidad) {
+      toast({ variant:"destructive", title:"Error", description:"Fecha de caducidad requerida para entradas de lote" }); return;
+    }
     setSavingMov(true);
     const cantidad = parseInt(movForm.cantidad);
     let loteId: string | null = movForm.lote_id || null;
@@ -272,7 +275,7 @@ export default function Farmacia() {
           const { data: nuevoLote, error } = await supabase.from("lotes_medicamento").insert({
             medicamento_id: movForm.medicamento_id,
             numero_lote: movForm.numero_lote,
-            fecha_caducidad: movForm.fecha_caducidad || new Date(Date.now() + 365*24*60*60*1000).toISOString().split("T")[0],
+            fecha_caducidad: movForm.fecha_caducidad,
             existencia: cantidad,
           }).select().single();
           if (error) throw error;

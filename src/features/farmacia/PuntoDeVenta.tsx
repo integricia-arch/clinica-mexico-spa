@@ -248,7 +248,7 @@ export default function PuntoDeVenta({
     return () => clearTimeout(t);
   }, [patientSearch, clienteTipo]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = format(now, "yyyy-MM-dd");
 
   function fifoLote(medId: string, qty: number): Lote | null {
     return lotes
