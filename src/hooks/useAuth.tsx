@@ -121,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setRoles([]);
+    try { localStorage.removeItem("activeClinicId"); } catch { /* ignore */ }
   }, []);
 
   return (

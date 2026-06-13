@@ -51,12 +51,23 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Forbidden — solo administradores pueden cancelar CFDIs" }, 403);
   }
 
+  // Obtener clinic_id autorizado desde membresías — no confiar en el body
+  const { data: membership } = await svc
+    .from("clinic_memberships")
+    .select("clinic_id")
+    .eq("user_id", userData.user.id)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
   try {
     const body: CancelarRequest = await req.json();
-    const { clinic_id, cfdi_id, motivo, cfdi_sustitucion } = body;
+    const { cfdi_id, motivo, cfdi_sustitucion } = body;
+    // clinic_id proviene de la membresía del usuario, no del body
+    const clinic_id = membership?.clinic_id ?? (body as any).clinic_id;
 
     if (!clinic_id || !cfdi_id || !motivo) {
-      return json({ error: "Faltan campos: clinic_id, cfdi_id y motivo son obligatorios" }, 400);
+      return json({ error: "Faltan campos: cfdi_id y motivo son obligatorios" }, 400);
     }
     if (!["01", "02", "03", "04"].includes(motivo)) {
       return json({ error: "Motivo inválido — usar 01, 02, 03 o 04" }, 400);

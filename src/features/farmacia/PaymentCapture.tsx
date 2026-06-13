@@ -147,7 +147,13 @@ export function paymentsToRows(method: Method, bd: PaymentBreakdown) {
   else if (method === "tarjeta") pushCard(bd.card.amount);
   else if (method === "transferencia") pushTransfer(bd.transfer.amount);
   else if (method === "mixto") {
-    pushCash(bd.efectivo);
+    // En mixto el efectivo es exacto (sin cambio); monto_recibido = bd.efectivo
+    if (bd.efectivo > 0) rows.push({
+      payment_method: "efectivo",
+      amount: bd.efectivo,
+      monto_recibido: bd.efectivo,
+      cambio_entregado: 0,
+    });
     pushCard(bd.tarjeta);
     pushTransfer(bd.transferencia);
   }
@@ -182,7 +188,7 @@ export function PaymentCapture({
   };
   const setMixtoTransferencia = (transf: number) => {
     const restante = Math.max(0, round2(total - value.efectivo - transf));
-    onChange({ ...value, transferencia: transf, transfer: { ...value.transfer, amount: transf }, tarjeta: restante, card: { ...value.card, amount: restante } });
+    onChange({ ...value, transferencia: transf, transfer: { ...value.transfer, amount: transf }, tarjeta: restante, card: { ...value.card, amount: restante }, monto_recibido: value.efectivo });
   };
 
   const setCardAmount = (n: number) => onChange({ ...value, tarjeta: n, card: { ...value.card, amount: n } });

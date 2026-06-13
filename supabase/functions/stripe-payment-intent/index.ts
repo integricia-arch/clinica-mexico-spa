@@ -62,6 +62,9 @@ Deno.serve(async (req: Request) => {
     if (!clinic_id || !amount_cents || amount_cents < 1) {
       return json({ error: "clinic_id y amount_cents (≥1) son obligatorios" }, 400);
     }
+    if (amount_cents > 50_000_000) {
+      return json({ error: "Monto excede el límite permitido (500,000 MXN)" }, 400);
+    }
 
     // Cargar config Stripe de la clínica para verificar ambiente
     const { data: gwCfg } = await svc

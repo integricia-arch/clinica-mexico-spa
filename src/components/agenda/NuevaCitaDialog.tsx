@@ -51,16 +51,16 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
   const [busqueda,  setBusqueda]  = useState("");
   const [searching, setSearching] = useState(false);
 
-  const defaultDatetime = (() => {
+  const computeDefaultDatetime = () => {
     const base = defaultDate ? new Date(defaultDate + "T09:00:00") : new Date();
     base.setMinutes(0, 0, 0);
     if (!defaultDate) base.setHours(base.getHours() + 1);
     return toDatetimeLocal(base.toISOString());
-  })();
+  };
 
   const [doctorId,  setDoctorId]  = useState("");
   const [pacienteId, setPacienteId] = useState("");
-  const [fechaInicio, setFechaInicio] = useState(defaultDatetime);
+  const [fechaInicio, setFechaInicio] = useState(() => computeDefaultDatetime());
   const [duracion, setDuracion]   = useState("30");
   const [servicioId, setServicioId] = useState("__none__");
   const [motivo,    setMotivo]    = useState("");
@@ -69,7 +69,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
   useEffect(() => {
     if (!open) return;
     setDoctorId(""); setPacienteId(""); setBusqueda(""); setPacientes([]);
-    setFechaInicio(defaultDatetime); setDuracion("30");
+    setFechaInicio(computeDefaultDatetime()); setDuracion("30");
     setServicioId("__none__"); setMotivo(""); setSaving(false);
 
     Promise.all([
@@ -107,11 +107,16 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     if (!fechaInicio) { toast.error("Fecha/hora requerida");  return; }
 
     setSaving(true);
+    // fechaInicio viene de datetime-local (sin TZ). Interpretamos como hora local MX (UTC-6).
+    const toUTC = (local: string) => {
+      const d = new Date(local.includes("T") ? local : local + "T00:00:00");
+      return d.toISOString();
+    };
     const { error } = await supabase.from("appointments").insert({
       doctor_id:   doctorId,
       patient_id:  pacienteId,
-      fecha_inicio: new Date(fechaInicio).toISOString(),
-      fecha_fin:    new Date(fechaFin).toISOString(),
+      fecha_inicio: toUTC(fechaInicio),
+      fecha_fin:    toUTC(fechaFin),
       servicio_id:  servicioId !== "__none__" ? servicioId : null,
       motivo_consulta: motivo.trim() || null,
       origen: "web",

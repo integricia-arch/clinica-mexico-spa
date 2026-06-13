@@ -106,13 +106,33 @@ Deno.serve(async (req: Request) => {
     if (!cfg?.pac_usuario) return json({ error: "Configuración PAC no disponible" }, 400);
     if (!cfg.domicilio_fiscal_cp) return json({ error: "CP del emisor no configurado" }, 400);
 
-    // Calcular IVA del pago (base × 16% o 8% según el CFDI original)
-    // Simplificación: asumimos IVA 16% sobre la parte del pago que corresponde a IVA
-    // Base = monto / (1 + tasa); importe IVA = base * tasa
-    const ivaTasa   = cfg.iva_default ?? 0.16;
-    const basePago  = round2(monto / (1 + ivaTasa));
-    const ivaImporte = round2(monto - basePago);
-    const tasaStr   = (ivaTasa as number).toFixed(6);
+    // Calcular IVA del pago desde los conceptos del CFDI original
+    const { data: conceptos } = await svc
+      .from("cfdi_conceptos")
+      .select("iva_tasa, iva_importe, importe, descuento")
+      .eq("cfdi_id", cfdi_id);
+
+    let basePago = 0;
+    let ivaImporte = 0;
+    let tasaStr = "0.160000";
+
+    if (conceptos && conceptos.length > 0) {
+      const totalConceptos = round2(conceptos.reduce((s: number, c: any) => s + (c.importe - (c.descuento ?? 0)), 0));
+      const totalIvaConceptos = round2(conceptos.reduce((s: number, c: any) => s + (c.iva_importe ?? 0), 0));
+      // Prorratear IVA según la proporción del pago vs total del CFDI
+      const ratio = totalConceptos > 0 ? monto / (totalConceptos + totalIvaConceptos) : 1;
+      ivaImporte = round2(totalIvaConceptos * ratio);
+      basePago = round2(monto - ivaImporte);
+      // Tasa predominante para el campo TasaOCuotaDR
+      const tasaDominante = conceptos.find((c: any) => c.iva_tasa != null)?.iva_tasa ?? 0.16;
+      tasaStr = (tasaDominante as number).toFixed(6);
+    } else {
+      // Fallback: asumir 16% si no hay conceptos cargados
+      const ivaTasa = cfg.iva_default ?? 0.16;
+      basePago  = round2(monto / (1 + ivaTasa));
+      ivaImporte = round2(monto - basePago);
+      tasaStr   = (ivaTasa as number).toFixed(6);
+    }
 
     // Payload Facturama Complemento de Pagos
     const payload = {
@@ -121,7 +141,9 @@ Deno.serve(async (req: Request) => {
         Nombre:                  docOrig.nombre_receptor,
         UsoCfdi:                 "CP01",   // Pagos — uso fijo para REP
         RegimenFiscalReceptor:   receptor?.regimen_fiscal ?? "616",
-        DomicilioFiscalReceptor: receptor?.domicilio_fiscal_cp ?? cfg.domicilio_fiscal_cp,
+        DomicilioFiscalReceptor: receptor?.domicilio_fiscal_cp ?? (() => {
+          throw new Error("CP fiscal del receptor no registrado — agregarlo en Facturación → Receptores");
+        })(),
       },
       TipoDeComprobante: "P",
       Moneda:            "XXX",

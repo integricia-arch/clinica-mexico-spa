@@ -188,7 +188,9 @@ function CloseTurnoDialog({
     if (error) {
       if (error.message?.startsWith("DIFF_EXCEEDS_THRESHOLD")) {
         const parts = error.message.split("|");
-        setOverridePrompt({ diff: Number(parts[1] ?? 0), umbral: Number(parts[2] ?? 0) });
+        const diff   = Number.isFinite(Number(parts[1])) ? Number(parts[1]) : 0;
+        const umbral = Number.isFinite(Number(parts[2])) ? Number(parts[2]) : 0;
+        setOverridePrompt({ diff, umbral });
         return;
       }
       toast.error(`No se pudo cerrar el turno: ${error.message}`);

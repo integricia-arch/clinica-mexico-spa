@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, ChevronLeft, ChevronRight, Bot, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,7 +82,7 @@ export default function Agenda() {
   const [accion, setAccion] = useState(false);
   const [showNueva, setShowNueva] = useState(false);
 
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
     setLoading(true);
     const ini = new Date(fecha); ini.setHours(0, 0, 0, 0);
     const fin = new Date(fecha); fin.setHours(23, 59, 59, 999);
@@ -98,18 +98,18 @@ export default function Agenda() {
     setCitas((cdata as any) ?? []);
     setDoctores((ddata as any) ?? []);
     setLoading(false);
-  };
+  }, [fecha]);
 
-  useEffect(() => { loadAppointments(); }, [fecha]);
+  useEffect(() => { loadAppointments(); }, [loadAppointments]);
 
   useEffect(() => {
     const channel = supabase
       .channel("agenda-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "appointments" }, () => loadAppointments())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "appointments" }, () => loadAppointments())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "appointments" }, loadAppointments)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "appointments" }, loadAppointments)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [fecha]);
+  }, [loadAppointments]);
 
   const citasFiltradas = useMemo(() =>
     citas.filter((c) =>

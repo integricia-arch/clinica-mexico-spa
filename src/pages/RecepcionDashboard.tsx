@@ -113,7 +113,7 @@ export default function RecepcionDashboard() {
     });
     setCitas(listRes.data ?? []);
     // identidades_canal vuelve como array si la FK es ambigua; normalizamos
-    const convsNorm = (convRes.data ?? []).map((c: any) => {
+    let convsNorm = (convRes.data ?? []).map((c: any) => {
       const ic = Array.isArray(c.identidades_canal) ? c.identidades_canal[0] : c.identidades_canal;
       return { ...c, identidades_canal: ic ?? { display_name: null, patient_id: null, canal_id: "" }, patients: null };
     }) as ConvRow[];
@@ -124,9 +124,10 @@ export default function RecepcionDashboard() {
       const { data: pats } = await supabase
         .from("patients").select("id, nombre, apellidos").in("id", patientIds);
       const byId = new Map((pats ?? []).map((p: any) => [p.id, p]));
-      convsNorm.forEach((c) => {
+      convsNorm = convsNorm.map((c) => {
         const pid = c.identidades_canal.patient_id;
-        if (pid && byId.has(pid)) c.patients = byId.get(pid) as any;
+        if (pid && byId.has(pid)) return { ...c, patients: byId.get(pid) as any };
+        return c;
       });
     }
     setConvs(convsNorm);

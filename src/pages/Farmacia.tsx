@@ -313,7 +313,7 @@ export default function Farmacia() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Caja</h1>
+          <h1 className="text-2xl font-bold text-foreground">Farmacia</h1>
           {turnoCtx && (
             <div className="mt-1 flex items-center gap-2">
               <p className="text-sm text-muted-foreground">{turnoCtx.openTurno.caja_nombre}</p>

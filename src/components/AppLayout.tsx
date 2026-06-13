@@ -5,9 +5,11 @@ import {
   Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
   CalendarPlus, Headset, ShieldCheck,
   MessageCircle, BellRing, ClipboardList, Stethoscope,
-  CreditCard, Lock, UserRound,
+  CreditCard, Lock, UserRound, ChevronLeft, ChevronRight,
+  UserCog,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import {
@@ -32,17 +34,17 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/recepcion", icon: Headset, label: "Recepción", roles: ["admin", "receptionist"] },
   { to: "/pacientes", icon: Users, label: "Pacientes", roles: ["admin", "receptionist", "doctor", "nurse"] },
   { to: "/agenda", icon: CalendarDays, label: "Agenda", roles: ["admin", "receptionist", "doctor", "nurse"] },
-  { to: "/nueva-cita", icon: CalendarPlus, label: "Nueva cita", roles: ["admin", "receptionist"] },
+  { to: "/citas", icon: ClipboardList, label: "Citas", roles: ["admin", "receptionist", "doctor", "nurse"] },
   { to: "/doctor", icon: Stethoscope, label: "Panel del doctor", roles: ["admin", "doctor"] },
   { to: "/expedientes", icon: FileText, label: "Expedientes", roles: ["admin", "doctor", "nurse"] },
   { to: "/recetas", icon: FileText, label: "Recetas", roles: ["admin", "doctor", "nurse"] },
-  { to: "/citas", icon: ClipboardList, label: "Citas", roles: ["admin", "receptionist", "doctor", "nurse"] },
   { to: "/recordatorios", icon: BellRing, label: "Recordatorios", roles: ["admin", "receptionist", "doctor"] },
   // ── Operaciones ──
   { section: "Operaciones", to: "/farmacia", icon: CreditCard, label: "Caja", roles: ["admin", "nurse", "receptionist", "cajero"] },
-  // ── Admin ──
-  { section: "Admin", to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"] },
+  { to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"] },
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
+  // ── Admin ──
+  { section: "Admin", to: "/admin/usuarios", icon: UserCog, label: "Usuarios", roles: ["admin"] },
   { to: "/auditoria", icon: ShieldCheck, label: "Auditoría", roles: ["admin"] },
   { to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin", "doctor"] },
   // patient-only
@@ -59,13 +61,21 @@ const ROLE_LABELS: Record<AppRole, string> = {
   cajero: "Cajero",
 };
 
+// Focus routes where sidebar is hidden (POS / Caja mode)
+const FOCUS_ROUTES = ["/caja", "/farmacia"];
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, roles, signOut } = useAuth();
-  const { isOpen: sidebarOpen, close: closeSidebar, openDrawer } = useSidebarState();
+  const { activeClinicId } = useActiveClinic();
+  const { isOpen: sidebarOpen, isCollapsed, close: closeSidebar, openDrawer, toggle, isTablet } = useSidebarState();
   const [escaladasCount, setEscaladasCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const isFocusRoute = FOCUS_ROUTES.some((r) => location.pathname.startsWith(r));
+  // Desktop = neither tablet nor small — ≥1280px
+  const isDesktop = !isTablet && typeof window !== "undefined" && window.innerWidth >= 1280;
 
   const handleSignOut = async () => {
     await signOut();
@@ -89,12 +99,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const initials = user?.email?.substring(0, 2).toUpperCase() || "??";
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !activeClinicId) return;
     const fetchCount = async () => {
       const { count } = await supabase
         .from("conversaciones")
         .select("id", { count: "exact", head: true })
-        .eq("status", "escalada");
+        .eq("status", "escalada")
+        .eq("clinic_id", activeClinicId);
       setEscaladasCount(count ?? 0);
     };
     fetchCount();
@@ -103,7 +114,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "conversaciones" }, fetchCount)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user]);
+  }, [user, activeClinicId]);
+
+  // Sidebar width classes
+  const sidebarWidth = isCollapsed ? "w-16" : "w-64";
+  const contentMargin = isFocusRoute ? "" : isCollapsed ? "xl:ml-16" : "xl:ml-64";
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -116,111 +131,174 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           onSwitchUser={handleSwitchUser}
         />
       )}
+
+      {/* Mobile/tablet overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm xl:hidden"
           onClick={closeSidebar}
         />
       )}
 
       {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-300 w-64 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
-      >
-        {/* Logo */}
-        <div className="flex h-16 items-center gap-2.5 px-5 border-b border-sidebar-border">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-            <Heart className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div>
-            <span className="text-display font-bold text-sm text-sidebar-accent-foreground">ClínicaMX</span>
-            <span className="block text-[11px] text-sidebar-foreground/60">Operaciones Clínicas</span>
-          </div>
-          <button onClick={closeSidebar} className="ml-auto text-sidebar-foreground hover:text-sidebar-accent-foreground">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {(() => {
-            let lastSection = "";
-            return visibleNav.map((item) => {
-              const showSection = item.section && item.section !== lastSection;
-              if (item.section) lastSection = item.section;
-              const isActive = location.pathname === item.to;
-              const showBadge = item.to === "/inbox" && escaladasCount > 0;
-              return (
-                <div key={item.to}>
-                  {showSection && (
-                    <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                      {item.section}
-                    </p>
-                  )}
-                  <NavLink
-                    to={item.to}
-                    onClick={closeSidebar}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-sidebar-accent text-sidebar-primary"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    }`}
-                  >
-                    <item.icon className="h-[18px] w-[18px] shrink-0" />
-                    <span className="flex-1">{item.label}</span>
-                    {showBadge && (
-                      <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-red-500 text-white px-1.5">
-                        {escaladasCount}
-                      </span>
-                    )}
-                  </NavLink>
-                </div>
-              );
-            });
-          })()}
-        </nav>
-
-        {/* Footer */}
-        <div className="border-t border-sidebar-border p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-primary text-sm font-semibold">
-              {initials}
+      {!isFocusRoute && (
+        <aside
+          className={`
+            fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar
+            transition-all duration-300 ease-in-out
+            ${sidebarWidth}
+            xl:translate-x-0
+            ${sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+          `}
+        >
+          {/* Logo */}
+          <div className={`flex h-16 items-center border-b border-sidebar-border shrink-0 ${isCollapsed ? "justify-center px-3" : "gap-2.5 px-5"}`}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary">
+              <Heart className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-sidebar-accent-foreground">
-                {user?.email || "Usuario"}
-              </p>
-              <p className="truncate text-xs text-sidebar-foreground/60">{roleLabel}</p>
-            </div>
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <span className="text-display font-bold text-sm text-sidebar-accent-foreground">ClínicaMX</span>
+                <span className="block text-[11px] text-sidebar-foreground/60">Operaciones Clínicas</span>
+              </div>
+            )}
+            {/* Mobile close button */}
             <button
-              onClick={() => { signOut(); navigate("/login"); }}
-              className="text-sidebar-foreground hover:text-sidebar-accent-foreground"
-              title="Cerrar sesión"
+              onClick={closeSidebar}
+              className={`ml-auto text-sidebar-foreground hover:text-sidebar-accent-foreground xl:hidden ${isCollapsed ? "hidden" : ""}`}
             >
-              <LogOut className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
-      </aside>
+
+          {/* Nav */}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5">
+            {(() => {
+              let lastSection = "";
+              return visibleNav.map((item) => {
+                const showSection = item.section && item.section !== lastSection;
+                if (item.section) lastSection = item.section;
+                const isActive = item.to === "/"
+                  ? location.pathname === "/"
+                  : location.pathname.startsWith(item.to);
+                const showBadge = item.to === "/inbox" && escaladasCount > 0;
+                return (
+                  <div key={item.to}>
+                    {showSection && !isCollapsed && (
+                      <p className="px-3 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                        {item.section}
+                      </p>
+                    )}
+                    {showSection && isCollapsed && (
+                      <div className="mx-2 my-3 border-t border-sidebar-border/40" />
+                    )}
+                    <NavLink
+                      to={item.to}
+                      onClick={closeSidebar}
+                      title={isCollapsed ? item.label : undefined}
+                      className={`
+                        flex items-center gap-3 rounded-lg text-sm font-medium transition-colors
+                        ${isCollapsed ? "justify-center px-0 py-2.5 mx-1" : "px-3 py-2.5"}
+                        ${isActive
+                          ? "bg-sidebar-accent text-sidebar-primary"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                        }
+                      `}
+                    >
+                      <item.icon className="h-[18px] w-[18px] shrink-0" />
+                      {!isCollapsed && (
+                        <>
+                          <span className="flex-1 truncate">{item.label}</span>
+                          {showBadge && (
+                            <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-red-500 text-white px-1.5">
+                              {escaladasCount}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {isCollapsed && showBadge && (
+                        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+                      )}
+                    </NavLink>
+                  </div>
+                );
+              });
+            })()}
+          </nav>
+
+          {/* Footer */}
+          <div className="border-t border-sidebar-border shrink-0">
+            {/* Collapse toggle — desktop only */}
+            <div className="hidden xl:flex justify-end px-3 py-2">
+              <button
+                onClick={toggle}
+                className="flex items-center justify-center h-7 w-7 rounded-md text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60 transition-colors"
+                title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+              >
+                {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {/* User info */}
+            <div className={`p-3 ${isCollapsed ? "flex justify-center" : "flex items-center gap-3"}`}>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-primary text-sm font-semibold">
+                {initials}
+              </div>
+              {!isCollapsed && (
+                <>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-sidebar-accent-foreground">
+                      {user?.email?.split("@")[0] || "Usuario"}
+                    </p>
+                    <p className="truncate text-xs text-sidebar-foreground/60">{roleLabel}</p>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="text-sidebar-foreground/50 hover:text-sidebar-accent-foreground"
+                    title="Cerrar sesión"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </aside>
+      )}
 
       {/* Main */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 lg:px-6">
-          <button
-            onClick={openDrawer}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-3">
-            <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+      <div className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${contentMargin}`}>
+        <header className="flex h-14 items-center justify-between border-b border-border bg-card/80 backdrop-blur-sm px-4 shrink-0">
+          <div className="flex items-center gap-2">
+            {/* Mobile/tablet hamburger */}
+            {!isFocusRoute && (
+              <button
+                onClick={openDrawer}
+                className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors xl:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            )}
+            {/* Focus route: always show hamburger */}
+            {isFocusRoute && (
+              <button
+                onClick={openDrawer}
+                className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted transition-colors cursor-pointer outline-none">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
                     {initials}
                   </div>
                   <div className="hidden sm:block text-left">
@@ -256,7 +334,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 xl:p-6">{children}</main>
       </div>
     </div>
   );
