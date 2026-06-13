@@ -14,6 +14,8 @@ interface AuthContextType {
   isStaff: () => boolean;
   refreshRoles: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Llamado por ActiveClinicProvider para sobrescribir roles al scope de la clínica activa */
+  setClinicRoles: (roles: AppRole[]) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -110,6 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [roles]
   );
 
+  const setClinicRoles = useCallback((newRoles: AppRole[]) => {
+    setRoles(newRoles);
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -118,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, roles, loading, hasRole, isStaff, refreshRoles, signOut }}>
+    <AuthContext.Provider value={{ user, session, roles, loading, hasRole, isStaff, refreshRoles, signOut, setClinicRoles }}>
       {children}
     </AuthContext.Provider>
   );

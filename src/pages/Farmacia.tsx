@@ -263,9 +263,12 @@ export default function Farmacia() {
       if (movForm.tipo === "entrada") {
         const existente = lotesDe(movForm.medicamento_id).find(l => l.numero_lote === movForm.numero_lote);
         if (existente) {
-          await supabase.from("lotes_medicamento").update({ existencia: existente.existencia + cantidad }).eq("id", existente.id);
+          const { data: nuevaExistencia } = await supabase.rpc("increment_lote_existencia" as never, {
+            p_lote_id: existente.id,
+            p_cantidad: cantidad,
+          } as never);
           loteId = existente.id;
-          setLotes(p => p.map(l => l.id === existente.id ? { ...l, existencia: l.existencia + cantidad } : l));
+          setLotes(p => p.map(l => l.id === existente.id ? { ...l, existencia: (nuevaExistencia as number) ?? l.existencia + cantidad } : l));
         } else {
           const { data: nuevoLote, error } = await supabase.from("lotes_medicamento").insert({
             medicamento_id: movForm.medicamento_id,

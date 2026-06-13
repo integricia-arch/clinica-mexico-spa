@@ -37,15 +37,24 @@ const ActiveClinicContext = createContext<ActiveClinicContextValue | undefined>(
 const STORAGE_KEY = "activeClinicId";
 const DEFAULT_CODE = "salud_integral_mx";
 
+interface MembershipWithRole {
+  clinic_id: string;
+  role: string;
+  clinics: ClinicLite | null;
+}
+
 export function ActiveClinicProvider({ children }: { children: ReactNode }) {
-  const { user, roles, loading: authLoading } = useAuth();
+  const { user, roles, loading: authLoading, setClinicRoles } = useAuth();
   const [userClinics, setUserClinics] = useState<ClinicLite[]>([]);
+  const [allMemberships, setAllMemberships] = useState<MembershipWithRole[]>([]);
   const [activeClinicId, setActiveClinicIdState] = useState<string | null>(
     () => (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null),
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // isGlobalAdmin usa los roles iniciales de user_roles (antes de narrowing por clínica)
+  // para el bootstrap de useActiveClinic (detectar superadmins sin membresías)
   const isGlobalAdmin = roles.includes("admin");
 
   const setActiveClinicId = useCallback((id: string) => {
@@ -55,7 +64,12 @@ export function ActiveClinicProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
-  }, []);
+    // Actualizar roles al scope de la nueva clínica
+    const clinicRoles = allMemberships
+      .filter((m) => m.clinic_id === id)
+      .map((m) => m.role as import("@/integrations/supabase/types").Database["public"]["Enums"]["app_role"]);
+    setClinicRoles(clinicRoles.length > 0 ? clinicRoles : (isGlobalAdmin ? ["admin" as const] : []));
+  }, [allMemberships, isGlobalAdmin, setClinicRoles]);
 
   const load = useCallback(async () => {
     if (!user) {
@@ -67,19 +81,22 @@ export function ActiveClinicProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      // Cargar memberships activas + datos de clinic
+      // Cargar memberships activas + datos de clinic + rol por clínica
       const { data: memberships, error: mErr } = await supabase
         .from("clinic_memberships")
-        .select("clinic_id, clinics:clinic_id(id, code, name, timezone, country, status)")
+        .select("clinic_id, role, clinics:clinic_id(id, code, name, timezone, country, status)")
         .eq("user_id", user.id)
         .eq("status", "active");
 
       if (mErr) throw mErr;
 
-      const clinics: ClinicLite[] = (memberships ?? [])
-        .map((m: any) => m.clinics)
+      const rawMemberships = (memberships ?? []) as MembershipWithRole[];
+      setAllMemberships(rawMemberships);
+
+      const clinics: ClinicLite[] = rawMemberships
+        .map((m) => m.clinics)
         .filter(Boolean)
-        .filter((c: ClinicLite) => c.status === "active");
+        .filter((c) => c!.status === "active") as ClinicLite[];
 
       // dedupe por id
       const dedup = Array.from(new Map(clinics.map((c) => [c.id, c])).values());
@@ -108,6 +125,11 @@ export function ActiveClinicProvider({ children }: { children: ReactNode }) {
         } catch {
           /* ignore */
         }
+        // Narrowing de roles al scope de la clínica activa
+        const clinicRoles = rawMemberships
+          .filter((m) => m.clinic_id === next)
+          .map((m) => m.role as import("@/integrations/supabase/types").Database["public"]["Enums"]["app_role"]);
+        setClinicRoles(clinicRoles.length > 0 ? clinicRoles : (isGlobalAdmin ? ["admin" as const] : []));
       }
     } catch (e: any) {
       setError(e?.message ?? "Error cargando clínicas");
