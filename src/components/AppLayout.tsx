@@ -67,7 +67,7 @@ const FOCUS_ROUTES = ["/caja", "/farmacia"];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, roles, signOut } = useAuth();
-  const { activeClinicId } = useActiveClinic();
+  const { activeClinicId, error: clinicError } = useActiveClinic();
   const { isOpen: sidebarOpen, isCollapsed, close: closeSidebar, openDrawer, toggle, isTablet } = useSidebarState();
   const [escaladasCount, setEscaladasCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
@@ -123,6 +123,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {clinicError && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-destructive/90 text-destructive-foreground text-xs text-center py-2 px-4">
+          Error cargando datos de clínica: {clinicError} — recarga la página o contacta soporte.
+        </div>
+      )}
       {isLocked && user?.email && (
         <LockScreen
           email={user.email}

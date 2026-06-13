@@ -63,6 +63,15 @@ const PAYMENT_LABEL: Record<typeof PAYMENT_METHODS[number], string> = {
 const formatMXN = (n: number) =>
   n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
+function PosClockDisplay() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  return <>{format(now, "dd/MM/yyyy HH:mm", { locale: es })}</>;
+}
+
 async function logPosAudit(
   clinicId: string | null,
   event: string,
@@ -133,12 +142,6 @@ export default function PuntoDeVenta({
   const { activeClinic, activeClinicId } = useActiveClinic();
   const { toast } = useToast();
   const perms = posPermissions(roles);
-
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(t);
-  }, []);
 
   const [meds, setMeds] = useState<Med[]>([]);
   const [lotes, setLotes] = useState<Lote[]>([]);
@@ -248,7 +251,7 @@ export default function PuntoDeVenta({
     return () => clearTimeout(t);
   }, [patientSearch, clienteTipo]);
 
-  const today = format(now, "yyyy-MM-dd");
+  const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
   function fifoLote(medId: string, qty: number): Lote | null {
     return lotes
@@ -673,7 +676,7 @@ export default function PuntoDeVenta({
         <div className="flex items-center gap-3 text-sm min-w-0">
           <span className="flex items-center gap-1.5 shrink-0"><UserIcon className="h-4 w-4 text-muted-foreground" /><strong className="truncate max-w-[120px] xl:max-w-none">{cajeroLabel}</strong></span>
           <span className="hidden xl:flex items-center gap-1.5 text-muted-foreground"><Building2 className="h-4 w-4 shrink-0" />{activeClinic?.name ?? "—"}</span>
-          <span className="hidden xl:flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4 shrink-0" />{format(now, "dd/MM/yyyy HH:mm", { locale: es })}</span>
+          <span className="hidden xl:flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4 shrink-0" /><PosClockDisplay /></span>
         </div>
         <ShiftBadge shift={shift} />
       </div>
