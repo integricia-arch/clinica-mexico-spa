@@ -173,20 +173,43 @@ const flow = [
 const pricing = [
   {
     name: "Esencial", price: "$2,499", period: "MXN / mes",
-    desc: "Clínicas con 1-3 consultorios", featured: false, cta: "Empezar",
+    desc: "Clínicas con 1-3 consultorios", featured: false, cta: "Suscribirme",
+    checkoutPlan: "esencial" as string | null,
     features: ["Hasta 3 doctores", "500 citas/mes", "Bot Telegram", "Recordatorios automáticos", "Soporte por correo"],
   },
   {
     name: "Profesional", price: "$5,999", period: "MXN / mes",
-    desc: "La opción más popular", featured: true, cta: "Solicitar demo",
+    desc: "La opción más popular", featured: true, cta: "Suscribirme",
+    checkoutPlan: "profesional" as string | null,
     features: ["Hasta 10 doctores", "Citas ilimitadas", "Bot Telegram + WhatsApp", "Farmacia & POS completo", "Facturación CFDI", "Soporte prioritario"],
   },
   {
     name: "Empresarial", price: "A medida", period: "",
     desc: "Grupos médicos y hospitales", featured: false, cta: "Hablemos",
+    checkoutPlan: null as string | null,
     features: ["Doctores ilimitados", "Multi-sucursal", "Integraciones a la medida", "SLA dedicado", "Onboarding asistido", "Capacitación in situ"],
   },
 ];
+
+async function startCheckout(plan: string, setLoading: (v: boolean) => void) {
+  setLoading(true);
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      },
+    );
+    const data = await res.json();
+    if (!res.ok || !data.url) throw new Error(data.error ?? `Error ${res.status}`);
+    window.location.href = data.url;
+  } catch (err) {
+    setLoading(false);
+    alert(`No se pudo iniciar la suscripción: ${(err as Error).message}\nEscríbenos a contacto@integrika.mx`);
+  }
+}
 
 const testimonials = [
   {
@@ -229,6 +252,7 @@ const mockAppointments = [
 
 // ── PricingCardInner ──────────────────────────────────────────────────────────
 function PricingCardInner({ plan }: { plan: typeof pricing[0] }) {
+  const [loading, setLoading] = useState(false);
   return (
     <>
       {plan.featured && (
@@ -242,11 +266,22 @@ function PricingCardInner({ plan }: { plan: typeof pricing[0] }) {
         <span className="pr-h" style={{ fontSize: 42, fontWeight: 800, color: plan.featured ? TEAL : "#0f172a", letterSpacing: "-0.04em" }}>{plan.price}</span>
         {plan.period && <span style={{ fontSize: 13, color: SLATE }}>{plan.period}</span>}
       </div>
-      <a href="mailto:contacto@integrika.mx?subject=Plan%20ClinicaMX" style={{ display: "block", marginBottom: 24 }}>
-        <button className={`pr-btn ${plan.featured ? "pr-btn-p" : "pr-btn-o"}`} style={{ width: "100%", justifyContent: "center" }}>
-          {plan.cta}
+      {plan.checkoutPlan ? (
+        <button
+          className={`pr-btn ${plan.featured ? "pr-btn-p" : "pr-btn-o"}`}
+          style={{ width: "100%", justifyContent: "center", marginBottom: 24, opacity: loading ? 0.6 : 1 }}
+          disabled={loading}
+          onClick={() => startCheckout(plan.checkoutPlan!, setLoading)}
+        >
+          {loading ? "Redirigiendo…" : plan.cta}
         </button>
-      </a>
+      ) : (
+        <a href="mailto:contacto@integrika.mx?subject=Plan%20ClinicaMX" style={{ display: "block", marginBottom: 24 }}>
+          <button className={`pr-btn ${plan.featured ? "pr-btn-p" : "pr-btn-o"}`} style={{ width: "100%", justifyContent: "center" }}>
+            {plan.cta}
+          </button>
+        </a>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {plan.features.map((f) => (
           <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>

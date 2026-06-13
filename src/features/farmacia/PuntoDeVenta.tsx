@@ -32,6 +32,7 @@ import { RecetaValidacionModal, type RecetaData } from "./RecetaValidacionModal"
 import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
 import { PaymentCapture, emptyBreakdown, validatePayment, paymentsToRows, looksLikeFullCardNumber, type PaymentBreakdown } from "./PaymentCapture";
 import { OpenShiftCard, ShiftBadge, fetchCurrentShift, type Shift } from "./ShiftPanel";
+import StripePaymentModal from "@/features/pagos/StripePaymentModal";
 
 type Lote = {
   id: string;
@@ -171,6 +172,8 @@ export default function PuntoDeVenta({
   const [viewMode, setViewMode] = useState<"scanner" | "catalogo">("scanner");
   const [lastError, setLastError] = useState<string | null>(null);
   const [catalogSearch, setCatalogSearch] = useState("");
+  const [stripeOpen, setStripeOpen] = useState(false);
+  const [stripeTxnId, setStripeTxnId] = useState<string | null>(null);
 
   async function refreshShift() {
     setShiftLoading(true);
@@ -179,6 +182,31 @@ export default function PuntoDeVenta({
     setShiftLoading(false);
   }
   useEffect(() => { refreshShift(); }, []);
+
+  // Llamado cuando Stripe Elements confirma el cobro exitosamente.
+  async function handleStripeSuccess(paymentIntentId: string, txnId: string | null) {
+    setStripeTxnId(txnId);
+    setStripeOpen(false);
+    const stripeBreakdown: PaymentBreakdown = {
+      ...breakdown,
+      tarjeta: total,
+      efectivo: 0,
+      monto_recibido: 0,
+      transferencia: 0,
+      card: {
+        amount: total,
+        card_last4: "0000",
+        card_type: "credito",
+        card_brand: "Visa",
+        authorization_code: paymentIntentId,
+        terminal_id: "STRIPE",
+        acquirer: "Stripe",
+      },
+      transfer: { amount: 0, transfer_reference: "", bank_name: "" },
+    };
+    setBreakdown(stripeBreakdown);
+    await submitSale(stripeBreakdown, txnId);
+  }
 
   // Advertir antes de cerrar/navegar con carrito activo
   useEffect(() => {
@@ -416,16 +444,17 @@ export default function PuntoDeVenta({
   }, [payment, total]);
 
 
-  async function submitSale() {
+  async function submitSale(bdOverride?: PaymentBreakdown, stripeTxnIdOverride?: string | null) {
     if (!perms.canPosSell || cart.length === 0) return;
+    const bd = bdOverride ?? breakdown;
     const rxMeds = cart.filter(
       (c) => c.med.requiere_receta || c.med.controlado || c.med.is_controlled || !!blockReasonForDirectSale(c.med),
     );
 
     // Bloqueo PCI: nunca aceptar número completo de tarjeta en ningún campo.
     if (
-      looksLikeFullCardNumber(breakdown.card.card_last4) ||
-      breakdown.card.card_last4.length > 4
+      looksLikeFullCardNumber(bd.card.card_last4) ||
+      bd.card.card_last4.length > 4
     ) {
       await logPosAudit(activeClinicId, "intento_tarjeta_numero_completo_bloqueado", {
         field: "card_last4",
@@ -434,7 +463,7 @@ export default function PuntoDeVenta({
       return;
     }
 
-    const v = validatePayment(payment, total, breakdown);
+    const v = validatePayment(payment, total, bd);
     if (!v.ok) {
       await logPosAudit(activeClinicId, "diferencia_pago_total", { method: payment, error: v.error, total });
       toast({ title: "Pago inválido", description: v.error, variant: "destructive" });
@@ -475,9 +504,18 @@ export default function PuntoDeVenta({
       return;
     }
 
+    // Si el cobro fue por Stripe, actualizar payment_transactions con el sale_id
+    const resolvedStripeTxnId = stripeTxnIdOverride ?? stripeTxnId;
+    if (resolvedStripeTxnId) {
+      await supabase
+        .from("payment_transactions" as never)
+        .update({ sale_id: saleId } as never)
+        .eq("id", resolvedStripeTxnId as never);
+    }
+
     // Inserta el desglose de pagos (pharmacy_sale_payments)
     type PayRow = Record<string, unknown> & { payment_method: string; amount: number; card_last4?: string; card_brand?: string; authorization_code?: string; terminal_id?: string; transfer_reference?: string; bank_name?: string };
-    const baseRows = paymentsToRows(payment, breakdown) as PayRow[];
+    const baseRows = paymentsToRows(payment, bd) as PayRow[];
     const rows: PayRow[] = baseRows.map((r) => Object.assign({}, r, {
       sale_id: saleId as unknown as string,
       clinic_id: activeClinicId,
@@ -986,6 +1024,17 @@ export default function PuntoDeVenta({
               <Receipt className="h-5 w-5 mr-2" />
               {submitting ? "Registrando…" : `Cobrar ${formatMXN(total)}`}
             </Button>
+            {payment === "tarjeta" && activeClinicId && (
+              <Button
+                variant="outline"
+                className="w-full h-10 text-sm border-violet-300 text-violet-700 hover:bg-violet-50"
+                disabled={cart.length === 0 || submitting || !perms.canPosSell}
+                onClick={() => setStripeOpen(true)}
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                Cobrar con Stripe
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -999,6 +1048,16 @@ export default function PuntoDeVenta({
         />
       )}
       <TicketInterno open={ticketOpen} onClose={() => setTicketOpen(false)} data={ticketData} />
+      {activeClinicId && (
+        <StripePaymentModal
+          open={stripeOpen}
+          onOpenChange={setStripeOpen}
+          onSuccess={handleStripeSuccess}
+          clinicId={activeClinicId}
+          amountCents={Math.round(total * 100)}
+          description={`Venta farmacia — ${cart.length} art.`}
+        />
+      )}
     </div>
   );
 }
