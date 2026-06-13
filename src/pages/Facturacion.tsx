@@ -128,7 +128,7 @@ export default function Facturacion() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sin sesión");
 
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cfdi-download?cfdi_id=${doc.id}&format=${format}`;
+      const url = `${import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, "")}/functions/v1/cfdi-download?cfdi_id=${doc.id}&format=${format}`;
       const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${session.access_token}`,

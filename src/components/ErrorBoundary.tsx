@@ -28,12 +28,23 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-destructive p-6">
           <AlertCircle className="h-8 w-8" />
           <p className="text-sm font-medium">Ocurrió un error en esta sección.</p>
-          <button
-            className="text-xs underline text-muted-foreground"
-            onClick={() => this.setState({ hasError: false, error: null })}
-          >
-            Reintentar
-          </button>
+          {this.state.error?.message && (
+            <p className="text-xs text-muted-foreground max-w-sm text-center">{this.state.error.message}</p>
+          )}
+          <div className="flex gap-3">
+            <button
+              className="text-xs underline text-muted-foreground"
+              onClick={() => window.location.reload()}
+            >
+              Recargar página
+            </button>
+            <button
+              className="text-xs underline text-muted-foreground"
+              onClick={() => this.setState({ hasError: false, error: null })}
+            >
+              Reintentar sección
+            </button>
+          </div>
         </div>
       );
     }

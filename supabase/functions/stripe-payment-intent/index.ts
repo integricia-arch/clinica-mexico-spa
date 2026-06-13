@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
   // admin o receptionist pueden cobrar
   const { data: roles } = await svc
     .from("user_roles").select("role").eq("user_id", userData.user.id);
-  const allowed = (roles ?? []).some((r: any) => ["admin", "receptionist"].includes(r.role));
+  const allowed = (roles ?? []).some((r: { role: string }) => ["admin", "receptionist"].includes(r.role));
   if (!allowed) return json({ error: "Forbidden" }, 403);
 
   try {

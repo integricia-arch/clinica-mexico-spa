@@ -61,7 +61,10 @@ export function TicketInterno({
     return () => { document.head.removeChild(style); };
   }, []);
 
-  if (!data) return null;
+  if (!data) {
+    if (open) onClose();
+    return null;
+  }
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm max-h-[90vh] flex flex-col">

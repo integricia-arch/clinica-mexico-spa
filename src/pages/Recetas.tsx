@@ -225,7 +225,7 @@ export default function Recetas() {
       ) : (
         <div className="space-y-2">
           {filtered.map((r) => {
-            const s = STATUS_LABELS[r.status] ?? STATUS_LABELS.issued;
+            const s = STATUS_LABELS[r.status] ?? { label: r.status, cls: "bg-muted text-muted-foreground" };
             const hasControlled = r.items.some((i) => i.is_controlled);
             return (
               <div key={r.id} className="rounded-lg border border-border bg-card p-4">

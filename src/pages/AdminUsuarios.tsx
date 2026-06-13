@@ -105,13 +105,18 @@ export default function AdminUsuarios() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("admin-users", { body: { action: "list" } });
-    setLoading(false);
-    if (error || (data as any)?.error) {
-      toast.error("No se pudieron cargar los usuarios");
-      return;
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-users", { body: { action: "list" } });
+      if (error || (data as any)?.error) {
+        toast.error("No se pudieron cargar los usuarios");
+        return;
+      }
+      setUsers(((data as any)?.users ?? []) as UsuarioRow[]);
+    } catch {
+      toast.error("Error al conectar con el servidor");
+    } finally {
+      setLoading(false);
     }
-    setUsers(((data as any)?.users ?? []) as UsuarioRow[]);
   };
 
   const fetchDoctors = async () => {
@@ -346,6 +351,8 @@ export default function AdminUsuarios() {
   const [linkExistingUserId, setLinkExistingUserId] = useState<string>("");
   const [linkMode, setLinkMode] = useState<"new" | "existing">("new");
   const [linking, setLinking] = useState(false);
+  const [unlinkDoctor, setUnlinkDoctor] = useState<DoctorRow | null>(null);
+  const [unlinking, setUnlinking] = useState(false);
 
   const openLinkDoctor = (d: DoctorRow) => {
     setLinkDoctor(d);
@@ -379,16 +386,20 @@ export default function AdminUsuarios() {
     fetchDoctors();
   };
 
-  const handleUnlinkDoctor = async (d: DoctorRow) => {
-    if (!confirm(`¿Desvincular la cuenta de ${d.nombre} ${d.apellidos}? La cuenta de usuario no se elimina.`)) return;
+  const handleUnlinkDoctor = async () => {
+    if (!unlinkDoctor) return;
+    setUnlinking(true);
     const { data, error } = await supabase.functions.invoke("admin-users", {
-      body: { action: "unlink_doctor_user", doctor_id: d.id },
+      body: { action: "unlink_doctor_user", doctor_id: unlinkDoctor.id },
     });
+    setUnlinking(false);
     if (error || (data as any)?.error) {
       toast.error((data as any)?.error || "No se pudo desvincular");
+      setUnlinkDoctor(null);
       return;
     }
     toast.success("Médico desvinculado");
+    setUnlinkDoctor(null);
     fetchDoctors();
   };
 
@@ -414,6 +425,7 @@ export default function AdminUsuarios() {
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
   const [savingDoctor, setSavingDoctor] = useState(false);
   const [doctorDel, setDoctorDel] = useState<DoctorRow | null>(null);
+  const [deletingDoctor, setDeletingDoctor] = useState(false);
 
   const openDoctorNew = () => {
     setDoctorEdit(null);
@@ -495,7 +507,9 @@ export default function AdminUsuarios() {
 
   const handleDeleteDoctor = async () => {
     if (!doctorDel) return;
+    setDeletingDoctor(true);
     const { error } = await supabase.from("doctors").delete().eq("id", doctorDel.id);
+    setDeletingDoctor(false);
     if (error) {
       toast.error("No se puede eliminar: el médico tiene registros relacionados. Marca como Inactivo en su lugar.");
       setDoctorDel(null);
@@ -804,7 +818,7 @@ export default function AdminUsuarios() {
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           {d.user_id ? (
-                            <Button size="sm" variant="outline" onClick={() => handleUnlinkDoctor(d)}>
+                            <Button size="sm" variant="outline" onClick={() => setUnlinkDoctor(d)}>
                               <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
                             </Button>
                           ) : (
@@ -913,9 +927,27 @@ export default function AdminUsuarios() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteDoctor} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
+            <AlertDialogCancel disabled={deletingDoctor}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteDoctor} disabled={deletingDoctor} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deletingDoctor ? "Eliminando…" : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmar desvincular médico */}
+      <AlertDialog open={!!unlinkDoctor} onOpenChange={(o) => !o && setUnlinkDoctor(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Desvincular cuenta de Dr(a). {unlinkDoctor?.nombre} {unlinkDoctor?.apellidos}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La cuenta de usuario no se elimina. El médico quedará sin acceso al sistema hasta que se vincule otra cuenta.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unlinking}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnlinkDoctor} disabled={unlinking} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {unlinking ? "Desvinculando…" : "Desvincular"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -947,7 +979,7 @@ export default function AdminUsuarios() {
                 </div>
                 <div>
                   <Label>Contraseña inicial</Label>
-                  <Input type="text" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="mínimo 12 caracteres" />
+                  <Input type="password" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="mínimo 12 caracteres" />
                 </div>
               </>
             ) : (
@@ -987,7 +1019,7 @@ export default function AdminUsuarios() {
             </div>
             <div>
               <Label>Contraseña inicial</Label>
-              <Input type="text" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="mínimo 12 caracteres" />
+              <Input type="password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="mínimo 12 caracteres" />
             </div>
             <div>
               <Label>Rol</Label>
@@ -1076,7 +1108,7 @@ export default function AdminUsuarios() {
           <div className="space-y-3">
             <div>
               <Label>Nueva contraseña</Label>
-              <Input type="text" value={pwValue} onChange={(e) => setPwValue(e.target.value)} placeholder="mínimo 12 caracteres" />
+              <Input type="password" value={pwValue} onChange={(e) => setPwValue(e.target.value)} placeholder="mínimo 12 caracteres" />
             </div>
           </div>
           <DialogFooter>
@@ -1099,7 +1131,7 @@ export default function AdminUsuarios() {
           <div className="space-y-3">
             <div>
               <Label>Contraseña base</Label>
-              <Input type="text" value={basePw} onChange={(e) => setBasePw(e.target.value)} placeholder="mínimo 12 caracteres" />
+              <Input type="password" value={basePw} onChange={(e) => setBasePw(e.target.value)} placeholder="mínimo 12 caracteres" />
             </div>
           </div>
           <DialogFooter>

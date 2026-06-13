@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
     .from("user_roles")
     .select("role")
     .eq("user_id", userData.user.id);
-  const allowed = (roles ?? []).some((r: any) => ["admin", "receptionist"].includes(r.role));
+  const allowed = (roles ?? []).some((r: { role: string }) => ["admin", "receptionist"].includes(r.role));
   if (!allowed) {
     return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
   }

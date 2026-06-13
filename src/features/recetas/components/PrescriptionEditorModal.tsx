@@ -143,10 +143,8 @@ export default function PrescriptionEditorModal({
 
   async function ensurePrescription(): Promise<string | null> {
     if (prescriptionId) {
-      // Actualizar diagnóstico si cambió
-      if (diag) {
-        await supabase.from("prescriptions").update({ diagnosis: diag }).eq("id", prescriptionId);
-      }
+      // Actualizar diagnóstico (incluyendo string vacío para limpiar)
+      await supabase.from("prescriptions").update({ diagnosis: diag || null }).eq("id", prescriptionId);
       return prescriptionId;
     }
     const res = await createPrescriptionFromConsultation({
@@ -200,8 +198,7 @@ export default function PrescriptionEditorModal({
       return;
     }
     setIssuing(true);
-    // Asegurar diagnóstico actualizado
-    if (diag) await supabase.from("prescriptions").update({ diagnosis: diag }).eq("id", prescriptionId);
+    await supabase.from("prescriptions").update({ diagnosis: diag || null }).eq("id", prescriptionId);
     const res = await issuePrescription(prescriptionId);
     setIssuing(false);
     if (!res.ok) {

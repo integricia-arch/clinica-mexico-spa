@@ -83,7 +83,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
 
   useEffect(() => {
     const q = busqueda.trim();
-    if (q.length < 2) { setPacientes([]); return; }
+    if (q.length < 2) { setPacientes([]); setSearching(false); return; }
     setSearching(true);
     const t = setTimeout(async () => {
       const { data } = await supabase

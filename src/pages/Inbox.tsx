@@ -331,7 +331,7 @@ export default function Inbox() {
               <div className="min-w-0">
                 <h2 className="text-display font-bold truncate">{nombreIdentidad(selected)}</h2>
                 <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                  <span>{selected.identidades_canal ? CANAL_META[selected.identidades_canal.canal_id].label : "—"}</span>
+                  <span>{selected.identidades_canal ? (CANAL_META[selected.identidades_canal.canal_id] ?? { label: selected.identidades_canal.canal_id }).label : "—"}</span>
                   <span>·</span>
                   <span>Inició {new Date(selected.created_at).toLocaleString("es-MX")}</span>
                   <span>·</span>
