@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -91,10 +91,21 @@ export default function Farmacia() {
 
   useEffect(() => { loadData(); }, []);
 
+  const loadAlertas = useCallback(async () => {
+    setLoadingAlertas(true);
+    const { data } = await supabase
+      .from("almacen_alertas" as never)
+      .select("*, medicamentos(nombre)")
+      .eq("status", filtroAlertas)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setAlertas((data as any[]) ?? []);
+    setLoadingAlertas(false);
+  }, [filtroAlertas]);
+
   useEffect(() => {
     if (tab === "inventario" && inventarioView === "faltantes") loadAlertas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, inventarioView, filtroAlertas]);
+  }, [tab, inventarioView, loadAlertas]);
 
   async function loadData() {
     setLoading(true);
@@ -105,18 +116,6 @@ export default function Farmacia() {
     setMedicamentos(meds ?? []);
     setLotes(lts ?? []);
     setLoading(false);
-  }
-
-  async function loadAlertas() {
-    setLoadingAlertas(true);
-    const { data } = await supabase
-      .from("almacen_alertas" as never)
-      .select("*, medicamentos(nombre)")
-      .eq("status", filtroAlertas)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    setAlertas((data as any[]) ?? []);
-    setLoadingAlertas(false);
   }
 
   async function resolveAlerta(id: string, newStatus: "resolved" | "external") {

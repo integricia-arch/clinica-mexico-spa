@@ -1,7 +1,14 @@
+import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
+const PRINT_CSS = `@media print {
+  body * { visibility: hidden; }
+  #pos-ticket-print, #pos-ticket-print * { visibility: visible; }
+  #pos-ticket-print { position: absolute; left: 0; top: 0; width: 80mm; }
+}`;
 
 const formatMXN = (n: number) =>
   n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -47,6 +54,13 @@ export function TicketInterno({
   onClose: () => void;
   data: TicketData | null;
 }) {
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = PRINT_CSS;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
   if (!data) return null;
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -136,13 +150,6 @@ export function TicketInterno({
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
           <Button onClick={() => window.print()}>Imprimir</Button>
         </DialogFooter>
-        <style>{`
-          @media print {
-            body * { visibility: hidden; }
-            #pos-ticket-print, #pos-ticket-print * { visibility: visible; }
-            #pos-ticket-print { position: absolute; left: 0; top: 0; width: 80mm; }
-          }
-        `}</style>
       </DialogContent>
     </Dialog>
   );

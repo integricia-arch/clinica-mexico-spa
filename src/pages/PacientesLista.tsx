@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
@@ -20,30 +20,34 @@ export default function PacientesLista() {
   const [selected, setSelected] = useState<Patient | null>(null);
 
   const canEdit = hasRole("admin") || hasRole("receptionist");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
 
   useEffect(() => {
-    load();
-  }, []);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => load(search), search ? 300 : 0);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [search]);
 
-  async function load() {
-    const { data } = await supabase
+  async function load(term: string) {
+    setLoading(true);
+    let q = supabase
       .from("patients")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("activo", true)
-      .order("apellidos", { ascending: true });
+      .order("apellidos", { ascending: true })
+      .limit(100);
+    if (term.trim().length >= 2) {
+      const t = term.trim();
+      q = q.or(`nombre.ilike.%${t}%,apellidos.ilike.%${t}%,telefono.ilike.%${t}%,curp.ilike.%${t}%`);
+    }
+    const { data, count } = await q;
     setPatients(data ?? []);
+    setTotal(count ?? null);
     setLoading(false);
   }
 
-  const filtered = patients.filter((p) => {
-    const term = search.toLowerCase();
-    return (
-      p.nombre.toLowerCase().includes(term) ||
-      p.apellidos.toLowerCase().includes(term) ||
-      (p.telefono && p.telefono.includes(term)) ||
-      (p.curp && p.curp.toLowerCase().includes(term))
-    );
-  });
+  const filtered = patients;
 
   const openNew = () => { setSelected(null); setModalOpen(true); };
   const openEdit = (p: Patient) => { setSelected(p); setModalOpen(true); };
@@ -66,7 +70,7 @@ export default function PacientesLista() {
         <div>
           <h1 className="text-display text-2xl font-bold text-foreground">Pacientes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {patients.length} pacientes registrados
+            {total !== null ? `${total} pacientes` : "Cargando…"}{patients.length === 100 && total !== null && total > 100 ? ` (mostrando primeros 100)` : ""}
           </p>
         </div>
         {canEdit && (
