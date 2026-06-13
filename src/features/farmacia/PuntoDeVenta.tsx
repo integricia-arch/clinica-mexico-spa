@@ -579,7 +579,7 @@ export default function PuntoDeVenta({
 
     const cajeroNombre = user?.user_metadata?.full_name ?? user?.email ?? "Cajero";
     setTicketData({
-      folio: String(saleId).slice(0, 8).toUpperCase(),
+      folio: String(saleId).slice(0, 12).toUpperCase(),
       fecha: new Date(),
       cajero: cajeroNombre,
       clinica: activeClinic?.name ?? "Clínica",

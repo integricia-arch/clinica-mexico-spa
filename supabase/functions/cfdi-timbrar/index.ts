@@ -222,7 +222,7 @@ Deno.serve(async (req: Request) => {
     const facData = await facRes.json();
 
     if (!facRes.ok) {
-      const msg = facData?.Message ?? facData?.message ?? JSON.stringify(facData);
+      const msg = facData?.Message ?? facData?.message ?? "(sin mensaje)";
       console.error("[cfdi-timbrar] Facturama error", facRes.status, msg);
       return json({ error: `Facturama ${facRes.status}: ${msg}` }, 422);
     }

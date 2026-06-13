@@ -75,8 +75,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   const isFocusRoute = FOCUS_ROUTES.some((r) => location.pathname.startsWith(r));
-  // Desktop = neither tablet nor small — ≥1280px
-  const isDesktop = !isTablet && typeof window !== "undefined" && window.innerWidth >= 1280;
 
   const handleSignOut = async () => {
     await signOut();

@@ -62,6 +62,17 @@ interface IdentidadCanal {
   display_name: string | null;
 }
 
+interface RecordatorioCita {
+  id: string;
+  appointment_id: string;
+  identidad_canal_id: string;
+  programado_para: string;
+  mensaje: string;
+  status: string;
+  enviado_at: string | null;
+  identidades_canal: IdentidadCanal | null;
+}
+
 export default function DetalleCita() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -71,7 +82,7 @@ export default function DetalleCita() {
   const [appointment, setAppointment] = useState<any>(null);
   const [resources, setResources] = useState<any[]>([]);
   const [servicio, setServicio] = useState<any>(null);
-  const [recordatorios, setRecordatorios] = useState<any[]>([]);
+  const [recordatorios, setRecordatorios] = useState<RecordatorioCita[]>([]);
   const [identidadesCanal, setIdentidadesCanal] = useState<IdentidadCanal[]>([]);
   const [journeyInstance, setJourneyInstance] = useState<JourneyInstanceLite | null>(null);
   const [arrivalOpen, setArrivalOpen] = useState(false);
@@ -106,12 +117,13 @@ export default function DetalleCita() {
   const [stripeAmountInput, setStripeAmountInput] = useState("");
 
   const reloadRecordatorios = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from("recordatorios_cita")
       .select("*, identidades_canal(canal_id, display_name)")
       .eq("appointment_id", id!)
       .order("programado_para", { ascending: true });
-    setRecordatorios(data ?? []);
+    setRecordatorios((data ?? []) as RecordatorioCita[]);
   };
 
   const abrirNuevoRecordatorio = () => {

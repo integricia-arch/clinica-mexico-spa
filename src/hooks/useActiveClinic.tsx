@@ -131,8 +131,8 @@ export function ActiveClinicProvider({ children }: { children: ReactNode }) {
           .map((m) => m.role as import("@/integrations/supabase/types").Database["public"]["Enums"]["app_role"]);
         setClinicRoles(clinicRoles.length > 0 ? clinicRoles : (isGlobalAdmin ? ["admin" as const] : []));
       }
-    } catch (e: any) {
-      setError(e?.message ?? "Error cargando clínicas");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error cargando clínicas");
     } finally {
       setLoading(false);
     }

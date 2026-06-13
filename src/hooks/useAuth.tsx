@@ -64,13 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // evitar setLoading(true) para no desmontar páginas activas y perder estado.
           if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") return;
           setLoading(true);
-          setTimeout(() => {
+          queueMicrotask(() => {
             if (event === "USER_UPDATED") {
               refreshSessionAndRoles(session.user.id).finally(() => setLoading(false));
             } else {
               fetchRoles(session.user.id).finally(() => setLoading(false));
             }
-          }, 0);
+          });
         } else {
           setRoles([]);
           setLoading(false);

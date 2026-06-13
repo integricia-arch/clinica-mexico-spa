@@ -60,6 +60,7 @@ interface CorteRow {
   total_general: number;
   conteo_movimientos: number;
   requiere_autorizacion: boolean;
+  turno_id: string;
 }
 
 interface TurnoHistorial {
@@ -716,6 +717,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
 
     if (turnosHist && turnosHist.length > 0) {
       const ids = turnosHist.map((t: any) => t.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: cortesData } = await (supabase as any)
         .from("cortes")
         .select("id, tipo, folio_secuencial, created_at, efectivo_esperado, conteo_ciego, diferencia, total_general, conteo_movimientos, requiere_autorizacion, turno_id")
@@ -723,7 +725,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
         .order("created_at");
 
       const cortesByTurno: Record<string, CorteRow[]> = {};
-      for (const c of (cortesData as any[]) ?? []) {
+      for (const c of (cortesData as CorteRow[]) ?? []) {
         if (!cortesByTurno[c.turno_id]) cortesByTurno[c.turno_id] = [];
         cortesByTurno[c.turno_id].push(c as CorteRow);
       }
