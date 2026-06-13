@@ -73,31 +73,40 @@ Deno.serve(async (req: Request) => {
 
   switch (event.type) {
     case "payment_intent.succeeded": {
-      await svc
+      const { count } = await svc
         .from("payment_transactions")
         .update({ status: "completed" })
         .eq("payment_intent_id", pi.id);
-      console.log("[stripe-webhook] payment_intent.succeeded:", pi.id);
+      if (!count) console.warn("[stripe-webhook] payment_intent.succeeded: no row matched:", pi.id);
+      else console.log("[stripe-webhook] payment_intent.succeeded:", pi.id);
       break;
     }
 
     case "payment_intent.payment_failed": {
-      await svc
+      const { data: existing } = await svc
         .from("payment_transactions")
-        .update({
-          status:   "failed",
-          metadata: { failure_message: pi.last_payment_error?.message ?? "Error desconocido" },
-        })
+        .select("metadata")
+        .eq("payment_intent_id", pi.id)
+        .maybeSingle();
+      const mergedMeta = {
+        ...(existing?.metadata as Record<string, unknown> ?? {}),
+        failure_message: pi.last_payment_error?.message ?? "Error desconocido",
+      };
+      const { count: failCount } = await svc
+        .from("payment_transactions")
+        .update({ status: "failed", metadata: mergedMeta })
         .eq("payment_intent_id", pi.id);
-      console.log("[stripe-webhook] payment_intent.payment_failed:", pi.id);
+      if (!failCount) console.warn("[stripe-webhook] payment_intent.payment_failed: no row matched:", pi.id);
+      else console.log("[stripe-webhook] payment_intent.payment_failed:", pi.id);
       break;
     }
 
     case "payment_intent.canceled": {
-      await svc
+      const { count: cancelCount } = await svc
         .from("payment_transactions")
         .update({ status: "cancelled" })
         .eq("payment_intent_id", pi.id);
+      if (!cancelCount) console.warn("[stripe-webhook] payment_intent.canceled: no row matched:", pi.id);
       break;
     }
 

@@ -68,6 +68,13 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Faltan campos obligatorios" }, 400);
     }
 
+    // Validar aritmética SAT: saldo_anterior - monto ≈ saldo_insoluto
+    if (Math.abs(saldo_anterior - monto - saldo_insoluto) > 0.01) {
+      return json({
+        error: `Aritmética REP inválida: saldo_anterior(${saldo_anterior}) - monto(${monto}) ≠ saldo_insoluto(${saldo_insoluto})`,
+      }, 422);
+    }
+
     // Cargar el CFDI PPD original
     const { data: docOrig } = await svc
       .from("cfdi_documentos")

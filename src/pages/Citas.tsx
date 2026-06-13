@@ -43,6 +43,10 @@ const STATUS_META: Record<Status, { label: string; cls: string }> = {
   cancelada: { label: "Cancelada", cls: "bg-destructive/15 text-destructive" },
 };
 
+function statusMeta(s: string): { label: string; cls: string } {
+  return STATUS_META[s as Status] ?? { label: s, cls: "bg-muted text-muted-foreground" };
+}
+
 const ORIGEN_META: Record<string, { Icon: any; cls: string }> = {
   telegram: { Icon: Send, cls: "text-sky-500" },
   whatsapp: { Icon: Phone, cls: "text-emerald-500" },
@@ -226,8 +230,8 @@ export default function Citas() {
                     <td className="px-4 py-3">{c.doctors ? `${c.doctors.nombre} ${c.doctors.apellidos}` : "—"}</td>
                     <td className="px-4 py-3">{toMX(c.fecha_inicio)}</td>
                     <td className="px-4 py-3">
-                      <Badge className={cn("border-transparent", STATUS_META[c.status].cls)}>
-                        {STATUS_META[c.status].label}
+                      <Badge className={cn("border-transparent", statusMeta(c.status).cls)}>
+                        {statusMeta(c.status).label}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">

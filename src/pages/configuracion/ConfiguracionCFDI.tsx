@@ -86,7 +86,7 @@ export default function ConfiguracionCFDI() {
       setLoading(true);
       const { data } = await supabase
         .from("cfdi_config" as any)
-        .select("*")
+        .select("id, rfc, razon_social, regimen_fiscal, domicilio_fiscal_cp, serie_defecto, pac_proveedor, pac_ambiente, pac_usuario, csd_cer_nombre, csd_key_nombre, csd_cer_path, csd_key_path, iva_default, zona_fronteriza")
         .eq("clinic_id", activeClinicId)
         .maybeSingle();
       if (data) {

@@ -10,9 +10,12 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SUPABASE_SVC  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL  = Deno.env.get("SUPABASE_URL");
+const SUPABASE_ANON = Deno.env.get("SUPABASE_ANON_KEY");
+const SUPABASE_SVC  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+if (!SUPABASE_URL || !SUPABASE_ANON || !SUPABASE_SVC) {
+  throw new Error("[cfdi-timbrar] Env vars missing: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY");
+};
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -289,7 +292,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Guardar conceptos
-    await svc.from("cfdi_conceptos").insert(
+    const { error: conceptosErr } = await svc.from("cfdi_conceptos").insert(
       conceptos.map((c) => {
         const base = round2(c.cantidad * c.valor_unitario - (c.descuento ?? 0));
         return {
@@ -308,6 +311,9 @@ Deno.serve(async (req: Request) => {
         };
       })
     );
+    if (conceptosErr) {
+      console.error("[cfdi-timbrar] cfdi_conceptos insert error:", conceptosErr.message);
+    }
 
     // Guardar/actualizar receptor en catálogo si es nuevo
     const { data: recExist } = await svc
