@@ -87,8 +87,9 @@ export default function Citas() {
 
   const fetchCitas = async () => {
     setLoading(true);
-    const start = new Date(from + "T00:00:00").toISOString();
-    const end = new Date(to + "T23:59:59").toISOString();
+    // Explicit Mexico City offset (-06:00) so range is always correct regardless of browser timezone
+    const start = new Date(from + "T00:00:00-06:00").toISOString();
+    const end = new Date(to + "T23:59:59-06:00").toISOString();
     let q = supabase
       .from("appointments")
       .select("*, patients(id,nombre,apellidos,telefono), doctors(id,nombre,apellidos), servicios(id,nombre)")

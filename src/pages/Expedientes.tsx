@@ -41,7 +41,11 @@ export default function Expedientes() {
   const [newExpForm, setNewExpForm] = useState({ patient_id: "", doctor_id: "", tipo: "primera_vez" });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { loadExpedientes(); }, []);
+  useEffect(() => {
+    loadExpedientes();
+    supabase.from("doctors").select("id, nombre, apellidos").eq("activo", true).order("apellidos")
+      .then(({ data }) => setDoctors(data ?? []));
+  }, []);
 
   async function loadExpedientes() {
     setLoading(true);
@@ -58,7 +62,7 @@ export default function Expedientes() {
   }
 
   async function loadNotas(expId: string) {
-    if (notas[expId]) return;
+    // No cache guard: always reload to reflect changes from other sessions
     try {
       const data = await restSelect(
         "notas_consulta",
@@ -120,11 +124,13 @@ export default function Expedientes() {
   }
 
   function handleNotaSaved(n: any) {
+    const doc = doctors.find((d) => d.id === currentDoctorId);
+    const enriched = { ...n, doctors: doc ? { nombre: doc.nombre, apellidos: doc.apellidos } : { nombre: "", apellidos: "" } };
     setNotas((prev) => {
       const list = prev[currentExpId] ?? [];
-      const idx = list.findIndex((x) => x.id === n.id);
-      if (idx >= 0) { const next = [...list]; next[idx] = n; return { ...prev, [currentExpId]: next }; }
-      return { ...prev, [currentExpId]: [n, ...list] };
+      const idx = list.findIndex((x) => x.id === enriched.id);
+      if (idx >= 0) { const next = [...list]; next[idx] = enriched; return { ...prev, [currentExpId]: next }; }
+      return { ...prev, [currentExpId]: [enriched, ...list] };
     });
     setExpedientes((e) => e.map((x) => x.id === currentExpId ? { ...x, updated_at: new Date().toISOString() } : x));
   }
