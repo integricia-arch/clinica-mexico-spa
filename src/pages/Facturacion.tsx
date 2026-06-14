@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Search, Plus, Download, FileText, MoreHorizontal,
-  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle, Globe, Receipt, FileMinus, ClipboardCheck,
+  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle, Globe, Receipt, FileMinus, ClipboardCheck, Mail,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -10,6 +10,7 @@ import TimbrarCFDIDialog from "@/features/facturacion/TimbrarCFDIDialog";
 import RegistrarPagoREPDialog from "@/features/facturacion/RegistrarPagoREPDialog";
 import FacturaGlobalDialog from "@/features/facturacion/FacturaGlobalDialog";
 import NotaCreditoDialog from "@/features/facturacion/NotaCreditoDialog";
+import EnviarEmailCFDIDialog from "@/features/facturacion/EnviarEmailCFDIDialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -79,6 +80,7 @@ export default function Facturacion() {
   const [repDoc, setRepDoc] = useState<CfdiDoc | null>(null);
   const [notaCreditoDoc, setNotaCreditoDoc] = useState<CfdiDoc | null>(null);
   const [verificandoId, setVerificandoId] = useState<string | null>(null);
+  const [emailDoc, setEmailDoc] = useState<CfdiDoc | null>(null);
   const [globalOpen, setGlobalOpen] = useState(false);
   const [cpEmisor, setCpEmisor] = useState("");
 
@@ -405,6 +407,12 @@ export default function Facturacion() {
                         >
                           <FileText className="h-4 w-4" /> Descargar PDF
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setEmailDoc(d)}
+                          className="gap-2 cursor-pointer"
+                        >
+                          <Mail className="h-4 w-4" /> Enviar por email
+                        </DropdownMenuItem>
                         {d.uuid_fiscal && (
                           <DropdownMenuItem
                             onClick={() => copyUUID(d.uuid_fiscal, d.id)}
@@ -495,6 +503,14 @@ export default function Facturacion() {
           onOpenChange={(o) => { if (!o) setNotaCreditoDoc(null); }}
           onSuccess={(id, uuid) => { toast.success(`Nota de crédito timbrada — UUID: ${uuid}`); setNotaCreditoDoc(null); load(); }}
           originDoc={notaCreditoDoc}
+        />
+      )}
+
+      {emailDoc && (
+        <EnviarEmailCFDIDialog
+          open={!!emailDoc}
+          onOpenChange={(o) => { if (!o) setEmailDoc(null); }}
+          doc={emailDoc}
         />
       )}
 
