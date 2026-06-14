@@ -4,6 +4,7 @@ import {
   Minus, ArrowUpDown, FileBarChart2, ChevronDown, ChevronRight, Info, CheckCircle, Printer,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { restSelect } from "@/lib/restClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
@@ -671,16 +672,16 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     if (!activeClinic?.id || !user?.id) return;
     setLoading(true);
 
-    const [{ data: cajasData }, { data: turnoData }, { data: auditData }] = await Promise.all([
+    const [{ data: cajasData }, { data: turnoData }, auditRows] = await Promise.all([
       supabase.from("cajas").select("id, nombre, fondo_default, es_farmacia")
         .eq("clinic_id", activeClinic.id).eq("activo", true).order("nombre"),
       supabase.from("turnos").select("*")
         .eq("clinic_id", activeClinic.id).eq("cajero_user_id", user.id)
         .eq("estado", "abierto").maybeSingle(),
-      (supabase as any).from("turno_pharmacy_link_audit")
-        .select("id, turno_id, caja_id, pharmacy_shift_id, action, reason, created_at")
-        .eq("clinic_id", activeClinic.id)
-        .order("created_at", { ascending: false }).limit(20),
+      restSelect(
+        "turno_pharmacy_link_audit",
+        `select=id,turno_id,caja_id,pharmacy_shift_id,action,reason,created_at&clinic_id=eq.${activeClinic.id}&order=created_at.desc&limit=20`,
+      ).catch(() => [] as LinkAudit[]),
     ]);
 
     const cajasList = (cajasData as Caja[]) ?? [];
@@ -688,7 +689,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
 
     setCajas(cajasList);
     setTurnoActivo(activeTurno);
-    setAuditLog((auditData as LinkAudit[]) ?? []);
+    setAuditLog((auditRows as LinkAudit[]) ?? []);
 
     if (cajasList[0] && !cajaId) {
       setCajaId(cajasList[0].id);
@@ -697,7 +698,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
 
     // Fondos del turno activo
     if (activeTurno) {
-      const { data: fondosData } = await (supabase as any)
+      const { data: fondosData } = await supabase
         .from("fondos_movimientos")
         .select("id, tipo, monto, motivo, created_at")
         .eq("turno_id", activeTurno.id)
