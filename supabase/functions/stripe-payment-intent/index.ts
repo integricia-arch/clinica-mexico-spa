@@ -77,6 +77,18 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Stripe no está configurado o no está activo para esta clínica" }, 400);
     }
 
+    // Verificar que ambiente config coincide con la key en uso
+    const keyIsLive = STRIPE_KEY.startsWith("sk_live_");
+    const cfgIsLive = gwCfg.ambiente === "live";
+    if (keyIsLive !== cfgIsLive) {
+      const keyMode = keyIsLive ? "producción (sk_live_)" : "pruebas (sk_test_)";
+      const cfgMode = cfgIsLive ? "producción" : "pruebas";
+      console.error(`[stripe-payment-intent] Mismatch ambiente: key=${keyMode}, config=${cfgMode}`);
+      return json({
+        error: `Conflicto de ambiente Stripe: la clave del servidor es de ${keyMode} pero la clínica está configurada en modo ${cfgMode}. Contacta al administrador.`,
+      }, 500);
+    }
+
     // Crear PaymentIntent en Stripe (API directa, sin SDK)
     const params = new URLSearchParams({
       amount:              String(amount_cents),
