@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,7 @@ interface DoctorRow {
 }
 
 export default function AdminUsuarios() {
+  const { activeClinicId } = useActiveClinic();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UsuarioRow[]>([]);
   const [doctors, setDoctors] = useState<DoctorRow[]>([]);
@@ -209,21 +211,16 @@ export default function AdminUsuarios() {
     const has = user.roles.includes(role);
     setBusyUser(user.id);
     try {
-      if (has) {
-        const { error } = await supabase.from("user_roles").delete().eq("user_id", user.id).eq("role", role);
-        if (error) throw error;
-        setUsers((prev) => prev.map((u) =>
-          u.id === user.id ? { ...u, roles: u.roles.filter((r) => r !== role) } : u
-        ));
-        toast.success(`Rol "${ROLE_LABELS[role]}" removido`);
-      } else {
-        const { error } = await supabase.from("user_roles").insert({ user_id: user.id, role });
-        if (error) throw error;
-        setUsers((prev) => prev.map((u) =>
-          u.id === user.id ? { ...u, roles: [...u.roles, role] } : u
-        ));
-        toast.success(`Rol "${ROLE_LABELS[role]}" asignado`);
-      }
+      const { data, error } = await supabase.functions.invoke("admin-users", {
+        body: { action: "toggle_role", user_id: user.id, role, has, clinic_id: activeClinicId },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || "Error");
+      setUsers((prev) => prev.map((u) =>
+        u.id === user.id
+          ? { ...u, roles: has ? u.roles.filter((r) => r !== role) : [...u.roles, role] }
+          : u
+      ));
+      toast.success(has ? `Rol "${ROLE_LABELS[role]}" removido` : `Rol "${ROLE_LABELS[role]}" asignado`);
     } catch (err: any) {
       toast.error(err.message || "No se pudo actualizar el rol");
     } finally {
@@ -258,7 +255,7 @@ export default function AdminUsuarios() {
       return;
     }
     if (["admin", "manager"].includes(createRole) && createPin) {
-      const newUserId = (data as any)?.user?.id;
+      const newUserId = (data as any)?.user_id;
       if (newUserId) {
         const { error: pinErr } = await supabase.rpc("set_supervisor_pin", {
           p_user_id: newUserId,
@@ -332,7 +329,7 @@ export default function AdminUsuarios() {
     if (basePw.length < 12) { toast.error("Mínimo 12 caracteres"); return; }
     setApplyingBase(true);
     const { data, error } = await supabase.functions.invoke("admin-users", {
-      body: { action: "set_base_password_all", password: basePw },
+      body: { action: "set_base_password_all", password: basePw, clinic_id: activeClinicId },
     });
     setApplyingBase(false);
     if (error || (data as any)?.error) {
@@ -493,7 +490,7 @@ export default function AdminUsuarios() {
     if (doctorEdit) {
       ({ error } = await supabase.from("doctors").update(payload).eq("id", doctorEdit.id));
     } else {
-      ({ error } = await supabase.from("doctors").insert(payload));
+      ({ error } = await supabase.from("doctors").insert({ ...payload, clinic_id: activeClinicId }));
     }
     setSavingDoctor(false);
     if (error) {
