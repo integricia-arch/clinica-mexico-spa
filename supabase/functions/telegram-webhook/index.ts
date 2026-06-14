@@ -113,6 +113,8 @@ const TOOLS = [
 // ENTRY POINT
 // ============================================================
 Deno.serve(async (req) => {
+  if (req.method === "GET") return new Response(JSON.stringify({ status: "ok", fn: "telegram-webhook" }), { status: 200, headers: { "Content-Type": "application/json" } });
+
   if (!WEBHOOK_SECRET) {
     console.error("WEBHOOK_SECRET no configurado");
     return new Response("misconfigured", { status: 500 });

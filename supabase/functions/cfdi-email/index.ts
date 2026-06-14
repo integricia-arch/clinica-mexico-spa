@@ -54,6 +54,7 @@ const fmt = (n: number) => n.toLocaleString("es-MX", { style: "currency", curren
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "GET") return json({ status: "ok", fn: "cfdi-email" });
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return json({ error: "Unauthorized" }, 401);

@@ -77,6 +77,7 @@ interface TimbrarRequest {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "GET") return json({ status: "ok", fn: "cfdi-timbrar" });
 
   // Auth: verificar usuario activo
   const authHeader = req.headers.get("Authorization");
