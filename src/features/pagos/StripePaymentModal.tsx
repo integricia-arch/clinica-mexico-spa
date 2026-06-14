@@ -204,6 +204,7 @@ export default function StripePaymentModal({
   const handlePaymentSuccess = (piId: string) => {
     setPaid(true);
     onSuccess(piId, transactionId);
+    setTimeout(() => onOpenChange(false), 2000);
   };
 
   return (

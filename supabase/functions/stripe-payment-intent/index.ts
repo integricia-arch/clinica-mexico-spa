@@ -78,8 +78,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Verificar que ambiente config coincide con la key en uso
-    const keyIsLive = STRIPE_KEY.startsWith("sk_live_");
-    const cfgIsLive = gwCfg.ambiente === "live";
+    const keyIsLive = STRIPE_KEY.startsWith("sk_live_") || STRIPE_KEY.startsWith("rk_live_");
+    const cfgIsLive = gwCfg.ambiente === "produccion";
     if (keyIsLive !== cfgIsLive) {
       const keyMode = keyIsLive ? "producción (sk_live_)" : "pruebas (sk_test_)";
       const cfgMode = cfgIsLive ? "producción" : "pruebas";
