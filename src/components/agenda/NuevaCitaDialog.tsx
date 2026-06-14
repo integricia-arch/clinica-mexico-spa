@@ -11,7 +11,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import PacienteModal from "@/components/PacienteModal";
 
 interface Doctor  { id: string; nombre: string; apellidos: string; especialidad: string | null }
 interface Servicio { id: string; nombre: string }
@@ -65,6 +67,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
   const [servicioId, setServicioId] = useState("__none__");
   const [motivo,    setMotivo]    = useState("");
   const [saving,    setSaving]    = useState(false);
+  const [pacienteModalOpen, setPacienteModalOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -166,7 +169,19 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
                       <p className="px-3 py-2 text-xs text-muted-foreground">Buscando…</p>
                     )}
                     {!searching && pacientes.length === 0 && (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">Sin resultados</p>
+                      <div className="px-3 py-2 flex items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">Sin resultados</p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-xs h-7"
+                          onClick={() => setPacienteModalOpen(true)}
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          Registrar paciente
+                        </Button>
+                      </div>
                     )}
                     {pacientes.map((p) => (
                       <button
@@ -262,6 +277,17 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <PacienteModal
+        open={pacienteModalOpen}
+        onClose={() => setPacienteModalOpen(false)}
+        onSaved={(p) => {
+          setPacienteModalOpen(false);
+          setPacientes((prev) => [...prev, { id: p.id, nombre: p.nombre, apellidos: p.apellidos, telefono: p.telefono ?? null }]);
+          setPacienteId(p.id);
+          setBusqueda(`${p.nombre} ${p.apellidos}`);
+        }}
+      />
     </Dialog>
   );
 }

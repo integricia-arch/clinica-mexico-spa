@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, UserPlus } from "lucide-react";
 import { friendlyError } from "@/lib/errors";
 import { useFieldErrors } from "@/hooks/useFieldErrors";
+import PacienteModal from "@/components/PacienteModal";
 
 export default function NuevaCita() {
   const { session } = useAuth();
@@ -23,6 +24,7 @@ export default function NuevaCita() {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const { markErrors, clearError, errorClass } = useFieldErrors();
+  const [pacienteModalOpen, setPacienteModalOpen] = useState(false);
 
   const DRAFT_KEY = "nueva-cita-draft";
 
@@ -105,7 +107,12 @@ export default function NuevaCita() {
       <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-6 shadow-card space-y-5">
         {/* Paciente */}
         <div className="space-y-2">
-          <Label>Paciente *</Label>
+          <div className="flex items-center justify-between">
+            <Label>Paciente *</Label>
+            <Button type="button" size="sm" variant="ghost" className="gap-1.5 h-7 text-xs text-muted-foreground hover:text-foreground" onClick={() => setPacienteModalOpen(true)}>
+              <UserPlus className="h-3.5 w-3.5" /> Nuevo paciente
+            </Button>
+          </div>
           {dataLoaded ? (
             <Select value={form.patient_id || undefined} onValueChange={(v) => { clearError("patient_id"); setForm({ ...form, patient_id: v }); }}>
               <SelectTrigger id="field-patient_id" className={errorClass("patient_id")}><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
@@ -121,6 +128,17 @@ export default function NuevaCita() {
             <div className="h-10 rounded-md border border-input bg-muted animate-pulse" />
           )}
         </div>
+
+        <PacienteModal
+          open={pacienteModalOpen}
+          onClose={() => setPacienteModalOpen(false)}
+          onSaved={(p) => {
+            setPacienteModalOpen(false);
+            setPatients((prev) => [...prev, { id: p.id, nombre: p.nombre, apellidos: p.apellidos }]);
+            setForm((f) => ({ ...f, patient_id: p.id }));
+            clearError("patient_id");
+          }}
+        />
 
         {/* Médico */}
         <div className="space-y-2">
