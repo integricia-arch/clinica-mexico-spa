@@ -1,4 +1,5 @@
 import { Logtail } from "@logtail/browser";
+import * as Sentry from "@sentry/react";
 
 const token = import.meta.env.VITE_BETTERSTACK_TOKEN as string | undefined;
 
@@ -27,6 +28,8 @@ export const logger = {
   error(msg: string, ctx?: LogCtx) {
     if (logtail) logtail.error(msg, enrich(ctx));
     else console.error(msg, ctx);
+    // Also send to Sentry for full error tracking + stack traces
+    Sentry.captureMessage(msg, { level: "error", extra: ctx });
   },
   flush() {
     return logtail?.flush();
