@@ -6,11 +6,11 @@ import {
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
-import { Loader2, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, CreditCard, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -72,32 +72,44 @@ function PaymentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-center">
-        <p className="text-xs text-muted-foreground">Total a cobrar</p>
-        <p className="text-2xl font-bold text-foreground">{fmt(amountCents)}</p>
+    <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+      {/* Amount — sticky top */}
+      <div className="px-6 pb-4">
+        <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-center">
+          <p className="text-xs text-muted-foreground mb-0.5">Total a cobrar</p>
+          <p className="text-3xl font-bold tracking-tight text-foreground">{fmt(amountCents)}</p>
+        </div>
       </div>
 
-      <PaymentElement
-        onReady={() => setReady(true)}
-        options={{ layout: "tabs" }}
-      />
+      {/* Payment element — scrollable zone */}
+      <div className="flex-1 overflow-y-auto px-6 pb-2">
+        <PaymentElement
+          onReady={() => setReady(true)}
+          options={{ layout: "accordion" }}
+        />
 
-      {errMsg && (
-        <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 text-sm text-destructive">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          {errMsg}
+        {errMsg && (
+          <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 text-sm text-destructive mt-4">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            {errMsg}
+          </div>
+        )}
+      </div>
+
+      {/* Actions — sticky bottom */}
+      <div className="px-6 pt-4 pb-1 border-t border-border bg-background">
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={processing} className="flex-1">
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={!stripe || !elements || !ready || processing} className="flex-1 gap-2">
+            {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+            {processing ? "Procesando…" : "Pagar"}
+          </Button>
         </div>
-      )}
-
-      <div className="flex gap-3 pt-1">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={processing} className="flex-1">
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={!stripe || !elements || !ready || processing} className="flex-1 gap-2">
-          {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-          {processing ? "Procesando…" : "Pagar"}
-        </Button>
+        <p className="flex items-center justify-center gap-1.5 mt-3 text-[11px] text-muted-foreground">
+          <ShieldCheck className="h-3 w-3" /> Pago seguro procesado por Stripe
+        </p>
       </div>
     </form>
   );
@@ -106,10 +118,12 @@ function PaymentForm({
 // ─── Success state ──────────────────────────────────────────────────────────
 function SuccessView({ amount, onClose }: { amount: number; onClose: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-4 py-6">
-      <CheckCircle2 className="h-16 w-16 text-success" />
+    <div className="flex flex-col items-center gap-4 py-8 px-6">
+      <div className="rounded-full bg-success/10 p-4">
+        <CheckCircle2 className="h-12 w-12 text-success" />
+      </div>
       <div className="text-center">
-        <p className="text-lg font-bold text-foreground">¡Pago exitoso!</p>
+        <p className="text-xl font-bold text-foreground">¡Pago exitoso!</p>
         <p className="text-muted-foreground text-sm mt-1">{fmt(amount)} cobrados correctamente</p>
       </div>
       <Button onClick={onClose} className="mt-2 w-full">Cerrar</Button>
@@ -135,7 +149,6 @@ export default function StripePaymentModal({
   const [loadingSetup, setLoadingSetup]   = useState(false);
   const [paid, setPaid]                   = useState(false);
 
-  // Cargar publishable key y crear PaymentIntent al abrir
   useEffect(() => {
     if (!open) {
       setClientSecret(null);
@@ -148,7 +161,6 @@ export default function StripePaymentModal({
       setLoadingSetup(true);
       setLoadError(null);
       try {
-        // 1. Cargar publishable key desde payment_gateway_config
         const { data: gwCfg, error: cfgErr } = await supabase
           .from("payment_gateway_config" as any)
           .select("stripe_publishable_key, ambiente, activo, proveedor")
@@ -162,7 +174,6 @@ export default function StripePaymentModal({
 
         setStripePromise(loadStripe(gw.stripe_publishable_key));
 
-        // 2. Crear PaymentIntent vía edge function
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error("Sin sesión");
 
@@ -209,50 +220,56 @@ export default function StripePaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            Cobro con tarjeta
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-sm p-0 gap-0 overflow-hidden flex flex-col max-h-[92vh]">
+        {/* Header — always visible */}
+        <div className="flex items-center gap-2.5 px-6 py-4 border-b border-border shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+            <CreditCard className="h-4 w-4 text-primary" />
+          </div>
+          <h2 className="text-base font-semibold text-foreground">Cobro con tarjeta</h2>
+        </div>
 
-        {paid ? (
-          <SuccessView amount={amountCents} onClose={() => onOpenChange(false)} />
-        ) : loadingSetup ? (
-          <div className="flex flex-col items-center gap-3 py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Preparando cobro…</p>
-          </div>
-        ) : loadError ? (
-          <div className="space-y-4 py-2">
-            <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              {loadError}
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {paid ? (
+            <SuccessView amount={amountCents} onClose={() => onOpenChange(false)} />
+          ) : loadingSetup ? (
+            <div className="flex flex-col items-center gap-3 py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Preparando cobro…</p>
             </div>
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
-              Cerrar
-            </Button>
-          </div>
-        ) : stripePromise && clientSecret ? (
-          <Elements
-            stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "stripe",
-                variables: { colorPrimary: "#6d28d9" },
-              },
-              locale: "es-419",
-            }}
-          >
-            <PaymentForm
-              onSuccess={handlePaymentSuccess}
-              onCancel={() => onOpenChange(false)}
-              amountCents={amountCents}
-            />
-          </Elements>
-        ) : null}
+          ) : loadError ? (
+            <div className="space-y-4 p-6">
+              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                {loadError}
+              </div>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
+                Cerrar
+              </Button>
+            </div>
+          ) : stripePromise && clientSecret ? (
+            <Elements
+              stripe={stripePromise}
+              options={{
+                clientSecret,
+                appearance: {
+                  theme: "stripe",
+                  variables: { colorPrimary: "#6d28d9", borderRadius: "8px" },
+                },
+                locale: "es-419",
+              }}
+            >
+              <div className="pt-5">
+                <PaymentForm
+                  onSuccess={handlePaymentSuccess}
+                  onCancel={() => onOpenChange(false)}
+                  amountCents={amountCents}
+                />
+              </div>
+            </Elements>
+          ) : null}
+        </div>
       </DialogContent>
     </Dialog>
   );
