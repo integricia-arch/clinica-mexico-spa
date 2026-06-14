@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const wasAuthenticatedRef = useRef(false);
 
   const fetchRoles = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -57,12 +58,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        const wasAuthenticated = wasAuthenticatedRef.current;
+        wasAuthenticatedRef.current = !!session?.user;
+
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // TOKEN_REFRESHED e INITIAL_SESSION no requieren re-fetch de roles:
-          // evitar setLoading(true) para no desmontar páginas activas y perder estado.
+          // TOKEN_REFRESHED e INITIAL_SESSION: no re-fetch, no spinner.
           if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") return;
+          // SIGNED_IN mientras ya había sesión activa (refresh de tab, etc.):
+          // refrescar roles silenciosamente sin desmontar la página.
+          if (event === "SIGNED_IN" && wasAuthenticated) {
+            queueMicrotask(() => fetchRoles(session.user.id));
+            return;
+          }
           setLoading(true);
           queueMicrotask(() => {
             if (event === "USER_UPDATED") {
@@ -72,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           });
         } else {
+          wasAuthenticatedRef.current = false;
           setRoles([]);
           setLoading(false);
         }
@@ -79,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      wasAuthenticatedRef.current = !!session?.user;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {

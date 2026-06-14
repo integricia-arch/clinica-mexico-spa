@@ -112,9 +112,12 @@ export default function DetalleCita() {
   const puedeGestionarRecordatorios = hasRole("admin") || hasRole("receptionist");
 
   // Stripe payment modal
+  const stripeAmountKey = `stripe-amount-${id ?? ""}`;
   const [stripeOpen, setStripeOpen] = useState(false);
   const [stripeAmountCents, setStripeAmountCents] = useState(0);
-  const [stripeAmountInput, setStripeAmountInput] = useState("");
+  const [stripeAmountInput, setStripeAmountInput] = useState(() => {
+    try { return sessionStorage.getItem(`stripe-amount-${id ?? ""}`) ?? ""; } catch { return ""; }
+  });
 
   const reloadRecordatorios = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -377,7 +380,10 @@ export default function DetalleCita() {
                       ? (servicio.precio_centavos / 100).toFixed(2)
                       : "0.00"}
                     value={stripeAmountInput}
-                    onChange={(e) => setStripeAmountInput(e.target.value)}
+                    onChange={(e) => {
+                      setStripeAmountInput(e.target.value);
+                      try { sessionStorage.setItem(stripeAmountKey, e.target.value); } catch { /* ignore */ }
+                    }}
                     className="w-full rounded-md border border-input bg-background pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/20"
                   />
                 </div>
@@ -669,11 +675,9 @@ export default function DetalleCita() {
         <StripePaymentModal
           open={stripeOpen}
           onOpenChange={setStripeOpen}
-          onSuccess={(piId, txnId) => {
-            toast({
-              title: "Pago exitoso",
-              description: `Cobro registrado — PI: ${piId.slice(-8)}`,
-            });
+          onSuccess={(piId) => {
+            try { sessionStorage.removeItem(stripeAmountKey); } catch { /* ignore */ }
+            toast({ title: "Pago exitoso", description: `Cobro registrado — PI: ${piId.slice(-8)}` });
             setStripeAmountInput("");
           }}
           clinicId={activeClinicId}

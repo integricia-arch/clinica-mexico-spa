@@ -24,16 +24,19 @@ export default function NuevaCita() {
   const [loading, setLoading] = useState(false);
   const { markErrors, clearError, errorClass } = useFieldErrors();
 
-  const [form, setForm] = useState({
-    patient_id: "",
-    doctor_id: "",
-    room_id: "",
-    fecha: "",
-    hora_inicio: "",
-    hora_fin: "",
-    motivo_consulta: "",
-    notas: "",
+  const DRAFT_KEY = "nueva-cita-draft";
+
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("nueva-cita-draft");
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return { patient_id: "", doctor_id: "", room_id: "", fecha: "", hora_inicio: "", hora_fin: "", motivo_consulta: "", notas: "" };
   });
+
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch { /* ignore */ }
+  }, [form]);
 
   useEffect(() => {
     Promise.all([
@@ -82,6 +85,7 @@ export default function NuevaCita() {
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
       toast({ title: "Cita creada", description: "La cita se agendó exitosamente" });
       navigate("/agenda");
     } catch (err: any) {
@@ -216,7 +220,7 @@ export default function NuevaCita() {
             <CalendarPlus className="mr-2 h-4 w-4" />
             {loading ? "Agendando..." : "Agendar cita"}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate("/agenda")}>
+          <Button type="button" variant="outline" onClick={() => { try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ } navigate("/agenda"); }}>
             Cancelar
           </Button>
         </div>
