@@ -26,8 +26,10 @@ export const logger = {
     else console.warn(msg, ctx);
   },
   error(msg: string, ctx?: LogCtx) {
-    if (logtail) logtail.error(msg, enrich(ctx));
-    else console.error(msg, ctx);
+    if (logtail) {
+      logtail.error(msg, enrich(ctx));
+      logtail.flush(); // flush immediately on errors so they're not lost in SPA navigation
+    } else console.error(msg, ctx);
     // Also send to Sentry for full error tracking + stack traces
     Sentry.captureMessage(msg, { level: "error", extra: ctx });
   },
@@ -37,6 +39,12 @@ export const logger = {
 };
 
 export function initGlobalErrorCapture() {
+  // Startup ping — confirms the token is valid and logs reach BetterStack
+  if (logtail) {
+    logtail.info("App init", enrich({ version: import.meta.env.VITE_APP_VERSION ?? "unknown" }));
+    logtail.flush();
+  }
+
   window.addEventListener("error", (e) => {
     logger.error("Uncaught error", {
       message: e.message,
