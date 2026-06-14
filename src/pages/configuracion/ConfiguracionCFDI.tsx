@@ -172,16 +172,29 @@ export default function ConfiguracionCFDI() {
       csd_key_path: keyPath,
       iva_default: parseFloat(form.iva_default) || 0.16,
       zona_fronteriza: form.zona_fronteriza,
+      // pac_contrasena y csd_contrasena NUNCA se escriben aquí — van a Vault
     };
-    if (form.pac_contrasena) payload.pac_contrasena = form.pac_contrasena;
-    if (form.csd_contrasena) payload.csd_contrasena = form.csd_contrasena;
 
     const { error } = existingId
       ? await supabase.from("cfdi_config" as any).update(payload).eq("id", existingId)
       : await supabase.from("cfdi_config" as any).insert(payload);
 
+    if (error) { setSaving(false); toast.error("Error al guardar: " + error.message); return; }
+
+    // Guardar credenciales en Vault (edge function con service role)
+    if (form.pac_contrasena || form.csd_contrasena) {
+      const credBody: Record<string, string> = { clinic_id: activeClinicId };
+      if (form.pac_contrasena) credBody.pac_contrasena = form.pac_contrasena;
+      if (form.csd_contrasena) credBody.csd_contrasena = form.csd_contrasena;
+      const { error: credErr } = await supabase.functions.invoke("cfdi-set-credentials", { body: credBody });
+      if (credErr) {
+        setSaving(false);
+        toast.error("Config guardada pero error en credenciales: " + credErr.message);
+        return;
+      }
+    }
+
     setSaving(false);
-    if (error) { toast.error("Error al guardar: " + error.message); return; }
     toast.success("Configuración CFDI guardada");
     setCerFile(null);
     setKeyFile(null);

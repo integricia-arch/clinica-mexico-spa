@@ -26,6 +26,17 @@ function json(data: unknown, status = 200) {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+async function getPacCredentials(svc: ReturnType<typeof createClient>, cfg: Record<string, any>) {
+  if (cfg.pac_secret_id) {
+    const { data: secret, error } = await svc.rpc("cfdi_get_secret", { p_id: cfg.pac_secret_id });
+    if (error) throw new Error("Error leyendo secreto PAC: " + error.message);
+    return { pac_usuario: cfg.pac_usuario as string, pac_contrasena: secret as string };
+  }
+  // Fallback a texto plano (legado — eliminar una vez todos migrados)
+  if (cfg.pac_contrasena) return { pac_usuario: cfg.pac_usuario as string, pac_contrasena: cfg.pac_contrasena as string };
+  throw new Error("Credenciales PAC no configuradas en Configuración → Facturación");
+}
+
 interface Concepto {
   clave_prod_serv: string;
   clave_unidad: string;
@@ -107,7 +118,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (!cfg) return json({ error: "Sin configuración CFDI — configura el emisor primero" }, 400);
-    if (!cfg.pac_usuario || !cfg.pac_contrasena) {
+    if (!cfg.pac_usuario || (!cfg.pac_secret_id && !cfg.pac_contrasena)) {
       return json({ error: "Credenciales PAC no configuradas en Configuración → Facturación" }, 400);
     }
     if (!cfg.domicilio_fiscal_cp) {
@@ -211,7 +222,8 @@ Deno.serve(async (req: Request) => {
     const facBase = cfg.pac_ambiente === "produccion"
       ? "https://api.facturama.mx"
       : "https://apisandbox.facturama.mx";
-    const creds = btoa(`${cfg.pac_usuario}:${cfg.pac_contrasena}`);
+    const { pac_contrasena } = await getPacCredentials(svc, cfg);
+    const creds = btoa(`${cfg.pac_usuario}:${pac_contrasena}`);
 
     const facRes = await fetch(`${facBase}/api/3/cfdis`, {
       method:  "POST",

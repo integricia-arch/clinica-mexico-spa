@@ -21,6 +21,16 @@ function json(data: unknown, status = 200) {
   });
 }
 
+async function getPacCredentials(svc: ReturnType<typeof createClient>, cfg: Record<string, any>) {
+  if (cfg.pac_secret_id) {
+    const { data: secret, error } = await svc.rpc("cfdi_get_secret", { p_id: cfg.pac_secret_id });
+    if (error) throw new Error("Error leyendo secreto PAC: " + error.message);
+    return { pac_usuario: cfg.pac_usuario as string, pac_contrasena: secret as string };
+  }
+  if (cfg.pac_contrasena) return { pac_usuario: cfg.pac_usuario as string, pac_contrasena: cfg.pac_contrasena as string };
+  throw new Error("Credenciales PAC no configuradas");
+}
+
 interface CancelarRequest {
   clinic_id: string;
   cfdi_id: string;           // UUID interno en BD
@@ -93,18 +103,19 @@ Deno.serve(async (req: Request) => {
     // Cargar config PAC
     const { data: cfg } = await svc
       .from("cfdi_config")
-      .select("pac_ambiente, pac_usuario, pac_contrasena")
+      .select("pac_ambiente, pac_usuario, pac_secret_id, pac_contrasena")
       .eq("clinic_id", clinic_id)
       .maybeSingle();
 
-    if (!cfg?.pac_usuario) {
+    if (!cfg?.pac_usuario || (!cfg.pac_secret_id && !cfg.pac_contrasena)) {
       return json({ error: "Configuración PAC no disponible" }, 400);
     }
 
     const facBase = cfg.pac_ambiente === "produccion"
       ? "https://api.facturama.mx"
       : "https://apisandbox.facturama.mx";
-    const creds = btoa(`${cfg.pac_usuario}:${cfg.pac_contrasena}`);
+    const { pac_contrasena } = await getPacCredentials(svc, cfg);
+    const creds = btoa(`${cfg.pac_usuario}:${pac_contrasena}`);
 
     // Facturama: DELETE /api/cfdis/issued/{id}?motive={motivo}[&uuidReplacement={uuid}]
     let cancelUrl = `${facBase}/api/cfdis/issued/${encodeURIComponent(doc.pac_id_externo)}?motive=${motivo}`;
