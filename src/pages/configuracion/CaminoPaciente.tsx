@@ -16,12 +16,13 @@ import { Badge } from "@/components/ui/badge";
 
 import { toast } from "sonner";
 import { useJourneyTemplates, useJourneyVersion, type JourneyStep, type JourneyTemplate } from "@/features/camino-paciente/hooks/useJourneyData";
-import { STEP_TYPE_LABELS, TEMPLATE_TYPE_LABELS, APP_ROLES, CRITICAL_STEP_KEYS } from "@/features/camino-paciente/lib/stepKeys";
+import { STEP_TYPE_LABELS, TEMPLATE_TYPE_LABELS, APP_ROLES, CRITICAL_STEP_KEYS, STEP_KEY_LABELS } from "@/features/camino-paciente/lib/stepKeys";
 import { validateJourneyConfiguration } from "@/features/camino-paciente/lib/validateJourneyConfiguration";
 import { simulateJourney, SCENARIO_LABELS, type Scenario } from "@/features/camino-paciente/lib/simulateJourney";
 import { getAvailableOptionsForStep } from "@/features/camino-paciente/lib/getAvailableOptionsForStep";
 import { ConfigHealthBadge } from "@/features/camino-paciente/components/ConfigHealthBadge";
 import { friendlyError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 
 export default function CaminoPacienteConfig() {
   const nav = useNavigate();
@@ -41,6 +42,16 @@ export default function CaminoPacienteConfig() {
   const [newTemplateOpen, setNewTemplateOpen] = useState(false);
 
   const validation = useMemo(() => validateJourneyConfiguration(steps as any, []), [steps]);
+
+  useEffect(() => {
+    if (validation.status === "red" && selectedTemplate) {
+      logger.warn("Journey config has errors", {
+        templateId: selectedTemplate.id,
+        templateName: selectedTemplate.name,
+        issues: validation.issues.filter((i) => i.level === "error").map((i) => i.message),
+      });
+    }
+  }, [validation.status, selectedTemplate?.id]);
 
   if (!isAdmin) {
     return (
@@ -888,16 +899,18 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
         await supabase.from("journey_step_definitions").insert(rows);
       }
     } else {
-      // fallback: create critical steps
+      // fallback: create critical steps with valid defaults per step
       const rows = CRITICAL_STEP_KEYS.map((k, i) => ({
         template_version_id: ver.id,
         step_key: k,
-        step_name: k,
+        step_name: STEP_KEY_LABELS[k] ?? k,
         step_type: "clinica" as any,
         step_order: i + 1,
         is_required: true,
         is_critical: true,
-        allowed_complete_roles: ["admin"],
+        blocks_progress: !["followup", "billing", "prescription"].includes(k),
+        requires_responsible: (["consultation", "prescription", "discharge"] as string[]).includes(k),
+        allowed_complete_roles: k === "prescription" ? ["doctor", "admin"] : ["admin"],
       }));
       await supabase.from("journey_step_definitions").insert(rows);
     }
