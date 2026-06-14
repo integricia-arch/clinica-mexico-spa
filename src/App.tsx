@@ -23,6 +23,7 @@ import CaminoPacienteConfig from "@/pages/configuracion/CaminoPaciente";
 import MachoteReceta from "@/pages/configuracion/MachoteReceta";
 import ConfiguracionCFDI from "@/pages/configuracion/ConfiguracionCFDI";
 import ConfiguracionPagos from "@/pages/configuracion/ConfiguracionPagos";
+import ConfiguracionEmail from "@/pages/configuracion/ConfiguracionEmail";
 import RecetaImprimir from "@/pages/RecetaImprimir";
 import RecetaBitacora from "@/pages/RecetaBitacora";
 import MisRecetas from "@/pages/MisRecetas";
@@ -93,6 +94,7 @@ const App = () => (
                         <Route path="/configuracion/caja" element={<ProtectedRoute allowedRoles={["admin","manager","cajero"]}><CajaConfiguracion /></ProtectedRoute>} />
                         <Route path="/configuracion/facturacion" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracionCFDI /></ProtectedRoute>} />
                         <Route path="/configuracion/pagos" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracionPagos /></ProtectedRoute>} />
+                        <Route path="/configuracion/email" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracionEmail /></ProtectedRoute>} />
                         <Route path="/caja/turno" element={<ProtectedRoute allowedRoles={["admin","manager","cajero"]}><CajaTurno /></ProtectedRoute>} />
                         <Route path="/caja" element={<ProtectedRoute allowedRoles={["admin","manager","cajero","receptionist"]}><TurnoGuard cajaFilter="general"><Caja /></TurnoGuard></ProtectedRoute>} />
                         <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsuarios /></ProtectedRoute>} />

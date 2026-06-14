@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard } from "lucide-react";
+import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const secciones: Seccion[] = [
   { icon: Globe, titulo: "Localización", descripcion: "Zona horaria (Ciudad de México), formato de fecha (dd/mm/aaaa), moneda (MXN), idioma (Español)." },
   { icon: FileText, titulo: "Facturación y CFDI", descripcion: "Datos del emisor, régimen fiscal, certificados de sello digital y configuración de timbrado.", to: "/configuracion/facturacion", adminOnly: true },
   { icon: CreditCard, titulo: "Cobros y pagos digitales", descripcion: "Pasarela de pago: Stripe, OXXO Pay y transferencia SPEI. Terminal física en consultorio.", to: "/configuracion/pagos", adminOnly: true },
+  { icon: Mail, titulo: "Email y notificaciones", descripcion: "Remitente, nombre y reply-to para correos del sistema (CFDI, recordatorios).", to: "/configuracion/email", adminOnly: true },
 ];
 
 interface Room { id: string; nombre: string; piso: string | null; activo: boolean; capacidad: number }

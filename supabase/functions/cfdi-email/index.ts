@@ -104,6 +104,19 @@ Deno.serve(async (req: Request) => {
       .eq("clinic_id", clinic_id)
       .maybeSingle();
 
+    // Cargar configuración de email por clínica
+    const { data: emailSettings } = await svc
+      .from("clinic_settings")
+      .select("data")
+      .eq("clinic_id", clinic_id)
+      .eq("section", "email")
+      .maybeSingle();
+    const emailCfg = (emailSettings as any)?.data as {
+      from_name?: string;
+      from_email?: string;
+      reply_to?: string;
+    } | null;
+
     // Determinar email destino
     let destinatario = email_override?.trim() ?? "";
     if (!destinatario) {
@@ -168,6 +181,14 @@ Deno.serve(async (req: Request) => {
 
     const hasPdf = attachments.length > 1;
     const emisorNombre = cfg?.nombre_razon_social ?? cfg?.rfc ?? "Integriclinica";
+
+    // Determinar remitente: config por clínica → env var fallback
+    const fromName  = emailCfg?.from_name?.trim()  || emisorNombre;
+    const fromEmail = emailCfg?.from_email?.trim();
+    const resendFrom = fromEmail
+      ? `${fromName} <${fromEmail}>`
+      : RESEND_FROM;
+    const replyTo = emailCfg?.reply_to?.trim() || undefined;
     const tipoLabel = TIPO_LABEL[doc.tipo] ?? `CFDI tipo ${doc.tipo}`;
     const fechaEmision = new Date(doc.fecha_emision).toLocaleDateString("es-MX", {
       day: "2-digit", month: "long", year: "numeric",
@@ -236,11 +257,12 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from:        RESEND_FROM,
+        from:        resendFrom,
         to:          [destinatario],
         subject,
         html,
         attachments,
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
 
