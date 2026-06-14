@@ -71,6 +71,8 @@ interface TimbrarRequest {
   informacion_global?: InformacionGlobal;
   appointment_id?: string;
   sale_id?: string;
+  cfdi_relacionado_uuid?: string; // UUID SAT del CFDI origen (requerido para tipo E)
+  tipo_relacion?: string;         // default "01" (nota de crédito)
 }
 
 Deno.serve(async (req: Request) => {
@@ -103,10 +105,13 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: TimbrarRequest = await req.json();
-    const { clinic_id, tipo = "I", receptor, conceptos, metodo_pago, forma_pago, informacion_global, appointment_id, sale_id } = body;
+    const { clinic_id, tipo = "I", receptor, conceptos, metodo_pago, forma_pago, informacion_global, appointment_id, sale_id, cfdi_relacionado_uuid, tipo_relacion = "01" } = body;
 
     if (!clinic_id || !receptor?.rfc || !conceptos?.length) {
       return json({ error: "Faltan datos: clinic_id, receptor.rfc y conceptos son obligatorios" }, 400);
+    }
+    if (tipo === "E" && !cfdi_relacionado_uuid) {
+      return json({ error: "Para tipo E (nota de crédito) se requiere cfdi_relacionado_uuid (UUID SAT del CFDI de ingreso)" }, 400);
     }
 
     // Cargar config CFDI de la clínica
@@ -196,6 +201,14 @@ Deno.serve(async (req: Request) => {
 
     if (cfg.serie_defecto) payload.Serie = cfg.serie_defecto;
 
+    // Tipo E: nota de crédito requiere CfdiRelacionados con TipoRelacion "01"
+    if (tipo === "E" && cfdi_relacionado_uuid) {
+      payload.CfdiRelacionados = [{
+        TipoRelacion:    tipo_relacion,
+        CfdiRelacionado: [{ Uuid: cfdi_relacionado_uuid }],
+      }];
+    }
+
     // Factura global: InformacionGlobal + receptor XAXX bloqueado
     if (informacion_global) {
       payload.InformacionGlobal = {
@@ -283,9 +296,10 @@ Deno.serve(async (req: Request) => {
         forma_pago:     metodo_pago === "PPD" ? "99" : forma_pago,
         xml_contenido:  xmlContenido,
         status:         "vigente",
-        appointment_id: appointment_id ?? null,
-        sale_id:        sale_id ?? null,
-        pac_id_externo: pacIdExterno,
+        appointment_id:        appointment_id ?? null,
+        sale_id:               sale_id ?? null,
+        pac_id_externo:        pacIdExterno,
+        cfdi_relacionado_uuid: cfdi_relacionado_uuid ?? null,
       })
       .select("id")
       .single();

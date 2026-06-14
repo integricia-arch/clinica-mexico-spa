@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Search, Plus, Download, FileText, MoreHorizontal,
-  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle, Globe, Receipt,
+  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle, Globe, Receipt, FileMinus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import TimbrarCFDIDialog from "@/features/facturacion/TimbrarCFDIDialog";
 import RegistrarPagoREPDialog from "@/features/facturacion/RegistrarPagoREPDialog";
 import FacturaGlobalDialog from "@/features/facturacion/FacturaGlobalDialog";
+import NotaCreditoDialog from "@/features/facturacion/NotaCreditoDialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -69,6 +70,7 @@ export default function Facturacion() {
   const [cancelSustitucion, setCancelSustitucion] = useState("");
   const [canceling, setCanceling] = useState(false);
   const [repDoc, setRepDoc] = useState<CfdiDoc | null>(null);
+  const [notaCreditoDoc, setNotaCreditoDoc] = useState<CfdiDoc | null>(null);
   const [globalOpen, setGlobalOpen] = useState(false);
   const [cpEmisor, setCpEmisor] = useState("");
 
@@ -376,6 +378,14 @@ export default function Facturacion() {
                             <Receipt className="h-4 w-4" /> Registrar pago (REP)
                           </DropdownMenuItem>
                         )}
+                        {d.status === "vigente" && d.tipo === "I" && d.uuid_fiscal && (
+                          <DropdownMenuItem
+                            onClick={() => setNotaCreditoDoc(d)}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <FileMinus className="h-4 w-4" /> Nota de crédito
+                          </DropdownMenuItem>
+                        )}
                         {d.status === "vigente" && (
                           <>
                             <DropdownMenuSeparator />
@@ -423,6 +433,15 @@ export default function Facturacion() {
         clinicId={activeClinicId ?? ""}
         cpEmisor={cpEmisor}
       />
+
+      {notaCreditoDoc && (
+        <NotaCreditoDialog
+          open={!!notaCreditoDoc}
+          onOpenChange={(o) => { if (!o) setNotaCreditoDoc(null); }}
+          onSuccess={(id, uuid) => { toast.success(`Nota de crédito timbrada — UUID: ${uuid}`); setNotaCreditoDoc(null); load(); }}
+          originDoc={notaCreditoDoc}
+        />
+      )}
 
       {/* Dialog cancelación */}
       <Dialog open={!!cancelDoc} onOpenChange={(o) => { if (!o) setCancelDoc(null); }}>
