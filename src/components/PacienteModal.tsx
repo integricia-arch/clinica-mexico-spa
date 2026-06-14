@@ -101,6 +101,7 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
     const payload = {
       nombre: form.nombre.trim(),
       apellidos: form.apellidos.trim(),
+      activo: true,
       fecha_nacimiento: form.fecha_nacimiento || null,
       sexo: form.sexo || null,
       curp: form.curp.toUpperCase() || null,

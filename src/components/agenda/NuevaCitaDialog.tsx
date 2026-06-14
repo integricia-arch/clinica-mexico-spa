@@ -283,9 +283,13 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
         onClose={() => setPacienteModalOpen(false)}
         onSaved={(p) => {
           setPacienteModalOpen(false);
-          setPacientes((prev) => [...prev, { id: p.id, nombre: p.nombre, apellidos: p.apellidos, telefono: p.telefono ?? null }]);
+          // Agregar a la lista local e ID antes de que el search pueda sobrescribir
+          setPacientes((prev) => {
+            if (prev.some((x) => x.id === p.id)) return prev;
+            return [...prev, { id: p.id, nombre: p.nombre, apellidos: p.apellidos, telefono: p.telefono ?? null }];
+          });
           setPacienteId(p.id);
-          setBusqueda(`${p.nombre} ${p.apellidos}`);
+          // NO llamar setBusqueda — causaría re-search que sobrescribe pacientes
         }}
       />
     </Dialog>
