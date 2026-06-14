@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Search, Plus, Download, FileText, MoreHorizontal,
-  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle, Globe, Receipt, FileMinus,
+  Loader2, RefreshCw, Copy, Check, Ban, AlertTriangle, Globe, Receipt, FileMinus, ClipboardCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -46,8 +46,15 @@ const MOTIVOS_CANCELACION = [
   { value: "04", label: "04 — Operación nominativa relacionada en factura global" },
 ];
 const STATUS_COLOR: Record<string, string> = {
-  vigente:   "bg-success/10 text-success",
-  cancelado: "bg-destructive/10 text-destructive",
+  vigente:               "bg-success/10 text-success",
+  cancelado:             "bg-destructive/10 text-destructive",
+  cancelacion_pendiente: "bg-warning/10 text-warning",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  vigente:               "Vigente",
+  cancelado:             "Cancelado",
+  cancelacion_pendiente: "Cancelación pendiente",
 };
 
 const fmt = (n: number) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -71,6 +78,7 @@ export default function Facturacion() {
   const [canceling, setCanceling] = useState(false);
   const [repDoc, setRepDoc] = useState<CfdiDoc | null>(null);
   const [notaCreditoDoc, setNotaCreditoDoc] = useState<CfdiDoc | null>(null);
+  const [verificandoId, setVerificandoId] = useState<string | null>(null);
   const [globalOpen, setGlobalOpen] = useState(false);
   const [cpEmisor, setCpEmisor] = useState("");
 
@@ -200,6 +208,41 @@ export default function Facturacion() {
       toast.error("Error al cancelar: " + err.message);
     } finally {
       setCanceling(false);
+    }
+  };
+
+  const handleVerificarAcuse = async (doc: CfdiDoc) => {
+    if (!activeClinicId) return;
+    setVerificandoId(doc.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sin sesión");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cfdi-acuse`,
+        {
+          method: "POST",
+          headers: {
+            Authorization:  `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+            apikey:         import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ clinic_id: activeClinicId, cfdi_id: doc.id }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
+
+      if (data.changed) {
+        toast.success(data.message ?? "CFDI cancelado por acuse del receptor");
+        load();
+      } else {
+        toast.info(data.message ?? "Sin cambios");
+      }
+    } catch (err: any) {
+      toast.error("Error al verificar acuse: " + err.message);
+    } finally {
+      setVerificandoId(null);
     }
   };
 
@@ -336,7 +379,7 @@ export default function Facturacion() {
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${STATUS_COLOR[d.status] ?? "bg-muted text-muted-foreground"}`}>
-                      {d.status.charAt(0).toUpperCase() + d.status.slice(1)}
+                      {STATUS_LABEL[d.status] ?? d.status}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -384,6 +427,18 @@ export default function Facturacion() {
                             className="gap-2 cursor-pointer"
                           >
                             <FileMinus className="h-4 w-4" /> Nota de crédito
+                          </DropdownMenuItem>
+                        )}
+                        {d.status === "cancelacion_pendiente" && (
+                          <DropdownMenuItem
+                            onClick={() => handleVerificarAcuse(d)}
+                            className="gap-2 cursor-pointer"
+                            disabled={verificandoId === d.id}
+                          >
+                            {verificandoId === d.id
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <ClipboardCheck className="h-4 w-4" />}
+                            Verificar acuse receptor
                           </DropdownMenuItem>
                         )}
                         {d.status === "vigente" && (

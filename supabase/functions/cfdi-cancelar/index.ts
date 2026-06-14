@@ -141,12 +141,27 @@ Deno.serve(async (req: Request) => {
       return json({ error: errMsg }, 422);
     }
 
+    // Detectar si SAT requiere acuse del receptor (Facturama devuelve Status en body)
+    let facStatus = "cancelled";
+    if (facRes.status !== 204) {
+      try {
+        const facBody = await facRes.json();
+        // Facturama puede devolver "Cancellation requested" cuando receptor debe aceptar
+        const rawStatus: string = facBody?.Status ?? facBody?.status ?? "";
+        if (rawStatus.toLowerCase().includes("request") || rawStatus.toLowerCase().includes("pending")) {
+          facStatus = "pending";
+        }
+      } catch { /* body vacío o no JSON → asumir cancelado */ }
+    }
+
+    const nuevoStatus = facStatus === "pending" ? "cancelacion_pendiente" : "cancelado";
+
     // Actualizar BD
     const { error: updateErr } = await svc
       .from("cfdi_documentos")
       .update({
-        status:               "cancelado",
-        motivo_cancelacion:   motivo,
+        status:                nuevoStatus,
+        motivo_cancelacion:    motivo,
         cfdi_relacionado_uuid: cfdi_sustitucion ? cfdi_sustitucion as any : null,
       })
       .eq("id", cfdi_id);
@@ -156,6 +171,7 @@ Deno.serve(async (req: Request) => {
       return json({
         ok: true,
         warning: "Cancelado en PAC pero no actualizado en BD: " + updateErr.message,
+        status: nuevoStatus,
       });
     }
 
@@ -165,10 +181,10 @@ Deno.serve(async (req: Request) => {
       action:     "UPDATE",
       table_name: "cfdi_documentos",
       record_id:  cfdi_id,
-      new_values: { status: "cancelado", motivo_cancelacion: motivo },
+      new_values: { status: nuevoStatus, motivo_cancelacion: motivo },
     });
 
-    return json({ ok: true, cfdi_id, motivo });
+    return json({ ok: true, cfdi_id, motivo, status: nuevoStatus, pendiente_acuse: nuevoStatus === "cancelacion_pendiente" });
 
   } catch (err: any) {
     console.error("[cfdi-cancelar] unexpected error:", err);
