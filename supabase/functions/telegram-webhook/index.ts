@@ -15,6 +15,7 @@ const ANTHROPIC_API_KEY    = Deno.env.get("ANTHROPIC_API_KEY")!;
 const WEBHOOK_SECRET       = Deno.env.get("WEBHOOK_SECRET") ?? "";
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const CLINIC_NAME          = Deno.env.get("CLINIC_NAME") ?? "ClínicaMX";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const ANTHROPIC_MODEL_MEMORIA = "claude-haiku-4-5-20251001"; // barato: resumen de memoria del paciente
@@ -38,7 +39,7 @@ const CATEGORIAS: Record<string, { label: string; especialidades: string[] }> = 
   lab:    { label: "🔬 Estudios y laboratorio", especialidades: ["Laboratorio", "Imagenología"] },
 };
 
-const SYSTEM_PROMPT_BASE = `Eres el asistente virtual de AGENDAMIENTO de ClínicaMX, una clínica multiespecialidad en México.
+const SYSTEM_PROMPT_BASE = `Eres el asistente virtual de AGENDAMIENTO de ${CLINIC_NAME}, una clínica multiespecialidad en México.
 
 TU ROL: Ayudar a agendar citas, informar horarios/precios/ubicación y conectar con recepción. NO eres médico ni personal de salud. No puedes ni debes dar consejos, diagnósticos ni interpretaciones médicas.
 
@@ -169,8 +170,7 @@ function pideHumano(t: string): boolean {
     "agente", "asesor", "ejecutivo", "operador", "recepcion", "recepcionista",
     "que me entienda", "alguien que me entienda", "nadie me entiende",
     "quiero ayuda", "necesito ayuda", "me pueden ayudar", "ayuda por favor",
-    "hablar con alguien", "con alguien", "cambiar mi cita", "cambiar la cita",
-    "cambiar mi consulta", "reagendar", "reprogramar", "mover mi cita",
+    "hablar con alguien", "con alguien",
   ];
   return frases.some((f) => s.includes(f));
 }
@@ -276,6 +276,13 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     await enviarTelegram(chatId, "Claro 🙌 En un momento una persona de nuestro equipo te atiende por aquí.\nCuando quieras agendar una cita, solo escríbeme \"hola\".");
     return;
   }
+  // Reagendar por texto libre
+  const lowerText = (text ?? "").toLowerCase().trim();
+  if (["/reagendar", "reagendar", "reprogramar", "cambiar mi cita", "cambiar la cita", "cambiar mi consulta", "mover mi cita"].some((f) => lowerText.includes(f))) {
+    await guardarMensajeUsuario(conv.id, text, rawMsg);
+    return iniciarReagendarCita(chatId, conv);
+  }
+
   // Saludo o intención de iniciar (en sus palabras o con /start). No interrumpe una cita en curso.
   if (text === "/start" || esSaludo(text)) {
     const sesionActual = await obtenerSesion(conv.id);
@@ -283,7 +290,7 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     if (text === "/start" || !enWizard) {
       await guardarMensajeUsuario(conv.id, text, rawMsg);
       await limpiarSesion(conv.id);
-      const bienvenida = "¡Hola! 👋 Soy el asistente de ClínicaMX. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo.\n\n¿En qué te puedo ayudar hoy?";
+      const bienvenida = `¡Hola! 👋 Soy el asistente de ${CLINIC_NAME}. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo.\n\n¿En qué te puedo ayudar hoy?`;
       await guardarMensajeAsistente(conv.id, bienvenida);
       await enviarMenuPrincipal(chatId, bienvenida);
       return;
@@ -508,6 +515,9 @@ async function manejarCallback(cq: any) {
     case "ver_cita":        return verMiCita(chatId, conv);
     case "cancelar_cita":   return iniciarCancelacionCita(chatId, conv);
     case "cancelar_id":     return confirmarCancelacionCita(chatId, conv, arg);
+    case "reagendar":       return iniciarReagendarCita(chatId, conv);
+    case "reagendar_pick":  return mostrarSlotsReagendar(chatId, conv, arg);
+    case "reagendar_slot":  return confirmarReagendar(chatId, conv, arg);
     default:                return;
   }
 }
@@ -577,7 +587,7 @@ async function manejarConsultaAbierta(chatId: string, conv: any, text: string) {
 async function manejarOtro(chatId: string, conv: any) {
   await enviarTelegramConBotones(chatId, "¿En qué te puedo ayudar?", [
     [
-      { text: "📝 Cambiar mi cita", callback_data: "humano_razon:cambio_cita" },
+      { text: "🔄 Reagendar mi cita", callback_data: "reagendar:" },
       { text: "💳 Información de pagos", callback_data: "humano_razon:pagos" },
     ],
     [
@@ -657,7 +667,11 @@ async function verMiCita(chatId: string, conv: any) {
   await enviarTelegramConBotones(chatId, msg, [
     [
       { text: "🗓 Agendar otra cita", callback_data: "menu_agendar:" },
-      { text: "🧑 Cambiar / Cancelar", callback_data: "humano:" },
+      { text: "🔄 Cambiar fecha/hora", callback_data: "reagendar:" },
+    ],
+    [
+      { text: "❌ Cancelar cita", callback_data: "cancelar_cita:" },
+      { text: "🧑 Hablar con alguien", callback_data: "humano:" },
     ],
     [{ text: "← Menú principal", callback_data: "menu_principal:" }],
   ]);
@@ -727,6 +741,151 @@ async function confirmarCancelacionCita(chatId: string, conv: any, citaId: strin
     `✅ Cita cancelada:\n📅 ${fecha}\n🩺 ${(cita.servicios as any)?.nombre ?? "—"}\n\n¿Quieres agendar otra?`,
     [
       [{ text: "🗓 Agendar nueva cita", callback_data: "menu_agendar:" }],
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]
+  );
+}
+
+// ============================================================
+// REAGENDAR
+// ============================================================
+async function iniciarReagendarCita(chatId: string, conv: any) {
+  const { data: identidad } = await supabase
+    .from("identidades_canal").select("patient_id").eq("id", conv.identidad_canal_id).single();
+
+  if (!identidad?.patient_id) {
+    return enviarTelegramConBotones(chatId, "No encontré citas a tu nombre.", [
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
+  }
+
+  const { data: citas } = await supabase
+    .from("appointments")
+    .select("id, fecha_inicio, servicio_id, servicios(nombre)")
+    .eq("patient_id", identidad.patient_id)
+    .gte("fecha_inicio", new Date().toISOString())
+    .not("status", "in", "(cancelada,cancelado,no_show)")
+    .order("fecha_inicio", { ascending: true })
+    .limit(3);
+
+  if (!citas || citas.length === 0) {
+    return enviarTelegramConBotones(chatId, "No tienes citas próximas para reagendar.", [
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
+  }
+
+  const rows = citas.map((c: any) => {
+    const fecha = new Date(c.fecha_inicio).toLocaleString("es-MX", {
+      timeZone: "America/Mexico_City", day: "numeric", month: "short",
+      hour: "2-digit", minute: "2-digit",
+    });
+    return [{ text: `🔄 ${fecha} — ${c.servicios?.nombre ?? "Cita"}`, callback_data: `reagendar_pick:${c.id}` }];
+  });
+  rows.push([{ text: "← Menú principal", callback_data: "menu_principal:" }]);
+
+  await enviarTelegramConBotones(chatId, "¿Qué cita quieres cambiar de fecha?", rows);
+}
+
+async function mostrarSlotsReagendar(chatId: string, conv: any, citaId: string) {
+  const { data: identidad } = await supabase
+    .from("identidades_canal").select("patient_id").eq("id", conv.identidad_canal_id).single();
+  const { data: cita } = await supabase
+    .from("appointments").select("id, patient_id, servicio_id, servicios(nombre)").eq("id", citaId).single();
+
+  if (!cita || cita.patient_id !== identidad?.patient_id) {
+    return enviarTelegram(chatId, "No encontré esa cita.");
+  }
+
+  const result = await listarHorariosDisponibles({ servicio_id: cita.servicio_id, dias_adelante: 14 });
+  if ((result as any).error) return enviarTelegram(chatId, "Error consultando horarios. Intenta de nuevo.");
+
+  const horarios = (result as any).horarios ?? [];
+  if (horarios.length === 0) {
+    return enviarTelegramConBotones(chatId, "No hay horarios disponibles en los próximos 14 días.", [
+      [{ text: "← Volver", callback_data: "reagendar:" }],
+      [{ text: "🧑 Hablar con alguien", callback_data: "humano:" }],
+    ]);
+  }
+
+  const slotMap: Record<string, any> = {};
+  const rows = horarios.slice(0, 8).map((h: any, idx: number) => {
+    const key = String(idx);
+    slotMap[key] = { fecha_inicio: h.fecha_inicio, doctor_id: h.doctor_id, doctor_nombre: h.doctor_nombre, fecha_local: h.fecha_local };
+    return [{ text: `${h.fecha_local} · ${h.doctor_nombre}`, callback_data: `reagendar_slot:${citaId}:${key}` }];
+  });
+  rows.push([
+    { text: "← Volver", callback_data: "reagendar:" },
+    { text: "🧑 Hablar con alguien", callback_data: "humano:" },
+  ]);
+
+  await upsertSesion(conv.id, {
+    flow_data: { ...(await obtenerSesion(conv.id))?.flow_data ?? {}, reagendar_slots: slotMap, reagendar_cita_id: citaId },
+  });
+
+  const svcNombre = (cita.servicios as any)?.nombre ?? "tu cita";
+  await enviarTelegramConBotones(chatId, `Elige el nuevo horario para *${svcNombre}*:`, rows);
+}
+
+async function confirmarReagendar(chatId: string, conv: any, arg: string) {
+  const [citaId, slotKey] = arg.split(":");
+  if (!citaId || slotKey === undefined) return enviarTelegram(chatId, "Dato inválido. Intenta de nuevo.");
+
+  const { data: identidad } = await supabase
+    .from("identidades_canal").select("patient_id").eq("id", conv.identidad_canal_id).single();
+  const { data: cita } = await supabase
+    .from("appointments").select("id, patient_id, servicio_id, servicios(nombre, duracion_minutos)").eq("id", citaId).single();
+
+  if (!cita || cita.patient_id !== identidad?.patient_id) {
+    return enviarTelegram(chatId, "No encontré esa cita.");
+  }
+
+  const sesion = await obtenerSesion(conv.id);
+  const slot = sesion?.flow_data?.reagendar_slots?.[slotKey];
+  if (!slot) return enviarTelegramConBotones(chatId, "El horario ya no está disponible.", [
+    [{ text: "🔄 Elegir otro horario", callback_data: `reagendar_pick:${citaId}` }],
+    [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+  ]);
+
+  const duracion = (cita.servicios as any)?.duracion_minutos ?? 30;
+  const inicio   = new Date(slot.fecha_inicio);
+  const fin      = new Date(inicio.getTime() + duracion * 60000);
+
+  const { error: eu } = await supabase.from("appointments").update({
+    fecha_inicio: inicio.toISOString(),
+    fecha_fin:    fin.toISOString(),
+    doctor_id:    slot.doctor_id,
+  }).eq("id", citaId);
+
+  if (eu) {
+    if (eu.code === "23P01" || /exclude|exclusion/i.test(eu.message)) {
+      return enviarTelegramConBotones(chatId, "Ese horario ya fue tomado. Elige otro.", [
+        [{ text: "🔄 Ver otros horarios", callback_data: `reagendar_pick:${citaId}` }],
+      ]);
+    }
+    return enviarTelegram(chatId, "No pude reagendar. Por favor llama a recepción.");
+  }
+
+  // Actualizar recordatorios: cancelar los viejos e insertar nuevos
+  await supabase.from("recordatorios_cita").update({ status: "cancelado" }).eq("appointment_id", citaId).eq("status", "pendiente");
+  const ahora = new Date();
+  const nuevosRecs: any[] = [];
+  const rec24h = new Date(inicio.getTime() - 24 * 3600000);
+  if (rec24h > ahora) nuevosRecs.push({ appointment_id: citaId, identidad_canal_id: conv.identidad_canal_id, programado_para: rec24h.toISOString(), tipo: "t24h", status: "pendiente" });
+  const rec2h = new Date(inicio.getTime() - 2 * 3600000);
+  if (rec2h > ahora) nuevosRecs.push({ appointment_id: citaId, identidad_canal_id: conv.identidad_canal_id, programado_para: rec2h.toISOString(), tipo: "t2h", status: "pendiente" });
+  if (nuevosRecs.length) await supabase.from("recordatorios_cita").insert(nuevosRecs);
+
+  await registrarAudit(conv, "cita_reagendada_bot", { cita_id: citaId, nuevo_slot: slot.fecha_inicio });
+
+  const fechaStr = inicio.toLocaleString("es-MX", {
+    timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short",
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  await enviarTelegramConBotones(chatId,
+    `✅ Cita reagendada:\n📅 ${fechaStr}\n👨‍⚕️ ${slot.doctor_nombre}\n🩺 ${(cita.servicios as any)?.nombre ?? "—"}`,
+    [
+      [{ text: "🗓 Ver mis citas", callback_data: "ver_cita:" }],
       [{ text: "← Menú principal", callback_data: "menu_principal:" }],
     ]
   );
@@ -1070,10 +1229,12 @@ async function crearCitaDesdeSesion(conv: any) {
   }
 
   try {
-    // Un solo recordatorio por cita (el paciente pidió no recibir varios).
-    // 2 h antes = nudge del mismo día, el de mayor valor contra no-shows.
     const ahora = new Date();
     const rows: any[] = [];
+    const rec24h = new Date(inicio.getTime() - 24 * 3600000);
+    if (rec24h > ahora) {
+      rows.push({ appointment_id: cita.id, identidad_canal_id: conv.identidad_canal_id, programado_para: rec24h.toISOString(), tipo: "t24h", status: "pendiente" });
+    }
     const rec2h = new Date(inicio.getTime() - 2 * 3600000);
     if (rec2h > ahora) {
       rows.push({ appointment_id: cita.id, identidad_canal_id: conv.identidad_canal_id, programado_para: rec2h.toISOString(), tipo: "t2h", status: "pendiente" });

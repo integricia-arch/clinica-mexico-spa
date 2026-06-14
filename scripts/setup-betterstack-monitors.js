@@ -59,6 +59,15 @@ const MONITORS = [
     follow_redirects: false,
     regions: ["us"],
   },
+  {
+    url:              `${SUPABASE_URL}/functions/v1/telegram-webhook`,
+    pronounceable_name: "Edge Fn — telegram-webhook (bot)",
+    check_frequency:  120,
+    request_timeout:  10,
+    expected_status_codes: [200, 401, 403],
+    follow_redirects: false,
+    regions: ["us"],
+  },
 ];
 
 async function createMonitor(monitor) {
