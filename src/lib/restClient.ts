@@ -4,18 +4,10 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-function getSupabaseConfig() {
-  // Acceder a la URL desde el cliente ya inicializado
-  const url = (supabase as any).supabaseUrl as string;
-  const key = (supabase as any).supabaseKey as string;
-  return { url, key };
-}
-
 async function getHeaders(): Promise<Record<string, string>> {
-  const { key } = getSupabaseConfig();
   const { data: { session } } = await supabase.auth.getSession();
   return {
-    "apikey": key,
+    "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
     "Content-Type": "application/json",
     "Prefer": "return=representation",
     ...(session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {}),
@@ -23,8 +15,7 @@ async function getHeaders(): Promise<Record<string, string>> {
 }
 
 function buildUrl(table: string, query = "") {
-  const { url } = getSupabaseConfig();
-  return `${url}/rest/v1/${table}${query ? `?${query}` : ""}`;
+  return `${import.meta.env.VITE_SUPABASE_URL as string}/rest/v1/${table}${query ? `?${query}` : ""}`;
 }
 
 export async function restSelect(table: string, query = "") {
