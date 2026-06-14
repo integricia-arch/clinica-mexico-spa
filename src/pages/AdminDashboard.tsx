@@ -15,8 +15,6 @@ import TodayAppointmentsTable from "@/features/centro-control/components/TodayAp
 import DoctorLoadCard, { type DoctorLoad } from "@/features/centro-control/components/DoctorLoadCard";
 import RoomStatusCard, { type RoomStatus } from "@/features/centro-control/components/RoomStatusCard";
 import OperationalAlerts, { type OperationalAlert } from "@/features/centro-control/components/OperationalAlerts";
-import SeguimientosPendientes from "@/features/centro-control/components/SeguimientosPendientes";
-import RecentActivityFeed from "@/features/centro-control/components/RecentActivityFeed";
 import PatientOperationalDrawer from "@/features/centro-control/components/PatientOperationalDrawer";
 import QuickArrivalModal from "@/features/centro-control/components/QuickArrivalModal";
 import { useDashboardData } from "@/features/centro-control/hooks/useDashboardData";
@@ -190,25 +188,6 @@ export default function AdminDashboard() {
     return out;
   }, [rows, doctorLoads]);
 
-  // ============ FOLLOWUP ============
-  const seguimientos = useMemo(() => {
-    const now = Date.now();
-    return data.recordatorios
-      .filter((r: any) => r.status !== "enviado")
-      .map((r: any) => {
-        const appt = data.appointments.find((a: any) => a.id === r.appointment_id);
-        const patient = appt ? data.patients[appt.patient_id] : null;
-        return {
-          id: r.id,
-          appointment_id: r.appointment_id,
-          programado_para: r.programado_para,
-          status: r.status,
-          tipo: r.tipo,
-          paciente: patient ? `${patient.nombre} ${patient.apellidos}` : undefined,
-          vencido: new Date(r.programado_para).getTime() < now,
-        };
-      });
-  }, [data.recordatorios, data.appointments, data.patients]);
 
   // ============ ACTIONS ============
   const openRow = (row: KanbanRow) => { setDrawerRow(row); setDrawerOpen(true); };
@@ -302,10 +281,6 @@ export default function AdminDashboard() {
 
       <OperationalAlerts alerts={alerts} onNavigate={navigate} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SeguimientosPendientes items={seguimientos} onOpenInbox={() => navigate("/inbox")} />
-        <RecentActivityFeed items={data.auditReciente} />
-      </div>
 
       <PatientOperationalDrawer
         row={drawerRow}

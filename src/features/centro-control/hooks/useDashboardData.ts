@@ -14,7 +14,6 @@ export interface DashboardData {
   consentimientosByPatient: Record<string, any>;
   recordatorios: any[];
   conversacionesEscaladas: any[];
-  auditReciente: any[];
   doctorsList: any[];
   roomsList: any[];
 }
@@ -22,7 +21,7 @@ export interface DashboardData {
 const EMPTY: DashboardData = {
   appointments: [], patients: {}, doctors: {}, rooms: {}, servicios: {},
   instancesByAppointment: {}, expedientesActivosByPatient: {}, consentimientosByPatient: {},
-  recordatorios: [], conversacionesEscaladas: [], auditReciente: [],
+  recordatorios: [], conversacionesEscaladas: [],
   doctorsList: [], roomsList: [],
 };
 
@@ -65,7 +64,7 @@ export function useDashboardData(date: Date) {
 
       const [
         patientsRes, doctorsRes, roomsRes, serviciosRes, instancesRes,
-        expRes, conRes, recRes, convRes, auditRes, allDoctorsRes, allRoomsRes,
+        expRes, conRes, recRes, convRes, allDoctorsRes, allRoomsRes,
       ] = await Promise.allSettled([
         patientIds.length ? supabase.from("patients").select("id,nombre,apellidos,telefono,email,alergias,activo").in("id", patientIds) : Promise.resolve({ data: [] }),
         doctorIds.length ? supabase.from("doctors").select("id,nombre,apellidos,especialidad").in("id", doctorIds) : Promise.resolve({ data: [] }),
@@ -76,7 +75,6 @@ export function useDashboardData(date: Date) {
         patientIds.length ? supabase.from("consentimientos").select("id,patient_id,tipo,otorgado,otorgado_at").in("patient_id", patientIds).eq("otorgado", true) : Promise.resolve({ data: [] }),
         supabase.from("recordatorios_cita").select("*").gte("programado_para", start).lt("programado_para", new Date(date.getTime() + 7 * 86400000).toISOString()).order("programado_para").limit(50),
         supabase.from("conversaciones").select("*").eq("status", "escalada").order("last_message_at", { ascending: false }).limit(20),
-        supabase.from("audit_logs").select("id,accion,tabla,registro_id,user_id,created_at").order("created_at", { ascending: false }).limit(20),
         supabase.from("doctors").select("id,nombre,apellidos,especialidad,activo").eq("activo", true).order("apellidos"),
         supabase.from("rooms").select("id,nombre,piso,activo").eq("activo", true).order("nombre"),
       ]);
@@ -112,7 +110,6 @@ export function useDashboardData(date: Date) {
         consentimientosByPatient,
         recordatorios: safe(recRes),
         conversacionesEscaladas: safe(convRes),
-        auditReciente: safe(auditRes),
         doctorsList: safe(allDoctorsRes),
         roomsList: safe(allRoomsRes),
       });

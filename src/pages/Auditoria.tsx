@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ShieldCheck, Filter, Bug, Copy, RefreshCw, Store, ChevronDown, ChevronRight,
+  Bell, CheckCircle2, Clock, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,6 +48,9 @@ const ACCION_COLOR: Record<string, string> = {
 };
 const TABLA_LABEL: Record<string, { modulo: string; nombre: string }> = {
   appointments: { modulo: "Agenda", nombre: "Cita" },
+  patients: { modulo: "Pacientes", nombre: "Paciente" },
+  recordatorios_cita: { modulo: "Agenda", nombre: "Recordatorio de cita" },
+  journey_instances: { modulo: "Camino paciente", nombre: "Camino del paciente" },
   expedientes: { modulo: "Expedientes", nombre: "Expediente" },
   notas_consulta: { modulo: "Expedientes", nombre: "Nota de consulta" },
   medicamentos: { modulo: "Farmacia", nombre: "Medicamento" },
@@ -69,7 +76,7 @@ const PHARMACY_TABLAS = new Set([
   "turnos", "cortes",
 ]);
 
-const MODULOS = ["Todos", "Agenda", "Expedientes", "Farmacia", "Caja", "Farmacia/Caja"] as const;
+const MODULOS = ["Todos", "Pacientes", "Agenda", "Camino paciente", "Expedientes", "Farmacia", "Caja", "Farmacia/Caja"] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -188,13 +195,35 @@ function FarmaciaLogCard({ r }: { r: AuditRow }) {
   );
 }
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type SeguimientoRow = {
+  id: string;
+  appointment_id: string;
+  programado_para: string;
+  status: string;
+  tipo: string;
+  appointments: {
+    fecha_inicio: string;
+    patients: { nombre: string; apellidos: string; telefono: string | null } | null;
+    doctors: { nombre: string; apellidos: string } | null;
+  } | null;
+};
+
+const SEGUIMIENTO_STATUS: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
+  pendiente: { label: "Pendiente", icon: Clock, cls: "text-amber-700 bg-amber-500/10" },
+  enviado: { label: "Enviado", icon: CheckCircle2, cls: "text-emerald-700 bg-emerald-500/10" },
+  fallido: { label: "Fallido", icon: AlertCircle, cls: "text-destructive bg-destructive/10" },
+};
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-type Tab = "general" | "farmacia";
+type Tab = "seguimientos" | "general" | "farmacia";
 
 export default function Auditoria() {
   const { activeClinic } = useActiveClinic();
-  const [tab, setTab] = useState<Tab>("general");
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>("seguimientos");
 
   // General audit
   const [rows, setRows] = useState<AuditRow[]>([]);
@@ -205,10 +234,26 @@ export default function Auditoria() {
   const [errors, setErrors] = useState<PosErrorRow[]>([]);
   const [errLoading, setErrLoading] = useState(false);
 
+  // Seguimientos
+  const [seguimientos, setSeguimientos] = useState<SeguimientoRow[]>([]);
+  const [segLoading, setSegLoading] = useState(true);
+  const [segFilter, setSegFilter] = useState<string>("pendiente");
+
   // Farmacia tech logs
   const [farmLogs, setFarmLogs] = useState<AuditRow[]>([]);
   const [farmLoading, setFarmLoading] = useState(false);
   const [farmFilter, setFarmFilter] = useState<string>("todos");
+
+  const loadSeguimientos = async () => {
+    setSegLoading(true);
+    const { data } = await supabase
+      .from("recordatorios_cita")
+      .select("id, appointment_id, programado_para, status, tipo, appointments(fecha_inicio, patients(nombre,apellidos,telefono), doctors(nombre,apellidos))")
+      .order("programado_para", { ascending: false })
+      .limit(100);
+    setSeguimientos((data ?? []) as any);
+    setSegLoading(false);
+  };
 
   const loadErrors = async () => {
     setErrLoading(true);
@@ -247,6 +292,7 @@ export default function Auditoria() {
       setLoading(false);
     })();
     loadErrors();
+    loadSeguimientos();
   }, []);
 
   useEffect(() => {
@@ -282,18 +328,131 @@ export default function Auditoria() {
 
       {/* Tab switcher */}
       <div className="flex gap-1 border-b border-border">
-        {(["general", "farmacia"] as const).map((t) => (
-          <button key={t}
-            onClick={() => setTab(t)}
+        {([
+          { key: "seguimientos", label: `Seguimientos${seguimientos.filter(s => s.status === "pendiente").length ? ` (${seguimientos.filter(s => s.status === "pendiente").length})` : ""}` },
+          { key: "general", label: "Registro general" },
+          { key: "farmacia", label: "Farmacia / Caja" },
+        ] as const).map(({ key, label }) => (
+          <button key={key}
+            onClick={() => setTab(key as Tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t
+              tab === key
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}>
-            {t === "general" ? "General" : "Farmacia / Caja"}
+            {label}
           </button>
         ))}
       </div>
+
+      {/* ── Tab: Seguimientos ── */}
+      {tab === "seguimientos" && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex gap-1">
+              {(["pendiente", "enviado", "fallido", "todos"] as const).map((s) => {
+                const meta = s === "todos" ? null : SEGUIMIENTO_STATUS[s];
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setSegFilter(s)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      segFilter === s
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {meta && <meta.icon className="h-3 w-3" />}
+                    {s === "todos" ? "Todos" : meta?.label}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={loadSeguimientos}
+              disabled={segLoading}
+              className="flex items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:bg-muted ml-auto"
+            >
+              <RefreshCw className={`h-3 w-3 ${segLoading ? "animate-spin" : ""}`} />
+              Actualizar
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Paciente</th>
+                    <th className="px-4 py-3 text-left">Médico</th>
+                    <th className="px-4 py-3 text-left">Tipo</th>
+                    <th className="px-4 py-3 text-left">Programado para</th>
+                    <th className="px-4 py-3 text-left">Estado</th>
+                    <th className="px-4 py-3 text-left">Cita</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {segLoading ? (
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Cargando…</td></tr>
+                  ) : (() => {
+                    const now = Date.now();
+                    const filtered = seguimientos.filter((s) => segFilter === "todos" || s.status === segFilter);
+                    if (filtered.length === 0) {
+                      return <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Sin seguimientos en este filtro</td></tr>;
+                    }
+                    return filtered.map((s) => {
+                      const patient = s.appointments?.patients;
+                      const doctor = s.appointments?.doctors;
+                      const vencido = new Date(s.programado_para).getTime() < now && s.status === "pendiente";
+                      const meta = SEGUIMIENTO_STATUS[s.status] ?? SEGUIMIENTO_STATUS.pendiente;
+                      const Icon = meta.icon;
+                      return (
+                        <tr key={s.id} className="hover:bg-muted/30">
+                          <td className="px-4 py-3 font-medium">
+                            {patient ? `${patient.nombre} ${patient.apellidos}` : "—"}
+                            {patient?.telefono && <div className="text-xs text-muted-foreground">{patient.telefono}</div>}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs">
+                            {doctor ? `Dr(a). ${doctor.nombre} ${doctor.apellidos}` : "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1 text-xs">
+                              <Bell className="h-3 w-3 text-muted-foreground" />
+                              {s.tipo}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            <span className={vencido ? "text-destructive font-medium" : ""}>
+                              {format(new Date(s.programado_para), "dd MMM yyyy HH:mm", { locale: es })}
+                            </span>
+                            {vencido && <div className="text-[10px] text-destructive">Vencido</div>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${meta.cls}`}>
+                              <Icon className="h-3 w-3" />
+                              {meta.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {s.appointments?.fecha_inicio && (
+                              <button
+                                onClick={() => navigate(`/citas?id=${s.appointment_id}`)}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                {format(new Date(s.appointments.fecha_inicio), "dd MMM HH:mm", { locale: es })}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Tab: General ── */}
       {tab === "general" && (
