@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface Props {
   children: ReactNode;
@@ -19,7 +20,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
-    console.error("[ErrorBoundary]", error, info.componentStack);
+    logger.error("[ErrorBoundary] React render error", {
+      error_message: error.message,
+      stack: error.stack,
+      component_stack: info.componentStack,
+    });
   }
 
   render() {
