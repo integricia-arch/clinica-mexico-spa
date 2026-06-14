@@ -62,6 +62,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
 
   const [doctorId,  setDoctorId]  = useState("");
   const [pacienteId, setPacienteId] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [fechaInicio, setFechaInicio] = useState(() => computeDefaultDatetime());
   const [duracion, setDuracion]   = useState("30");
   const [servicioId, setServicioId] = useState("__none__");
@@ -71,7 +72,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
 
   useEffect(() => {
     if (!open) return;
-    setDoctorId(""); setPacienteId(""); setBusqueda(""); setPacientes([]);
+    setDoctorId(""); setPacienteId(""); setSelectedPatient(null); setBusqueda(""); setPacientes([]);
     setFechaInicio(computeDefaultDatetime()); setDuracion("30");
     setServicioId("__none__"); setMotivo(""); setSaving(false);
 
@@ -101,7 +102,6 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     return () => clearTimeout(t);
   }, [busqueda]);
 
-  const selectedPatient = pacientes.find((p) => p.id === pacienteId) ?? null;
   const fechaFin = addMinutes(fechaInicio, Number(duracion));
 
   async function handleSubmit() {
@@ -149,7 +149,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
                 <span className="font-medium">{selectedPatient.nombre} {selectedPatient.apellidos}</span>
                 <button
-                  onClick={() => { setPacienteId(""); setBusqueda(""); }}
+                  onClick={() => { setPacienteId(""); setSelectedPatient(null); setBusqueda(""); }}
                   className="text-xs text-muted-foreground hover:text-destructive"
                 >
                   Cambiar
@@ -186,7 +186,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
                     {pacientes.map((p) => (
                       <button
                         key={p.id}
-                        onClick={() => { setPacienteId(p.id); setBusqueda(p.nombre + " " + p.apellidos); }}
+                        onClick={() => { setPacienteId(p.id); setSelectedPatient(p); setBusqueda(p.nombre + " " + p.apellidos); }}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
                       >
                         <span className="font-medium">{p.nombre} {p.apellidos}</span>
@@ -282,14 +282,10 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
         open={pacienteModalOpen}
         onClose={() => setPacienteModalOpen(false)}
         onSaved={(p) => {
-          setPacienteModalOpen(false);
-          // Agregar a la lista local e ID antes de que el search pueda sobrescribir
-          setPacientes((prev) => {
-            if (prev.some((x) => x.id === p.id)) return prev;
-            return [...prev, { id: p.id, nombre: p.nombre, apellidos: p.apellidos, telefono: p.telefono ?? null }];
-          });
+          const pat: Patient = { id: p.id, nombre: p.nombre, apellidos: p.apellidos, telefono: p.telefono ?? null };
+          setSelectedPatient(pat);
           setPacienteId(p.id);
-          // NO llamar setBusqueda — causaría re-search que sobrescribe pacientes
+          setPacienteModalOpen(false);
         }}
       />
     </Dialog>
