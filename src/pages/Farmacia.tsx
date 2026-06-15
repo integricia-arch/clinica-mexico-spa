@@ -31,6 +31,7 @@ import DashboardCompras from "@/features/farmacia/DashboardCompras";
 import PuntoReorden from "@/features/farmacia/PuntoReorden";
 import LibroControlControlados from "@/features/farmacia/LibroControlControlados";
 import SolicitudesCompra from "@/features/farmacia/SolicitudesCompra";
+import MedicamentoProveedoresPanel from "@/features/farmacia/MedicamentoProveedoresPanel";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -1007,6 +1008,15 @@ export default function Farmacia() {
               <Textarea value={medForm.descripcion} onChange={e => setMedForm(f => ({ ...f, descripcion: e.target.value }))}
                 placeholder="Notas comerciales o adicionales..." rows={2} />
             </div>
+
+            {editMed && (
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <MedicamentoProveedoresPanel
+                  medicamentoId={editMed}
+                  medicamentoNombre={medForm.nombre}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setMedModal(false)}>Cancelar</Button>
