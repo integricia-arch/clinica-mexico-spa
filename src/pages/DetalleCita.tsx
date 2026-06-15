@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { restSelect } from "@/lib/restClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -120,13 +121,11 @@ export default function DetalleCita() {
   });
 
   const reloadRecordatorios = async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any)
-      .from("recordatorios_cita")
-      .select("*, identidades_canal(canal_id, display_name)")
-      .eq("appointment_id", id!)
-      .order("programado_para", { ascending: true });
-    setRecordatorios((data ?? []) as RecordatorioCita[]);
+    const data = await restSelect(
+      "recordatorios_cita",
+      `select=*,identidades_canal(canal_id,display_name)&appointment_id=eq.${id}&order=programado_para.asc`,
+    ).catch(() => []);
+    setRecordatorios(data as RecordatorioCita[]);
   };
 
   const abrirNuevoRecordatorio = () => {

@@ -154,6 +154,15 @@ export default function PuntoDeVenta({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discount, setDiscount] = useState("0");
   const [payment, setPayment] = useState<typeof PAYMENT_METHODS[number]>("efectivo");
+
+  const hasControlledInCart = useMemo(
+    () => cart.some((c) => c.med.is_controlled || c.med.controlado),
+    [cart],
+  );
+
+  useEffect(() => {
+    if (hasControlledInCart && payment === "pendiente") setPayment("efectivo");
+  }, [hasControlledInCart]);
   const [requiresInvoice, setRequiresInvoice] = useState(false);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -1000,7 +1009,11 @@ export default function PuntoDeVenta({
             <Select value={payment} onValueChange={(v) => setPayment(v as typeof PAYMENT_METHODS[number])}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {PAYMENT_METHODS.map((p) => <SelectItem key={p} value={p}>{PAYMENT_LABEL[p]}</SelectItem>)}
+                {PAYMENT_METHODS.map((p) => (
+                  <SelectItem key={p} value={p} disabled={p === "pendiente" && hasControlledInCart}>
+                    {PAYMENT_LABEL[p]}{p === "pendiente" && hasControlledInCart ? " (controlado)" : ""}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <PaymentCapture method={payment} total={total} value={breakdown} onChange={setBreakdown} />
