@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ChevronDown, ChevronUp, AlertTriangle, FileText, CreditCard } from "lucide-react";
+import ThreeWayMatchPanel from "./ThreeWayMatchPanel";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -41,7 +42,7 @@ export default function FacturasProveedor() {
   const { activeClinicId } = useActiveClinic();
   const { toast } = useToast();
   const { items: proveedores } = useProveedores(activeClinicId);
-  const { items, loading, error, pendientes, vencidas, create, registrarPago, getPagos } = useFacturasProveedor(activeClinicId);
+  const { items, loading, error, pendientes, vencidas, create, registrarPago, getPagos, refresh } = useFacturasProveedor(activeClinicId);
 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedPagos, setExpandedPagos] = useState<Record<string, PagoProveedor[]>>({});
@@ -237,6 +238,19 @@ export default function FacturasProveedor() {
                     )}
                     {f.concepto && <div className="col-span-2"><span className="text-muted-foreground">Concepto:</span> {f.concepto}</div>}
                   </div>
+
+                  <ThreeWayMatchPanel
+                    facturaId={f.id}
+                    facturaTotal={f.total_centavos}
+                    ordenId={f.orden_id}
+                    recepcionId={f.recepcion_id}
+                    matchStatus={f.match_status}
+                    matchOcTotal={f.match_oc_total_centavos}
+                    matchRecTotal={f.match_recepcion_total_centavos}
+                    matchDif={f.match_diferencia_centavos}
+                    matchNotas={f.match_notas}
+                    onUpdated={refresh}
+                  />
 
                   {(f.estatus === "pendiente" || f.estatus === "parcial") && (
                     <Button size="sm" onClick={() => { setPagoDialog(f.id); setPagoForm({ ...EMPTY_PAGO, monto_str: (f.saldo_pendiente_centavos / 100).toFixed(2) }); }}>

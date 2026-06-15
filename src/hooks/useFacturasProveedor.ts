@@ -23,6 +23,11 @@ export interface FacturaProveedor {
   concepto: string;
   notas: string;
   created_at: string;
+  match_status: string;
+  match_oc_total_centavos: number | null;
+  match_recepcion_total_centavos: number | null;
+  match_diferencia_centavos: number | null;
+  match_notas: string | null;
 }
 
 export interface PagoProveedor {
@@ -83,6 +88,11 @@ interface FacturaRow {
   concepto: string | null;
   notas: string | null;
   created_at: string;
+  match_status: string | null;
+  match_oc_total_centavos: number | null;
+  match_recepcion_total_centavos: number | null;
+  match_diferencia_centavos: number | null;
+  match_notas: string | null;
 }
 
 const toFactura = (row: FacturaRow): FacturaProveedor => ({
@@ -106,6 +116,11 @@ const toFactura = (row: FacturaRow): FacturaProveedor => ({
   concepto: row.concepto ?? "",
   notas: row.notas ?? "",
   created_at: row.created_at,
+  match_status: row.match_status ?? "sin_oc",
+  match_oc_total_centavos: row.match_oc_total_centavos ?? null,
+  match_recepcion_total_centavos: row.match_recepcion_total_centavos ?? null,
+  match_diferencia_centavos: row.match_diferencia_centavos ?? null,
+  match_notas: row.match_notas ?? null,
 });
 
 const nextFolioFact = (existing: string[]): string => {
