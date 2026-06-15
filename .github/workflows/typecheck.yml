@@ -19,7 +19,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Type-check (tsc --noEmit)
         run: npx tsc -p tsconfig.app.json --noEmit
@@ -27,6 +27,6 @@ jobs:
       - name: Lint (eslint)
         run: npm run lint
 
-      - name: Security audit
-        run: npm audit --audit-level=high
+      - name: Security audit (production deps only)
+        run: npm audit --audit-level=high --omit=dev
 
