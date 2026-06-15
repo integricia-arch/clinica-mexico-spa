@@ -259,12 +259,12 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - [x] **DetalleCita**: RecordatorioCita interface; recordatorios state tipado
 - [x] **cfdi-timbrar**: console.error sin JSON.stringify(facData) completo
 
-### ALTOS diferidos (no resueltos aún)
-- [ ] **ConfiguracionCFDI**: pac_contrasena/csd_contrasena en texto plano (necesita Vault)
-- [ ] **AdminUsuarios**: doctors insert sin clinic_id; user_roles sin scope; set_base_password_all sin scope
-- [ ] **CajaTurno:671**: turno_pharmacy_link_audit no tipado (tabla fuera de tipos generados)
-- [ ] **restClient.ts**: (supabase as any).supabaseUrl/supabaseKey
-- [ ] **stripe-payment-intent**: no verifica que ambiente config coincide con key en uso
+### ALTOS diferidos — TODOS RESUELTOS (Jun 14 sesión 13)
+- [x] **ConfiguracionCFDI**: Vault ya implementado — `cfdi-set-credentials` edge function + `pac_secret_id` en `cfdi_config`
+- [x] **AdminUsuarios**: doctors insert tiene `clinic_id`; `toggle_role`/`set_base_password_all` scope vía `clinic_memberships`
+- [x] **CajaTurno:719**: `(supabase as any).from("cortes")` → `restSelect()` (misma API que audit log)
+- [x] **restClient.ts**: archivo limpio, no tiene `(supabase as any)` — falso positivo
+- [x] **stripe-payment-intent**: ambiente check `sk_live_`/`rk_live_` vs `config.ambiente` ya implementado
 
 ### BAJOs diferidos (trade-off consciente)
 - [ ] **Farmacia**: forceMount en TabsContent "pos" — intencional para preservar carrito, causaría regresión UX si se elimina
@@ -281,8 +281,31 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - [x] Fixes 🟢 BAJO — 16/18 resueltos (2 diferidos, 1 trade-off consciente)
 
 ### CFDI
-- [ ] Notas de crédito (tipo E)
-- [ ] Acuse receptor en cancelación
+- [x] Notas de crédito (tipo E) — commit c3e24fc
+- [x] Acuse receptor en cancelación — commit f731c53
+
+### Completado (Jun 14 sesión 11)
+- [x] `prescriptions` + `prescription_items` + `patient_checkout_events` en prod
+- [x] RPC `generate_prescription_number_for_doctor`
+- [x] BetterStack: flush inmediato en errores + startup ping → verificado ✓
+- [x] Cloudflare WAF: `not MX → Managed Challenge` + Bot Fight Mode
+- [x] GitHub Actions: Node 24 opt-in (deadline Jun 16)
+- [x] Documento E-R: `memoria/proyectos/er-sistema.md`
+
+### Completado (Jun 14 sesión 13)
+- [x] **ALTOS diferidos**: todos 5 verificados/resueltos (ver sección arriba)
+- [x] **CajaTurno**: `(supabase as any).from("cortes")` eliminado → `restSelect()` con PostgREST `in.(...)` syntax
+- [x] **Reconciliación turnos generales**: `get_corte_pago_total` extendido para incluir `movimiento_pagos` (tarjeta/transferencia SAT codes) además de pharmacy sales — `PagoReconcile` ahora funciona para cajas no-farmacia
+
+### Completado (Jun 14 sesión 12)
+- [x] `monitoring_alerts` tabla en Supabase — almacena incidents de BetterStack
+- [x] GET `/health` agregado a `cfdi-timbrar`, `cfdi-email`, `telegram-webhook` → devuelven 200
+- [x] 4 monitores DOWN eliminados y recreados apuntando a endpoints que devuelven 200:
+  - Supabase REST → `/rest/v1/profiles?limit=1&select=id` + anon key
+  - cfdi-timbrar → GET /functions/v1/cfdi-timbrar → 200
+  - cfdi-email → GET /functions/v1/cfdi-email → 200
+  - telegram-webhook → GET /functions/v1/telegram-webhook → 200
+- [x] **Los 6 monitores BetterStack ahora están UP** (commit `6a8f2d8`)
 
 ### Bugs conocidos
 - (ninguno activo)

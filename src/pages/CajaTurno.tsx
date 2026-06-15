@@ -718,12 +718,10 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
 
     if (turnosHist && turnosHist.length > 0) {
       const ids = turnosHist.map((t: any) => t.id);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: cortesData } = await (supabase as any)
-        .from("cortes")
-        .select("id, tipo, folio_secuencial, created_at, efectivo_esperado, conteo_ciego, diferencia, total_general, conteo_movimientos, requiere_autorizacion, turno_id")
-        .in("turno_id", ids)
-        .order("created_at");
+      const cortesData = await restSelect(
+        "cortes",
+        `select=id,tipo,folio_secuencial,created_at,efectivo_esperado,conteo_ciego,diferencia,total_general,conteo_movimientos,requiere_autorizacion,turno_id&turno_id=in.(${ids.join(",")})&order=created_at`,
+      ).catch(() => []);
 
       const cortesByTurno: Record<string, CorteRow[]> = {};
       for (const c of (cortesData as CorteRow[]) ?? []) {
