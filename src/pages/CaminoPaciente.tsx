@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useJourneyInstance } from "@/features/camino-paciente/hooks/useJourneyInstance";
+import { useAuth } from "@/hooks/useAuth";
 import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ArrowLeft, Check, Lock, ShieldAlert, FileText,
   User, Clock, Stethoscope, MapPin, Calendar,
-  ChevronRight, AlertCircle,
+  ChevronRight, AlertCircle, ShieldX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -76,6 +77,24 @@ function StepBadge({ status }: { status: string }) {
 
 const ACTIVE_STATUSES = ["in_progress", "open", "needs_review", "blocked"];
 
+// Roles allowed to act on each step (open / close / block)
+const STEP_ROLES: Record<string, string[]> = {
+  arrival:            ["admin", "manager", "receptionist", "nurse"],
+  assignment:         ["admin", "manager", "receptionist"],
+  attention_open:     ["admin", "manager", "nurse", "receptionist"],
+  identification:     ["admin", "manager", "receptionist"],
+  record:             ["admin", "manager", "doctor", "nurse"],
+  triage:             ["admin", "manager", "nurse"],
+  consultation_open:  ["admin", "manager", "doctor"],
+  consultation_close: ["admin", "manager", "doctor"],
+  consultation:       ["admin", "manager", "doctor"],
+  prescription:       ["admin", "manager", "doctor"],
+  pharmacy:           ["admin", "manager", "nurse", "cajero"],
+  billing:            ["admin", "manager", "receptionist", "cajero"],
+  discharge:          ["admin", "manager", "receptionist", "nurse"],
+  followup:           ["admin", "manager", "receptionist"],
+};
+
 // ── component ──────────────────────────────────────────────────────────────
 
 export default function CaminoPaciente() {
@@ -84,6 +103,7 @@ export default function CaminoPaciente() {
   const [searchParams] = useSearchParams();
   const stepKeyParam = searchParams.get("step");
 
+  const { roles } = useAuth();
   const { loading, instance, patient, appointment, steps, stepData, pendingOverrides, audit, reload } =
     useJourneyInstance(id ?? null);
 
@@ -123,6 +143,13 @@ export default function CaminoPaciente() {
 
   const completedCount = steps.filter((s) => s.status === "completed").length;
   const pct = steps.length ? Math.round((completedCount / steps.length) * 100) : 0;
+
+  const canActOnStep = (stepKey: string): boolean => {
+    if (!stepKey) return false;
+    const allowed = STEP_ROLES[stepKey];
+    if (!allowed) return true; // unmapped step → allow all
+    return roles.some((r) => allowed.includes(r));
+  };
 
   // ── handlers ──────────────────────────────────────────────────────────────
 
@@ -275,6 +302,7 @@ export default function CaminoPaciente() {
             {steps.map((s) => {
               const isActive = activeStep?.id === s.id;
               const isActionable = ACTIVE_STATUSES.includes(s.status);
+              const userCanAct = canActOnStep(s.step_key);
               return (
                 <button
                   key={s.id}
@@ -291,6 +319,9 @@ export default function CaminoPaciente() {
                     <div className="flex items-center gap-1.5 truncate">
                       <span className="font-medium truncate">{s.step_name}</span>
                       {s.blocked_reason && <AlertCircle className="h-3 w-3 text-destructive shrink-0" />}
+                      {isActionable && !userCanAct && (
+                        <ShieldX className={`h-3 w-3 shrink-0 ${isActive ? "text-primary-foreground/70" : "text-orange-400"}`} />
+                      )}
                     </div>
                     {!isActive && (
                       <div className="mt-0.5">
@@ -397,19 +428,32 @@ export default function CaminoPaciente() {
 
                 {/* ── Acciones ────────────────────────────────────────────── */}
                 <TabsContent value="acciones" className="space-y-4 pt-3">
+                  {/* Role restriction banner */}
+                  {!canActOnStep(activeStep.step_key) && (
+                    <div className="flex items-start gap-2 rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
+                      <ShieldX className="h-4 w-4 mt-0.5 shrink-0 text-orange-500" />
+                      <div>
+                        <p className="font-medium">Sin permiso para este hito</p>
+                        <p className="text-xs text-orange-700 mt-0.5">
+                          Roles requeridos: {(STEP_ROLES[activeStep.step_key] ?? []).join(", ") || "—"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Primary actions */}
                   <div className="flex gap-2 flex-wrap">
                     <Button
                       size="sm" variant="outline"
                       onClick={handleOpen}
-                      disabled={["in_progress", "completed"].includes(activeStep.status)}
+                      disabled={["in_progress", "completed"].includes(activeStep.status) || !canActOnStep(activeStep.step_key)}
                     >
                       Abrir hito
                     </Button>
                     <Button
                       size="sm"
                       onClick={handleClose}
-                      disabled={activeStep.status === "completed"}
+                      disabled={activeStep.status === "completed" || !canActOnStep(activeStep.step_key)}
                     >
                       <Check className="h-4 w-4 mr-1" /> Completar hito
                     </Button>
@@ -429,7 +473,7 @@ export default function CaminoPaciente() {
                     <Button
                       size="sm" variant="destructive"
                       onClick={handleBlock}
-                      disabled={!blockReason.trim()}
+                      disabled={!blockReason.trim() || !canActOnStep(activeStep.step_key)}
                     >
                       Bloquear
                     </Button>

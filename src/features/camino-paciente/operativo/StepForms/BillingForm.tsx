@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, ExternalLink } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
 import { isClosed } from "./_shared";
@@ -15,6 +16,7 @@ const METODOS = ["Efectivo", "Tarjeta débito", "Tarjeta crédito", "Transferenc
 const USOS_CFDI = ["G03 - Gastos en general", "D01 - Honorarios médicos", "P01 - Por definir", "S01 - Sin efectos fiscales"];
 
 export default function BillingForm({ stepId, stepStatus, existingData, onSaved }: StepFormProps) {
+  const navigate = useNavigate();
   const [monto, setMonto] = useState(existingData.monto ?? "");
   const [metodo, setMetodo] = useState(existingData.metodo_pago ?? "Efectivo");
   const [folio, setFolio] = useState(existingData.folio_pago ?? "");
@@ -44,9 +46,19 @@ export default function BillingForm({ stepId, stepStatus, existingData, onSaved 
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Registre el cobro. Si requiere factura, capture los datos fiscales para CFDI (emisión en módulo aparte).
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          Registre el cobro. Si requiere factura, capture los datos fiscales para CFDI (emisión en módulo aparte).
+        </p>
+        <Button
+          size="sm" variant="outline" type="button"
+          className="shrink-0 gap-1.5 text-xs"
+          onClick={() => navigate("/caja")}
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Ir a Caja
+        </Button>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Monto (MXN) <span className="text-destructive">*</span></Label>
