@@ -69,6 +69,27 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
   const [motivo,    setMotivo]    = useState("");
   const [saving,    setSaving]    = useState(false);
   const [pacienteModalOpen, setPacienteModalOpen] = useState(false);
+  const [recurrente, setRecurrente]         = useState(false);
+  const [recurrenciaTipo, setRecurrenciaTipo] = useState<"semanal" | "quincenal" | "mensual">("semanal");
+  const [recurrenciaHasta, setRecurrenciaHasta] = useState("");
+
+  function generarOcurrencias(inicio: string, tipo: string, hasta: string): string[] {
+    const dates: string[] = [];
+    const fin = new Date(hasta + "T23:59:59");
+    const cur = new Date(inicio);
+    let n = 0;
+    while (true) {
+      if (n > 0) {
+        if (tipo === "semanal")    cur.setDate(cur.getDate() + 7);
+        else if (tipo === "quincenal") cur.setDate(cur.getDate() + 14);
+        else if (tipo === "mensual") cur.setMonth(cur.getMonth() + 1);
+      }
+      if (cur > fin || n > 52) break;
+      dates.push(cur.toISOString());
+      n++;
+    }
+    return dates;
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -108,29 +129,69 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     if (!doctorId)   { toast.error("Selecciona un médico");   return; }
     if (!pacienteId) { toast.error("Selecciona un paciente"); return; }
     if (!fechaInicio) { toast.error("Fecha/hora requerida");  return; }
+    if (recurrente && !recurrenciaHasta) { toast.error("Indica la fecha hasta cuándo se repite"); return; }
 
     setSaving(true);
-    // fechaInicio viene de datetime-local (sin TZ). Interpretamos como hora local MX (UTC-6).
-    const toUTC = (local: string) => {
-      const d = new Date(local.includes("T") ? local : local + "T00:00:00");
-      return d.toISOString();
-    };
-    const { error } = await supabase.from("appointments").insert({
-      doctor_id:   doctorId,
-      patient_id:  pacienteId,
-      fecha_inicio: toUTC(fechaInicio),
-      fecha_fin:    toUTC(fechaFin),
-      servicio_id:  servicioId !== "__none__" ? servicioId : null,
-      motivo_consulta: motivo.trim() || null,
-      origen: "web",
-      creada_por_bot: false,
-      status: "confirmada",
-      created_by: user?.id ?? null,
-    });
-    setSaving(false);
+    const toUTC = (iso: string) => new Date(iso.includes("T") ? iso : iso + "T00:00:00").toISOString();
+    const durMin = Number(duracion);
 
-    if (error) { toast.error("No se pudo crear la cita: " + error.message); return; }
-    toast.success("Cita creada correctamente");
+    const basePayload = {
+      doctor_id:       doctorId,
+      patient_id:      pacienteId,
+      servicio_id:     servicioId !== "__none__" ? servicioId : null,
+      motivo_consulta: motivo.trim() || null,
+      origen:          "web" as const,
+      creada_por_bot:  false,
+      status:          "confirmada",
+      created_by:      user?.id ?? null,
+      recurrencia_tipo: recurrente ? recurrenciaTipo : null,
+    };
+
+    if (!recurrente) {
+      const { error } = await supabase.from("appointments").insert({
+        ...basePayload,
+        fecha_inicio: toUTC(fechaInicio),
+        fecha_fin:    toUTC(fechaFin),
+        recurrencia_num: 1,
+      });
+      setSaving(false);
+      if (error) { toast.error("No se pudo crear la cita: " + error.message); return; }
+      toast.success("Cita creada");
+      onSuccess();
+      return;
+    }
+
+    // Recurrente: insertar primera, luego las siguientes con cita_padre_id
+    const fechas = generarOcurrencias(toUTC(fechaInicio), recurrenciaTipo, recurrenciaHasta);
+    if (fechas.length === 0) { toast.error("No hay ocurrencias en ese rango"); setSaving(false); return; }
+
+    const { data: primera, error: e1 } = await supabase.from("appointments")
+      .insert({
+        ...basePayload,
+        fecha_inicio:    fechas[0],
+        fecha_fin:       new Date(new Date(fechas[0]).getTime() + durMin * 60000).toISOString(),
+        recurrencia_num: 1,
+        recurrencia_hasta: recurrenciaHasta,
+      })
+      .select("id").single();
+
+    if (e1 || !primera) { toast.error("Error al crear primera cita: " + e1?.message); setSaving(false); return; }
+
+    if (fechas.length > 1) {
+      const siguientes = fechas.slice(1).map((f, i) => ({
+        ...basePayload,
+        fecha_inicio:      f,
+        fecha_fin:         new Date(new Date(f).getTime() + durMin * 60000).toISOString(),
+        cita_padre_id:     primera.id,
+        recurrencia_num:   i + 2,
+        recurrencia_hasta: recurrenciaHasta,
+      }));
+      const { error: e2 } = await supabase.from("appointments").insert(siguientes);
+      if (e2) { toast.error("Citas recurrentes creadas con errores: " + e2.message); setSaving(false); return; }
+    }
+
+    setSaving(false);
+    toast.success(`Serie de ${fechas.length} citas creada (${recurrenciaTipo})`);
     onSuccess();
   }
 
@@ -267,6 +328,43 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
             />
+          </div>
+
+          {/* Recurrencia */}
+          <div className="rounded-lg border border-border/60 px-3 py-3 space-y-3 bg-muted/20">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="recurrente" checked={recurrente}
+                onChange={(e) => setRecurrente(e.target.checked)} />
+              <Label htmlFor="recurrente" className="cursor-pointer text-sm">Cita recurrente</Label>
+            </div>
+            {recurrente && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Frecuencia</Label>
+                  <Select value={recurrenciaTipo} onValueChange={(v) => setRecurrenciaTipo(v as typeof recurrenciaTipo)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="semanal">Semanal (cada 7 días)</SelectItem>
+                      <SelectItem value="quincenal">Quincenal (cada 14 días)</SelectItem>
+                      <SelectItem value="mensual">Mensual (mismo día)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Repetir hasta</Label>
+                  <Input type="date" value={recurrenciaHasta}
+                    min={fechaInicio.slice(0, 10)}
+                    onChange={(e) => setRecurrenciaHasta(e.target.value)} required={recurrente} />
+                </div>
+                {recurrenciaHasta && (
+                  <p className="col-span-2 text-xs text-muted-foreground">
+                    Se crearán {generarOcurrencias(
+                      new Date(fechaInicio).toISOString(), recurrenciaTipo, recurrenciaHasta
+                    ).length} citas en la serie.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

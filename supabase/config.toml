@@ -24,3 +24,6 @@ verify_jwt = false
 
 [functions.cfdi-parse]
 verify_jwt = false
+
+[functions.confirmar-cita]
+verify_jwt = false
