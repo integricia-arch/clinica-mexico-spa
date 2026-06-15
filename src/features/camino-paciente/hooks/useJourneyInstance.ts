@@ -30,10 +30,28 @@ export interface JourneyInstanceFull {
   created_at: string;
 }
 
+export interface PatientContext {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  fecha_nacimiento: string | null;
+  sexo: string | null;
+}
+
+export interface AppointmentContext {
+  id: string;
+  fecha_inicio: string;
+  motivo_consulta: string | null;
+  doctor_nombre: string | null;
+  sala_nombre: string | null;
+}
+
 export interface UseJourneyInstanceState {
   loading: boolean;
   error: string | null;
   instance: JourneyInstanceFull | null;
+  patient: PatientContext | null;
+  appointment: AppointmentContext | null;
   steps: JourneyStep[];
   stepData: Record<string, Record<string, unknown>>;
   pendingOverrides: Record<string, unknown>[];
@@ -45,6 +63,8 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [instance, setInstance] = useState<JourneyInstanceFull | null>(null);
+  const [patient, setPatient] = useState<PatientContext | null>(null);
+  const [appointment, setAppointment] = useState<AppointmentContext | null>(null);
   const [steps, setSteps] = useState<JourneyStep[]>([]);
   const [stepData, setStepData] = useState<Record<string, Record<string, unknown>>>({});
   const [pendingOverrides, setPendingOverrides] = useState<Record<string, unknown>[]>([]);
@@ -75,7 +95,41 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
           .limit(50),
       ]);
 
-      if (inst.status === "fulfilled" && inst.value.data) setInstance(inst.value.data as unknown as JourneyInstanceFull);
+      const instData = inst.status === "fulfilled" ? (inst.value.data as unknown as JourneyInstanceFull | null) : null;
+      if (instData) {
+        setInstance(instData);
+
+        // Fetch patient context
+        if (instData.patient_id) {
+          const { data: p } = await supabase
+            .from("patients")
+            .select("id, nombre, apellidos, fecha_nacimiento, sexo")
+            .eq("id", instData.patient_id)
+            .maybeSingle();
+          setPatient(p as PatientContext | null);
+        }
+
+        // Fetch appointment context (with doctor join)
+        if (instData.appointment_id) {
+          const { data: a } = await supabase
+            .from("appointments")
+            .select("id, fecha_inicio, motivo_consulta, doctors(nombre, apellidos), salas(nombre)")
+            .eq("id", instData.appointment_id)
+            .maybeSingle();
+          if (a) {
+            const doc = (a as unknown as { doctors: { nombre: string; apellidos: string } | null }).doctors;
+            const sala = (a as unknown as { salas: { nombre: string } | null }).salas;
+            setAppointment({
+              id: a.id,
+              fecha_inicio: (a as unknown as { fecha_inicio: string }).fecha_inicio,
+              motivo_consulta: (a as unknown as { motivo_consulta: string | null }).motivo_consulta,
+              doctor_nombre: doc ? `${doc.nombre} ${doc.apellidos}`.trim() : null,
+              sala_nombre: sala?.nombre ?? null,
+            });
+          }
+        }
+      }
+
       const stepsArr = st.status === "fulfilled" ? (st.value.data ?? []) : [];
       setSteps(stepsArr as unknown as JourneyStep[]);
 
@@ -119,5 +173,5 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
     };
   }, [journeyId, load]);
 
-  return { loading, error, instance, steps, stepData, pendingOverrides, audit, reload: load };
+  return { loading, error, instance, patient, appointment, steps, stepData, pendingOverrides, audit, reload: load };
 }
