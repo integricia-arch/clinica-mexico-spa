@@ -426,19 +426,19 @@ export default function PuntoDeVenta({
   // IVA proporcional: precios incluyen IVA; aplicar ratio del descuento global
   const discountRatio = subtotal > 0 ? total / subtotal : 1;
   const totalIva = cart.reduce((s, c) => {
-    const tasa = c.med.tasa_iva ?? 0.16;
+    const tasa = c.med.tasa_iva ?? 0;
     if (tasa === 0) return s;
     const itemSub = (c.quantity * c.unit_price - c.discount) * discountRatio;
     return s + (itemSub - itemSub / (1 + tasa));
   }, 0);
   const baseGravable = cart.reduce((s, c) => {
-    const tasa = c.med.tasa_iva ?? 0.16;
+    const tasa = c.med.tasa_iva ?? 0;
     if (tasa === 0) return s;
     const itemSub = (c.quantity * c.unit_price - c.discount) * discountRatio;
     return s + itemSub / (1 + tasa);
   }, 0);
   const exento = cart.reduce((s, c) => {
-    const tasa = c.med.tasa_iva ?? 0.16;
+    const tasa = c.med.tasa_iva ?? 0;
     if (tasa > 0) return s;
     return s + (c.quantity * c.unit_price - c.discount) * discountRatio;
   }, 0);
