@@ -521,10 +521,24 @@ Todas las fases completadas. Sin pendientes.
 - [x] `FacturasProveedor.tsx`: panel integrado en accordion expandido, antes de "Registrar pago"
 - [x] commit `9f00caf` · deploy `73d75045`
 
+## Completado (Jun 15, 2026 — sesión 26)
+
+### Gap #17 — Punto de Reorden Automático ✅
+- [x] Migration `add_stock_maximo_reorder_point`: `stock_maximo INTEGER DEFAULT 0` en `medicamentos`; backfill = stock_minimo*3 para registros con stock_minimo>0
+- [x] `PuntoReorden.tsx`: panel de reorden con modelo min-max
+  - Lista todos los medicamentos donde stock_actual < stock_minimo
+  - Columnas: stock_actual / mínimo / máximo / a_pedir (editable)
+  - `a_pedir` = stock_máximo − stock_actual (editable antes de generar OC)
+  - Botón "Generar OC sugerida" → dialog proveedor + fecha → crea draft en Órdenes de Compra
+  - Precio de referencia = costo_unitario del último lote (0 si sin historial, avisa al usuario)
+  - Estado vacío si todos los productos están en stock
+- [x] `Farmacia.tsx`: nuevo subview "Reorden" con badge contador (naranja) en nav inventario
+- [x] `Farmacia.tsx`: campo "Stock máximo (reponer hasta)" en dialog edición de medicamentos
+- [x] commit `0b2c656` · deploy `773f6e11`
+
 ## Pendiente / Próximo
 
 Sin pendientes activos. Opciones para siguiente sesión:
-- **Gap #17 — Punto de reorden automático**: alerta cuando existencia ≤ stock_minimo por lote/medicamento
 - **Gap #11 — Devoluciones a proveedor**: flujo de nota de crédito proveedor + reversa inventario
 - **Gap #14 — Evaluación de proveedores**: score automático (cumplimiento OC, diferencias recepción, CxP puntualidad)
 - **Agenda mejorada**: citas recurrentes, confirmación Telegram/SMS, bloqueos por doctor, vista semanal
