@@ -315,7 +315,7 @@ export default function Farmacia() {
       });
       if (error) throw error;
 
-      toast({ title: movForm.tipo === "entrada" ? "Entrada registrada" : "Salida registrada" });
+      toast({ title: movForm.tipo === "entrada" ? "Entrada registrada" : movForm.tipo === "merma" ? "Merma registrada" : movForm.tipo === "uso_interno" ? "Uso interno registrado" : "Salida registrada" });
       setMovModal(false);
       setMovForm(EMPTY_MOV);
     } catch (e: any) {
@@ -955,7 +955,13 @@ export default function Farmacia() {
       <Dialog open={movModal} onOpenChange={v => !v && setMovModal(false)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{movForm.tipo === "entrada" ? "Registrar entrada" : movForm.tipo === "salida" ? "Dispensar / Salida" : "Ajuste de inventario"}</DialogTitle>
+            <DialogTitle>
+              {movForm.tipo === "entrada" ? "Registrar entrada"
+                : movForm.tipo === "salida" ? "Dispensar / Salida"
+                : movForm.tipo === "uso_interno" ? "Uso interno"
+                : movForm.tipo === "merma" ? "Registrar merma"
+                : "Ajuste de inventario"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -966,6 +972,8 @@ export default function Farmacia() {
                   <SelectItem value="entrada">Entrada (compra / recepción)</SelectItem>
                   <SelectItem value="salida">Salida (dispensación)</SelectItem>
                   <SelectItem value="ajuste">Ajuste de inventario</SelectItem>
+                  <SelectItem value="uso_interno">Uso interno (consumo clínica)</SelectItem>
+                  <SelectItem value="merma">Merma (daño / vencido / destrucción)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1016,7 +1024,11 @@ export default function Farmacia() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setMovModal(false)}>Cancelar</Button>
             <Button onClick={saveMov} disabled={savingMov}>
-              {savingMov ? "Guardando..." : movForm.tipo === "entrada" ? "Registrar entrada" : "Registrar salida"}
+              {savingMov ? "Guardando…"
+                : movForm.tipo === "entrada" ? "Registrar entrada"
+                : movForm.tipo === "merma" ? "Registrar merma"
+                : movForm.tipo === "uso_interno" ? "Registrar uso"
+                : "Registrar salida"}
             </Button>
           </DialogFooter>
         </DialogContent>

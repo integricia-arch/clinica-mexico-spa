@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Trash2, Loader2, Pencil, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Field, type SectionProps } from "../shared";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { untypedTable } from "@/lib/untypedTable";
 import { useInsumos, type Insumo, type InsumoInput } from "@/hooks/useInsumos";
 import { useKits, type Kit, type KitInput, type KitItemInput } from "@/hooks/useKits";
 import { useProveedores, type Proveedor, type ProveedorInput } from "@/hooks/useProveedores";
@@ -803,6 +804,81 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
 }
 
 /* ---------------- 12. Inventario y Costos (persistencia real) ---------------- */
+function ComprasConfigTab({ clinicId, canEdit }: { clinicId: string | null; canEdit: boolean }) {
+  const [umbral, setUmbral] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!clinicId) return;
+    untypedTable("clinic_settings")
+      .select("data")
+      .eq("clinic_id", clinicId)
+      .eq("section", "compras")
+      .single()
+      .then(({ data }) => {
+        const d = (data as { data?: { umbral_aprobacion_oc_centavos?: number } } | null)?.data;
+        if (d?.umbral_aprobacion_oc_centavos != null) {
+          setUmbral(String(d.umbral_aprobacion_oc_centavos / 100));
+        }
+        setLoaded(true);
+      });
+  }, [clinicId]);
+
+  const handleSave = async () => {
+    if (!clinicId) return;
+    const centavos = Math.round(Number(umbral) * 100);
+    setSaving(true);
+    const { error } = await untypedTable("clinic_settings")
+      .upsert({
+        clinic_id: clinicId,
+        section: "compras",
+        data: { umbral_aprobacion_oc_centavos: centavos > 0 ? centavos : null },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "clinic_id,section" });
+    setSaving(false);
+    if (error) toast.error("Error al guardar: " + error.message);
+    else toast.success("Configuración de compras guardada");
+  };
+
+  if (!loaded) return <p className="text-sm text-muted-foreground">Cargando…</p>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Aprobación de Órdenes de Compra</CardTitle>
+        <CardDescription>
+          OC que superen el umbral requieren aprobación de un manager o admin antes de enviarse al proveedor.
+          Deja en 0 para desactivar el flujo de aprobación.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-1.5 max-w-xs">
+          <Label htmlFor="umbral-oc">Umbral de aprobación (MXN)</Label>
+          <Input
+            id="umbral-oc"
+            type="number"
+            min={0}
+            step={100}
+            value={umbral}
+            onChange={(e) => setUmbral(e.target.value)}
+            placeholder="Ej: 5000 — deja en 0 para sin límite"
+            disabled={!canEdit}
+          />
+          <p className="text-xs text-muted-foreground">
+            OC con total &gt; {umbral ? `$${Number(umbral).toLocaleString("es-MX")}` : "—"} requerirán aprobación.
+          </p>
+        </div>
+        {canEdit && (
+          <Button onClick={handleSave} disabled={saving} size="sm">
+            {saving ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />Guardando…</> : "Guardar"}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SectionInventario(_: SectionProps) {
   const { activeClinicId, isGlobalAdmin } = useActiveClinic();
   const canEdit = isGlobalAdmin;
@@ -817,6 +893,7 @@ export function SectionInventario(_: SectionProps) {
         <TabsTrigger value="insumos">Insumos</TabsTrigger>
         <TabsTrigger value="kits">Kits por tratamiento</TabsTrigger>
         <TabsTrigger value="proveedores">Proveedores</TabsTrigger>
+        <TabsTrigger value="compras">Config. Compras</TabsTrigger>
       </TabsList>
 
       <TabsContent value="insumos" className="mt-4">
@@ -827,6 +904,9 @@ export function SectionInventario(_: SectionProps) {
       </TabsContent>
       <TabsContent value="proveedores" className="mt-4">
         <ProveedoresTab clinicId={activeClinicId} canEdit={canEdit} />
+      </TabsContent>
+      <TabsContent value="compras" className="mt-4">
+        <ComprasConfigTab clinicId={activeClinicId} canEdit={canEdit} />
       </TabsContent>
     </Tabs>
   );

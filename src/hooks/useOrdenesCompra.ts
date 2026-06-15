@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { friendlyError } from "@/lib/errors";
 import { untypedTable } from "@/lib/untypedTable";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface OrdenCompraItem {
   id: string;
@@ -20,7 +21,7 @@ export interface OrdenCompra {
   folio: string;
   proveedor_id: string;
   proveedor_nombre?: string;
-  estatus: "borrador" | "confirmada" | "parcial" | "recibida" | "cancelada";
+  estatus: "borrador" | "pendiente_aprobacion" | "confirmada" | "parcial" | "recibida" | "cancelada" | "rechazada";
   fecha_emision: string;
   fecha_entrega_est: string | null;
   terminos_pago: number;
@@ -128,10 +129,26 @@ export function useOrdenesCompra(clinicId: string | null) {
 
   useEffect(() => { load(); }, [load]);
 
+  const getUmbral = useCallback(async (): Promise<number | null> => {
+    const { data } = await untypedTable("clinic_settings")
+      .select("data")
+      .eq("clinic_id", clinicId)
+      .eq("section", "compras")
+      .single();
+    const d = (data as { data?: { umbral_aprobacion_oc_centavos?: number } } | null)?.data;
+    return d?.umbral_aprobacion_oc_centavos ?? null;
+  }, [clinicId]);
+
   const create = useCallback(async (input: OrdenCompraInput) => {
     if (!clinicId) throw new Error("No hay clínica activa.");
     const totales = calcTotales(input.items);
     const folio = nextFolio(items.map((o) => o.folio));
+
+    // Si total supera umbral → pendiente_aprobacion; si no → borrador
+    const umbral = await getUmbral();
+    const estatus = umbral !== null && totales.total_centavos > umbral
+      ? "pendiente_aprobacion"
+      : "borrador";
 
     const { data: ordenData, error: oErr } = await untypedTable("ordenes_compra")
       .insert({
@@ -141,6 +158,7 @@ export function useOrdenesCompra(clinicId: string | null) {
         terminos_pago: input.terminos_pago,
         fecha_entrega_est: input.fecha_entrega_est || null,
         notas: input.notas.trim() || null,
+        estatus,
         ...totales,
       })
       .select("id")
@@ -167,8 +185,31 @@ export function useOrdenesCompra(clinicId: string | null) {
     const { error: uErr } = await untypedTable("ordenes_compra")
       .update({ estatus: "confirmada" })
       .eq("id", id)
-      .eq("estatus", "borrador");
+      .in("estatus", ["borrador", "pendiente_aprobacion"]);
     if (uErr) throw new Error(friendlyError(uErr, "No se pudo confirmar la orden."));
+    await load();
+  }, [load]);
+
+  const aprobar = useCallback(async (id: string) => {
+    const user = (await supabase.auth.getUser()).data.user;
+    const { error: uErr } = await untypedTable("ordenes_compra")
+      .update({
+        estatus: "confirmada",
+        aprobada_by: user?.id ?? null,
+        aprobada_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("estatus", "pendiente_aprobacion");
+    if (uErr) throw new Error(friendlyError(uErr, "No se pudo aprobar la orden."));
+    await load();
+  }, [load]);
+
+  const rechazar = useCallback(async (id: string, motivo: string) => {
+    const { error: uErr } = await untypedTable("ordenes_compra")
+      .update({ estatus: "rechazada", rechazada_motivo: motivo.trim() || null })
+      .eq("id", id)
+      .eq("estatus", "pendiente_aprobacion");
+    if (uErr) throw new Error(friendlyError(uErr, "No se pudo rechazar la orden."));
     await load();
   }, [load]);
 
@@ -190,5 +231,5 @@ export function useOrdenesCompra(clinicId: string | null) {
       .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre_generico ?? "" }));
   }, []);
 
-  return { items, loading, error, create, confirmar, cancelar, getItems, refresh: load };
+  return { items, loading, error, create, confirmar, aprobar, rechazar, cancelar, getItems, refresh: load };
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { useAuth } from "@/hooks/useAuth";
 import { useProveedores } from "@/hooks/useProveedores";
 import { useOrdenesCompra, type OrdenCompra, type OrdenCompraItemInput } from "@/hooks/useOrdenesCompra";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ChevronDown, ChevronUp, ShoppingCart, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, ChevronDown, ChevronUp, ShoppingCart, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -18,11 +19,13 @@ const formatMXN = (centavos: number) =>
   (centavos / 100).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
 const ESTATUS_BADGE: Record<OrdenCompra["estatus"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  borrador:   { label: "Borrador",   variant: "secondary" },
-  confirmada: { label: "Confirmada", variant: "default" },
-  parcial:    { label: "Parcial",    variant: "outline" },
-  recibida:   { label: "Recibida",   variant: "default" },
-  cancelada:  { label: "Cancelada",  variant: "destructive" },
+  borrador:              { label: "Borrador",             variant: "secondary" },
+  pendiente_aprobacion:  { label: "Pend. aprobación",    variant: "outline" },
+  confirmada:            { label: "Confirmada",           variant: "default" },
+  parcial:               { label: "Parcial",              variant: "outline" },
+  recibida:              { label: "Recibida",             variant: "default" },
+  cancelada:             { label: "Cancelada",            variant: "destructive" },
+  rechazada:             { label: "Rechazada",            variant: "destructive" },
 };
 
 interface MedicamentoOption {
@@ -39,7 +42,11 @@ export default function OrdenesCompra() {
   const { activeClinicId } = useActiveClinic();
   const { toast } = useToast();
   const { items: proveedores } = useProveedores(activeClinicId);
-  const { items: ordenes, loading, error, create, confirmar, cancelar, getItems, refresh } = useOrdenesCompra(activeClinicId);
+  const { hasRole } = useAuth();
+  const isManager = hasRole("admin") || hasRole("manager");
+  const { items: ordenes, loading, error, create, confirmar, aprobar, rechazar, cancelar, getItems, refresh } = useOrdenesCompra(activeClinicId);
+  const [rechazarDialog, setRechazarDialog] = useState<string | null>(null);
+  const [rechazarMotivo, setRechazarMotivo] = useState("");
 
   const [medicamentos, setMedicamentos] = useState<MedicamentoOption[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -150,6 +157,27 @@ export default function OrdenesCompra() {
     }
   };
 
+  const handleAprobar = async (id: string) => {
+    try {
+      await aprobar(id);
+      toast({ title: "Orden aprobada y confirmada" });
+    } catch (e) {
+      toast({ title: String(e), variant: "destructive" });
+    }
+  };
+
+  const handleRechazar = async () => {
+    if (!rechazarDialog) return;
+    try {
+      await rechazar(rechazarDialog, rechazarMotivo);
+      toast({ title: "Orden rechazada" });
+      setRechazarDialog(null);
+      setRechazarMotivo("");
+    } catch (e) {
+      toast({ title: String(e), variant: "destructive" });
+    }
+  };
+
   const handleCancelar = async (id: string) => {
     try {
       await cancelar(id);
@@ -211,19 +239,36 @@ export default function OrdenesCompra() {
 
               {isOpen && (
                 <div className="border-t px-3 pb-3 pt-2 space-y-3">
+                  {/* Alerta pendiente aprobación */}
+                  {oc.estatus === "pendiente_aprobacion" && (
+                    <div className="flex items-start gap-2 rounded-md bg-yellow-50 border border-yellow-200 p-2 text-xs text-yellow-800">
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>OC supera el umbral de aprobación. Requiere firma de manager o admin antes de enviarse.</span>
+                    </div>
+                  )}
                   {/* Acciones */}
-                  {(oc.estatus === "borrador" || oc.estatus === "confirmada") && (
-                    <div className="flex gap-2">
-                      {oc.estatus === "borrador" && (
-                        <Button size="sm" variant="default" onClick={() => handleConfirmar(oc.id)}>
-                          <CheckCircle className="h-4 w-4 mr-1" /> Confirmar y enviar
+                  <div className="flex gap-2 flex-wrap">
+                    {oc.estatus === "borrador" && (
+                      <Button size="sm" onClick={() => handleConfirmar(oc.id)}>
+                        <CheckCircle className="h-4 w-4 mr-1" /> Confirmar y enviar
+                      </Button>
+                    )}
+                    {oc.estatus === "pendiente_aprobacion" && isManager && (
+                      <>
+                        <Button size="sm" onClick={() => handleAprobar(oc.id)}>
+                          <CheckCircle className="h-4 w-4 mr-1" /> Aprobar
                         </Button>
-                      )}
+                        <Button size="sm" variant="destructive" onClick={() => { setRechazarDialog(oc.id); setRechazarMotivo(""); }}>
+                          <XCircle className="h-4 w-4 mr-1" /> Rechazar
+                        </Button>
+                      </>
+                    )}
+                    {(oc.estatus === "borrador" || oc.estatus === "confirmada") && (
                       <Button size="sm" variant="outline" onClick={() => handleCancelar(oc.id)}>
                         <XCircle className="h-4 w-4 mr-1" /> Cancelar
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Items */}
                   <div className="overflow-x-auto">
@@ -371,6 +416,29 @@ export default function OrdenesCompra() {
             <Button onClick={handleSubmit} disabled={saving}>
               {saving ? "Guardando…" : "Crear orden"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Rechazar OC */}
+      <Dialog open={!!rechazarDialog} onOpenChange={(o) => { if (!o) setRechazarDialog(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Rechazar Orden de Compra</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">La OC quedará marcada como rechazada. Indica el motivo:</p>
+            <div className="space-y-1">
+              <Label>Motivo del rechazo</Label>
+              <Input
+                value={rechazarMotivo}
+                onChange={(e) => setRechazarMotivo(e.target.value)}
+                placeholder="Ej: Monto excede presupuesto del mes…"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRechazarDialog(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleRechazar}>Rechazar OC</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
