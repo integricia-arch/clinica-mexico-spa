@@ -30,6 +30,7 @@ import ActasMerma from "@/features/farmacia/ActasMerma";
 import DashboardCompras from "@/features/farmacia/DashboardCompras";
 import PuntoReorden from "@/features/farmacia/PuntoReorden";
 import LibroControlControlados from "@/features/farmacia/LibroControlControlados";
+import SolicitudesCompra from "@/features/farmacia/SolicitudesCompra";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -1102,6 +1103,7 @@ export default function Farmacia() {
           <Tabs defaultValue="dashboard">
             <TabsList>
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="solicitudes">Solicitudes</TabsTrigger>
               <TabsTrigger value="oc">Órdenes de Compra</TabsTrigger>
               <TabsTrigger value="recepcion">Recepción de Mercancía</TabsTrigger>
               <TabsTrigger value="cxp">Cuentas por Pagar</TabsTrigger>
@@ -1110,6 +1112,7 @@ export default function Farmacia() {
               <TabsTrigger value="evaluacion">Evaluación</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard" className="mt-4"><DashboardCompras /></TabsContent>
+            <TabsContent value="solicitudes" className="mt-4"><SolicitudesCompra medicamentos={medicamentos} /></TabsContent>
             <TabsContent value="oc" className="mt-4"><OrdenesCompra /></TabsContent>
             <TabsContent value="recepcion" className="mt-4"><RecepcionMercancia /></TabsContent>
             <TabsContent value="cxp" className="mt-4"><FacturasProveedor /></TabsContent>
