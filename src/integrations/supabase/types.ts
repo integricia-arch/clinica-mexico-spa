@@ -2524,26 +2524,39 @@ export type Database = {
       medicamentos: {
         Row: {
           activo: boolean
+          advertencias: string | null
           allow_direct_sale: boolean
+          barcode: string | null
           categoria: string
           clave_cuadro_basico: string | null
+          codigo_interno: string | null
           concentracion: string | null
+          contraindicaciones: string | null
           controlado: boolean
           created_at: string
           descripcion: string | null
+          equivalence_group_key: string | null
           forma_farmaceutica: string | null
+          fuente_info: string | null
           grupo_terapeutico: string | null
           id: string
+          indicaciones_uso: string | null
+          interacciones_relevantes: string | null
           is_controlled: boolean
+          laboratorio: string | null
           nombre: string
           precio_unitario: number
+          presentacion: string | null
           principio_activo: string | null
           registro_cofepris: string | null
+          registro_sanitario: string | null
           regulatory_notes: string | null
           requiere_receta: boolean
           requires_prescription: boolean
           requires_retained_prescription: boolean
           requires_special_prescription: boolean
+          sale_type: string
+          sku: string | null
           stock_minimo: number
           tasa_iva: number
           unidad: string
@@ -2551,26 +2564,39 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          advertencias?: string | null
           allow_direct_sale?: boolean
+          barcode?: string | null
           categoria: string
           clave_cuadro_basico?: string | null
+          codigo_interno?: string | null
           concentracion?: string | null
+          contraindicaciones?: string | null
           controlado?: boolean
           created_at?: string
           descripcion?: string | null
+          equivalence_group_key?: string | null
           forma_farmaceutica?: string | null
+          fuente_info?: string | null
           grupo_terapeutico?: string | null
           id?: string
+          indicaciones_uso?: string | null
+          interacciones_relevantes?: string | null
           is_controlled?: boolean
+          laboratorio?: string | null
           nombre: string
           precio_unitario?: number
+          presentacion?: string | null
           principio_activo?: string | null
           registro_cofepris?: string | null
+          registro_sanitario?: string | null
           regulatory_notes?: string | null
           requiere_receta?: boolean
           requires_prescription?: boolean
           requires_retained_prescription?: boolean
           requires_special_prescription?: boolean
+          sale_type?: string
+          sku?: string | null
           stock_minimo?: number
           tasa_iva?: number
           unidad?: string
@@ -2578,26 +2604,39 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          advertencias?: string | null
           allow_direct_sale?: boolean
+          barcode?: string | null
           categoria?: string
           clave_cuadro_basico?: string | null
+          codigo_interno?: string | null
           concentracion?: string | null
+          contraindicaciones?: string | null
           controlado?: boolean
           created_at?: string
           descripcion?: string | null
+          equivalence_group_key?: string | null
           forma_farmaceutica?: string | null
+          fuente_info?: string | null
           grupo_terapeutico?: string | null
           id?: string
+          indicaciones_uso?: string | null
+          interacciones_relevantes?: string | null
           is_controlled?: boolean
+          laboratorio?: string | null
           nombre?: string
           precio_unitario?: number
+          presentacion?: string | null
           principio_activo?: string | null
           registro_cofepris?: string | null
+          registro_sanitario?: string | null
           regulatory_notes?: string | null
           requiere_receta?: boolean
           requires_prescription?: boolean
           requires_retained_prescription?: boolean
           requires_special_prescription?: boolean
+          sale_type?: string
+          sku?: string | null
           stock_minimo?: number
           tasa_iva?: number
           unidad?: string
