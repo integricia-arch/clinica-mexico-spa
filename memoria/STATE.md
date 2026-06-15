@@ -407,17 +407,77 @@ Sub-tabs: **Órdenes de Compra | Recepción de Mercancía | Cuentas por Pagar**
 ### Estado final Farmacia.tsx — tab Compras
 Sub-tabs: **Órdenes de Compra | Recepción de Mercancía | Cuentas por Pagar | Aging / Vencimientos**
 
+## Completado (Jun 15, 2026 — sesión 19)
+
+### uso_interno + merma en movimientos_inventario ✅
+- [x] Migration `add_uso_interno_merma_to_movimiento_tipo`: enum extendido
+- [x] Farmacia.tsx: select movimiento incluye "Uso interno" y "Merma"
+- [x] Títulos dialog y toast actualizados para ambos tipos
+
+### Flujo aprobación OC ✅
+- [x] Migration `add_oc_approval_flow`: columnas `aprobada_by`, `aprobada_at`, `rechazada_motivo` en `ordenes_compra`
+- [x] `useOrdenesCompra`: `aprobar()` + `rechazar()` + `getUmbral()` desde `clinic_settings/compras`
+  - `create()`: si total > umbral → estatus `pendiente_aprobacion`; si no → `borrador`
+- [x] `OrdenesCompra.tsx`:
+  - Badge `pendiente_aprobacion` (amarillo) y `rechazada` (rojo)
+  - Alerta visual en OC pendiente con mensaje COSO
+  - Botones "Aprobar" + "Rechazar" visibles solo para admin/manager
+  - Dialog rechazo con campo motivo
+- [x] Ajustes › Inventario › "Config. Compras": umbral configurable (MXN), upsert en `clinic_settings`
+- [x] `tsc --noEmit` = 0 errores
+
+## Completado (Jun 15, 2026 — sesión 20)
+
+### Actas de Merma ✅
+- [x] Migration `create_actas_merma_module`: tablas `actas_merma` + `actas_merma_items` con RLS
+- [x] RPC `firmar_acta_merma`: verifica PIN bcrypt, checa rol admin/manager, firma acta, decrementa `lotes_medicamento.existencia`, inserta `movimientos_inventario` tipo=merma
+- [x] `src/hooks/useActasMerma.ts`: create, solicitarFirma, firmar (RPC), rechazar, getItems
+- [x] `src/features/farmacia/ActasMerma.tsx`: lista acordeón, dialog nueva acta (líneas dinámicas con lote/costo auto-fill), dialog firma PIN supervisor, dialog rechazo
+- [x] Sub-view "Mermas" en tab Inventario de Farmacia.tsx
+- [x] `tsc --noEmit` = 0 errores · commit `e37915a` · deploy `4bfe3ace`
+
+### Estado final Farmacia.tsx — tab Inventario
+Sub-views: **Catálogo | Caducidades | Faltantes | Conteos | COFEPRIS | ABC / Rotación | Mermas**
+
+## Completado (Jun 15, 2026 — sesión 21)
+
+### Dashboard de Compras ✅
+- [x] `src/features/farmacia/DashboardCompras.tsx`
+  - KPI cards: OC del mes, pend. aprobación, CxP vencido, total CxP pendiente
+  - Alertas inline: OC sin aprobar + facturas que vencen en ≤7 días
+  - Gráfica barras: evolución compras últimas 8 semanas
+  - Top 5 proveedores por monto total (barras horizontales)
+  - Breakdown OC por estatus + últimas 5 órdenes recientes
+  - Tabla facturas vencidas con días mora
+  - Recepciones del mes con estatus
+- [x] "Dashboard" como tab por defecto en Compras (antes de OC)
+- [x] `tsc --noEmit` = 0 errores · commit `5b018e8` · deploy `087e8cad`
+
+### Estado final Farmacia.tsx — tab Compras
+Sub-tabs: **Dashboard | Órdenes de Compra | Recepción de Mercancía | Cuentas por Pagar | Aging / Vencimientos**
+
+## Completado (Jun 15, 2026 — sesión 22)
+
+### Notificaciones CxP vencimiento ✅
+- [x] Migration: `ultima_notificacion_vencimiento_at TIMESTAMPTZ` en `facturas_proveedor`
+- [x] Edge function `notify-cxp-vencimiento` (verify_jwt=false):
+  - Auth: `NOTIFY_CXP_CRON_SECRET` (cron) | service_role_key | admin/manager JWT
+  - Busca facturas con saldo > 0 y vencimiento ≤ hoy+3d, no notificadas en 24h
+  - Email via Resend a todos los admin/manager de la clínica
+  - Telegram opcional via `clinic_settings` section=notifications, data.telegram_admin_chat_id
+  - Cooldown 24h: actualiza `ultima_notificacion_vencimiento_at` al enviar
+  - Health: GET → 200
+- [x] pg_cron job id=3: `0 15 * * *` (9am CDMX UTC-6) — activo en prod
+- [x] `NOTIFY_CXP_CRON_SECRET` seteado en Supabase Secrets
+- [x] config.toml: verify_jwt=false para la función
+- [x] commit `1e588c0` · deployed `notify-cxp-vencimiento` v1 ACTIVE
+
+### Módulo Almacén/Compras/Proveedores — COMPLETO ✅
+Todas las fases completadas. Sin pendientes.
+
 ## Pendiente / Próximo
 
-### Módulo Almacén — pendientes menores
-- [ ] Flujo aprobación OC por nivel de monto (requiere roles y config)
-- [ ] Actas de merma digitales con firma de autorización supervisor
-- [ ] `uso_interno` como tipo en `movimientos_inventario`
-
-### Próximas prioridades sugeridas
-1. Flujo de aprobación OC (monto > umbral → requiere firma manager)
-2. Dashboard de compras: KPIs globales (total OC mes, rotación, proveedor top)
-3. Notificaciones por email/Telegram cuando factura vence en <3 días
+Sin pendientes de módulo Almacén. Próximos módulos a definir.
 
 ## Completado (Jun 15, 2026 — sesión 15)
 
