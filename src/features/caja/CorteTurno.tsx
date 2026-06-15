@@ -103,7 +103,7 @@ export default function CorteTurno() {
       setSelected(list[0]);
     } else if (list.length > 0 && selected) {
       const updated = list.find((t) => t.id === selected.id);
-      if (updated) setSelected(updated);
+      setSelected(updated ?? list[0]);
     }
 
     setLoading(false);
