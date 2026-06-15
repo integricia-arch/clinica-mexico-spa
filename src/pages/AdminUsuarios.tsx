@@ -490,7 +490,7 @@ export default function AdminUsuarios() {
     if (doctorEdit) {
       ({ error } = await supabase.from("doctors").update(payload).eq("id", doctorEdit.id));
     } else {
-      ({ error } = await supabase.from("doctors").insert({ ...payload, clinic_id: activeClinicId }));
+      ({ error } = await supabase.from("doctors").insert({ ...payload, clinic_id: activeClinicId } as never));
     }
     setSavingDoctor(false);
     if (error) {

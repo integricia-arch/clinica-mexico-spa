@@ -71,6 +71,7 @@ interface RecordatorioCita {
   mensaje: string;
   status: string;
   enviado_at: string | null;
+  tipo?: string | null;
   identidades_canal: IdentidadCanal | null;
 }
 

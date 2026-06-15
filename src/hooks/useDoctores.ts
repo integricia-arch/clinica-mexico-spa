@@ -106,7 +106,7 @@ export function useDoctores(clinicId: string | null) {
       if (!clinicId) throw new Error("No hay clínica activa seleccionada.");
       const { error: cErr } = await supabase
         .from("doctors")
-        .insert({ ...toRow(input), clinic_id: clinicId });
+        .insert({ ...toRow(input), clinic_id: clinicId } as never);
       if (cErr) throw new Error(friendlyError(cErr, "No se pudo crear el doctor."));
       await load();
     },

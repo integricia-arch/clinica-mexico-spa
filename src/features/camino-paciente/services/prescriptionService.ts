@@ -181,7 +181,7 @@ export async function issuePrescription(prescription_id: string): Promise<RxResu
         stockActual = (lotes ?? []).reduce((s, l: { existencia: number }) => s + l.existencia, 0);
       }
       if (stockActual < needed) {
-        await supabase.from("almacen_alertas" as never).insert({
+        await supabase.from("almacen_alertas").insert({
           clinic_id: (rx as unknown as { clinic_id: string | null }).clinic_id ?? null,
           tipo: "faltante_receta",
           medicamento_id: item.medication_id ?? null,
