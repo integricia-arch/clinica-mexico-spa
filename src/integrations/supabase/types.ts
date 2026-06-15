@@ -555,6 +555,317 @@ export type Database = {
         }
         Relationships: []
       }
+      cfdi_conceptos: {
+        Row: {
+          cantidad: number
+          cfdi_id: string
+          clave_prod_serv: string
+          clave_unidad: string
+          created_at: string | null
+          descripcion: string
+          descuento: number
+          id: string
+          importe: number
+          iva_importe: number | null
+          iva_tasa: number | null
+          objeto_imp: string
+          valor_unitario: number
+        }
+        Insert: {
+          cantidad?: number
+          cfdi_id: string
+          clave_prod_serv: string
+          clave_unidad: string
+          created_at?: string | null
+          descripcion: string
+          descuento?: number
+          id?: string
+          importe: number
+          iva_importe?: number | null
+          iva_tasa?: number | null
+          objeto_imp?: string
+          valor_unitario: number
+        }
+        Update: {
+          cantidad?: number
+          cfdi_id?: string
+          clave_prod_serv?: string
+          clave_unidad?: string
+          created_at?: string | null
+          descripcion?: string
+          descuento?: number
+          id?: string
+          importe?: number
+          iva_importe?: number | null
+          iva_tasa?: number | null
+          objeto_imp?: string
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdi_conceptos_cfdi_id_fkey"
+            columns: ["cfdi_id"]
+            isOneToOne: false
+            referencedRelation: "cfdi_documentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cfdi_config: {
+        Row: {
+          activo: boolean | null
+          clinic_id: string
+          created_at: string | null
+          csd_cer_nombre: string | null
+          csd_cer_path: string | null
+          csd_contrasena: string | null
+          csd_key_nombre: string | null
+          csd_key_path: string | null
+          csd_secret_id: string | null
+          domicilio_fiscal_cp: string | null
+          id: string
+          iva_default: number | null
+          pac_ambiente: string | null
+          pac_contrasena: string | null
+          pac_proveedor: string | null
+          pac_secret_id: string | null
+          pac_usuario: string | null
+          razon_social: string | null
+          regimen_fiscal: string | null
+          rfc: string | null
+          serie_defecto: string | null
+          updated_at: string | null
+          zona_fronteriza: boolean | null
+        }
+        Insert: {
+          activo?: boolean | null
+          clinic_id: string
+          created_at?: string | null
+          csd_cer_nombre?: string | null
+          csd_cer_path?: string | null
+          csd_contrasena?: string | null
+          csd_key_nombre?: string | null
+          csd_key_path?: string | null
+          csd_secret_id?: string | null
+          domicilio_fiscal_cp?: string | null
+          id?: string
+          iva_default?: number | null
+          pac_ambiente?: string | null
+          pac_contrasena?: string | null
+          pac_proveedor?: string | null
+          pac_secret_id?: string | null
+          pac_usuario?: string | null
+          razon_social?: string | null
+          regimen_fiscal?: string | null
+          rfc?: string | null
+          serie_defecto?: string | null
+          updated_at?: string | null
+          zona_fronteriza?: boolean | null
+        }
+        Update: {
+          activo?: boolean | null
+          clinic_id?: string
+          created_at?: string | null
+          csd_cer_nombre?: string | null
+          csd_cer_path?: string | null
+          csd_contrasena?: string | null
+          csd_key_nombre?: string | null
+          csd_key_path?: string | null
+          csd_secret_id?: string | null
+          domicilio_fiscal_cp?: string | null
+          id?: string
+          iva_default?: number | null
+          pac_ambiente?: string | null
+          pac_contrasena?: string | null
+          pac_proveedor?: string | null
+          pac_secret_id?: string | null
+          pac_usuario?: string | null
+          razon_social?: string | null
+          regimen_fiscal?: string | null
+          rfc?: string | null
+          serie_defecto?: string | null
+          updated_at?: string | null
+          zona_fronteriza?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdi_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cfdi_documentos: {
+        Row: {
+          appointment_id: string | null
+          cfdi_relacionado_uuid: string | null
+          clinic_id: string
+          created_at: string | null
+          descuento: number
+          fecha_emision: string
+          folio: string | null
+          forma_pago: string | null
+          id: string
+          metodo_pago: string | null
+          moneda: string
+          motivo_cancelacion: string | null
+          nombre_receptor: string
+          pac_id_externo: string | null
+          patient_id: string | null
+          pdf_path: string | null
+          rfc_emisor: string
+          rfc_receptor: string
+          sale_id: string | null
+          serie: string | null
+          status: string
+          subtotal: number
+          tipo: string
+          total: number
+          updated_at: string | null
+          uuid_fiscal: string | null
+          xml_contenido: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          cfdi_relacionado_uuid?: string | null
+          clinic_id: string
+          created_at?: string | null
+          descuento?: number
+          fecha_emision?: string
+          folio?: string | null
+          forma_pago?: string | null
+          id?: string
+          metodo_pago?: string | null
+          moneda?: string
+          motivo_cancelacion?: string | null
+          nombre_receptor: string
+          pac_id_externo?: string | null
+          patient_id?: string | null
+          pdf_path?: string | null
+          rfc_emisor: string
+          rfc_receptor: string
+          sale_id?: string | null
+          serie?: string | null
+          status?: string
+          subtotal?: number
+          tipo: string
+          total?: number
+          updated_at?: string | null
+          uuid_fiscal?: string | null
+          xml_contenido?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          cfdi_relacionado_uuid?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          descuento?: number
+          fecha_emision?: string
+          folio?: string | null
+          forma_pago?: string | null
+          id?: string
+          metodo_pago?: string | null
+          moneda?: string
+          motivo_cancelacion?: string | null
+          nombre_receptor?: string
+          pac_id_externo?: string | null
+          patient_id?: string | null
+          pdf_path?: string | null
+          rfc_emisor?: string
+          rfc_receptor?: string
+          sale_id?: string | null
+          serie?: string | null
+          status?: string
+          subtotal?: number
+          tipo?: string
+          total?: number
+          updated_at?: string | null
+          uuid_fiscal?: string | null
+          xml_contenido?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdi_documentos_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_documentos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_documentos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cfdi_receptores: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          domicilio_fiscal_cp: string
+          email_envio: string | null
+          id: string
+          nombre: string
+          patient_id: string | null
+          regimen_fiscal: string
+          rfc: string
+          updated_at: string | null
+          uso_cfdi_defecto: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          domicilio_fiscal_cp: string
+          email_envio?: string | null
+          id?: string
+          nombre: string
+          patient_id?: string | null
+          regimen_fiscal: string
+          rfc: string
+          updated_at?: string | null
+          uso_cfdi_defecto?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          domicilio_fiscal_cp?: string
+          email_envio?: string | null
+          id?: string
+          nombre?: string
+          patient_id?: string | null
+          regimen_fiscal?: string
+          rfc?: string
+          updated_at?: string | null
+          uso_cfdi_defecto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdi_receptores_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_receptores_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklists: {
         Row: {
           activo: boolean
@@ -895,18 +1206,24 @@ export type Database = {
           created_at: string
           datos_json: Json
           diferencia: number | null
+          efectivo_deposito: number | null
           efectivo_esperado: number | null
           folio_secuencial: number | null
+          fondo_siguiente_turno: number | null
           generado_by: string | null
           id: string
           pharmacy_shift_id: string | null
           requiere_autorizacion: boolean
+          tarjeta_tpv_declarado: number | null
+          tarjeta_tpv_diferencia: number | null
           tipo: string
           total_efectivo: number
           total_general: number
           total_otros: number
           total_tarjeta: number
           total_transferencia: number
+          transferencia_declarado: number | null
+          transferencia_diferencia: number | null
           turno_id: string | null
           updated_at: string
         }
@@ -919,18 +1236,24 @@ export type Database = {
           created_at?: string
           datos_json?: Json
           diferencia?: number | null
+          efectivo_deposito?: number | null
           efectivo_esperado?: number | null
           folio_secuencial?: number | null
+          fondo_siguiente_turno?: number | null
           generado_by?: string | null
           id?: string
           pharmacy_shift_id?: string | null
           requiere_autorizacion?: boolean
+          tarjeta_tpv_declarado?: number | null
+          tarjeta_tpv_diferencia?: number | null
           tipo?: string
           total_efectivo?: number
           total_general?: number
           total_otros?: number
           total_tarjeta?: number
           total_transferencia?: number
+          transferencia_declarado?: number | null
+          transferencia_diferencia?: number | null
           turno_id?: string | null
           updated_at?: string
         }
@@ -943,18 +1266,24 @@ export type Database = {
           created_at?: string
           datos_json?: Json
           diferencia?: number | null
+          efectivo_deposito?: number | null
           efectivo_esperado?: number | null
           folio_secuencial?: number | null
+          fondo_siguiente_turno?: number | null
           generado_by?: string | null
           id?: string
           pharmacy_shift_id?: string | null
           requiere_autorizacion?: boolean
+          tarjeta_tpv_declarado?: number | null
+          tarjeta_tpv_diferencia?: number | null
           tipo?: string
           total_efectivo?: number
           total_general?: number
           total_otros?: number
           total_tarjeta?: number
           total_transferencia?: number
+          transferencia_declarado?: number | null
+          transferencia_diferencia?: number | null
           turno_id?: string | null
           updated_at?: string
         }
@@ -1019,6 +1348,141 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_prescription_template_versions: {
+        Row: {
+          doctor_id: string
+          id: string
+          publish_reason: string | null
+          published_at: string
+          published_by: string | null
+          snapshot_json: Json
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          doctor_id: string
+          id?: string
+          publish_reason?: string | null
+          published_at?: string
+          published_by?: string | null
+          snapshot_json?: Json
+          template_id: string
+          version_number?: number
+        }
+        Update: {
+          doctor_id?: string
+          id?: string
+          publish_reason?: string | null
+          published_at?: string
+          published_by?: string | null
+          snapshot_json?: Json
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_prescription_template_versions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_prescription_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_prescription_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_prescription_templates: {
+        Row: {
+          color_primario: string | null
+          consultorio_direccion: string | null
+          consultorio_email: string | null
+          consultorio_nombre: string | null
+          consultorio_telefono: string | null
+          created_at: string
+          current_version_id: string | null
+          current_version_number: number
+          doctor_id: string
+          encabezado_extra: string | null
+          firma_path: string | null
+          id: string
+          indicaciones_default: string | null
+          logo_path: string | null
+          mostrar_cedula: boolean
+          mostrar_especialidad: boolean
+          mostrar_firma: boolean
+          mostrar_qr: boolean
+          pie_pagina: string | null
+          tamano_papel: string
+          updated_at: string
+        }
+        Insert: {
+          color_primario?: string | null
+          consultorio_direccion?: string | null
+          consultorio_email?: string | null
+          consultorio_nombre?: string | null
+          consultorio_telefono?: string | null
+          created_at?: string
+          current_version_id?: string | null
+          current_version_number?: number
+          doctor_id: string
+          encabezado_extra?: string | null
+          firma_path?: string | null
+          id?: string
+          indicaciones_default?: string | null
+          logo_path?: string | null
+          mostrar_cedula?: boolean
+          mostrar_especialidad?: boolean
+          mostrar_firma?: boolean
+          mostrar_qr?: boolean
+          pie_pagina?: string | null
+          tamano_papel?: string
+          updated_at?: string
+        }
+        Update: {
+          color_primario?: string | null
+          consultorio_direccion?: string | null
+          consultorio_email?: string | null
+          consultorio_nombre?: string | null
+          consultorio_telefono?: string | null
+          created_at?: string
+          current_version_id?: string | null
+          current_version_number?: number
+          doctor_id?: string
+          encabezado_extra?: string | null
+          firma_path?: string | null
+          id?: string
+          indicaciones_default?: string | null
+          logo_path?: string | null
+          mostrar_cedula?: boolean
+          mostrar_especialidad?: boolean
+          mostrar_firma?: boolean
+          mostrar_qr?: boolean
+          pie_pagina?: string | null
+          tamano_papel?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_prescription_templates_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: true
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_current_version"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_prescription_template_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -1153,9 +1617,10 @@ export type Database = {
           id: string
           monto: number
           motivo: string
-          pharmacy_shift_id: string
+          pharmacy_shift_id: string | null
           registrado_by: string
           tipo: string
+          turno_id: string | null
         }
         Insert: {
           clinic_id: string
@@ -1163,9 +1628,10 @@ export type Database = {
           id?: string
           monto: number
           motivo: string
-          pharmacy_shift_id: string
+          pharmacy_shift_id?: string | null
           registrado_by: string
           tipo: string
+          turno_id?: string | null
         }
         Update: {
           clinic_id?: string
@@ -1173,9 +1639,10 @@ export type Database = {
           id?: string
           monto?: number
           motivo?: string
-          pharmacy_shift_id?: string
+          pharmacy_shift_id?: string | null
           registrado_by?: string
           tipo?: string
+          turno_id?: string | null
         }
         Relationships: [
           {
@@ -1183,6 +1650,13 @@ export type Database = {
             columns: ["pharmacy_shift_id"]
             isOneToOne: false
             referencedRelation: "pharmacy_cash_shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fondos_movimientos_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos"
             referencedColumns: ["id"]
           },
         ]
@@ -1327,6 +1801,576 @@ export type Database = {
             columns: ["proveedor_id"]
             isOneToOne: false
             referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_instance_audit: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          journey_instance_id: string
+          journey_instance_step_id: string | null
+          new_value_json: Json | null
+          old_value_json: Json | null
+          reason: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          journey_instance_id: string
+          journey_instance_step_id?: string | null
+          new_value_json?: Json | null
+          old_value_json?: Json | null
+          reason?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          journey_instance_id?: string
+          journey_instance_step_id?: string | null
+          new_value_json?: Json | null
+          old_value_json?: Json | null
+          reason?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_instance_audit_journey_instance_id_fkey"
+            columns: ["journey_instance_id"]
+            isOneToOne: false
+            referencedRelation: "journey_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_instance_audit_journey_instance_step_id_fkey"
+            columns: ["journey_instance_step_id"]
+            isOneToOne: false
+            referencedRelation: "journey_instance_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_instance_overrides: {
+        Row: {
+          authorized_at: string | null
+          authorized_by: string | null
+          created_at: string
+          id: string
+          journey_instance_id: string
+          journey_instance_step_id: string
+          reason: string
+          requested_by: string | null
+          risk_acknowledgement: string
+          status: string
+        }
+        Insert: {
+          authorized_at?: string | null
+          authorized_by?: string | null
+          created_at?: string
+          id?: string
+          journey_instance_id: string
+          journey_instance_step_id: string
+          reason: string
+          requested_by?: string | null
+          risk_acknowledgement?: string
+          status?: string
+        }
+        Update: {
+          authorized_at?: string | null
+          authorized_by?: string | null
+          created_at?: string
+          id?: string
+          journey_instance_id?: string
+          journey_instance_step_id?: string
+          reason?: string
+          requested_by?: string | null
+          risk_acknowledgement?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_instance_overrides_journey_instance_id_fkey"
+            columns: ["journey_instance_id"]
+            isOneToOne: false
+            referencedRelation: "journey_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_instance_overrides_journey_instance_step_id_fkey"
+            columns: ["journey_instance_step_id"]
+            isOneToOne: false
+            referencedRelation: "journey_instance_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_instance_step_data: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_json: Json
+          id: string
+          journey_instance_step_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_json?: Json
+          id?: string
+          journey_instance_step_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_json?: Json
+          id?: string
+          journey_instance_step_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_instance_step_data_journey_instance_step_id_fkey"
+            columns: ["journey_instance_step_id"]
+            isOneToOne: true
+            referencedRelation: "journey_instance_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_instance_steps: {
+        Row: {
+          assigned_to: string | null
+          blocked_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          id: string
+          journey_instance_id: string
+          next_action: string | null
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          status: string
+          step_key: string
+          step_name: string
+          step_order: number
+        }
+        Insert: {
+          assigned_to?: string | null
+          blocked_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          journey_instance_id: string
+          next_action?: string | null
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          status?: string
+          step_key: string
+          step_name: string
+          step_order?: number
+        }
+        Update: {
+          assigned_to?: string | null
+          blocked_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          journey_instance_id?: string
+          next_action?: string | null
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          status?: string
+          step_key?: string
+          step_name?: string
+          step_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_instance_steps_journey_instance_id_fkey"
+            columns: ["journey_instance_id"]
+            isOneToOne: false
+            referencedRelation: "journey_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_instances: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          id: string
+          patient_id: string | null
+          snapshot_json: Json | null
+          status: string
+          template_id: string | null
+          template_version_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          patient_id?: string | null
+          snapshot_json?: Json | null
+          status?: string
+          template_id?: string | null
+          template_version_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          patient_id?: string | null
+          snapshot_json?: Json | null
+          status?: string
+          template_id?: string | null
+          template_version_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_instances_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_instances_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "journey_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journey_instances_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "journey_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_option_catalogs: {
+        Row: {
+          applies_to_step_type: string | null
+          catalog_key: string
+          catalog_name: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          applies_to_step_type?: string | null
+          catalog_key: string
+          catalog_name: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          applies_to_step_type?: string | null
+          catalog_key?: string
+          catalog_name?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      journey_option_items: {
+        Row: {
+          catalog_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          option_label: string
+          option_value: string
+          sort_order: number
+        }
+        Insert: {
+          catalog_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          option_label: string
+          option_value: string
+          sort_order?: number
+        }
+        Update: {
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          option_label?: string
+          option_value?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_option_items_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "journey_option_catalogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_step_definitions: {
+        Row: {
+          allow_not_applicable: boolean
+          allowed_complete_roles: string[]
+          allowed_edit_roles: string[]
+          allowed_override_roles: string[]
+          blocks_progress: boolean
+          created_at: string
+          id: string
+          is_critical: boolean
+          is_required: boolean
+          max_recommended_minutes: number | null
+          requires_document: boolean
+          requires_responsible: boolean
+          step_description: string | null
+          step_key: string
+          step_name: string
+          step_order: number
+          step_type: string
+          template_version_id: string
+        }
+        Insert: {
+          allow_not_applicable?: boolean
+          allowed_complete_roles?: string[]
+          allowed_edit_roles?: string[]
+          allowed_override_roles?: string[]
+          blocks_progress?: boolean
+          created_at?: string
+          id?: string
+          is_critical?: boolean
+          is_required?: boolean
+          max_recommended_minutes?: number | null
+          requires_document?: boolean
+          requires_responsible?: boolean
+          step_description?: string | null
+          step_key: string
+          step_name: string
+          step_order?: number
+          step_type?: string
+          template_version_id: string
+        }
+        Update: {
+          allow_not_applicable?: boolean
+          allowed_complete_roles?: string[]
+          allowed_edit_roles?: string[]
+          allowed_override_roles?: string[]
+          blocks_progress?: boolean
+          created_at?: string
+          id?: string
+          is_critical?: boolean
+          is_required?: boolean
+          max_recommended_minutes?: number | null
+          requires_document?: boolean
+          requires_responsible?: boolean
+          step_description?: string | null
+          step_key?: string
+          step_name?: string
+          step_order?: number
+          step_type?: string
+          template_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_step_definitions_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "journey_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_step_fields: {
+        Row: {
+          created_at: string
+          field_key: string
+          field_label: string
+          field_type: string
+          id: string
+          is_required: boolean
+          sort_order: number
+          step_definition_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_key: string
+          field_label: string
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          sort_order?: number
+          step_definition_id: string
+        }
+        Update: {
+          created_at?: string
+          field_key?: string
+          field_label?: string
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          sort_order?: number
+          step_definition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_step_fields_step_definition_id_fkey"
+            columns: ["step_definition_id"]
+            isOneToOne: false
+            referencedRelation: "journey_step_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_template_versions: {
+        Row: {
+          config_json: Json | null
+          created_at: string
+          id: string
+          publish_reason: string | null
+          published_at: string | null
+          status: string
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          config_json?: Json | null
+          created_at?: string
+          id?: string
+          publish_reason?: string | null
+          published_at?: string | null
+          status?: string
+          template_id: string
+          version_number?: number
+        }
+        Update: {
+          config_json?: Json | null
+          created_at?: string
+          id?: string
+          publish_reason?: string | null
+          published_at?: string | null
+          status?: string
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "journey_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_templates: {
+        Row: {
+          active_version_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          type: string
+        }
+        Insert: {
+          active_version_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          type?: string
+        }
+        Update: {
+          active_version_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_active_version"
+            columns: ["active_version_id"]
+            isOneToOne: false
+            referencedRelation: "journey_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journey_validation_rules: {
+        Row: {
+          action_json: Json
+          condition_json: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          rule_name: string
+          severity: string
+          source_step_key: string
+          template_version_id: string
+        }
+        Insert: {
+          action_json?: Json
+          condition_json?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          rule_name: string
+          severity?: string
+          source_step_key: string
+          template_version_id: string
+        }
+        Update: {
+          action_json?: Json
+          condition_json?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          rule_name?: string
+          severity?: string
+          source_step_key?: string
+          template_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_validation_rules_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "journey_template_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -1629,6 +2673,75 @@ export type Database = {
           id?: string
           nombre?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      monitoring_alerts: {
+        Row: {
+          alert_status: string | null
+          alert_type: string | null
+          analysis_notes: string | null
+          analyzed: boolean | null
+          created_at: string | null
+          email_body_text: string | null
+          email_message_id: string | null
+          email_received_at: string | null
+          email_subject: string | null
+          error_message: string | null
+          fix_applied: boolean | null
+          fix_description: string | null
+          http_status_code: number | null
+          id: string
+          incident_id: string | null
+          monitor_name: string | null
+          monitor_url: string | null
+          raw_data: Json | null
+          response_time_ms: number | null
+          source: string
+        }
+        Insert: {
+          alert_status?: string | null
+          alert_type?: string | null
+          analysis_notes?: string | null
+          analyzed?: boolean | null
+          created_at?: string | null
+          email_body_text?: string | null
+          email_message_id?: string | null
+          email_received_at?: string | null
+          email_subject?: string | null
+          error_message?: string | null
+          fix_applied?: boolean | null
+          fix_description?: string | null
+          http_status_code?: number | null
+          id?: string
+          incident_id?: string | null
+          monitor_name?: string | null
+          monitor_url?: string | null
+          raw_data?: Json | null
+          response_time_ms?: number | null
+          source?: string
+        }
+        Update: {
+          alert_status?: string | null
+          alert_type?: string | null
+          analysis_notes?: string | null
+          analyzed?: boolean | null
+          created_at?: string | null
+          email_body_text?: string | null
+          email_message_id?: string | null
+          email_received_at?: string | null
+          email_subject?: string | null
+          error_message?: string | null
+          fix_applied?: boolean | null
+          fix_description?: string | null
+          http_status_code?: number | null
+          id?: string
+          incident_id?: string | null
+          monitor_name?: string | null
+          monitor_url?: string | null
+          raw_data?: Json | null
+          response_time_ms?: number | null
+          source?: string
         }
         Relationships: []
       }
@@ -1989,6 +3102,73 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_checkout_events: {
+        Row: {
+          appointment_id: string | null
+          checked_out_by: string | null
+          checkout_status: string
+          checkout_type: string
+          created_at: string
+          discharge_summary: string
+          followup_date: string | null
+          followup_required: boolean
+          id: string
+          journey_instance_id: string
+          notes: string | null
+          patient_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          checked_out_by?: string | null
+          checkout_status?: string
+          checkout_type: string
+          created_at?: string
+          discharge_summary: string
+          followup_date?: string | null
+          followup_required?: boolean
+          id?: string
+          journey_instance_id: string
+          notes?: string | null
+          patient_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          checked_out_by?: string | null
+          checkout_status?: string
+          checkout_type?: string
+          created_at?: string
+          discharge_summary?: string
+          followup_date?: string | null
+          followup_required?: boolean
+          id?: string
+          journey_instance_id?: string
+          notes?: string | null
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_checkout_events_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_checkout_events_journey_instance_id_fkey"
+            columns: ["journey_instance_id"]
+            isOneToOne: false
+            referencedRelation: "journey_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_checkout_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           activo: boolean
@@ -2066,6 +3246,126 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      payment_gateway_config: {
+        Row: {
+          activo: boolean | null
+          ambiente: string
+          clinic_id: string
+          created_at: string | null
+          id: string
+          metodos_habilitados: string[] | null
+          proveedor: string
+          stripe_publishable_key: string | null
+          stripe_terminal_habilitado: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          ambiente?: string
+          clinic_id: string
+          created_at?: string | null
+          id?: string
+          metodos_habilitados?: string[] | null
+          proveedor?: string
+          stripe_publishable_key?: string | null
+          stripe_terminal_habilitado?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          ambiente?: string
+          clinic_id?: string
+          created_at?: string | null
+          id?: string
+          metodos_habilitados?: string[] | null
+          proveedor?: string
+          stripe_publishable_key?: string | null
+          stripe_terminal_habilitado?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_gateway_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          cfdi_id: string | null
+          clinic_id: string
+          created_at: string | null
+          currency: string
+          id: string
+          metadata: Json | null
+          metodo: string | null
+          payment_intent_id: string | null
+          proveedor: string
+          sale_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          cfdi_id?: string | null
+          clinic_id: string
+          created_at?: string | null
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          metodo?: string | null
+          payment_intent_id?: string | null
+          proveedor: string
+          sale_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          cfdi_id?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          metodo?: string | null
+          payment_intent_id?: string | null
+          proveedor?: string
+          sale_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_cfdi_id_fkey"
+            columns: ["cfdi_id"]
+            isOneToOne: false
+            referencedRelation: "cfdi_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pharmacy_cash_shifts: {
         Row: {
@@ -2483,6 +3783,238 @@ export type Database = {
         }
         Relationships: []
       }
+      prescription_items: {
+        Row: {
+          brand_name: string | null
+          concentration: string | null
+          controlled_group: string | null
+          created_at: string
+          dose: string
+          duration: string
+          frequency: string
+          generic_name: string
+          id: string
+          instructions: string
+          is_controlled: boolean
+          medication_id: string | null
+          pharmaceutical_form: string | null
+          prescription_id: string
+          presentation: string | null
+          quantity: number | null
+          route: string
+        }
+        Insert: {
+          brand_name?: string | null
+          concentration?: string | null
+          controlled_group?: string | null
+          created_at?: string
+          dose: string
+          duration: string
+          frequency: string
+          generic_name: string
+          id?: string
+          instructions: string
+          is_controlled?: boolean
+          medication_id?: string | null
+          pharmaceutical_form?: string | null
+          prescription_id: string
+          presentation?: string | null
+          quantity?: number | null
+          route: string
+        }
+        Update: {
+          brand_name?: string | null
+          concentration?: string | null
+          controlled_group?: string | null
+          created_at?: string
+          dose?: string
+          duration?: string
+          frequency?: string
+          generic_name?: string
+          id?: string
+          instructions?: string
+          is_controlled?: boolean
+          medication_id?: string | null
+          pharmaceutical_form?: string | null
+          prescription_id?: string
+          presentation?: string | null
+          quantity?: number | null
+          route?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescription_items_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescription_items_prescription_id_fkey"
+            columns: ["prescription_id"]
+            isOneToOne: false
+            referencedRelation: "prescriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prescriptions: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string | null
+          consultation_note_id: string | null
+          created_at: string
+          diagnosis: string | null
+          digital_signature_status: string | null
+          doctor_id: string
+          expediente_id: string | null
+          id: string
+          issue_date: string | null
+          journey_instance_id: string | null
+          notes: string | null
+          patient_id: string
+          prescription_number: string | null
+          qr_code_value: string | null
+          status: string
+          template_id: string | null
+          template_snapshot_json: Json | null
+          template_version_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id?: string | null
+          consultation_note_id?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          digital_signature_status?: string | null
+          doctor_id: string
+          expediente_id?: string | null
+          id?: string
+          issue_date?: string | null
+          journey_instance_id?: string | null
+          notes?: string | null
+          patient_id: string
+          prescription_number?: string | null
+          qr_code_value?: string | null
+          status?: string
+          template_id?: string | null
+          template_snapshot_json?: Json | null
+          template_version_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string | null
+          consultation_note_id?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          digital_signature_status?: string | null
+          doctor_id?: string
+          expediente_id?: string | null
+          id?: string
+          issue_date?: string | null
+          journey_instance_id?: string | null
+          notes?: string | null
+          patient_id?: string
+          prescription_number?: string | null
+          qr_code_value?: string | null
+          status?: string
+          template_id?: string | null
+          template_snapshot_json?: Json | null
+          template_version_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_consultation_note_id_fkey"
+            columns: ["consultation_note_id"]
+            isOneToOne: false
+            referencedRelation: "notas_consulta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_expediente_id_fkey"
+            columns: ["expediente_id"]
+            isOneToOne: false
+            referencedRelation: "expedientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_journey_instance_id_fkey"
+            columns: ["journey_instance_id"]
+            isOneToOne: false
+            referencedRelation: "journey_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_prescription_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_prescription_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string
+          supervisor_pin_hash: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          supervisor_pin_hash?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          supervisor_pin_hash?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       proveedores: {
         Row: {
           activo: boolean
@@ -2811,13 +4343,57 @@ export type Database = {
     }
     Functions: {
       can_configure_caja: { Args: { _user_id: string }; Returns: boolean }
+      cfdi_get_secret: { Args: { p_id: string }; Returns: string }
+      cfdi_upsert_secret: {
+        Args: {
+          p_description?: string
+          p_existing_id: string
+          p_name: string
+          p_secret: string
+        }
+        Returns: string
+      }
       cleanup_abandoned_bot_sesiones: { Args: never; Returns: number }
+      corte_set_fondo: {
+        Args: { p_corte_id: string; p_fondo_siguiente: number }
+        Returns: undefined
+      }
+      corte_set_pago_declarado: {
+        Args: { p_corte_id: string; p_declarado: number; p_metodo: string }
+        Returns: number
+      }
+      corte_set_tarjeta_tpv: {
+        Args: { p_corte_id: string; p_tpv_declarado: number }
+        Returns: number
+      }
+      generate_prescription_number_for_doctor: {
+        Args: { _doctor_id: string }
+        Returns: string
+      }
+      get_clinic_supervisors: {
+        Args: { p_clinic_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          has_pin: boolean
+          user_id: string
+        }[]
+      }
+      get_corte_pago_total: {
+        Args: { p_corte_id: string; p_metodo: string }
+        Returns: number
+      }
+      get_corte_tarjeta_total: { Args: { p_corte_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_lote_existencia: {
+        Args: { p_cantidad: number; p_lote_id: string }
+        Returns: number
       }
       is_appointment_participant: {
         Args: { _appointment_id: string }
@@ -2844,10 +4420,21 @@ export type Database = {
               p_cash_count: number
               p_notes?: string
               p_shift_id: string
+              p_supervisor_id?: string
               p_supervisor_override?: boolean
             }
             Returns: Json
           }
+      pharmacy_close_shift_with_pin: {
+        Args: {
+          p_cash_count: number
+          p_notes?: string
+          p_pin: string
+          p_shift_id: string
+          p_supervisor_id: string
+        }
+        Returns: Json
+      }
       pharmacy_corte_x: { Args: { p_shift_id: string }; Returns: Json }
       pharmacy_current_shift: {
         Args: { p_clinic?: string }
@@ -2895,14 +4482,43 @@ export type Database = {
       }
       pharmacy_register_return: { Args: { p_payload: Json }; Returns: string }
       pharmacy_register_sale: { Args: { p_payload: Json }; Returns: string }
+      set_supervisor_pin: {
+        Args: { p_pin: string; p_user_id: string }
+        Returns: undefined
+      }
       turno_close: {
         Args: {
           p_cash_count: number
           p_notes?: string
+          p_supervisor_id?: string
           p_supervisor_override?: boolean
           p_turno_id: string
         }
         Returns: Json
+      }
+      turno_close_with_pin: {
+        Args: {
+          p_cash_count: number
+          p_notes?: string
+          p_pin: string
+          p_supervisor_id: string
+          p_turno_id: string
+        }
+        Returns: Json
+      }
+      turno_corte_x: { Args: { p_turno_id: string }; Returns: Json }
+      turno_fondo_movimiento: {
+        Args: {
+          p_monto: number
+          p_motivo: string
+          p_tipo: string
+          p_turno_id: string
+        }
+        Returns: string
+      }
+      update_journey_progress: {
+        Args: { _journey_instance_id: string }
+        Returns: undefined
       }
       user_has_clinic_access: {
         Args: { _clinic_id: string; _user_id: string }
