@@ -24,6 +24,7 @@ import InventarioCiclico from "@/features/farmacia/InventarioCiclico";
 import ReporteCOFEPRIS from "@/features/farmacia/ReporteCOFEPRIS";
 import ReporteRotacionABC from "@/features/farmacia/ReporteRotacionABC";
 import ReporteAgingCxP from "@/features/farmacia/ReporteAgingCxP";
+import DevolucionesProveedor from "@/features/farmacia/DevolucionesProveedor";
 import ActasMerma from "@/features/farmacia/ActasMerma";
 import DashboardCompras from "@/features/farmacia/DashboardCompras";
 import PuntoReorden from "@/features/farmacia/PuntoReorden";
@@ -1080,12 +1081,14 @@ export default function Farmacia() {
               <TabsTrigger value="recepcion">Recepción de Mercancía</TabsTrigger>
               <TabsTrigger value="cxp">Cuentas por Pagar</TabsTrigger>
               <TabsTrigger value="aging">Aging / Vencimientos</TabsTrigger>
+              <TabsTrigger value="devoluciones">Devoluciones</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard" className="mt-4"><DashboardCompras /></TabsContent>
             <TabsContent value="oc" className="mt-4"><OrdenesCompra /></TabsContent>
             <TabsContent value="recepcion" className="mt-4"><RecepcionMercancia /></TabsContent>
             <TabsContent value="cxp" className="mt-4"><FacturasProveedor /></TabsContent>
             <TabsContent value="aging" className="mt-4"><ReporteAgingCxP /></TabsContent>
+            <TabsContent value="devoluciones" className="mt-4"><DevolucionesProveedor /></TabsContent>
           </Tabs>
         </TabsContent>
         <TabsContent value="cierre" className="space-y-6">
