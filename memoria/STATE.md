@@ -554,8 +554,60 @@ Todas las fases completadas. Sin pendientes.
 
 ## Pendiente / Próximo
 
-Sin pendientes activos. Opciones para siguiente sesión:
-- **Gap #14 — Evaluación de proveedores**: score automático (cumplimiento OC, diferencias recepción, CxP puntualidad)
+## Completado (Jun 15, 2026 — sesión 28)
+
+### Gap #14 — Evaluación de Proveedores ✅
+- [x] `EvaluacionProveedores.tsx`: scorecard automático por proveedor
+  - KPI entrega puntual (35%): avg días tardanza vs fecha_entrega_est OC
+  - KPI exactitud cantidad (30%): sum(recibida)/sum(pedida) por OC→recepcion
+  - KPI calidad/devolución (20%): inverso tasa devolucion (unidades devueltas / recibidas)
+  - KPI exactitud precio (15%): facturas_proveedor con match_status ok/aprobado_gerente vs total con match
+  - Rating A≥85% / B70–84% / C55–69% / D<55%
+  - Filtro período 90d / 6m / 1a; botón refresh
+  - Accordion por proveedor: barras score por dimensión + tabla ponderada breakdown
+- [x] `Farmacia.tsx`: sub-tab "Evaluación" en Compras
+- [x] commit `ba5096c` · deploy `b0cb1eb1`
+
+### Cola de investigación registrada en STATE.md
+- INV-A: Validación operativa contable (NIF, COFEPRIS, SAP/Odoo/Netsuite, COSO)
+- INV-B: Auto-abasto con proveedor preferido por artículo + email automático OC
+- INV-C: Lectura CFDI XML/PDF para validación 4-way match (anti-robo)
+
+### Cola de investigación (próximas sesiones — requieren análisis antes de implementar)
+
+#### INV-A: Validación operativa contable y administrativa
+Investigar y validar el flujo completo (compras→recepción→factura→pago→inventario) contra:
+- NIF C-4 (inventarios), NIF D-2 (costo de ventas), NIF C-19 (instrumentos financieros)
+- COFEPRIS: Buenas Prácticas de Almacenamiento (BPA), cadena de custodia controlados
+- SAP Business One módulo MM (Materials Management) como referencia de industria
+- Odoo 17 módulo Purchase/Inventory
+- Netsuite Purchase Orders flow
+- QuickBooks Enterprise: purchase order → bill → payment cycle
+- IIA (Institute of Internal Auditors): controles anti-fraude en compras
+- COSO 2013: control interno en procesos de abastecimiento
+Preguntas clave: ¿falta algún control? ¿segregación de funciones? ¿trazabilidad suficiente?
+
+#### INV-B: Auto-abasto con proveedor preferido por artículo
+Diseñar y validar:
+- Tabla `medicamento_proveedor_preferido`: medicamento_id → proveedor_id + precio_pactado + plazo_entrega
+- Agrupación de artículos por proveedor para OC eficiente (mínimo de compra, multiplos)
+- Trigger automático cuando stock < stock_minimo → genera OC borrador → envía email al proveedor (edge function)
+- Aprobación de OC antes de enviar (flujo existente) vs envío automático sin aprobación (riesgo)
+- Integración con punto de reorden (gap #17 ya implementado)
+Preguntas: ¿cuándo es seguro el auto-envío sin aprobación humana? ¿COFEPRIS tiene restricciones para controlados?
+
+#### INV-C: Lectura CFDI XML/PDF para validación 4-way (anti-robo/fraude)
+Diseñar y validar:
+- Parser XML CFDI 4.0 (SAT): extraer Conceptos → cantidad, valorUnitario, importe, descripcion
+- Mapeo CFDI concepto → medicamento_id por descripcion/ClaveProdServ/NoIdentificacion
+- Comparación automática: CFDI vs OC vs Recepción vs Factura interna (4-way match)
+- Alertas si: precio CFDI ≠ precio OC (>tolerancia), cantidad CFDI > cantidad recibida
+- Flujo: upload XML en FacturasProveedor → parse → auto-poblar campos → 3-way match mejorado
+- PDF fallback: AWS Textract / Google Document AI para facturas sin CFDI (proveedores pequeños)
+- Anti-robo: detectar si cantidad recibida < cantidad facturada (posible desvío)
+Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripción no coincide?
+
+### Otras opciones
 - **Agenda mejorada**: citas recurrentes, confirmación Telegram/SMS, bloqueos por doctor, vista semanal
 - **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
 - **DischargeForm mejorado**: resumen de alta más completo (diagnóstico final, documentos entregados)
