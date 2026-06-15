@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,21 +103,21 @@ export default function Login() {
   const handleGoogle = async () => {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
       });
-      if (result.error) {
-        const { title, description } = translateAuthError(result.error);
+      if (error) {
+        const { title, description } = translateAuthError(error);
         toast({ variant: "destructive", title, description });
-        return;
+        setLoading(false);
       }
-      if (result.redirected) return;
-      const from = (location.state as { from?: string } | null)?.from ?? "/";
-      navigate(from, { replace: true });
-    } catch (err: any) {
+      // On success: browser redirects to Google → back to app; no need to navigate manually
+    } catch (err: unknown) {
       const { title, description } = translateAuthError(err);
       toast({ variant: "destructive", title, description });
-    } finally {
       setLoading(false);
     }
   };
