@@ -11,6 +11,7 @@ import {
   saveJourneyStepData,
   closeJourneyStep,
 } from "@/features/camino-paciente/services/journeyEngine";
+import { syncConsultationNote } from "@/features/camino-paciente/services/consultationNoteSync";
 
 const consultationSchema = z.object({
   anamnesis: z.string().trim().min(10, "La anamnesis debe tener al menos 10 caracteres").max(3000, "Máximo 3000 caracteres"),
@@ -35,10 +36,12 @@ interface Props {
   stepId: string;
   stepStatus: string;
   existingData: ConsultationData;
+  appointmentId?: string | null;
+  patientId?: string | null;
   onSaved?: () => void;
 }
 
-export default function ConsultationForm({ stepId, stepStatus, existingData, onSaved }: Props) {
+export default function ConsultationForm({ stepId, stepStatus, existingData, appointmentId, patientId, onSaved }: Props) {
   const [anamnesis, setAnamnesis] = useState(existingData.anamnesis ?? "");
   const [subjetivo, setSubjetivo] = useState(existingData.subjetivo ?? "");
   const [objetivo, setObjetivo] = useState(existingData.objetivo ?? "");
@@ -143,11 +146,23 @@ export default function ConsultationForm({ stepId, stepStatus, existingData, onS
       toast.error(s.error ?? "Error al guardar");
       return;
     }
+
+    // Sync to notas_consulta (patient expediente) — non-blocking, failure doesn't block closing
+    if (appointmentId && patientId) {
+      const syncResult = await syncConsultationNote(appointmentId, patientId, parsed.data as {
+        anamnesis: string; subjetivo: string; objetivo: string;
+        analisis: string; plan: string; diagnostico_principal: string;
+      });
+      if (!syncResult.ok) {
+        toast.error(`Nota guardada en camino, pero no en expediente: ${syncResult.error ?? "error"}`);
+      }
+    }
+
     const c = await closeJourneyStep(stepId);
     setClosing(false);
     if (!c.ok) toast.error(c.error ?? "Error al cerrar");
     else {
-      toast.success("Consulta cerrada. Siguiente hito abierto.");
+      toast.success("Consulta cerrada. Nota persistida en expediente.");
       onSaved?.();
     }
   };
