@@ -45,18 +45,19 @@ export default function ConfiguracionPagos() {
     const load = async () => {
       setLoading(true);
       const { data } = await supabase
-        .from("payment_gateway_config" as any)
+        .from("payment_gateway_config" as unknown as "appointments")
         .select("*")
         .eq("clinic_id", activeClinicId)
         .maybeSingle();
       if (data) {
-        setExistingId((data as any).id);
+        const cfg = data as Record<string, unknown>;
+        setExistingId(cfg.id as string);
         setForm({
-          proveedor: (data as any).proveedor ?? "stripe",
-          ambiente: (data as any).ambiente ?? "sandbox",
-          stripe_publishable_key: (data as any).stripe_publishable_key ?? "",
-          stripe_terminal_habilitado: (data as any).stripe_terminal_habilitado ?? false,
-          metodos_habilitados: (data as any).metodos_habilitados ?? ["card"],
+          proveedor: (cfg.proveedor as string | null) ?? "stripe",
+          ambiente: (cfg.ambiente as string | null) ?? "sandbox",
+          stripe_publishable_key: (cfg.stripe_publishable_key as string | null) ?? "",
+          stripe_terminal_habilitado: (cfg.stripe_terminal_habilitado as boolean | null) ?? false,
+          metodos_habilitados: (cfg.metodos_habilitados as string[] | null) ?? ["card"],
         });
       }
       setLoading(false);
@@ -99,8 +100,8 @@ export default function ConfiguracionPagos() {
     };
 
     const { error } = existingId
-      ? await supabase.from("payment_gateway_config" as any).update(payload).eq("id", existingId)
-      : await supabase.from("payment_gateway_config" as any).insert(payload);
+      ? await supabase.from("payment_gateway_config" as unknown as "appointments").update(payload).eq("id", existingId)
+      : await supabase.from("payment_gateway_config" as unknown as "appointments").insert(payload);
 
     setSaving(false);
     if (error) { toast.error("Error al guardar: " + error.message); return; }

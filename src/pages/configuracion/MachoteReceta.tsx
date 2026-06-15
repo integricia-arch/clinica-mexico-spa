@@ -106,7 +106,7 @@ export default function MachoteReceta() {
         setLoading(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [user, isAdmin]);
 
   const patch = (p: Partial<DoctorPrescriptionTemplate>) => {

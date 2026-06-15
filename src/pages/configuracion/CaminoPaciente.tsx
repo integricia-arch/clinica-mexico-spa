@@ -17,12 +17,56 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useJourneyTemplates, useJourneyVersion, type JourneyStep, type JourneyTemplate } from "@/features/camino-paciente/hooks/useJourneyData";
 import { STEP_TYPE_LABELS, TEMPLATE_TYPE_LABELS, APP_ROLES, CRITICAL_STEP_KEYS, STEP_KEY_LABELS } from "@/features/camino-paciente/lib/stepKeys";
-import { validateJourneyConfiguration } from "@/features/camino-paciente/lib/validateJourneyConfiguration";
+import { validateJourneyConfiguration, type StepLite } from "@/features/camino-paciente/lib/validateJourneyConfiguration";
 import { simulateJourney, SCENARIO_LABELS, type Scenario } from "@/features/camino-paciente/lib/simulateJourney";
 import { getAvailableOptionsForStep } from "@/features/camino-paciente/lib/getAvailableOptionsForStep";
 import { ConfigHealthBadge } from "@/features/camino-paciente/components/ConfigHealthBadge";
 import { friendlyError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+
+// Local row types for Supabase query results
+interface StepFieldRow {
+  id: string;
+  field_key: string;
+  field_label: string;
+  field_type: string;
+  is_required: boolean;
+  step_definition_id: string;
+  sort_order: number;
+}
+
+interface CatalogRow {
+  id: string;
+  catalog_name: string;
+  catalog_key: string;
+  applies_to_step_type: string | null;
+}
+
+interface CatalogItemRow {
+  id: string;
+  catalog_id: string;
+  option_label: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+interface RuleRow {
+  id: string;
+  rule_name: string;
+  source_step_key: string;
+  severity: "info" | "warning" | "blocking";
+  condition_json: { description?: string } | null;
+  action_json: { description?: string } | null;
+  is_active: boolean;
+}
+
+interface VersionRow {
+  id: string;
+  version_number: number;
+  status: "draft" | "active" | "archived";
+  publish_reason: string | null;
+  config_json: Record<string, unknown> | null;
+}
 
 export default function CaminoPacienteConfig() {
   const nav = useNavigate();
@@ -41,7 +85,7 @@ export default function CaminoPacienteConfig() {
   const [simulatorOpen, setSimulatorOpen] = useState(false);
   const [newTemplateOpen, setNewTemplateOpen] = useState(false);
 
-  const validation = useMemo(() => validateJourneyConfiguration(steps as any, []), [steps]);
+  const validation = useMemo(() => validateJourneyConfiguration(steps as StepLite[], []), [steps]);
 
   useEffect(() => {
     if (validation.status === "red" && selectedTemplate) {
@@ -242,7 +286,7 @@ export default function CaminoPacienteConfig() {
         onSaved={() => { setEditingStep(null); reloadVersion(); }}
       />
 
-      <SimulatorDialog open={simulatorOpen} onClose={() => setSimulatorOpen(false)} steps={steps as any} />
+      <SimulatorDialog open={simulatorOpen} onClose={() => setSimulatorOpen(false)} steps={steps as StepLite[]} />
 
       <NewTemplateDialog open={newTemplateOpen} onClose={() => setNewTemplateOpen(false)} onCreated={() => { setNewTemplateOpen(false); reloadTemplates(); }} />
     </div>
@@ -397,7 +441,7 @@ function RoleSelector({ label, selected, onToggle }: { label: string; selected: 
 function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
   const [stepId, setStepId] = useState<string>(steps[0]?.id ?? "");
   const currentStep = steps.find((s) => s.id === stepId) ?? steps[0];
-  const [fields, setFields] = useState<any[]>([]);
+  const [fields, setFields] = useState<StepFieldRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -405,11 +449,11 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
     if (!currentStep) return;
     setLoading(true);
     const { data } = await supabase.from("journey_step_fields").select("*").eq("step_definition_id", currentStep.id).order("sort_order");
-    setFields((data as any) ?? []);
+    setFields((data ?? []) as StepFieldRow[]);
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentStep?.id]);
+  useEffect(() => { load();   }, [currentStep?.id]);
 
   const available = currentStep ? getAvailableOptionsForStep(currentStep.step_key) : [];
   const existingKeys = new Set(fields.map((f) => f.field_key));
@@ -476,7 +520,7 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
                     step_definition_id: currentStep.id,
                     field_key: opt.key,
                     field_label: opt.label,
-                    field_type: opt.fieldType as any,
+                    field_type: opt.fieldType as string,
                     is_required: false,
                   });
                   if (error) toast.error(friendlyError(error));
@@ -499,23 +543,23 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
 
 /* ---------- Catalogs panel ---------- */
 function CatalogsPanel() {
-  const [catalogs, setCatalogs] = useState<any[]>([]);
-  const [items, setItems] = useState<Record<string, any[]>>({});
+  const [catalogs, setCatalogs] = useState<CatalogRow[]>([]);
+  const [items, setItems] = useState<Record<string, CatalogItemRow[]>>({});
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
     const { data: cats } = await supabase.from("journey_option_catalogs").select("*").order("catalog_name");
     const { data: its } = await supabase.from("journey_option_items").select("*").order("sort_order");
-    const map: Record<string, any[]> = {};
-    (its ?? []).forEach((i: any) => { (map[i.catalog_id] ??= []).push(i); });
-    setCatalogs((cats as any) ?? []);
+    const map: Record<string, CatalogItemRow[]> = {};
+    (its ?? []).forEach((i: CatalogItemRow) => { (map[i.catalog_id] ??= []).push(i); });
+    setCatalogs((cats ?? []) as CatalogRow[]);
     setItems(map);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
 
-  const toggleItem = async (it: any) => {
+  const toggleItem = async (it: CatalogItemRow) => {
     const { error } = await supabase.from("journey_option_items").update({ is_active: !it.is_active }).eq("id", it.id);
     if (error) toast.error(friendlyError(error)); else load();
   };
@@ -561,7 +605,7 @@ function CatalogsPanel() {
 
 /* ---------- Rules panel ---------- */
 function RulesPanel({ steps, versionId }: { steps: JourneyStep[]; versionId: string | null }) {
-  const [rules, setRules] = useState<any[]>([]);
+  const [rules, setRules] = useState<RuleRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [ruleName, setRuleName] = useState("");
@@ -574,10 +618,10 @@ function RulesPanel({ steps, versionId }: { steps: JourneyStep[]; versionId: str
     if (!versionId) return;
     setLoading(true);
     const { data } = await supabase.from("journey_validation_rules").select("*").eq("template_version_id", versionId).order("created_at");
-    setRules((data as any) ?? []);
+    setRules((data ?? []) as RuleRow[]);
     setLoading(false);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [versionId]);
+  useEffect(() => { load();   }, [versionId]);
 
   const stepKeys = new Set(steps.map((s) => s.step_key));
 
@@ -652,7 +696,7 @@ function RulesPanel({ steps, versionId }: { steps: JourneyStep[]; versionId: str
             <div><Label>Acción (en palabras)</Label><Input value={action} onChange={(e) => setAction(e.target.value)} placeholder="Ej. bloquear avance hasta cargar resultado" /></div>
             <div>
               <Label>Severidad</Label>
-              <Select value={severity} onValueChange={(v: any) => setSeverity(v)}>
+              <Select value={severity} onValueChange={(v: "info" | "warning" | "blocking") => setSeverity(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="info">Informativa</SelectItem>
@@ -671,7 +715,7 @@ function RulesPanel({ steps, versionId }: { steps: JourneyStep[]; versionId: str
 
 /* ---------- Versions panel ---------- */
 function VersionsPanel({ templateId, canPublish, onChange }: { templateId: string; canPublish: boolean; onChange: () => void }) {
-  const [versions, setVersions] = useState<any[]>([]);
+  const [versions, setVersions] = useState<VersionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [reason, setReason] = useState("");
 
@@ -682,10 +726,10 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
       .select("*")
       .eq("template_id", templateId)
       .order("version_number", { ascending: false });
-    setVersions((data as any) ?? []);
+    setVersions((data ?? []) as VersionRow[]);
     setLoading(false);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [templateId]);
+  useEffect(() => { load();   }, [templateId]);
 
   const createDraftFromActive = async () => {
     const active = versions.find((v) => v.status === "active");
@@ -702,7 +746,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
     // clone steps
     const { data: srcSteps } = await supabase.from("journey_step_definitions").select("*").eq("template_version_id", active.id);
     if (srcSteps && srcSteps.length > 0) {
-      const rows = srcSteps.map((s: any) => ({
+      const rows = srcSteps.map((s: Record<string, unknown>) => ({
         template_version_id: newVersion.id,
         step_key: s.step_key,
         step_name: s.step_name,
@@ -726,7 +770,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
     load(); onChange();
   };
 
-  const publish = async (v: any) => {
+  const publish = async (v: VersionRow) => {
     if (!canPublish) { toast.error("La configuración tiene errores; corrígelos antes de publicar."); return; }
     if (!reason.trim()) { toast.error("Indica el motivo del cambio"); return; }
 
@@ -740,7 +784,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
     load(); onChange();
   };
 
-  const restore = async (v: any) => {
+  const restore = async (v: VersionRow) => {
     if (!confirm(`¿Restaurar v${v.version_number} como activa? La actual será archivada.`)) return;
     await supabase.from("journey_template_versions").update({ status: "archived" }).eq("template_id", templateId).eq("status", "active");
     await supabase.from("journey_template_versions").update({ status: "active" }).eq("id", v.id);
@@ -794,7 +838,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
 }
 
 /* ---------- Simulator ---------- */
-function SimulatorDialog({ open, onClose, steps }: { open: boolean; onClose: () => void; steps: any[] }) {
+function SimulatorDialog({ open, onClose, steps }: { open: boolean; onClose: () => void; steps: StepLite[] }) {
   const [scenario, setScenario] = useState<Scenario>("normal");
   const result = useMemo(() => simulateJourney(steps, scenario), [steps, scenario]);
   return (
@@ -804,7 +848,7 @@ function SimulatorDialog({ open, onClose, steps }: { open: boolean; onClose: () 
         <div className="space-y-3">
           <div>
             <Label>Escenario</Label>
-            <Select value={scenario} onValueChange={(v: any) => setScenario(v)}>
+            <Select value={scenario} onValueChange={(v: Scenario) => setScenario(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {(Object.keys(SCENARIO_LABELS) as Scenario[]).map((k) => (
@@ -878,7 +922,7 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
     if (base?.active_version_id) {
       const { data: srcSteps } = await supabase.from("journey_step_definitions").select("*").eq("template_version_id", base.active_version_id);
       if (srcSteps && srcSteps.length > 0) {
-        const rows = srcSteps.map((s: any) => ({
+        const rows = srcSteps.map((s: Record<string, unknown>) => ({
           template_version_id: ver.id,
           step_key: s.step_key,
           step_name: s.step_name,
@@ -904,7 +948,7 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
         template_version_id: ver.id,
         step_key: k,
         step_name: STEP_KEY_LABELS[k] ?? k,
-        step_type: "clinica" as any,
+        step_type: "clinica" as string,
         step_order: i + 1,
         is_required: true,
         is_critical: true,
@@ -931,7 +975,7 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
           <div><Label>Nombre *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div>
             <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v: any) => setType(v)}>
+            <Select value={type} onValueChange={(v: keyof typeof TEMPLATE_TYPE_LABELS) => setType(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {(Object.keys(TEMPLATE_TYPE_LABELS) as Array<keyof typeof TEMPLATE_TYPE_LABELS>).map((k) => (

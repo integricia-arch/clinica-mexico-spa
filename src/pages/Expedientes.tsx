@@ -14,6 +14,29 @@ import NotaConsultaModal from "@/components/NotaConsultaModal";
 import PrescriptionEditorModal from "@/features/recetas/components/PrescriptionEditorModal";
 import { FileCheck2 } from "lucide-react";
 
+interface PersonaMini { id: string; nombre: string; apellidos: string; }
+interface DoctorMini extends PersonaMini { especialidad?: string; }
+interface PatientMini extends PersonaMini { tipo_sangre?: string | null; alergias?: string | null; }
+interface NotaConsulta {
+  id: string;
+  fecha_consulta: string;
+  subjetivo?: string | null;
+  objetivo?: string | null;
+  analisis?: string | null;
+  plan?: string | null;
+  diagnostico_principal?: string | null;
+  doctors?: { nombre: string; apellidos: string } | null;
+}
+interface Expediente {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  tipo: string;
+  updated_at: string;
+  patients?: PatientMini | null;
+  doctors?: DoctorMini | null;
+}
+
 const TIPO_LABELS: Record<string, string> = {
   primera_vez: "Primera vez", seguimiento: "Seguimiento",
   urgencia: "Urgencia", cirugia: "Cirugía", cronico: "Crónico",
@@ -24,20 +47,20 @@ export default function Expedientes() {
   const { toast } = useToast();
   const canWrite = hasRole("admin") || hasRole("doctor");
 
-  const [expedientes, setExpedientes] = useState<any[]>([]);
+  const [expedientes, setExpedientes] = useState<Expediente[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [notas, setNotas] = useState<Record<string, any[]>>({});
+  const [notas, setNotas] = useState<Record<string, NotaConsulta[]>>({});
   const [notaModal, setNotaModal] = useState(false);
-  const [notaSelected, setNotaSelected] = useState<any | null>(null);
+  const [notaSelected, setNotaSelected] = useState<NotaConsulta | null>(null);
   const [currentExpId, setCurrentExpId] = useState<string>("");
   const [currentDoctorId, setCurrentDoctorId] = useState<string>("");
   const [rxModal, setRxModal] = useState(false);
   const [rxContext, setRxContext] = useState<{ patientId: string; doctorId: string; expedienteId: string; consultationNoteId?: string; diagnosis?: string } | null>(null);
   const [newExpModal, setNewExpModal] = useState(false);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [doctors, setDoctors] = useState<any[]>([]);
+  const [patients, setPatients] = useState<PersonaMini[]>([]);
+  const [doctors, setDoctors] = useState<DoctorMini[]>([]);
   const [newExpForm, setNewExpForm] = useState({ patient_id: "", doctor_id: "", tipo: "primera_vez" });
   const [saving, setSaving] = useState(false);
 
@@ -55,8 +78,8 @@ export default function Expedientes() {
         "select=*,patients(nombre,apellidos,tipo_sangre,alergias),doctors(nombre,apellidos,especialidad)&activo=eq.true&order=updated_at.desc"
       );
       setExpedientes(data ?? []);
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Error", description: e.message });
+    } catch (e: unknown) {
+      toast({ variant: "destructive", title: "Error", description: e instanceof Error ? e.message : "Error inesperado" });
     }
     setLoading(false);
   }
@@ -109,21 +132,21 @@ export default function Expedientes() {
       setExpedientes((e) => [{ ...exp, patients: patient, doctors: doctor }, ...e]);
       setNewExpModal(false);
       toast({ title: "Expediente creado" });
-    } catch (e: any) {
-      const msg = e.message?.includes("23505") ? "Este paciente ya tiene un expediente" : e.message;
+    } catch (e: unknown) {
+      const msg = e instanceof Error && e.message?.includes("23505") ? "Este paciente ya tiene un expediente" : (e instanceof Error ? e.message : "Error inesperado");
       toast({ variant: "destructive", title: "Error", description: msg });
     }
     setSaving(false);
   }
 
-  function openNota(expId: string, doctorId: string, nota?: any) {
+  function openNota(expId: string, doctorId: string, nota?: NotaConsulta) {
     setCurrentExpId(expId);
     setCurrentDoctorId(doctorId);
     setNotaSelected(nota ?? null);
     setNotaModal(true);
   }
 
-  function handleNotaSaved(n: any) {
+  function handleNotaSaved(n: NotaConsulta) {
     const doc = doctors.find((d) => d.id === currentDoctorId);
     const enriched = { ...n, doctors: doc ? { nombre: doc.nombre, apellidos: doc.apellidos } : { nombre: "", apellidos: "" } };
     setNotas((prev) => {

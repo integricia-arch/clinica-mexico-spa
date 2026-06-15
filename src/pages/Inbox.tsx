@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,7 +48,7 @@ interface Mensaje {
   created_at: string;
 }
 
-const CANAL_META: Record<CanalTipo, { label: string; Icon: any; color: string }> = {
+const CANAL_META: Record<CanalTipo, { label: string; Icon: React.ElementType; color: string }> = {
   telegram: { label: "Telegram", Icon: Send, color: "text-sky-500 bg-sky-500/10" },
   whatsapp: { label: "WhatsApp", Icon: Phone, color: "text-emerald-500 bg-emerald-500/10" },
   instagram: { label: "Instagram", Icon: Instagram, color: "text-pink-500 bg-pink-500/10" },
@@ -83,7 +83,7 @@ export default function Inbox() {
   const [filter, setFilter] = useState<"todas" | ConvStatus>("escalada");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mensajes, setMensajes] = useState<any[]>([]);
+  const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [showTechnical, setShowTechnical] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reply, setReply] = useState("");
@@ -110,11 +110,11 @@ export default function Inbox() {
         .select("conversacion_id, contenido, created_at")
         .in("conversacion_id", ids)
         .order("created_at", { ascending: false });
-      (msgs ?? []).forEach((m: any) => {
+      (msgs ?? []).forEach((m) => {
         if (!previews[m.conversacion_id]) previews[m.conversacion_id] = m.contenido;
       });
     }
-    setConversaciones((data ?? []).map((c: any) => ({ ...c, ultimo_mensaje: previews[c.id] ?? "" })));
+    setConversaciones((data ?? []).map((c) => ({ ...c, ultimo_mensaje: previews[c.id] ?? "" })) as Conversacion[]);
     setLoading(false);
   };
 
@@ -390,7 +390,7 @@ export default function Inbox() {
                 const isUser = m.rol === "user";
                 const isAssist = m.rol === "assistant";
                 const isTech = m.rol === "tool" || m.rol === "system";
-                const isHuman = isAssist && (m as any).raw_payload?.sent_by_human === true;
+                const isHuman = isAssist && (m as Mensaje & { raw_payload?: { sent_by_human?: boolean } }).raw_payload?.sent_by_human === true;
                 return (
                   <div
                     key={m.id}

@@ -34,11 +34,12 @@ export interface PatientStudy {
   updated_at: string;
 }
 
-const TBL = "patient_studies" as const;
+// patient_studies is not yet in the generated Supabase types — suppress until regenerated
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tbl = (name: string) => supabase.from(name as any);
 
 export async function listStudiesByPatient(patientId: string): Promise<PatientStudy[]> {
-  const { data, error } = await supabase
-    .from(TBL as any)
+  const { data, error } = await tbl("patient_studies")
     .select("*")
     .eq("patient_id", patientId)
     .order("solicitado_at", { ascending: false });
@@ -47,8 +48,7 @@ export async function listStudiesByPatient(patientId: string): Promise<PatientSt
 }
 
 export async function listStudiesByJourney(journeyId: string): Promise<PatientStudy[]> {
-  const { data, error } = await supabase
-    .from(TBL as any)
+  const { data, error } = await tbl("patient_studies")
     .select("*")
     .eq("journey_instance_id", journeyId)
     .order("solicitado_at", { ascending: false });
@@ -75,15 +75,16 @@ export async function requestStudy(input: {
   justificacion_repeticion?: string | null;
 }): Promise<PatientStudy> {
   const { data: u } = await supabase.auth.getUser();
-  const { data, error } = await supabase
-    .from(TBL as any)
-    .insert({
-      ...input,
-      prioridad: input.prioridad ?? "rutina",
-      requiere_ayuno: input.requiere_ayuno ?? false,
-      status: "solicitado",
-      solicitado_por: u.user?.id ?? null,
-    } as any)
+  const payload = {
+    ...input,
+    prioridad: input.prioridad ?? "rutina",
+    requiere_ayuno: input.requiere_ayuno ?? false,
+    status: "solicitado",
+    solicitado_por: u.user?.id ?? null,
+  };
+  const { data, error } = await tbl("patient_studies")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert(payload as any)
     .select("*")
     .single();
   if (error) throw error;
@@ -100,14 +101,15 @@ export async function registerStudyResult(
   },
 ): Promise<PatientStudy> {
   const { data: u } = await supabase.auth.getUser();
-  const { data, error } = await supabase
-    .from(TBL as any)
-    .update({
-      ...payload,
-      status: "recibido",
-      recibido_at: new Date().toISOString(),
-      recibido_por: u.user?.id ?? null,
-    } as any)
+  const updatePayload = {
+    ...payload,
+    status: "recibido",
+    recibido_at: new Date().toISOString(),
+    recibido_por: u.user?.id ?? null,
+  };
+  const { data, error } = await tbl("patient_studies")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(updatePayload as any)
     .eq("id", studyId)
     .select("*")
     .single();
@@ -120,14 +122,15 @@ export async function reviewStudy(
   payload: { interpretacion_medica: string },
 ): Promise<PatientStudy> {
   const { data: u } = await supabase.auth.getUser();
-  const { data, error } = await supabase
-    .from(TBL as any)
-    .update({
-      interpretacion_medica: payload.interpretacion_medica,
-      status: "revisado",
-      revisado_at: new Date().toISOString(),
-      revisado_por: u.user?.id ?? null,
-    } as any)
+  const updatePayload = {
+    interpretacion_medica: payload.interpretacion_medica,
+    status: "revisado",
+    revisado_at: new Date().toISOString(),
+    revisado_por: u.user?.id ?? null,
+  };
+  const { data, error } = await tbl("patient_studies")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(updatePayload as any)
     .eq("id", studyId)
     .select("*")
     .single();

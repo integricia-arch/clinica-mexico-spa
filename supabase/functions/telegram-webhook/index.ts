@@ -1548,7 +1548,7 @@ async function cargarHistorialParaAnthropic(conversacionId: string) {
   const { data } = await supabase.from("mensajes").select("rol, contenido")
     .eq("conversacion_id", conversacionId).in("rol", ["user", "assistant"])
     .order("created_at", { ascending: false }).limit(40);
-  let messages = (data ?? []).reverse().map((m: any) => ({ role: m.rol, content: m.contenido ?? "" }));
+  const messages = (data ?? []).reverse().map((m: any) => ({ role: m.rol, content: m.contenido ?? "" }));
   while (messages.length > 0 && messages[0].role !== "user") messages.shift();
   return messages;
 }

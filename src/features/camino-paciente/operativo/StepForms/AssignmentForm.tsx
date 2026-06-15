@@ -9,12 +9,17 @@ import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-pacient
 import type { StepFormProps } from "./_shared";
 import { isClosed } from "./_shared";
 
+interface DoctorRow { id: string; nombre: string; apellidos: string; }
+interface RoomRow { id: string; nombre: string; }
+interface ServicioRow { id: string; nombre: string; }
+interface ApptIds { doctor_id: string | null; room_id: string | null; servicio_id: string | null; }
+
 export default function AssignmentForm({
   stepId, stepStatus, appointmentId, existingData, onSaved,
 }: StepFormProps) {
-  const [doctors, setDoctors] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [servicios, setServicios] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<DoctorRow[]>([]);
+  const [rooms, setRooms] = useState<RoomRow[]>([]);
+  const [servicios, setServicios] = useState<ServicioRow[]>([]);
   const [doctorId, setDoctorId] = useState<string>(existingData.doctor_id ?? "");
   const [roomId, setRoomId] = useState<string>(existingData.room_id ?? "");
   const [servicioId, setServicioId] = useState<string>(existingData.servicio_id ?? "");
@@ -29,13 +34,13 @@ export default function AssignmentForm({
         supabase.from("servicios").select("id,nombre").eq("activo", true).order("nombre"),
         appointmentId
           ? supabase.from("appointments").select("doctor_id,room_id,servicio_id").eq("id", appointmentId).maybeSingle()
-          : Promise.resolve({ data: null } as any),
+          : Promise.resolve({ data: null as ApptIds | null }),
       ]);
       setDoctors(d.data ?? []);
       setRooms(r.data ?? []);
       setServicios(s.data ?? []);
-      if ((appt as any)?.data) {
-        const d2 = (appt as any).data;
+      if (appt.data) {
+        const d2 = appt.data;
         if (!doctorId && d2.doctor_id) setDoctorId(d2.doctor_id);
         if (!roomId && d2.room_id) setRoomId(d2.room_id);
         if (!servicioId && d2.servicio_id) setServicioId(d2.servicio_id);

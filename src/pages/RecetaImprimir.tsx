@@ -26,27 +26,28 @@ export default function RecetaImprimir() {
         if (error) throw error;
         if (!rx) throw new Error("Receta no encontrada");
 
+        const rxd = rx as Record<string, unknown>;
         const [docRes, patRes, itemsRes] = await Promise.all([
-          supabase.from("doctors").select("nombre, apellidos, especialidad, cedula_profesional").eq("id", (rx as any).doctor_id).maybeSingle(),
-          supabase.from("patients").select("nombre, apellidos, fecha_nacimiento, sexo").eq("id", (rx as any).patient_id).maybeSingle(),
+          supabase.from("doctors").select("nombre, apellidos, especialidad, cedula_profesional").eq("id", rxd.doctor_id as string).maybeSingle(),
+          supabase.from("patients").select("nombre, apellidos, fecha_nacimiento, sexo").eq("id", rxd.patient_id as string).maybeSingle(),
           supabase.from("prescription_items").select("*").eq("prescription_id", id),
         ]);
 
-        const tpl = (rx as any).template_snapshot_json ?? null;
+        const tpl = (rxd.template_snapshot_json as { logo_path?: string | null; firma_path?: string | null } | null) ?? null;
         const [logoUrl, firmaUrl] = await Promise.all([
           getAssetSignedUrl(tpl?.logo_path ?? null),
           getAssetSignedUrl(tpl?.firma_path ?? null),
         ]);
 
         setData({
-          number: (rx as any).prescription_number || "—",
-          issue_date: (rx as any).issue_date,
-          diagnosis: (rx as any).diagnosis,
-          notes: (rx as any).notes,
-          qr_code_value: (rx as any).qr_code_value,
-          doctor: (docRes.data as any) ?? { nombre: "", apellidos: "", especialidad: "", cedula_profesional: null },
-          patient: (patRes.data as any) ?? { nombre: "", apellidos: "", fecha_nacimiento: null, sexo: null },
-          items: (itemsRes.data as any) ?? [],
+          number: (rxd.prescription_number as string | null) || "—",
+          issue_date: rxd.issue_date as string | null,
+          diagnosis: rxd.diagnosis as string | null,
+          notes: rxd.notes as string | null,
+          qr_code_value: rxd.qr_code_value as string | null,
+          doctor: docRes.data ?? { nombre: "", apellidos: "", especialidad: "", cedula_profesional: null },
+          patient: patRes.data ?? { nombre: "", apellidos: "", fecha_nacimiento: null, sexo: null },
+          items: (itemsRes.data as PrescriptionPrintData["items"]) ?? [],
           template: tpl,
           logoUrl,
           firmaUrl,

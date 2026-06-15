@@ -92,16 +92,18 @@ export default function NotaCreditoDialog({ open, onOpenChange, onSuccess, origi
 
   const loadReceptor = async () => {
     if (!activeClinicId || !originDoc.rfc_receptor) return;
-    const { data } = await supabase
-      .from("cfdi_receptores" as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
+      .from("cfdi_receptores")
       .select("regimen_fiscal, domicilio_fiscal_cp, uso_cfdi_defecto")
       .eq("clinic_id", activeClinicId)
       .eq("rfc", originDoc.rfc_receptor)
-      .maybeSingle();
+      .maybeSingle() as { data: Record<string, unknown> | null };
     if (data) {
-      setRegimenFiscal((data as any).regimen_fiscal ?? "616");
-      setDomicilioFiscalCp((data as any).domicilio_fiscal_cp ?? "");
-      setUsoCfdi((data as any).uso_cfdi_defecto ?? "G03");
+      const rec = data as Record<string, unknown>;
+      setRegimenFiscal((rec.regimen_fiscal as string | null) ?? "616");
+      setDomicilioFiscalCp((rec.domicilio_fiscal_cp as string | null) ?? "");
+      setUsoCfdi((rec.uso_cfdi_defecto as string | null) ?? "G03");
     }
   };
 
@@ -190,8 +192,8 @@ export default function NotaCreditoDialog({ open, onOpenChange, onSuccess, origi
 
       onSuccess(result.cfdi_id, result.uuid_fiscal);
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err.message ?? "Error al emitir nota de crédito");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al emitir nota de crédito");
     } finally {
       setTimbrado(false);
     }

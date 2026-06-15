@@ -118,20 +118,22 @@ export default function TimbrarCFDIDialog({
   const loadReceptorByRfc = async (rfc: string) => {
     if (!activeClinicId || !rfc) return;
     setBuscandoRfc(true);
-    const { data } = await supabase
-      .from("cfdi_receptores" as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
+      .from("cfdi_receptores")
       .select("*")
       .eq("clinic_id", activeClinicId)
       .eq("rfc", rfc.toUpperCase().trim())
-      .maybeSingle();
+      .maybeSingle() as { data: Record<string, unknown> | null };
     if (data) {
+      const rec = data as Record<string, unknown>;
       setReceptor({
-        rfc:                 (data as any).rfc,
-        nombre:              (data as any).nombre,
-        regimen_fiscal:      (data as any).regimen_fiscal,
-        domicilio_fiscal_cp: (data as any).domicilio_fiscal_cp,
-        uso_cfdi:            (data as any).uso_cfdi_defecto ?? "S01",
-        email:               (data as any).email_envio ?? "",
+        rfc:                 rec.rfc as string,
+        nombre:              rec.nombre as string,
+        regimen_fiscal:      rec.regimen_fiscal as string,
+        domicilio_fiscal_cp: rec.domicilio_fiscal_cp as string,
+        uso_cfdi:            (rec.uso_cfdi_defecto as string | null) ?? "S01",
+        email:               (rec.email_envio as string | null) ?? "",
       });
     } else {
       setReceptor((prev) => ({ ...prev, rfc: rfc.toUpperCase().trim() }));
@@ -226,8 +228,8 @@ export default function TimbrarCFDIDialog({
 
       onSuccess(result.cfdi_id, result.uuid_fiscal);
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err.message ?? "Error al timbrar CFDI");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al timbrar CFDI");
     } finally {
       setTimbrado(false);
     }

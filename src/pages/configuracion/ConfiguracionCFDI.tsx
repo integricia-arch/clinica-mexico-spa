@@ -85,29 +85,31 @@ export default function ConfiguracionCFDI() {
     const load = async () => {
       setLoading(true);
       const { data } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .from("cfdi_config" as any)
         .select("id, rfc, razon_social, regimen_fiscal, domicilio_fiscal_cp, serie_defecto, pac_proveedor, pac_ambiente, pac_usuario, csd_cer_nombre, csd_key_nombre, csd_cer_path, csd_key_path, iva_default, zona_fronteriza")
         .eq("clinic_id", activeClinicId)
         .maybeSingle();
       if (data) {
-        setExistingId((data as any).id);
+        const row = data as Record<string, unknown>;
+        setExistingId(row.id as string);
         setForm({
-          rfc: (data as any).rfc ?? "",
-          razon_social: (data as any).razon_social ?? "",
-          regimen_fiscal: (data as any).regimen_fiscal ?? "601",
-          domicilio_fiscal_cp: (data as any).domicilio_fiscal_cp ?? "",
-          serie_defecto: (data as any).serie_defecto ?? "A",
-          pac_proveedor: (data as any).pac_proveedor ?? "facturama",
-          pac_ambiente: (data as any).pac_ambiente ?? "sandbox",
-          pac_usuario: (data as any).pac_usuario ?? "",
+          rfc: (row.rfc as string) ?? "",
+          razon_social: (row.razon_social as string) ?? "",
+          regimen_fiscal: (row.regimen_fiscal as string) ?? "601",
+          domicilio_fiscal_cp: (row.domicilio_fiscal_cp as string) ?? "",
+          serie_defecto: (row.serie_defecto as string) ?? "A",
+          pac_proveedor: (row.pac_proveedor as string) ?? "facturama",
+          pac_ambiente: (row.pac_ambiente as string) ?? "sandbox",
+          pac_usuario: (row.pac_usuario as string) ?? "",
           pac_contrasena: "",
-          csd_cer_nombre: (data as any).csd_cer_nombre ?? "",
-          csd_key_nombre: (data as any).csd_key_nombre ?? "",
-          csd_cer_path: (data as any).csd_cer_path ?? "",
-          csd_key_path: (data as any).csd_key_path ?? "",
+          csd_cer_nombre: (row.csd_cer_nombre as string) ?? "",
+          csd_key_nombre: (row.csd_key_nombre as string) ?? "",
+          csd_cer_path: (row.csd_cer_path as string) ?? "",
+          csd_key_path: (row.csd_key_path as string) ?? "",
           csd_contrasena: "",
-          iva_default: String((data as any).iva_default ?? "0.16"),
-          zona_fronteriza: (data as any).zona_fronteriza ?? false,
+          iva_default: String(row.iva_default ?? "0.16"),
+          zona_fronteriza: (row.zona_fronteriza as boolean) ?? false,
         });
       }
       setLoading(false);
@@ -147,8 +149,8 @@ export default function ConfiguracionCFDI() {
           if (upErr) throw new Error("Error subiendo .key: " + upErr.message);
           keyPath = path;
         }
-      } catch (err: any) {
-        toast.error(err.message);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : String(err));
         setSaving(false);
         setUploadingCsd(false);
         return;
@@ -156,7 +158,7 @@ export default function ConfiguracionCFDI() {
       setUploadingCsd(false);
     }
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       clinic_id: activeClinicId,
       rfc: form.rfc.toUpperCase().trim(),
       razon_social: form.razon_social.trim(),
@@ -176,7 +178,9 @@ export default function ConfiguracionCFDI() {
     };
 
     const { error } = existingId
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ? await supabase.from("cfdi_config" as any).update(payload).eq("id", existingId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       : await supabase.from("cfdi_config" as any).insert(payload);
 
     if (error) { setSaving(false); toast.error("Error al guardar: " + error.message); return; }

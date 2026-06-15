@@ -23,7 +23,7 @@ export interface JourneyInstanceFull {
   appointment_id: string | null;
   patient_id: string | null;
   status: string;
-  snapshot_json: any;
+  snapshot_json: Record<string, unknown> | null;
   template_id: string;
   template_version_id: string;
   updated_at: string;
@@ -36,8 +36,8 @@ export interface UseJourneyInstanceState {
   instance: JourneyInstanceFull | null;
   steps: JourneyStep[];
   stepData: Record<string, Record<string, unknown>>;
-  pendingOverrides: any[];
-  audit: any[];
+  pendingOverrides: Record<string, unknown>[];
+  audit: Record<string, unknown>[];
   reload: () => Promise<void>;
 }
 
@@ -47,8 +47,8 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
   const [instance, setInstance] = useState<JourneyInstanceFull | null>(null);
   const [steps, setSteps] = useState<JourneyStep[]>([]);
   const [stepData, setStepData] = useState<Record<string, Record<string, unknown>>>({});
-  const [pendingOverrides, setPendingOverrides] = useState<any[]>([]);
-  const [audit, setAudit] = useState<any[]>([]);
+  const [pendingOverrides, setPendingOverrides] = useState<Record<string, unknown>[]>([]);
+  const [audit, setAudit] = useState<Record<string, unknown>[]>([]);
 
   const load = useCallback(async () => {
     if (!journeyId) return;
@@ -75,27 +75,27 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
           .limit(50),
       ]);
 
-      if (inst.status === "fulfilled" && inst.value.data) setInstance(inst.value.data as any);
+      if (inst.status === "fulfilled" && inst.value.data) setInstance(inst.value.data as unknown as JourneyInstanceFull);
       const stepsArr = st.status === "fulfilled" ? (st.value.data ?? []) : [];
-      setSteps(stepsArr as any);
+      setSteps(stepsArr as unknown as JourneyStep[]);
 
       if (stepsArr.length) {
-        const ids = stepsArr.map((s: any) => s.id);
+        const ids = (stepsArr as Array<{ id: string }>).map((s) => s.id);
         const { data: sd } = await supabase
           .from("journey_instance_step_data")
           .select("journey_instance_step_id, data_json")
           .in("journey_instance_step_id", ids);
         const map: Record<string, Record<string, unknown>> = {};
-        (sd ?? []).forEach((r: any) => {
-          map[r.journey_instance_step_id] = r.data_json ?? {};
+        (sd ?? []).forEach((r) => {
+          map[r.journey_instance_step_id] = (r.data_json as Record<string, unknown> | null) ?? {};
         });
         setStepData(map);
       }
 
       if (ovr.status === "fulfilled") setPendingOverrides(ovr.value.data ?? []);
       if (au.status === "fulfilled") setAudit(au.value.data ?? []);
-    } catch (e: any) {
-      setError(e?.message ?? "Error cargando camino");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error cargando camino");
     } finally {
       setLoading(false);
     }

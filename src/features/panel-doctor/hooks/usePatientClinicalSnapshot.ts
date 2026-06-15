@@ -2,11 +2,48 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { listStudiesByPatient, type PatientStudy } from "../services/studiesService";
 
+export interface PatientRow {
+  id?: string;
+  nombre?: string | null;
+  apellidos?: string | null;
+  fecha_nacimiento?: string | null;
+  sexo?: string | null;
+  telefono?: string | null;
+  tipo_sangre?: string | null;
+  alergias?: string | null;
+  notas?: string | null;
+  contacto_emergencia_nombre?: string | null;
+  contacto_emergencia_telefono?: string | null;
+  [key: string]: unknown;
+}
+export interface ExpedienteRow {
+  id?: string;
+  patient_id?: string | null;
+  doctor_id?: string | null;
+  [key: string]: unknown;
+}
+export interface NotaRow {
+  id?: string;
+  expediente_id?: string | null;
+  fecha_consulta?: string | null;
+  diagnostico_principal?: string | null;
+  subjetivo?: string | null;
+  [key: string]: unknown;
+}
+export interface RecetaRow {
+  id?: string;
+  prescription_number?: string | null;
+  created_at?: string | null;
+  status?: string | null;
+  diagnosis?: string | null;
+  [key: string]: unknown;
+}
+
 export interface PatientSnapshot {
-  patient: any | null;
-  expediente: any | null;
-  notas: any[];
-  recetas: any[];
+  patient: PatientRow | null;
+  expediente: ExpedienteRow | null;
+  notas: NotaRow[];
+  recetas: RecetaRow[];
   studies: PatientStudy[];
   loading: boolean;
   error: string | null;
@@ -14,10 +51,10 @@ export interface PatientSnapshot {
 }
 
 export function usePatientClinicalSnapshot(patientId: string | null, doctorId: string | null): PatientSnapshot {
-  const [patient, setPatient] = useState<any | null>(null);
-  const [expediente, setExpediente] = useState<any | null>(null);
-  const [notas, setNotas] = useState<any[]>([]);
-  const [recetas, setRecetas] = useState<any[]>([]);
+  const [patient, setPatient] = useState<PatientRow | null>(null);
+  const [expediente, setExpediente] = useState<ExpedienteRow | null>(null);
+  const [notas, setNotas] = useState<NotaRow[]>([]);
+  const [recetas, setRecetas] = useState<RecetaRow[]>([]);
   const [studies, setStudies] = useState<PatientStudy[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,25 +91,25 @@ export function usePatientClinicalSnapshot(patientId: string | null, doctorId: s
           .limit(10),
         listStudiesByPatient(patientId),
       ]);
-      setPatient(p.data ?? null);
-      const exp = (e as any)?.data ?? null;
+      setPatient(p.data as PatientRow ?? null);
+      const exp = (e.data as ExpedienteRow) ?? null;
       setExpediente(exp);
-      setRecetas((r.data ?? []) as any[]);
+      setRecetas((r.data ?? []) as RecetaRow[]);
       setStudies(st);
 
       if (exp?.id) {
         const { data: n } = await supabase
           .from("notas_consulta")
           .select("*")
-          .eq("expediente_id", exp.id)
+          .eq("expediente_id", exp.id as string)
           .order("fecha_consulta", { ascending: false })
           .limit(10);
-        setNotas((n ?? []) as any[]);
+        setNotas((n ?? []) as NotaRow[]);
       } else {
         setNotas([]);
       }
-    } catch (err: any) {
-      setError(err?.message ?? "Error cargando contexto");
+    } catch (err: unknown) {
+      setError((err as { message?: string })?.message ?? "Error cargando contexto");
     } finally {
       setLoading(false);
     }

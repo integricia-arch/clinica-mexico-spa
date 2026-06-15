@@ -103,7 +103,7 @@ export default function Citas() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchCitas(); /* eslint-disable-next-line */ }, [from, to, doctorFilter]);
+  useEffect(() => { fetchCitas();   }, [from, to, doctorFilter]);
 
   const filtered = useMemo(
     () => citas.filter((c) => statusFilter.has(c.status)),

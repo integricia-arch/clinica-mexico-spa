@@ -35,6 +35,17 @@ const statusColor: Record<string, string> = {
   liberada: "bg-muted text-muted-foreground",
 };
 
+type CitaRow = {
+  id: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  status: string;
+  doctor_confirmation_status?: string;
+  doctor_confirmation_reason?: string | null;
+  doctors?: { nombre: string; apellidos: string } | null;
+  patients?: { nombre: string; apellidos: string; telefono?: string | null } | null;
+};
+
 type ConvRow = {
   id: string;
   status: string;
@@ -54,10 +65,10 @@ type ConvRow = {
 export default function RecepcionDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ citasHoy: 0, pendientes: 0, confirmadas: 0 });
-  const [citas, setCitas] = useState<any[]>([]);
+  const [citas, setCitas] = useState<CitaRow[]>([]);
   const [convs, setConvs] = useState<ConvRow[]>([]);
-  const [doctorPending, setDoctorPending] = useState<any[]>([]);
-  const [doctorDeclined, setDoctorDeclined] = useState<any[]>([]);
+  const [doctorPending, setDoctorPending] = useState<CitaRow[]>([]);
+  const [doctorDeclined, setDoctorDeclined] = useState<CitaRow[]>([]);
   const [doctorCallsPending, setDoctorCallsPending] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
@@ -111,9 +122,9 @@ export default function RecepcionDashboard() {
       pendientes: pendingRes.count ?? 0,
       confirmadas: confirmedRes.count ?? 0,
     });
-    setCitas(listRes.data ?? []);
+    setCitas((listRes.data ?? []) as CitaRow[]);
     // identidades_canal vuelve como array si la FK es ambigua; normalizamos
-    let convsNorm = (convRes.data ?? []).map((c: any) => {
+    let convsNorm = (convRes.data ?? []).map((c: ConvRow & { identidades_canal: ConvRow["identidades_canal"] | ConvRow["identidades_canal"][] }) => {
       const ic = Array.isArray(c.identidades_canal) ? c.identidades_canal[0] : c.identidades_canal;
       return { ...c, identidades_canal: ic ?? { display_name: null, patient_id: null, canal_id: "" }, patients: null };
     }) as ConvRow[];
@@ -123,16 +134,16 @@ export default function RecepcionDashboard() {
     if (patientIds.length) {
       const { data: pats } = await supabase
         .from("patients").select("id, nombre, apellidos").in("id", patientIds);
-      const byId = new Map((pats ?? []).map((p: any) => [p.id, p]));
+      const byId = new Map((pats ?? []).map((p) => [p.id, p]));
       convsNorm = convsNorm.map((c) => {
         const pid = c.identidades_canal.patient_id;
-        if (pid && byId.has(pid)) return { ...c, patients: byId.get(pid) as any };
+        if (pid && byId.has(pid)) return { ...c, patients: byId.get(pid) as ConvRow["patients"] };
         return c;
       });
     }
     setConvs(convsNorm);
-    setDoctorPending(docPendRes.data ?? []);
-    setDoctorDeclined(docDeclRes.data ?? []);
+    setDoctorPending((docPendRes.data ?? []) as CitaRow[]);
+    setDoctorDeclined((docDeclRes.data ?? []) as CitaRow[]);
     setDoctorCallsPending(callsRes.count ?? 0);
     setLoading(false);
   }
@@ -291,7 +302,7 @@ export default function RecepcionDashboard() {
             <h2 className="text-display font-semibold text-card-foreground">Pendientes de confirmar por doctor</h2>
           </div>
           <div className="divide-y divide-border">
-            {doctorPending.map((a: any) => (
+            {doctorPending.map((a) => (
               <div key={a.id}
                 onClick={() => navigate(`/cita/${a.id}`)}
                 className="flex items-center gap-4 px-5 py-3 hover:bg-muted/50 cursor-pointer">
@@ -317,7 +328,7 @@ export default function RecepcionDashboard() {
             <h2 className="text-display font-semibold text-card-foreground">Rechazadas por doctor · requieren reasignación</h2>
           </div>
           <div className="divide-y divide-border">
-            {doctorDeclined.map((a: any) => (
+            {doctorDeclined.map((a) => (
               <div key={a.id}
                 onClick={() => navigate(`/cita/${a.id}`)}
                 className="flex items-start gap-4 px-5 py-3 hover:bg-muted/50 cursor-pointer">

@@ -66,6 +66,15 @@ interface DoctorRow {
   duracion_cita_min?: number;
 }
 
+// Typed envelope returned by the admin-users edge function
+interface AdminUsersPayload {
+  error?: string;
+  users?: UsuarioRow[];
+  user_id?: string;
+  updated?: number;
+  skipped?: number;
+}
+
 export default function AdminUsuarios() {
   const { activeClinicId } = useActiveClinic();
   const [loading, setLoading] = useState(true);
@@ -109,11 +118,12 @@ export default function AdminUsuarios() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("admin-users", { body: { action: "list" } });
-      if (error || (data as any)?.error) {
+      const payload = data as AdminUsersPayload | null;
+      if (error || payload?.error) {
         toast.error("No se pudieron cargar los usuarios");
         return;
       }
-      setUsers(((data as any)?.users ?? []) as UsuarioRow[]);
+      setUsers((payload?.users ?? []) as UsuarioRow[]);
     } catch {
       toast.error("Error al conectar con el servidor");
     } finally {
@@ -214,15 +224,16 @@ export default function AdminUsuarios() {
       const { data, error } = await supabase.functions.invoke("admin-users", {
         body: { action: "toggle_role", user_id: user.id, role, has, clinic_id: activeClinicId },
       });
-      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || "Error");
+      const payload = data as AdminUsersPayload | null;
+      if (error || payload?.error) throw new Error(payload?.error || error?.message || "Error");
       setUsers((prev) => prev.map((u) =>
         u.id === user.id
           ? { ...u, roles: has ? u.roles.filter((r) => r !== role) : [...u.roles, role] }
           : u
       ));
       toast.success(has ? `Rol "${ROLE_LABELS[role]}" removido` : `Rol "${ROLE_LABELS[role]}" asignado`);
-    } catch (err: any) {
-      toast.error(err.message || "No se pudo actualizar el rol");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "No se pudo actualizar el rol");
     } finally {
       setBusyUser(null);
     }
@@ -249,13 +260,14 @@ export default function AdminUsuarios() {
     const { data, error } = await supabase.functions.invoke("admin-users", {
       body: { action: "create", email: createEmail, password: createPassword, roles: [createRole] },
     });
-    if (error || (data as any)?.error) {
+    const createPayload = data as AdminUsersPayload | null;
+    if (error || createPayload?.error) {
       setCreating(false);
-      toast.error((data as any)?.error || "No se pudo crear el usuario");
+      toast.error(createPayload?.error || "No se pudo crear el usuario");
       return;
     }
     if (["admin", "manager"].includes(createRole) && createPin) {
-      const newUserId = (data as any)?.user_id;
+      const newUserId = createPayload?.user_id;
       if (newUserId) {
         const { error: pinErr } = await supabase.rpc("set_supervisor_pin", {
           p_user_id: newUserId,
@@ -284,8 +296,9 @@ export default function AdminUsuarios() {
       body: { action: "update", user_id: editUser.id, email: editEmail },
     });
     setSavingEdit(false);
-    if (error || (data as any)?.error) {
-      toast.error((data as any)?.error || "No se pudo actualizar");
+    const editPayload = data as AdminUsersPayload | null;
+    if (error || editPayload?.error) {
+      toast.error(editPayload?.error || "No se pudo actualizar");
       return;
     }
     toast.success("Usuario actualizado");
@@ -301,8 +314,9 @@ export default function AdminUsuarios() {
       body: { action: "set_password", user_id: pwUser.id, password: pwValue },
     });
     setSavingPw(false);
-    if (error || (data as any)?.error) {
-      toast.error((data as any)?.error || "No se pudo cambiar la contraseña");
+    const pwPayload = data as AdminUsersPayload | null;
+    if (error || pwPayload?.error) {
+      toast.error(pwPayload?.error || "No se pudo cambiar la contraseña");
       return;
     }
     toast.success(`Contraseña actualizada para ${pwUser.email}`);
@@ -316,8 +330,9 @@ export default function AdminUsuarios() {
       body: { action: "delete", user_id: delUser.id },
     });
     setDeleting(false);
-    if (error || (data as any)?.error) {
-      toast.error((data as any)?.error || "No se pudo eliminar");
+    const delPayload = data as AdminUsersPayload | null;
+    if (error || delPayload?.error) {
+      toast.error(delPayload?.error || "No se pudo eliminar");
       return;
     }
     toast.success("Usuario eliminado");
@@ -332,12 +347,12 @@ export default function AdminUsuarios() {
       body: { action: "set_base_password_all", password: basePw, clinic_id: activeClinicId },
     });
     setApplyingBase(false);
-    if (error || (data as any)?.error) {
-      toast.error((data as any)?.error || "No se pudo aplicar la contraseña base");
+    const basePayload = data as AdminUsersPayload | null;
+    if (error || basePayload?.error) {
+      toast.error(basePayload?.error || "No se pudo aplicar la contraseña base");
       return;
     }
-    const d = data as any;
-    toast.success(`Aplicada a ${d.updated} usuario(s). Omitidos: ${d.skipped} (admin permanente)`);
+    toast.success(`Aplicada a ${basePayload?.updated ?? 0} usuario(s). Omitidos: ${basePayload?.skipped ?? 0} (admin permanente)`);
     setBaseOpen(false); setBasePw("");
   };
 
@@ -362,7 +377,7 @@ export default function AdminUsuarios() {
   const handleLinkDoctor = async () => {
     if (!linkDoctor) return;
     setLinking(true);
-    const payload: any = { action: "link_doctor_user", doctor_id: linkDoctor.id };
+    const payload: Record<string, unknown> = { action: "link_doctor_user", doctor_id: linkDoctor.id };
     if (linkMode === "existing") {
       if (!linkExistingUserId) { setLinking(false); toast.error("Selecciona un usuario"); return; }
       payload.existing_user_id = linkExistingUserId;
@@ -373,8 +388,9 @@ export default function AdminUsuarios() {
     }
     const { data, error } = await supabase.functions.invoke("admin-users", { body: payload });
     setLinking(false);
-    if (error || (data as any)?.error) {
-      toast.error((data as any)?.error || "No se pudo vincular");
+    const linkPayload = data as AdminUsersPayload | null;
+    if (error || linkPayload?.error) {
+      toast.error(linkPayload?.error || "No se pudo vincular");
       return;
     }
     toast.success(`Médico ${linkDoctor.nombre} ${linkDoctor.apellidos} vinculado`);
@@ -390,8 +406,9 @@ export default function AdminUsuarios() {
       body: { action: "unlink_doctor_user", doctor_id: unlinkDoctor.id },
     });
     setUnlinking(false);
-    if (error || (data as any)?.error) {
-      toast.error((data as any)?.error || "No se pudo desvincular");
+    const unlinkPayload = data as AdminUsersPayload | null;
+    if (error || unlinkPayload?.error) {
+      toast.error(unlinkPayload?.error || "No se pudo desvincular");
       setUnlinkDoctor(null);
       return;
     }
@@ -437,9 +454,9 @@ export default function AdminUsuarios() {
       especialidad: d.especialidad ?? "",
       cedula_profesional: d.cedula_profesional ?? "",
       telefono: d.telefono ?? "",
-      horario_inicio: ((d as any).horario_inicio ?? "08:00:00").slice(0, 5),
-      horario_fin: ((d as any).horario_fin ?? "18:00:00").slice(0, 5),
-      duracion_cita_min: (d as any).duracion_cita_min ?? 30,
+      horario_inicio: (d.horario_inicio ?? "08:00:00").slice(0, 5),
+      horario_fin: (d.horario_fin ?? "18:00:00").slice(0, 5),
+      duracion_cita_min: d.duracion_cita_min ?? 30,
       activo: d.activo,
     });
     setDoctorDialogOpen(true);

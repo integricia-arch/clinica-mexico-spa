@@ -69,8 +69,8 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
         .eq("servicio_id", servicioId);
       const fechaIso = new Date(`${fecha}T12:00:00-06:00`);
       const lista = (data ?? [])
-        .map((r: any) => r.doctor)
-        .filter((d: any) => {
+        .map((r) => (r as unknown as { doctor: Doctor & { activo: boolean } }).doctor)
+        .filter((d) => {
           if (!d?.activo) return false;
           // suspendido nunca aparece
           if (d.operational_status === "suspended") return false;
@@ -81,7 +81,7 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
           // vacation/sick_leave sin until siempre descartar
           if (["vacation","sick_leave"].includes(d.operational_status) && !d.operational_status_until) return false;
           return true;
-        }) as Doctor[];
+        });
       setDoctores(lista);
       setDoctorId("");
     })();
@@ -101,10 +101,10 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
         .gte("fecha_inicio", startIso)
         .lte("fecha_inicio", endIso)
         .or(filters.join(","));
-      const activas = (data ?? []).filter((a: any) =>
+      const activas = (data ?? []).filter((a) =>
         !["cancelada","cancelado","no_show","no_asistio"].includes(String(a.status).toLowerCase())
       );
-      setBusy(activas.map((a: any) => ({ fecha_inicio: a.fecha_inicio, fecha_fin: a.fecha_fin })));
+      setBusy(activas.map((a) => ({ fecha_inicio: a.fecha_inicio, fecha_fin: a.fecha_fin })));
       setSlotIso("");
     })();
   }, [doctorId, roomId, fecha]);
@@ -150,7 +150,7 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
 
     if (error) {
       setSaving(false);
-      if ((error as any).code === "23P01" || /exclude/i.test(error.message)) {
+      if ((error as { code?: string }).code === "23P01" || /exclude/i.test(error.message)) {
         toast.error("Ese horario ya fue tomado");
       } else {
         toast.error("No se pudo crear la cita: " + error.message);

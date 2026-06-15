@@ -4,18 +4,18 @@ import { useAuth } from "@/hooks/useAuth";
 import type { JourneyInstanceLite } from "../lib/journeyHelpers";
 
 export interface DashboardData {
-  appointments: any[];
-  patients: Record<string, any>;
-  doctors: Record<string, any>;
-  rooms: Record<string, any>;
-  servicios: Record<string, any>;
+  appointments: Record<string, unknown>[];
+  patients: Record<string, Record<string, unknown>>;
+  doctors: Record<string, Record<string, unknown>>;
+  rooms: Record<string, Record<string, unknown>>;
+  servicios: Record<string, Record<string, unknown>>;
   instancesByAppointment: Record<string, JourneyInstanceLite>;
-  expedientesActivosByPatient: Record<string, any>;
-  consentimientosByPatient: Record<string, any>;
-  recordatorios: any[];
-  conversacionesEscaladas: any[];
-  doctorsList: any[];
-  roomsList: any[];
+  expedientesActivosByPatient: Record<string, Record<string, unknown>>;
+  consentimientosByPatient: Record<string, Record<string, unknown>>;
+  recordatorios: Record<string, unknown>[];
+  conversacionesEscaladas: Record<string, unknown>[];
+  doctorsList: Record<string, unknown>[];
+  roomsList: Record<string, unknown>[];
 }
 
 const EMPTY: DashboardData = {
@@ -40,7 +40,7 @@ export function useDashboardData(date: Date) {
       let myDoctorIds: string[] = [];
       if (hasRole("doctor") && user) {
         const { data: docs } = await supabase.from("doctors").select("id").eq("user_id", user.id);
-        myDoctorIds = (docs ?? []).map((d: any) => d.id);
+        myDoctorIds = (docs ?? []).map((d: { id: string }) => d.id);
       }
 
       let aptQuery = supabase
@@ -54,13 +54,13 @@ export function useDashboardData(date: Date) {
       }
       const { data: appointments, error: apErr } = await aptQuery;
       if (apErr) throw apErr;
-      const apList = appointments ?? [];
+      const apList = (appointments ?? []) as Record<string, unknown>[];
 
-      const patientIds = [...new Set(apList.map((a: any) => a.patient_id).filter(Boolean))];
-      const doctorIds = [...new Set(apList.map((a: any) => a.doctor_id).filter(Boolean))];
-      const roomIds = [...new Set(apList.map((a: any) => a.room_id).filter(Boolean))];
-      const servicioIds = [...new Set(apList.map((a: any) => a.servicio_id).filter(Boolean))];
-      const apIds = apList.map((a: any) => a.id);
+      const patientIds = [...new Set(apList.map((a) => a.patient_id as string).filter(Boolean))];
+      const doctorIds = [...new Set(apList.map((a) => a.doctor_id as string).filter(Boolean))];
+      const roomIds = [...new Set(apList.map((a) => a.room_id as string).filter(Boolean))];
+      const servicioIds = [...new Set(apList.map((a) => a.servicio_id as string).filter(Boolean))];
+      const apIds = apList.map((a) => a.id as string);
 
       const [
         patientsRes, doctorsRes, roomsRes, serviciosRes, instancesRes,
@@ -79,24 +79,26 @@ export function useDashboardData(date: Date) {
         supabase.from("rooms").select("id,nombre,piso,activo").eq("activo", true).order("nombre"),
       ]);
 
-      const safe = (r: any) => (r.status === "fulfilled" ? (r.value.data ?? []) : []);
-      const byId = (arr: any[]) => Object.fromEntries(arr.map((x: any) => [x.id, x]));
+      const safe = (r: PromiseSettledResult<{ data: unknown[] | null }>) =>
+        (r.status === "fulfilled" ? (r.value.data ?? []) : []) as Record<string, unknown>[];
+      const byId = (arr: Record<string, unknown>[]) =>
+        Object.fromEntries(arr.map((x) => [x.id as string, x]));
 
       const instancesArr = safe(instancesRes);
       const instancesByAppointment: Record<string, JourneyInstanceLite> = {};
       for (const inst of instancesArr) {
-        if (inst.appointment_id) instancesByAppointment[inst.appointment_id] = inst;
+        if (inst.appointment_id) instancesByAppointment[inst.appointment_id as string] = inst as unknown as JourneyInstanceLite;
       }
 
       const expArr = safe(expRes);
-      const expedientesActivosByPatient: Record<string, any> = {};
+      const expedientesActivosByPatient: Record<string, Record<string, unknown>> = {};
       for (const e of expArr) {
-        if (!expedientesActivosByPatient[e.patient_id]) expedientesActivosByPatient[e.patient_id] = e;
+        if (!expedientesActivosByPatient[e.patient_id as string]) expedientesActivosByPatient[e.patient_id as string] = e;
       }
       const conArr = safe(conRes);
-      const consentimientosByPatient: Record<string, any> = {};
+      const consentimientosByPatient: Record<string, Record<string, unknown>> = {};
       for (const c of conArr) {
-        if (!consentimientosByPatient[c.patient_id]) consentimientosByPatient[c.patient_id] = c;
+        if (!consentimientosByPatient[c.patient_id as string]) consentimientosByPatient[c.patient_id as string] = c;
       }
 
       setData({
@@ -113,9 +115,9 @@ export function useDashboardData(date: Date) {
         doctorsList: safe(allDoctorsRes),
         roomsList: safe(allRoomsRes),
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("[Dashboard] loadDashboardData error", e);
-      setError(e.message || "Error al cargar el panel");
+      setError(e instanceof Error ? e.message : "Error al cargar el panel");
     } finally {
       setLoading(false);
     }

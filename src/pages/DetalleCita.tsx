@@ -75,15 +75,23 @@ interface RecordatorioCita {
   identidades_canal: IdentidadCanal | null;
 }
 
+type AppointmentRecord = Record<string, unknown>;
+type ResourceRecord = Record<string, unknown>;
+type ServicioRecord = Record<string, unknown>;
+
+// recordatorios_cita is not in the generated Supabase types, so we bypass via unknown cast.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabaseAny = supabase as unknown as any;
+
 export default function DetalleCita() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const { toast } = useToast();
   const { activeClinicId } = useActiveClinic();
-  const [appointment, setAppointment] = useState<any>(null);
-  const [resources, setResources] = useState<any[]>([]);
-  const [servicio, setServicio] = useState<any>(null);
+  const [appointment, setAppointment] = useState<AppointmentRecord | null>(null);
+  const [resources, setResources] = useState<ResourceRecord[]>([]);
+  const [servicio, setServicio] = useState<ServicioRecord | null>(null);
   const [recordatorios, setRecordatorios] = useState<RecordatorioCita[]>([]);
   const [identidadesCanal, setIdentidadesCanal] = useState<IdentidadCanal[]>([]);
   const [journeyInstance, setJourneyInstance] = useState<JourneyInstanceLite | null>(null);
@@ -104,7 +112,7 @@ export default function DetalleCita() {
 
   // Modal recordatorio
   const [reminderOpen, setReminderOpen] = useState(false);
-  const [editingReminder, setEditingReminder] = useState<any | null>(null);
+  const [editingReminder, setEditingReminder] = useState<RecordatorioCita | null>(null);
   const [reminderIdentidadId, setReminderIdentidadId] = useState<string>("");
   const [reminderFecha, setReminderFecha] = useState("");
   const [reminderMensaje, setReminderMensaje] = useState("");
@@ -132,19 +140,19 @@ export default function DetalleCita() {
   const abrirNuevoRecordatorio = () => {
     setEditingReminder(null);
     setReminderIdentidadId(identidadesCanal[0]?.id ?? "");
-    const citaMs = new Date(appointment.fecha_inicio).getTime();
+    const citaMs = new Date(appointment!.fecha_inicio as string).getTime();
     const defaultDate = new Date(Math.min(
       Math.max(Date.now() + 60 * 60 * 1000, citaMs - 2 * 60 * 60 * 1000),
       citaMs - 5 * 60 * 1000  // never schedule a reminder after the appointment starts
     ));
     setReminderFecha(format(defaultDate, "yyyy-MM-dd'T'HH:mm"));
     setReminderMensaje(
-      `Recordatorio: tiene una cita el ${format(new Date(appointment.fecha_inicio), "dd/MM/yyyy 'a las' HH:mm", { locale: es })} hrs.`
+      `Recordatorio: tiene una cita el ${format(new Date(appointment!.fecha_inicio as string), "dd/MM/yyyy 'a las' HH:mm", { locale: es })} hrs.`
     );
     setReminderOpen(true);
   };
 
-  const abrirReprogramar = (r: any) => {
+  const abrirReprogramar = (r: RecordatorioCita) => {
     setEditingReminder(r);
     setReminderIdentidadId(r.identidad_canal_id ?? identidadesCanal[0]?.id ?? "");
     setReminderFecha(format(new Date(r.programado_para), "yyyy-MM-dd'T'HH:mm"));
@@ -165,7 +173,7 @@ export default function DetalleCita() {
     const programado = new Date(reminderFecha).toISOString();
 
     if (editingReminder) {
-      const { error } = await (supabase as any)
+      const { error } = await supabaseAny
         .from("recordatorios_cita")
         .update({
           identidad_canal_id: reminderIdentidadId,
@@ -184,7 +192,7 @@ export default function DetalleCita() {
       }
       toast({ title: "Recordatorio reprogramado" });
     } else {
-      const { error } = await (supabase as any)
+      const { error } = await supabaseAny
         .from("recordatorios_cita")
         .insert({
           appointment_id: id!,
@@ -207,7 +215,7 @@ export default function DetalleCita() {
     await reloadRecordatorios();
   };
 
-  const enviarAhora = async (r: any) => {
+  const enviarAhora = async (r: RecordatorioCita) => {
     setSendingNow(r.id);
     const { error } = await supabase.functions.invoke("enviar-recordatorios", {
       body: { recordatorio_id: r.id },
@@ -231,14 +239,14 @@ export default function DetalleCita() {
           .eq("id", id)
           .single(),
         supabase.from("appointment_resources").select("*").eq("appointment_id", id),
-        (supabase as any)
+        supabaseAny
           .from("recordatorios_cita")
           .select("*, identidades_canal(canal_id, display_name)")
           .eq("appointment_id", id)
           .order("programado_para", { ascending: true }),
       ]);
-      setAppointment(aRes.data);
-      setResources(rRes.data ?? []);
+      setAppointment(aRes.data as AppointmentRecord);
+      setResources((rRes.data ?? []) as ResourceRecord[]);
       setRecordatorios(remRes.data ?? []);
       if (aRes.data?.patient_id) {
         const { data: icData } = await supabase
@@ -253,7 +261,7 @@ export default function DetalleCita() {
           .select("nombre, precio_centavos, duracion_minutos")
           .eq("id", aRes.data.servicio_id)
           .single();
-        setServicio(sData);
+        setServicio(sData as ServicioRecord);
       }
       setLoading(false);
     })();
@@ -261,7 +269,7 @@ export default function DetalleCita() {
   }, [id]);
 
   const updateStatus = async (newStatus: AppointmentStatus) => {
-    const oldStatus = appointment.status;
+    const oldStatus = appointment!.status;
     const { error } = await supabase
       .from("appointments")
       .update({ status: newStatus })
@@ -276,8 +284,8 @@ export default function DetalleCita() {
       _accion: newStatus === "cancelada" ? "cancelar" : "actualizar",
       _tabla: "appointments",
       _registro_id: id!,
-      _datos_anteriores: { status: oldStatus } as any,
-      _datos_nuevos: { status: newStatus } as any,
+      _datos_anteriores: { status: oldStatus } as unknown as Record<string, unknown>,
+      _datos_nuevos: { status: newStatus } as unknown as Record<string, unknown>,
     });
 
     setAppointment({ ...appointment, status: newStatus });
@@ -310,7 +318,7 @@ export default function DetalleCita() {
         <div className="flex items-center justify-between">
           <h1 className="text-display text-xl font-bold text-card-foreground">Detalle de cita</h1>
           {(hasRole("admin") || hasRole("receptionist")) && (
-            <Select value={a.status} onValueChange={updateStatus}>
+            <Select value={a.status as string} onValueChange={updateStatus}>
               <SelectTrigger className="w-[220px]">
                 <SelectValue />
               </SelectTrigger>
@@ -362,7 +370,7 @@ export default function DetalleCita() {
 
         {/* Cobro con tarjeta */}
         {(hasRole("admin") || hasRole("receptionist")) &&
-          !["cancelada", "liberada"].includes(a.status) &&
+          !["cancelada", "liberada"].includes(a.status as string) &&
           activeClinicId && (
             <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
               <div className="flex items-center gap-2">
@@ -377,7 +385,7 @@ export default function DetalleCita() {
                     min="1"
                     step="any"
                     placeholder={servicio?.precio_centavos
-                      ? (servicio.precio_centavos / 100).toFixed(2)
+                      ? ((servicio.precio_centavos as number) / 100).toFixed(2)
                       : "0.00"}
                     value={stripeAmountInput}
                     onChange={(e) => {
@@ -393,7 +401,7 @@ export default function DetalleCita() {
                     const mxn = raw
                       ? parseFloat(raw)
                       : servicio?.precio_centavos
-                        ? servicio.precio_centavos / 100
+                        ? (servicio.precio_centavos as number) / 100
                         : 0;
                     if (!mxn || mxn <= 0) {
                       toast({ variant: "destructive", title: "Monto requerido", description: "Ingresa el monto a cobrar." });
@@ -410,7 +418,7 @@ export default function DetalleCita() {
               </div>
               {servicio?.precio_centavos && !stripeAmountInput && (
                 <p className="text-xs text-muted-foreground">
-                  Precio del servicio: ${(servicio.precio_centavos / 100).toFixed(2)} MXN
+                  Precio del servicio: ${((servicio.precio_centavos as number) / 100).toFixed(2)} MXN
                 </p>
               )}
             </div>
@@ -448,10 +456,10 @@ export default function DetalleCita() {
             <div>
               <p className="text-sm font-medium">Fecha y hora</p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(a.fecha_inicio), "EEEE d 'de' MMMM, yyyy", { locale: es })}
+                {format(new Date(a.fecha_inicio as string), "EEEE d 'de' MMMM, yyyy", { locale: es })}
               </p>
               <p className="text-sm text-muted-foreground">
-                {format(new Date(a.fecha_inicio), "HH:mm")} – {format(new Date(a.fecha_fin), "HH:mm")}
+                {format(new Date(a.fecha_inicio as string), "HH:mm")} – {format(new Date(a.fecha_fin as string), "HH:mm")}
               </p>
             </div>
           </div>
@@ -461,10 +469,10 @@ export default function DetalleCita() {
             <div>
               <p className="text-sm font-medium">Paciente</p>
               <p className="text-sm text-muted-foreground">
-                {a.patients?.nombre} {a.patients?.apellidos}
+                {(a.patients as Record<string, unknown>)?.nombre as string} {(a.patients as Record<string, unknown>)?.apellidos as string}
               </p>
-              {a.patients?.telefono && (
-                <p className="text-xs text-muted-foreground">{a.patients.telefono}</p>
+              {(a.patients as Record<string, unknown>)?.telefono && (
+                <p className="text-xs text-muted-foreground">{(a.patients as Record<string, unknown>).telefono as string}</p>
               )}
             </div>
           </div>
@@ -474,9 +482,9 @@ export default function DetalleCita() {
             <div>
               <p className="text-sm font-medium">Médico</p>
               <p className="text-sm text-muted-foreground">
-                Dr(a). {a.doctors?.nombre} {a.doctors?.apellidos}
+                Dr(a). {(a.doctors as Record<string, unknown>)?.nombre as string} {(a.doctors as Record<string, unknown>)?.apellidos as string}
               </p>
-              <p className="text-xs text-muted-foreground">{a.doctors?.especialidad}</p>
+              <p className="text-xs text-muted-foreground">{(a.doctors as Record<string, unknown>)?.especialidad as string}</p>
             </div>
           </div>
 
@@ -485,7 +493,7 @@ export default function DetalleCita() {
             <div>
               <p className="text-sm font-medium">Consultorio</p>
               <p className="text-sm text-muted-foreground">
-                {a.rooms ? `${a.rooms.nombre}${a.rooms.piso ? ` (Piso ${a.rooms.piso})` : ""}` : "Sin asignar"}
+                {a.rooms ? `${(a.rooms as Record<string, unknown>).nombre}${(a.rooms as Record<string, unknown>).piso ? ` (Piso ${(a.rooms as Record<string, unknown>).piso})` : ""}` : "Sin asignar"}
               </p>
             </div>
           </div>
@@ -495,9 +503,9 @@ export default function DetalleCita() {
               <Pill className="h-5 w-5 text-primary mt-0.5" />
               <div>
                 <p className="text-sm font-medium">Servicio</p>
-                <p className="text-sm text-muted-foreground">{servicio.nombre}</p>
+                <p className="text-sm text-muted-foreground">{servicio.nombre as string}</p>
                 <p className="text-xs text-muted-foreground">
-                  ${(servicio.precio_centavos / 100).toLocaleString("es-MX")} · {servicio.duracion_minutos} min
+                  ${((servicio.precio_centavos as number) / 100).toLocaleString("es-MX")} · {servicio.duracion_minutos as number} min
                 </p>
               </div>
             </div>
@@ -509,7 +517,7 @@ export default function DetalleCita() {
             <FileText className="h-5 w-5 text-primary mt-0.5" />
             <div>
               <p className="text-sm font-medium">Motivo de consulta</p>
-              <p className="text-sm text-muted-foreground">{a.motivo_consulta}</p>
+              <p className="text-sm text-muted-foreground">{a.motivo_consulta as string}</p>
             </div>
           </div>
         )}
@@ -517,7 +525,7 @@ export default function DetalleCita() {
         {a.notas && (
           <div className="rounded-lg bg-muted/50 p-4">
             <p className="text-sm font-medium mb-1">Notas</p>
-            <p className="text-sm text-muted-foreground">{a.notas}</p>
+            <p className="text-sm text-muted-foreground">{a.notas as string}</p>
           </div>
         )}
 
@@ -526,10 +534,10 @@ export default function DetalleCita() {
             <p className="text-sm font-medium mb-2">Recursos asignados</p>
             <div className="space-y-1">
               {resources.map((r) => (
-                <div key={r.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div key={r.id as string} className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  <span className="font-medium">{r.tipo_recurso}</span>
-                  {r.descripcion && <span>— {r.descripcion}</span>}
+                  <span className="font-medium">{r.tipo_recurso as string}</span>
+                  {r.descripcion && <span>— {r.descripcion as string}</span>}
                 </div>
               ))}
             </div>
@@ -667,7 +675,7 @@ export default function DetalleCita() {
         open={arrivalOpen}
         onOpenChange={setArrivalOpen}
         appointmentId={id ?? null}
-        patientName={a.patients ? `${a.patients.nombre} ${a.patients.apellidos}` : undefined}
+        patientName={a.patients ? `${(a.patients as Record<string, unknown>).nombre} ${(a.patients as Record<string, unknown>).apellidos}` : undefined}
         onCompleted={reloadJourney}
       />
 

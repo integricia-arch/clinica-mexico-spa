@@ -18,7 +18,7 @@ type PosErrorRow = {
   funcion: string;
   error_msg: string;
   error_detail: string | null;
-  payload: any;
+  payload: Record<string, unknown> | null;
 };
 
 type AuditRow = {
@@ -28,8 +28,8 @@ type AuditRow = {
   accion: string;
   tabla: string;
   registro_id: string | null;
-  datos_anteriores: any;
-  datos_nuevos: any;
+  datos_anteriores: Record<string, unknown> | null;
+  datos_nuevos: Record<string, unknown> | null;
   clinic_id: string | null;
 };
 
@@ -251,14 +251,14 @@ export default function Auditoria() {
       .select("id, appointment_id, programado_para, status, tipo, appointments(fecha_inicio, patients(nombre,apellidos,telefono), doctors(nombre,apellidos))")
       .order("programado_para", { ascending: false })
       .limit(100);
-    setSeguimientos((data ?? []) as any);
+    setSeguimientos((data ?? []) as SeguimientoRow[]);
     setSegLoading(false);
   };
 
   const loadErrors = async () => {
     setErrLoading(true);
-    const { data } = await (supabase as any)
-      .from("pos_error_logs")
+    const { data } = await supabase
+      .from("pos_error_logs" as unknown as "appointments")
       .select("id, created_at, funcion, error_msg, error_detail, payload")
       .order("created_at", { ascending: false })
       .limit(50);
@@ -269,8 +269,8 @@ export default function Auditoria() {
   const loadFarmLogs = async () => {
     if (!activeClinic?.id) return;
     setFarmLoading(true);
-    const { data } = await (supabase as any)
-      .from("audit_logs")
+    const { data } = await supabase
+      .from("audit_logs" as unknown as "appointments")
       .select("id, created_at, user_id, accion, tabla, registro_id, datos_nuevos, datos_anteriores, clinic_id")
       .eq("clinic_id", activeClinic.id)
       .in("tabla", ["pharmacy_cash_shifts", "pharmacy_sales", "fondos_movimientos", "turnos", "cortes"])
@@ -459,7 +459,7 @@ export default function Auditoria() {
         <>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <select value={modulo} onChange={(e) => setModulo(e.target.value as any)}
+            <select value={modulo} onChange={(e) => setModulo(e.target.value as (typeof MODULOS)[number])}
               className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
               {MODULOS.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>

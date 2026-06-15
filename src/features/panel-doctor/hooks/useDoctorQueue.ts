@@ -24,6 +24,36 @@ export interface DoctorQueueItem {
   has_consentimiento: boolean;
 }
 
+interface PatientRow {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  fecha_nacimiento: string | null;
+  sexo: string | null;
+  telefono: string | null;
+  alergias: string | null;
+}
+
+interface NameRow {
+  id: string;
+  nombre: string;
+}
+
+interface JourneyRow {
+  id: string;
+  appointment_id: string;
+  snapshot_json: Record<string, unknown> | null;
+}
+
+interface ConsentRow {
+  patient_id: string;
+}
+
+interface SnapshotJson {
+  current_step_key?: string;
+  progress_percent?: number;
+}
+
 function startEndOfDay(iso = new Date()) {
   const d = new Date(iso);
   const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).toISOString();
@@ -74,13 +104,13 @@ export function useDoctorQueue(doctorId: string | null) {
               .from("patients")
               .select("id, nombre, apellidos, fecha_nacimiento, sexo, telefono, alergias")
               .in("id", patientIds)
-          : Promise.resolve({ data: [] as any[], error: null }),
+          : Promise.resolve({ data: [] as PatientRow[], error: null }),
         servicioIds.length
           ? supabase.from("servicios").select("id, nombre").in("id", servicioIds)
-          : Promise.resolve({ data: [] as any[], error: null }),
+          : Promise.resolve({ data: [] as NameRow[], error: null }),
         roomIds.length
           ? supabase.from("rooms").select("id, nombre").in("id", roomIds)
-          : Promise.resolve({ data: [] as any[], error: null }),
+          : Promise.resolve({ data: [] as NameRow[], error: null }),
         supabase
           .from("journey_instances")
           .select("id, appointment_id, snapshot_json")
@@ -91,25 +121,25 @@ export function useDoctorQueue(doctorId: string | null) {
               .select("patient_id")
               .in("patient_id", patientIds)
               .eq("otorgado", true)
-          : Promise.resolve({ data: [] as any[], error: null }),
+          : Promise.resolve({ data: [] as ConsentRow[], error: null }),
       ]);
 
-      const patientMap = new Map((pat.data ?? []).map((p: any) => [p.id, p]));
-      const srvMap = new Map((srv.data ?? []).map((s: any) => [s.id, s.nombre]));
-      const roomMap = new Map((rms.data ?? []).map((r: any) => [r.id, r.nombre]));
-      const journeyMap = new Map((jrn.data ?? []).map((j: any) => [j.appointment_id, j]));
-      const consentSet = new Set((cons.data ?? []).map((c: any) => c.patient_id));
+      const patientMap = new Map((pat.data ?? []).map((p: PatientRow) => [p.id, p]));
+      const srvMap = new Map((srv.data ?? []).map((s: NameRow) => [s.id, s.nombre]));
+      const roomMap = new Map((rms.data ?? []).map((r: NameRow) => [r.id, r.nombre]));
+      const journeyMap = new Map((jrn.data ?? []).map((j: JourneyRow) => [j.appointment_id, j]));
+      const consentSet = new Set((cons.data ?? []).map((c: ConsentRow) => c.patient_id));
 
       const result: DoctorQueueItem[] = apptList.map((a) => {
         const j = journeyMap.get(a.id);
-        const snap = (j?.snapshot_json ?? {}) as any;
+        const snap = (j?.snapshot_json ?? {}) as SnapshotJson;
         return {
           appointment_id: a.id,
           fecha_inicio: a.fecha_inicio,
           fecha_fin: a.fecha_fin,
           status: a.status,
           motivo_consulta: a.motivo_consulta,
-          patient: a.patient_id ? (patientMap.get(a.patient_id) as any) ?? null : null,
+          patient: a.patient_id ? (patientMap.get(a.patient_id) as PatientRow) ?? null : null,
           servicio_nombre: a.servicio_id ? srvMap.get(a.servicio_id) ?? null : null,
           room_nombre: a.room_id ? roomMap.get(a.room_id) ?? null : null,
           journey_instance_id: j?.id ?? null,
@@ -120,8 +150,8 @@ export function useDoctorQueue(doctorId: string | null) {
       });
       setItems(result);
       setError(null);
-    } catch (e: any) {
-      setError(e?.message ?? "Error cargando agenda");
+    } catch (e: unknown) {
+      setError((e as { message?: string })?.message ?? "Error cargando agenda");
     } finally {
       setLoading(false);
     }
