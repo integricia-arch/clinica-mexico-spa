@@ -24,6 +24,7 @@ import InventarioCiclico from "@/features/farmacia/InventarioCiclico";
 import ReporteCOFEPRIS from "@/features/farmacia/ReporteCOFEPRIS";
 import ReporteRotacionABC from "@/features/farmacia/ReporteRotacionABC";
 import ReporteAgingCxP from "@/features/farmacia/ReporteAgingCxP";
+import ActasMerma from "@/features/farmacia/ActasMerma";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -91,7 +92,7 @@ export default function Farmacia() {
   const [savingMov, setSavingMov] = useState(false);
 
   // Faltantes (almacen_alertas)
-  const [inventarioView, setInventarioView] = useState<"catalogo" | "faltantes" | "caducidades" | "conteos" | "cofepris" | "abc">("catalogo");
+  const [inventarioView, setInventarioView] = useState<"catalogo" | "faltantes" | "caducidades" | "conteos" | "cofepris" | "abc" | "mermas">("catalogo");
   const [alertas, setAlertas] = useState<any[]>([]);
   const [loadingAlertas, setLoadingAlertas] = useState(false);
   const [filtroAlertas, setFiltroAlertas] = useState<"pending" | "resolved" | "external">("pending");
@@ -398,6 +399,10 @@ export default function Farmacia() {
           onClick={() => setInventarioView("abc")}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "abc" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
         >ABC / Rotación</button>
+        <button
+          onClick={() => setInventarioView("mermas")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "mermas" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >Mermas</button>
       </div>
 
       {/* Faltantes view */}
@@ -543,6 +548,9 @@ export default function Farmacia() {
 
       {/* ABC / Rotación view */}
       {inventarioView === "abc" && <ReporteRotacionABC />}
+
+      {/* Mermas view */}
+      {inventarioView === "mermas" && <ActasMerma />}
 
       {/* Catálogo view */}
       {inventarioView === "catalogo" && <>
