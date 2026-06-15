@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useProveedores } from "@/hooks/useProveedores";
-import { useFacturasProveedor, type FacturaProveedor, type PagoProveedor } from "@/hooks/useFacturasProveedor";
+import { useFacturasProveedor, type FacturaProveedor, type FacturaInput, type PagoProveedor } from "@/hooks/useFacturasProveedor";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ const formatMXN = (c: number) => (c / 100).toLocaleString("es-MX", { style: "cur
 const UUID_SAT_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const ESTATUS_BADGE: Record<FacturaProveedor["estatus"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  provisional: { label: "Accrual provisional", variant: "outline" },
   pendiente:   { label: "Pendiente",   variant: "secondary" },
   parcial:     { label: "Pago parcial",variant: "outline" },
   pagada:      { label: "Pagada",      variant: "default" },
@@ -42,7 +43,7 @@ export default function FacturasProveedor() {
   const { activeClinicId } = useActiveClinic();
   const { toast } = useToast();
   const { items: proveedores } = useProveedores(activeClinicId);
-  const { items, loading, error, pendientes, vencidas, create, registrarPago, getPagos, refresh } = useFacturasProveedor(activeClinicId);
+  const { items, loading, error, pendientes, vencidas, create, registrarPago, getPagos, confirmarProvisional, refresh } = useFacturasProveedor(activeClinicId);
 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedPagos, setExpandedPagos] = useState<Record<string, PagoProveedor[]>>({});
@@ -50,6 +51,7 @@ export default function FacturasProveedor() {
 
   const [factDialog, setFactDialog] = useState(false);
   const [pagoDialog, setPagoDialog] = useState<string | null>(null);
+  const [confirmarProvId, setConfirmarProvId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uuidError, setUuidError] = useState("");
 
@@ -101,6 +103,46 @@ export default function FacturasProveedor() {
       });
       toast({ title: "Factura registrada" });
       setFactDialog(false);
+      setFactForm(EMPTY_FACTURA);
+      setUuidError("");
+    } catch (e) {
+      toast({ title: String(e), variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConfirmarProvisional = async () => {
+    if (!confirmarProvId) return;
+    if (!factForm.fecha_vencimiento) {
+      toast({ title: "Ingresa la fecha de vencimiento", variant: "destructive" }); return;
+    }
+    if (factForm.uuid_sat && !UUID_SAT_REGEX.test(factForm.uuid_sat)) {
+      setUuidError("UUID SAT inválido. Formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"); return;
+    }
+    const subtotal = Math.round(Number(factForm.subtotal_str) * 100);
+    const iva = Math.round(Number(factForm.iva_str || "0") * 100);
+    if (!subtotal) {
+      toast({ title: "Ingresa el subtotal", variant: "destructive" }); return;
+    }
+    setSaving(true);
+    try {
+      const input: FacturaInput = {
+        proveedor_id: factForm.proveedor_id,
+        orden_id: null, recepcion_id: null,
+        uuid_sat: factForm.uuid_sat,
+        serie_folio_proveedor: factForm.serie_folio_proveedor,
+        fecha_factura: factForm.fecha_factura,
+        fecha_vencimiento: factForm.fecha_vencimiento,
+        subtotal_centavos: subtotal,
+        iva_centavos: iva,
+        total_centavos: subtotal + iva,
+        concepto: factForm.concepto,
+        notas: factForm.notas,
+      };
+      await confirmarProvisional(confirmarProvId, input);
+      toast({ title: "CFDI registrado — accrual confirmado" });
+      setConfirmarProvId(null);
       setFactForm(EMPTY_FACTURA);
       setUuidError("");
     } catch (e) {
@@ -201,7 +243,7 @@ export default function FacturasProveedor() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-semibold">{f.folio_interno}</span>
-                    <Badge variant={badge.variant} className="text-xs">{badge.label}</Badge>
+                    <Badge variant={badge.variant} className={`text-xs${f.es_provisional ? " border-amber-400 text-amber-700 bg-amber-50" : ""}`}>{badge.label}</Badge>
                     {f.serie_folio_proveedor && (
                       <span className="text-xs text-muted-foreground font-mono">{f.serie_folio_proveedor}</span>
                     )}
@@ -252,6 +294,20 @@ export default function FacturasProveedor() {
                     onUpdated={refresh}
                   />
 
+                  {f.es_provisional && (
+                    <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                      <strong>Accrual devengado (NIF C-19)</strong> — Este registro es provisional. Reemplázalo con el CFDI real del proveedor.
+                    </div>
+                  )}
+                  {f.es_provisional && (
+                    <Button size="sm" variant="outline" className="border-amber-400 text-amber-800 hover:bg-amber-50" onClick={() => {
+                      setConfirmarProvId(f.id);
+                      setFactForm({ ...EMPTY_FACTURA, proveedor_id: f.proveedor_id });
+                      setUuidError("");
+                    }}>
+                      <FileText className="h-4 w-4 mr-1" /> Registrar CFDI real
+                    </Button>
+                  )}
                   {(f.estatus === "pendiente" || f.estatus === "parcial") && (
                     <Button size="sm" onClick={() => { setPagoDialog(f.id); setPagoForm({ ...EMPTY_PAGO, monto_str: (f.saldo_pendiente_centavos / 100).toFixed(2) }); }}>
                       <CreditCard className="h-4 w-4 mr-1" /> Registrar pago
@@ -357,6 +413,66 @@ export default function FacturasProveedor() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setFactDialog(false)} disabled={saving}>Cancelar</Button>
             <Button onClick={handleCreateFactura} disabled={saving}>{saving ? "Guardando…" : "Registrar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Confirmar CFDI real sobre accrual provisional */}
+      <Dialog open={!!confirmarProvId} onOpenChange={(o) => { if (!o) { setConfirmarProvId(null); setFactForm(EMPTY_FACTURA); setUuidError(""); } }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Registrar CFDI real — confirmar accrual</DialogTitle></DialogHeader>
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 mb-2">
+            Sustituye el accrual provisional con los datos reales del CFDI del proveedor. El folio interno y la OC/recepción vinculados se conservan.
+          </div>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Folio proveedor</Label>
+                <Input value={factForm.serie_folio_proveedor} onChange={(e) => setFactForm((f) => ({ ...f, serie_folio_proveedor: e.target.value }))} placeholder="A-001" />
+              </div>
+              <div className="space-y-1">
+                <Label>Fecha factura</Label>
+                <Input type="date" value={factForm.fecha_factura} onChange={(e) => setFactForm((f) => ({ ...f, fecha_factura: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>UUID SAT (CFDI)</Label>
+              <Input
+                value={factForm.uuid_sat}
+                onChange={(e) => { setFactForm((f) => ({ ...f, uuid_sat: e.target.value.trim() })); setUuidError(""); }}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                className={uuidError ? "border-destructive" : ""}
+              />
+              {uuidError && <p className="text-xs text-destructive">{uuidError}</p>}
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label>Subtotal (MXN) *</Label>
+                <Input type="number" min={0} step={0.01} value={factForm.subtotal_str} onChange={(e) => setFactForm((f) => ({ ...f, subtotal_str: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div className="space-y-1">
+                <Label>IVA (MXN)</Label>
+                <Input type="number" min={0} step={0.01} value={factForm.iva_str} onChange={(e) => setFactForm((f) => ({ ...f, iva_str: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div className="space-y-1">
+                <Label>Total</Label>
+                <p className="h-9 flex items-center text-sm font-semibold">
+                  {formatMXN(Math.round((Number(factForm.subtotal_str || 0) + Number(factForm.iva_str || 0)) * 100))}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Fecha de vencimiento *</Label>
+              <Input type="date" value={factForm.fecha_vencimiento} onChange={(e) => setFactForm((f) => ({ ...f, fecha_vencimiento: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Concepto</Label>
+              <Input value={factForm.concepto} onChange={(e) => setFactForm((f) => ({ ...f, concepto: e.target.value }))} placeholder="Compra de medicamentos…" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setConfirmarProvId(null); setFactForm(EMPTY_FACTURA); setUuidError(""); }} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleConfirmarProvisional} disabled={saving}>{saving ? "Guardando…" : "Confirmar CFDI"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

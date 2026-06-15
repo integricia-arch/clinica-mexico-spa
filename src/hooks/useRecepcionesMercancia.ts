@@ -174,6 +174,44 @@ export function useRecepcionesMercancia(clinicId: string | null) {
     const { error: iErr } = await untypedTable("recepciones_items").insert(itemRows);
     if (iErr) throw new Error(friendlyError(iErr, "No se pudieron registrar los productos recibidos."));
 
+    // NIF C-19: accrual devengado — si la OC no tiene CFDI real, crear factura provisional
+    if (input.orden_id) {
+      const { data: existeFact } = await untypedTable("facturas_proveedor")
+        .select("id")
+        .eq("orden_id", input.orden_id)
+        .eq("es_provisional", false)
+        .maybeSingle() as { data: { id: string } | null };
+      if (!existeFact) {
+        const { data: folioRows } = await untypedTable("facturas_proveedor")
+          .select("folio_interno")
+          .eq("clinic_id", clinicId) as { data: { folio_interno: string }[] | null };
+        const nums = (folioRows ?? []).map((r) => parseInt(r.folio_interno.replace(/\D/g, ""), 10)).filter((n) => !isNaN(n));
+        const provFolio = `FP-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(4, "0")}`;
+        const subtotal = itemRows.reduce((sum, it) => sum + it.cantidad_recibida * it.precio_unitario_centavos, 0);
+        const today = new Date().toISOString().split("T")[0];
+        const vence = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        await untypedTable("facturas_proveedor").insert({
+          clinic_id: clinicId,
+          folio_interno: provFolio,
+          proveedor_id: input.proveedor_id,
+          orden_id: input.orden_id,
+          recepcion_id,
+          uuid_sat: null,
+          serie_folio_proveedor: null,
+          fecha_factura: today,
+          fecha_vencimiento: vence,
+          subtotal_centavos: subtotal,
+          iva_centavos: 0,
+          total_centavos: subtotal,
+          saldo_pendiente_centavos: subtotal,
+          estatus: "provisional",
+          es_provisional: true,
+          concepto: "Accrual devengado — pendiente CFDI",
+          notas: `Generado al registrar ${folio}. Reemplazar con CFDI real del proveedor.`,
+        });
+      }
+    }
+
     // Actualizar cantidad_recibida en ordenes_compra_items y estatus OC
     if (input.orden_id) {
       for (const it of input.items) {

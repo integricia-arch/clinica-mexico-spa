@@ -18,7 +18,8 @@ export interface FacturaProveedor {
   iva_centavos: number;
   total_centavos: number;
   saldo_pendiente_centavos: number;
-  estatus: "pendiente" | "parcial" | "pagada" | "cancelada" | "en_disputa";
+  estatus: "provisional" | "pendiente" | "parcial" | "pagada" | "cancelada" | "en_disputa";
+  es_provisional: boolean;
   moneda: string;
   concepto: string;
   notas: string;
@@ -84,6 +85,7 @@ interface FacturaRow {
   total_centavos: number;
   saldo_pendiente_centavos: number;
   estatus: string;
+  es_provisional: boolean | null;
   moneda: string;
   concepto: string | null;
   notas: string | null;
@@ -112,6 +114,7 @@ const toFactura = (row: FacturaRow): FacturaProveedor => ({
   total_centavos: row.total_centavos,
   saldo_pendiente_centavos: row.saldo_pendiente_centavos,
   estatus: row.estatus as FacturaProveedor["estatus"],
+  es_provisional: row.es_provisional ?? false,
   moneda: row.moneda,
   concepto: row.concepto ?? "",
   notas: row.notas ?? "",
@@ -238,8 +241,41 @@ export function useFacturasProveedor(clinicId: string | null) {
     return (data ?? []) as PagoProveedor[];
   }, []);
 
-  const pendientes = items.filter((f) => f.estatus === "pendiente" || f.estatus === "parcial");
-  const vencidas = pendientes.filter((f) => new Date(f.fecha_vencimiento) < new Date());
+  const confirmarProvisional = useCallback(async (provId: string, input: FacturaInput): Promise<void> => {
+    if (!clinicId) throw new Error("No hay clínica activa.");
+    const uuidTrimmed = input.uuid_sat.trim();
+    if (uuidTrimmed) {
+      const { data: dup } = await untypedTable("facturas_proveedor")
+        .select("folio_interno, fecha_factura, proveedores(nombre)")
+        .eq("uuid_sat", uuidTrimmed)
+        .neq("id", provId)
+        .maybeSingle() as { data: { folio_interno: string; fecha_factura: string; proveedores: { nombre: string } | null } | null };
+      if (dup) {
+        const prov = dup.proveedores?.nombre ?? "proveedor desconocido";
+        throw new Error(`UUID duplicado: ya registrado en ${dup.folio_interno} (${prov}, ${dup.fecha_factura}).`);
+      }
+    }
+    const { error: uErr } = await untypedTable("facturas_proveedor").update({
+      uuid_sat: uuidTrimmed || null,
+      serie_folio_proveedor: input.serie_folio_proveedor.trim() || null,
+      fecha_factura: input.fecha_factura,
+      fecha_vencimiento: input.fecha_vencimiento,
+      subtotal_centavos: input.subtotal_centavos,
+      iva_centavos: input.iva_centavos,
+      total_centavos: input.total_centavos,
+      saldo_pendiente_centavos: input.total_centavos,
+      concepto: input.concepto.trim() || null,
+      notas: input.notas.trim() || null,
+      estatus: "pendiente",
+      es_provisional: false,
+    }).eq("id", provId);
+    if (uErr) throw new Error(friendlyError(uErr, "No se pudo confirmar la factura provisional."));
+    await load();
+  }, [clinicId, load]);
 
-  return { items, loading, error, create, registrarPago, getPagos, pendientes, vencidas, refresh: load };
+  const pendientes = items.filter((f) => f.estatus === "pendiente" || f.estatus === "parcial" || f.estatus === "provisional");
+  const vencidas = items.filter((f) => (f.estatus === "pendiente" || f.estatus === "parcial") && new Date(f.fecha_vencimiento) < new Date());
+  const provisionales = items.filter((f) => f.es_provisional);
+
+  return { items, loading, error, create, registrarPago, getPagos, confirmarProvisional, pendientes, vencidas, provisionales, refresh: load };
 }
