@@ -475,9 +475,23 @@ Sub-tabs: **Dashboard | Órdenes de Compra | Recepción de Mercancía | Cuentas 
 ### Módulo Almacén/Compras/Proveedores — COMPLETO ✅
 Todas las fases completadas. Sin pendientes.
 
+## Completado (Jun 15, 2026 — sesión 23)
+
+### Camino del Paciente — B + C ✅
+- [x] **B — BillingForm**: botón "Ir a Caja" (navega `/caja`) + descripción actualizada
+- [x] **B — PharmacyForm**: fetch `prescriptions` por `appointment_id` al montar; muestra número, diagnóstico y badge de estatus (Borrador/Activa/Surtida/Cancelada); botón "Ir a Farmacia" (navega `/farmacia`)
+- [x] **C — Role enforcement en CaminoPaciente.tsx**:
+  - `STEP_ROLES` map: 13 step_keys → roles permitidos (admin/manager en todos + roles especializados)
+  - `canActOnStep(stepKey)` checa `roles[]` de `useAuth()`
+  - Ícono `ShieldX` en step list sobre hitos activos donde el usuario no tiene permiso
+  - Banner naranja en tab Acciones con roles requeridos cuando usuario no puede actuar
+  - Botones Abrir/Completar/Bloquear deshabilitados cuando rol insuficiente
+- [x] Build limpio (`tsc` 0 errores) · commit `689fb09` · deploy `cbdc09ca` · push `origin/main`
+- [x] Site verificado: `integrika.mx` → 200 OK, bundle correcto, sin errores startup
+
 ## Pendiente / Próximo
 
-Sin pendientes de módulo Almacén. Próximos módulos a definir.
+Sin pendientes de módulo Almacén. Sin pendientes de Camino del Paciente (A+B+C completados). Próximos módulos a definir.
 
 ## Completado (Jun 15, 2026 — sesión 15)
 
