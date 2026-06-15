@@ -53,6 +53,13 @@ export interface CxpFactura {
   vencida: boolean;
 }
 
+export interface Top10Producto {
+  medicamento_id: string;
+  nombre: string;
+  total: number;
+  unidades: number;
+}
+
 export interface BIResumen {
   citasMes: number;
   citasMesAnterior: number;
@@ -79,6 +86,7 @@ export interface BIData {
   citasPorOrigen: OrigenCount[];
   citasPorDoctor: DoctorCount[];
   farmaciaTimeline: DiaVenta[];
+  top10Farmacia: Top10Producto[];
   stockAlertas: StockAlerta[];
   lotesPorVencer: LotePorVencer[];
   refresh: () => void;
@@ -157,6 +165,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
   const [citasPorOrigen, setCitasPorOrigen] = useState<OrigenCount[]>([]);
   const [citasPorDoctor, setCitasPorDoctor] = useState<DoctorCount[]>([]);
   const [farmaciaTimeline, setFarmaciaTimeline] = useState<DiaVenta[]>([]);
+  const [top10Farmacia, setTop10Farmacia] = useState<Top10Producto[]>([]);
   const [stockAlertas, setStockAlertas] = useState<StockAlerta[]>([]);
   const [lotesPorVencer, setLotesPorVencer] = useState<LotePorVencer[]>([]);
 
@@ -183,6 +192,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
         medicamentosRes,
         lotesRes,
         cxpRes,
+        itemsRes,
       ] = await Promise.all([
         supabase
           .from("appointments")
@@ -246,6 +256,13 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
           .select("saldo_pendiente_centavos,fecha_vencimiento")
           .eq("clinic_id", activeClinicId)
           .in("estatus", ["pendiente", "parcial"]),
+
+        supabase
+          .from("pharmacy_sale_items")
+          .select("medicamento_id,subtotal,quantity")
+          .eq("clinic_id", activeClinicId)
+          .gte("created_at", desde.toISOString())
+          .lte("created_at", hasta.toISOString()),
       ]);
 
       const citas = citasRes.data ?? [];
@@ -343,6 +360,26 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
         origenMap.set(o, (origenMap.get(o) ?? 0) + 1);
       });
 
+      // ─── Top 10 farmacia ────────────────────────────────────────────────
+      const items = (itemsRes.data ?? []) as Array<{ medicamento_id: string; subtotal: number | string; quantity: number }>;
+      const itemsMap = new Map<string, { total: number; unidades: number }>();
+      items.forEach(it => {
+        const prev = itemsMap.get(it.medicamento_id) ?? { total: 0, unidades: 0 };
+        itemsMap.set(it.medicamento_id, {
+          total: prev.total + Number(it.subtotal),
+          unidades: prev.unidades + it.quantity,
+        });
+      });
+      const computedTop10: Top10Producto[] = [...itemsMap.entries()]
+        .map(([medicamento_id, agg]) => ({
+          medicamento_id,
+          nombre: medMap.get(medicamento_id)?.nombre ?? medicamento_id.slice(0, 8),
+          total: agg.total,
+          unidades: agg.unidades,
+        }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 10);
+
       // ─── Commit state ──────────────────────────────────────────────────
       setResumen({
         citasMes,
@@ -371,6 +408,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
         [...doctorCountMap.values()].sort((a, b) => b.total - a.total),
       );
       setFarmaciaTimeline(buildFarmaciaTimeline(farmacia, desde, hasta));
+      setTop10Farmacia(computedTop10);
       setStockAlertas(computedStockAlertas);
       setLotesPorVencer(computedLotesPorVencer);
     } catch (e) {
@@ -392,6 +430,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
     citasPorOrigen,
     citasPorDoctor,
     farmaciaTimeline,
+    top10Farmacia,
     stockAlertas,
     lotesPorVencer,
     refresh: load,

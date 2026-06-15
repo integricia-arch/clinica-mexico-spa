@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { useBI, Periodo, DiaCount, DiaVenta, OrigenCount, DoctorCount } from "@/hooks/useBI";
+import { useBI, Periodo, DiaCount, DiaVenta, OrigenCount, DoctorCount, Top10Producto } from "@/hooks/useBI";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -354,8 +354,9 @@ function TabAgenda({ citasTimeline, citasPorDoctor, resumen, loading }: {
 
 // ─── Tab: Farmacia ────────────────────────────────────────────────────────────
 
-function TabFarmacia({ farmaciaTimeline, resumen, loading }: {
+function TabFarmacia({ farmaciaTimeline, top10Farmacia, resumen, loading }: {
   farmaciaTimeline: DiaVenta[];
+  top10Farmacia: Top10Producto[];
   resumen: ReturnType<typeof useBI>["resumen"];
   loading: boolean;
 }) {
@@ -423,6 +424,40 @@ function TabFarmacia({ farmaciaTimeline, resumen, loading }: {
                 <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                 <Tooltip labelFormatter={v => format(new Date(v + "T12:00:00"), "d/MM", { locale: es })} />
                 <Bar dataKey="transacciones" name="Transacciones" fill="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {top10Farmacia.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Top 10 productos por ingresos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={Math.max(160, top10Farmacia.length * 32)}>
+              <BarChart
+                layout="vertical"
+                data={top10Farmacia}
+                margin={{ top: 4, right: 8, left: 4, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <YAxis
+                  type="category"
+                  dataKey="nombre"
+                  tick={{ fontSize: 10 }}
+                  width={120}
+                  tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 15) + "…" : v}
+                />
+                <Tooltip
+                  formatter={(v: number, name: string) => [
+                    name === "total" ? fmtMXN(v) : `${v} uds`,
+                    name === "total" ? "Ingresos" : "Unidades",
+                  ]}
+                />
+                <Bar dataKey="total" name="total" fill="hsl(var(--chart-1))" radius={[0, 2, 2, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -701,6 +736,7 @@ export default function BI() {
         <TabsContent value="farmacia" className="mt-4">
           <TabFarmacia
             farmaciaTimeline={bi.farmaciaTimeline}
+            top10Farmacia={bi.top10Farmacia}
             resumen={bi.resumen}
             loading={bi.loading}
           />

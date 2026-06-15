@@ -8,8 +8,228 @@ import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import PacienteModal from "@/components/PacienteModal";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Patient = Tables<"patients">;
+
+type Appointment = {
+  id: string;
+  fecha_inicio: string | null;
+  status: string | null;
+  origen: string | null;
+  motivo: string | null;
+};
+
+type Prescription = {
+  id: string;
+  numero_receta: string | null;
+  created_at: string | null;
+  status: string | null;
+  diagnostico: string | null;
+};
+
+type PharmacySale = {
+  id: string;
+  created_at: string | null;
+  total: number | null;
+  status: string | null;
+  payment_method: string | null;
+};
+
+function apptStatusColor(status: string | null): string {
+  if (!status) return "text-muted-foreground";
+  if (["confirmada", "confirmada_medico", "confirmada_paciente"].includes(status)) return "text-green-600";
+  if (status === "cancelada") return "text-red-600";
+  if (status === "no_show") return "text-orange-500";
+  return "text-muted-foreground";
+}
+
+function rxStatusColor(status: string | null): string {
+  if (!status) return "text-muted-foreground";
+  if (["issued", "active"].includes(status)) return "text-green-600";
+  if (status === "cancelled") return "text-red-600";
+  return "text-muted-foreground";
+}
+
+function saleStatusColor(status: string | null): string {
+  if (!status) return "text-muted-foreground";
+  if (status === "completed") return "text-green-600";
+  if (status === "pending") return "text-orange-500";
+  if (status === "cancelled") return "text-red-600";
+  return "text-muted-foreground";
+}
+
+function Spinner() {
+  return (
+    <div className="flex justify-center py-8">
+      <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
+function PacienteHistorialDrawer({
+  patient,
+  open,
+  onClose,
+}: {
+  patient: Patient | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [appts, setAppts] = useState<Appointment[]>([]);
+  const [rxs, setRxs] = useState<Prescription[]>([]);
+  const [sales, setSales] = useState<PharmacySale[]>([]);
+  const [loadingAppts, setLoadingAppts] = useState(false);
+  const [loadingRxs, setLoadingRxs] = useState(false);
+  const [loadingSales, setLoadingSales] = useState(false);
+
+  useEffect(() => {
+    if (!open || !patient) return;
+
+    setLoadingAppts(true);
+    supabase
+      .from("appointments")
+      .select("id,fecha_inicio,status,origen,motivo")
+      .eq("patient_id", patient.id)
+      .order("fecha_inicio", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        setAppts((data as Appointment[]) ?? []);
+        setLoadingAppts(false);
+      });
+
+    setLoadingRxs(true);
+    supabase
+      .from("prescriptions")
+      .select("id,numero_receta,created_at,status,diagnostico")
+      .eq("patient_id", patient.id)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        setRxs((data as Prescription[]) ?? []);
+        setLoadingRxs(false);
+      });
+
+    setLoadingSales(true);
+    supabase
+      .from("pharmacy_sales")
+      .select("id,created_at,total,status,payment_method")
+      .eq("patient_id", patient.id)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        setSales((data as PharmacySale[]) ?? []);
+        setLoadingSales(false);
+      });
+  }, [open, patient]);
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>
+            {patient ? `${patient.nombre} ${patient.apellidos}` : "Historial"}
+          </SheetTitle>
+        </SheetHeader>
+
+        <Tabs defaultValue="citas" className="mt-4">
+          <TabsList className="w-full">
+            <TabsTrigger value="citas" className="flex-1">Citas</TabsTrigger>
+            <TabsTrigger value="recetas" className="flex-1">Recetas</TabsTrigger>
+            <TabsTrigger value="pagos" className="flex-1">Pagos</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="citas" className="mt-4 space-y-2">
+            {loadingAppts ? (
+              <Spinner />
+            ) : appts.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
+            ) : (
+              appts.map((a) => (
+                <div key={a.id} className="rounded-lg border border-border p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      {a.fecha_inicio
+                        ? format(new Date(a.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es })
+                        : "—"}
+                    </span>
+                    <span className={`text-xs font-medium ${apptStatusColor(a.status)}`}>
+                      {a.status ?? "—"}
+                    </span>
+                  </div>
+                  {a.motivo && (
+                    <p className="mt-1 text-xs text-muted-foreground truncate">{a.motivo}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="recetas" className="mt-4 space-y-2">
+            {loadingRxs ? (
+              <Spinner />
+            ) : rxs.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
+            ) : (
+              rxs.map((r) => (
+                <div key={r.id} className="rounded-lg border border-border p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{r.numero_receta ?? r.id.slice(0, 8)}</span>
+                    <span className={`text-xs font-medium ${rxStatusColor(r.status)}`}>
+                      {r.status ?? "—"}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {r.created_at
+                        ? format(new Date(r.created_at), "dd/MM/yyyy HH:mm", { locale: es })
+                        : "—"}
+                    </span>
+                    {r.diagnostico && (
+                      <span className="text-xs text-muted-foreground truncate max-w-[60%]">{r.diagnostico}</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="pagos" className="mt-4 space-y-2">
+            {loadingSales ? (
+              <Spinner />
+            ) : sales.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
+            ) : (
+              sales.map((s) => (
+                <div key={s.id} className="rounded-lg border border-border p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      ${s.total != null ? s.total.toFixed(2) : "—"}
+                    </span>
+                    <span className={`text-xs font-medium ${saleStatusColor(s.status)}`}>
+                      {s.status ?? "—"}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {s.created_at
+                        ? format(new Date(s.created_at), "dd/MM/yyyy HH:mm", { locale: es })
+                        : "—"}
+                    </span>
+                    {s.payment_method && (
+                      <span className="text-xs text-muted-foreground">{s.payment_method}</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
 export default function PacientesLista() {
   const { hasRole } = useAuth();
@@ -18,6 +238,8 @@ export default function PacientesLista() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<Patient | null>(null);
+  const [historialOpen, setHistorialOpen] = useState(false);
+  const [historialPaciente, setHistorialPaciente] = useState<Patient | null>(null);
 
   const canEdit = hasRole("admin") || hasRole("receptionist");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -110,7 +332,8 @@ export default function PacientesLista() {
           {filtered.map((p) => (
             <div
               key={p.id}
-              className="rounded-xl border border-border bg-card p-4 shadow-card hover:shadow-elevated transition-shadow"
+              className="rounded-xl border border-border bg-card p-4 shadow-card hover:shadow-elevated transition-shadow cursor-pointer"
+              onClick={() => { setHistorialPaciente(p); setHistorialOpen(true); }}
             >
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
@@ -132,7 +355,7 @@ export default function PacientesLista() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 shrink-0"
-                    onClick={() => openEdit(p)}
+                    onClick={(e) => { e.stopPropagation(); openEdit(p); }}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -176,6 +399,12 @@ export default function PacientesLista() {
         onClose={() => setModalOpen(false)}
         patient={selected}
         onSaved={handleSaved}
+      />
+
+      <PacienteHistorialDrawer
+        open={historialOpen}
+        patient={historialPaciente}
+        onClose={() => setHistorialOpen(false)}
       />
     </div>
   );

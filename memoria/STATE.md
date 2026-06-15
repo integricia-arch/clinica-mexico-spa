@@ -607,16 +607,67 @@ Todas las fases completadas. Sin pendientes.
 - [x] Edge function `auto-reorder` v1 ACTIVE: agrupa por proveedor, cooldown 7d, umbral $5k, bloquea estupefacientes/psico I-II, borradores manuales psico III, email via Resend
 - [x] pg_cron job id=4: `0 12 * * *` (06:00 CST) — activo en prod
 
+### Gap #6 — Parser CFDI XML 4.0 + 4-way match anti-robo ✅ (commit `3edda1e`)
+- [x] Migration `create_fp_cfdi_4way_match_antirobo`: tablas `fp_cfdi`, `fp_cfdi_lineas`, `medicamento_codigos_proveedor` + RLS
+- [x] ALTER TABLE `facturas_proveedor`: `fp_cfdi_id`, `cfdi_parseado`, `tiene_alertas_criticas`, `match_alertas_count`
+- [x] Edge fn `cfdi-parse` v1 ACTIVE: parse CFDI 4.0, aritmética, SAT SOAP, 3-nivel matching, 4-way match vs OC+Recepción
+- [x] Alertas CRITICA/ALTA/MEDIA con detección anti-robo CANTIDAD_FACTURADA_MAYOR_RECIBIDA
+- [x] `useFpCfdi.ts` + `CfdiUploadPanel.tsx`: drag-drop XML, tabla líneas coloreada, badge recomendación
+- [x] `FacturasProveedor.tsx`: botón "Subir XML" inline por factura
+
+## Completado (Jun 15, 2026 — sesión actual)
+
+### Business Intelligence dashboard ✅ (commit `931ac2d`)
+- [x] `src/hooks/useBI.ts`: 10 queries paralelas por período; citas timeline/origen/doctor, farmacia timeline, stock alertas, lotes por vencer, CxP, pacientes nuevos
+- [x] `src/pages/BI.tsx`: 5 tabs (Resumen | Agenda | Farmacia | Inventario | Finanzas)
+  - Resumen: 6 KPI cards con delta vs período anterior + gráficas citas y ventas por día + donut origen + bar doctores
+  - Agenda: funnel confirmadas/canceladas/no-show + tabla rendimiento médicos
+  - Farmacia: ventas diarias + transacciones diarias
+  - Inventario: tabla stock bajo mínimo + lotes por vencer 30d con badge días
+  - Finanzas: CxP pendiente vs vencido con barra visual
+  - Selector período: Este mes / Mes anterior / 3 meses / Este año
+  - Badge alert en tabs Inventario y Finanzas cuando hay datos críticos
+- [x] Ruta `/inteligencia` (ProtectedRoute admin/manager) en `App.tsx`
+- [x] Nav "Inteligencia BI" con ícono BarChart2 en sección Admin de `AppLayout.tsx`
+- [x] `tsc --noEmit` = 0 errores
+
+### Agenda mejorada ✅ (commit `329f954`)
+- [x] Migration `add_agenda_bloqueos_recurrencia`: `doctor_bloqueos` tabla + columnas recurrencia en `appointments`
+- [x] Edge function `confirmar-cita` v1 ACTIVE: cambia status + notifica vía Telegram al paciente
+- [x] `Agenda.tsx` reescrito: vista semanal (columnas=días, filas=horas) + vista día (columnas=doctores)
+  - Bloqueos visuales inline en grid; `BloqueoDialog` para crear bloqueos
+  - Filtro por doctor; recurrencia badge ↻ en CitaCard
+  - `cambiarStatus` usa edge fn con fallback directo a Supabase
+- [x] `NuevaCitaDialog.tsx`: sección recurrencia (semanal/quincenal/mensual + fecha hasta) + `generarOcurrencias()` max 52
+- [x] `supabase/config.toml`: `[functions.confirmar-cita] verify_jwt = false`
+
+### Gaps INV-A — TODOS COMPLETOS ✅ (commit `1612ee6`)
+- [x] **Auditoría log accesos**: tabla `audit_log` append-only + triggers en `proveedores`/`ordenes_compra`/`facturas_proveedor`; `AuditLogPanel.tsx` (solo admin/manager)
+- [x] **Validación RFC vs SAT 69B**: `EvaluacionProveedores.tsx` muestra badge EFOS, advertencia deducibilidad, link SAT; query enriquecida con `rfc`/`estatus_efos`/`ultima_verificacion_efos`
+- [x] **Bitácora temperatura cadena frío**: tabla `bitacora_temperatura` + trigger `fn_check_temp_rango` (auto-calcula `fuera_de_rango`); `BitacoraTemperaturaPanel.tsx` con tarjetas estado por zona + historial
+- [x] **Comparativa cotizaciones multi-proveedor**: tablas `cotizaciones` + `cotizaciones_items`; `CotizacionesPanel.tsx` con comparativa agrupada por SC, estrella mejor precio, selección ganador
+- [x] **Control presupuestal por categoría**: tabla `presupuesto_categorias` + vista `v_presupuesto_ejecucion`; `PresupuestoPanel.tsx` con barra de ejecución, alerta ≥80%, bloqueo visual a 100%
+- [x] Farmacia.tsx: 4 tabs nuevos en Compras (Cotizaciones, Presupuesto, Temperatura, Auditoría)
+
+## Completado (Jun 15, 2026 — sesión 30)
+
+### Auto-reorder operacional ✅
+- [x] `AUTO_REORDER_CRON_SECRET` configurado en Supabase Secrets (Dashboard)
+- [x] Vault: `vault.create_secret('auto_reorder_cron_secret', ...)` → id `471b7c73-088a-4a02-8ae9-23e6c3421026`
+- [x] pg_cron job id=4 actualizado: lee secret desde `vault.decrypted_secrets` en subquery (nunca en texto claro)
+- [x] Fix schema drift `auto-reorder` v3: `clinics.active` → `clinics.status = 'active'` (v2 retornaba 500)
+- [x] Edge function `auto-reorder` v3 ACTIVE — fix: `.eq("active", true)` → `.eq("status", "active")` (línea 166)
+- **Pendiente**: correr test post-fix para confirmar 200 (query `net.http_post` → revisar `net._http_response`)
+
 ## Pendiente / Próximo
 
-### Gap #6 — Parser CFDI XML 4.0 + 4-way match anti-robo (INV-C)
-- Edge fn `cfdi-parse`: fast-xml-parser, extrae conceptos CFDI 4.0, mapeo a medicamentos por descripción/NoIdentificacion
-- Tabla `facturas_proveedor_cfdi`: XML raw + conceptos parseados
-- 4-way match: CFDI vs OC vs Recepción vs Factura interna — alertas anti-robo (cantidad CFDI > recibida)
-- UI: drag-drop upload XML en FacturasProveedor → auto-poblar campos
+### BI — mejoras fase 2 (no crítico)
+- Top 10 productos farmacia por ingresos (requiere join pharmacy_sale_items con filtro de fecha)
+- Heatmap citas por hora del día / día de semana
+- KPI bot IA: costo mensual por canal (`bot_usage_costs` usa `organization_id`, no `clinic_id`)
+- Tasa retención pacientes (% que regresan en < 90 días)
 
 ### Otras opciones
-- **Agenda mejorada**: citas recurrentes, confirmación Telegram/SMS, bloqueos por doctor, vista semanal
 - **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
 - **DischargeForm mejorado**: resumen de alta más completo (diagnóstico final, documentos entregados)
 

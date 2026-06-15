@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
   } catch { /* no body */ }
 
   // Get all active clinics (or target one)
-  const clinicsQuery = supabase.from("clinics").select("id, name").eq("active", true);
+  const clinicsQuery = supabase.from("clinics").select("id, name").eq("status", "active");
   if (targetClinicId) clinicsQuery.eq("id", targetClinicId);
   const { data: clinics, error: clinicsErr } = await clinicsQuery;
   if (clinicsErr) {
