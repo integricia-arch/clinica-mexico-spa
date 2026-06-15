@@ -43,6 +43,7 @@ import CajaTurno from "@/pages/CajaTurno";
 import Caja from "@/pages/Caja";
 import TurnoGuard from "@/components/TurnoGuard";
 import AjustesPlataforma from "@/pages/ajustes/AjustesPlataforma";
+import BI from "@/pages/BI";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -99,6 +100,7 @@ const App = () => (
                         <Route path="/caja" element={<ProtectedRoute allowedRoles={["admin","manager","cajero","receptionist"]}><TurnoGuard cajaFilter="general"><Caja /></TurnoGuard></ProtectedRoute>} />
                         <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsuarios /></ProtectedRoute>} />
                         <Route path="/admin/diagnostico-multiclinica" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDiagnosticoMulticlinica /></ProtectedRoute>} />
+                        <Route path="/inteligencia" element={<ProtectedRoute allowedRoles={["admin","manager"]}><BI /></ProtectedRoute>} />
 
                         <Route path="*" element={<NotFound />} />
                       </Routes>

@@ -6,7 +6,7 @@ import {
   CalendarPlus, Headset, ShieldCheck,
   MessageCircle, BellRing, ClipboardList, Stethoscope,
   CreditCard, Lock, UserRound, ChevronLeft, ChevronRight,
-  UserCog,
+  UserCog, BarChart2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -45,7 +45,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"] },
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
   // ── Admin ──
-  { section: "Admin", to: "/admin/usuarios", icon: UserCog, label: "Usuarios", roles: ["admin"] },
+  { section: "Admin", to: "/inteligencia", icon: BarChart2, label: "Inteligencia BI", roles: ["admin", "manager"] },
+  { to: "/admin/usuarios", icon: UserCog, label: "Usuarios", roles: ["admin"] },
   { to: "/auditoria", icon: ShieldCheck, label: "Auditoría", roles: ["admin"] },
   { to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin", "doctor"] },
   // patient-only
