@@ -552,8 +552,6 @@ Todas las fases completadas. Sin pendientes.
 - [x] `Farmacia.tsx`: sub-tab "Devoluciones" en tab Compras
 - [x] commit `48a3d65` · deploy `67ef3651`
 
-## Pendiente / Próximo
-
 ## Completado (Jun 15, 2026 — sesión 28)
 
 ### Gap #14 — Evaluación de Proveedores ✅
@@ -568,10 +566,61 @@ Todas las fases completadas. Sin pendientes.
 - [x] `Farmacia.tsx`: sub-tab "Evaluación" en Compras
 - [x] commit `ba5096c` · deploy `b0cb1eb1`
 
-### Cola de investigación registrada en STATE.md
-- INV-A: Validación operativa contable (NIF, COFEPRIS, SAP/Odoo/Netsuite, COSO)
-- INV-B: Auto-abasto con proveedor preferido por artículo + email automático OC
-- INV-C: Lectura CFDI XML/PDF para validación 4-way match (anti-robo)
+### Investigaciones formales completadas ✅
+- INV-A → `memoria/proyectos/investigacion-operativa-contable-compras.md` — 20 gaps priorizados NIF/COFEPRIS/COSO
+- INV-B → `memoria/proyectos/investigacion-auto-abasto-proveedor-preferido.md` — schema completo + edge function + pg_cron
+- INV-C → `memoria/proyectos/investigacion-cfdi-xml-4way-match-antirobo.md` — parser CFDI 4.0 + 4-way match + alertas anti-robo
+
+### Fix IVA / push sesión 28
+- [x] `fix: PuntoDeVenta tasa_iva fallback 0.16 -> 0` (commit `135e96b`)
+- [x] Push origin/main completado: 9 commits `9f00caf..135e96b`
+
+## Completado (Jun 15, 2026 — sesión 29)
+
+### Gap #1 — CFDI duplicado ✅ (commit `1479d5f`)
+- [x] Pre-check UUID SAT antes de INSERT en `useFacturasProveedor.create()`
+- [x] Migration `add_unique_uuid_sat_facturas_proveedor`: UNIQUE INDEX parcial WHERE uuid_sat IS NOT NULL
+
+### Gap #2 — Libro control psicotrópicos/estupefacientes ✅ (commit `24b177e`)
+- [x] Migration: `tipo_control` en medicamentos + tablas `libro_control_controlados` + `libro_control_movimientos` con RLS
+- [x] `useLibroControlControlados.ts`: createLibro, cerrarLibro, registrarEntrada, registrarSalida (valida saldo), firmarMovimiento
+- [x] `LibroControlControlados.tsx`: accordion libros, dialogs entrada/salida, firma, badges COFEPRIS
+- [x] `Farmacia.tsx`: nav "Controlados" + subview + campo tipo_control en form medicamentos
+
+### Gap #3 — Solicitudes de Compra (SC) ✅ (commit `b6a8f49`)
+- [x] Migration: tablas `solicitudes_compra` + `solicitudes_compra_items` + FK en `ordenes_compra`
+- [x] `useSolicitudesCompra.ts`: create, enviar, aprobar, rechazar, marcarConvertida
+- [x] `SolicitudesCompra.tsx`: flujo borrador→enviada→aprobada→convertida, aprobación role-gated
+- [x] `Farmacia.tsx`: sub-tab "Solicitudes" antes de OC en tab Compras
+
+### Gap #4 — CxP Provisional Devengada NIF C-19 ✅ (commit `bc324fe`)
+- [x] Migration `add_provisional_accrual_to_facturas_proveedor`: estatus 'provisional' + `es_provisional` bool + índice parcial
+- [x] `useFacturasProveedor.ts`: tipo `es_provisional`, estatus union incluye 'provisional', `confirmarProvisional()`, `provisionales` computed
+- [x] `useRecepcionesMercancia.ts`: auto-crea accrual provisional al crear recepción con OC sin CFDI real
+- [x] `FacturasProveedor.tsx`: badge amber, aviso NIF C-19, dialog "Registrar CFDI real"
+
+### Gap #5 — Auto-abasto con proveedor preferido ✅ (commit `7d05952`)
+- [x] Migration `create_medicamento_proveedores_autoabasto`: tablas `medicamento_proveedores` + `auto_reorden_log` + trigger `update_updated_at` + RPC `get_medicamentos_en_reorden` + RLS
+- [x] `useMedicamentoProveedores.ts`: CRUD con precio pactado, mínimos, múltiplos, plazo, activo toggle
+- [x] `MedicamentoProveedoresPanel.tsx`: UI hasta 5 proveedores con orden de preferencia (★ primario), vigencia precio, restricciones pedido
+- [x] `Farmacia.tsx`: panel integrado en dialog edición de medicamento
+- [x] Edge function `auto-reorder` v1 ACTIVE: agrupa por proveedor, cooldown 7d, umbral $5k, bloquea estupefacientes/psico I-II, borradores manuales psico III, email via Resend
+- [x] pg_cron job id=4: `0 12 * * *` (06:00 CST) — activo en prod
+
+## Pendiente / Próximo
+
+### Gap #6 — Parser CFDI XML 4.0 + 4-way match anti-robo (INV-C)
+- Edge fn `cfdi-parse`: fast-xml-parser, extrae conceptos CFDI 4.0, mapeo a medicamentos por descripción/NoIdentificacion
+- Tabla `facturas_proveedor_cfdi`: XML raw + conceptos parseados
+- 4-way match: CFDI vs OC vs Recepción vs Factura interna — alertas anti-robo (cantidad CFDI > recibida)
+- UI: drag-drop upload XML en FacturasProveedor → auto-poblar campos
+
+### Otras opciones
+- **Agenda mejorada**: citas recurrentes, confirmación Telegram/SMS, bloqueos por doctor, vista semanal
+- **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
+- **DischargeForm mejorado**: resumen de alta más completo (diagnóstico final, documentos entregados)
+
+---
 
 ### Cola de investigación (próximas sesiones — requieren análisis antes de implementar)
 

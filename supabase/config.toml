@@ -21,3 +21,6 @@ verify_jwt = false
 
 [functions.auto-reorder]
 verify_jwt = false
+
+[functions.cfdi-parse]
+verify_jwt = false

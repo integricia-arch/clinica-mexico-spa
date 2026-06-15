@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ChevronDown, ChevronUp, AlertTriangle, FileText, CreditCard } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, AlertTriangle, FileText, CreditCard, Upload } from "lucide-react";
 import ThreeWayMatchPanel from "./ThreeWayMatchPanel";
+import CfdiUploadPanel from "./CfdiUploadPanel";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -52,6 +53,7 @@ export default function FacturasProveedor() {
   const [factDialog, setFactDialog] = useState(false);
   const [pagoDialog, setPagoDialog] = useState<string | null>(null);
   const [confirmarProvId, setConfirmarProvId] = useState<string | null>(null);
+  const [cfdiPanelId, setCfdiPanelId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uuidError, setUuidError] = useState("");
 
@@ -293,6 +295,35 @@ export default function FacturasProveedor() {
                     matchNotas={f.match_notas}
                     onUpdated={refresh}
                   />
+
+                  {/* CFDI XML 4-way match */}
+                  {!f.es_provisional && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CFDI XML · 4-way match</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => setCfdiPanelId(cfdiPanelId === f.id ? null : f.id)}
+                        >
+                          <Upload className="h-3 w-3 mr-1" />
+                          {cfdiPanelId === f.id ? "Cerrar" : "Subir XML"}
+                        </Button>
+                      </div>
+                      {cfdiPanelId === f.id && (
+                        <div className="rounded-lg border bg-muted/20 p-3">
+                          <CfdiUploadPanel
+                            facturaProveedorId={f.id}
+                            ordenCompraId={f.orden_id ?? undefined}
+                            recepcionId={f.recepcion_id ?? undefined}
+                            proveedorId={f.proveedor_id}
+                            onParsed={() => setCfdiPanelId(null)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {f.es_provisional && (
                     <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
