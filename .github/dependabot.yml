@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Mexico_City"
+    open-pull-requests-limit: 5
+    groups:
+      dev-tooling:
+        patterns:
+          - "vite*"
+          - "@vitejs/*"
+          - "vitest*"
+          - "eslint*"
+          - "typescript*"
+          - "@types/*"
+      ui-libs:
+        patterns:
+          - "@radix-ui/*"
+          - "framer-motion"
+          - "motion"
+          - "lucide-react"
+          - "tailwind*"
+    ignore:
+      - dependency-name: "lovable-tagger"
+        update-types: ["version-update:semver-major"]
