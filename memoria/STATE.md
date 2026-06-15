@@ -505,9 +505,28 @@ Todas las fases completadas. Sin pendientes.
 - [x] `FollowupForm`: syncFollowup al confirmar, fecha requerida con validación, checkbox "requiere nueva cita"
 - [x] commit `0c11751` · deploy `e086195e` · push `689fb09..0c11751`
 
+## Completado (Jun 15, 2026 — sesión 25)
+
+### 3-Way Match OC + Recepción + Factura ✅
+- [x] Migration `add_3way_match_to_facturas_proveedor`: columnas `match_status`, `match_oc_total_centavos`, `match_recepcion_total_centavos`, `match_diferencia_centavos`, `match_revisado_by/at`, `match_notas` con CHECK constraint en `facturas_proveedor`
+- [x] Auto-update: facturas con `orden_id` existentes → `match_status = 'pendiente'`
+- [x] `ThreeWayMatchPanel.tsx`: compara items OC vs recepción vs total factura
+  - Tolerancia: 1% o $50 MXN (lo mayor)
+  - Clasifica: ok / diferencia (1–10%) / disputa (>10%)
+  - Tabla de líneas por medicamento (qty/precio OC vs recepción, diff qty)
+  - Persiste resultado al verificar (match_status + totales en BD)
+  - Gerente/admin puede aprobar disputas con notas
+  - Si recepción no tiene `recepcion_id`, busca la más reciente por `orden_id`
+- [x] `useFacturasProveedor.ts`: interfaz extendida con 5 campos match_*
+- [x] `FacturasProveedor.tsx`: panel integrado en accordion expandido, antes de "Registrar pago"
+- [x] commit `9f00caf` · deploy `73d75045`
+
 ## Pendiente / Próximo
 
 Sin pendientes activos. Opciones para siguiente sesión:
+- **Gap #17 — Punto de reorden automático**: alerta cuando existencia ≤ stock_minimo por lote/medicamento
+- **Gap #11 — Devoluciones a proveedor**: flujo de nota de crédito proveedor + reversa inventario
+- **Gap #14 — Evaluación de proveedores**: score automático (cumplimiento OC, diferencias recepción, CxP puntualidad)
 - **Agenda mejorada**: citas recurrentes, confirmación Telegram/SMS, bloqueos por doctor, vista semanal
 - **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
 - **DischargeForm mejorado**: resumen de alta más completo (diagnóstico final, documentos entregados)
