@@ -107,7 +107,7 @@ async function logPosError(
     funcion,
     error_msg,
     error_detail,
-    payload,
+    payload: payload as unknown as import("@/integrations/supabase/types").Json,
   });
   if (error) {
     console.error("[logPosError] No se pudo guardar en pos_error_logs:", error.message, error);

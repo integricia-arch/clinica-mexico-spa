@@ -302,7 +302,7 @@ export default function Auditoria() {
   const filtradas = rows.filter((r) => {
     if (modulo === "Todos") return true;
     const meta = TABLA_LABEL[r.tabla];
-    if (!meta) return modulo === "Todos";
+    if (!meta) return false;
     return meta.modulo === modulo || meta.modulo.startsWith(modulo);
   });
 

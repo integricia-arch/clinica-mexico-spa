@@ -101,7 +101,7 @@ export default function Facturacion() {
         .maybeSingle(),
     ]);
     if (docsRes.error) toast.error("Error al cargar CFDIs: " + docsRes.error.message);
-    setDocs((docsRes.data ?? []) as CfdiDoc[]);
+    setDocs((docsRes.data ?? []) as unknown as CfdiDoc[]);
     if (cfgRes.data) setCpEmisor((cfgRes.data as any).domicilio_fiscal_cp ?? "");
     setLoading(false);
   }, [activeClinicId]);
