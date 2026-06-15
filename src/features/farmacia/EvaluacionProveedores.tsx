@@ -44,6 +44,9 @@ interface ProvKPI {
   // Meta
   ultima_compra: string | null;
   oc_pendientes: number;
+  rfc: string | null;
+  estatus_efos: string | null;
+  ultima_verificacion_efos: string | null;
 }
 
 const rating = (score: number): ProvKPI["rating"] => {
@@ -95,7 +98,7 @@ export default function EvaluacionProveedores() {
 
       // 1. Proveedores activos
       const { data: provs } = await untypedTable("proveedores")
-        .select("id, nombre")
+        .select("id, nombre, rfc, estatus_efos, ultima_verificacion_efos")
         .eq("activo", true);
 
       // 2. OC en período
@@ -232,6 +235,9 @@ export default function EvaluacionProveedores() {
           rating: provOcs.length === 0 && provRecs.length === 0 ? "N/A" : rating(scoreTotal),
           ultima_compra: ultimaRec?.fecha_recepcion ?? null,
           oc_pendientes: provOcs.filter((o) => ["confirmada", "parcial"].includes(o.estatus)).length,
+          rfc: prov.rfc ?? null,
+          estatus_efos: prov.estatus_efos ?? null,
+          ultima_verificacion_efos: prov.ultima_verificacion_efos ?? null,
         };
       }).filter((k) => k.oc_total > 0 || k.unidades_recibidas > 0);
 
@@ -320,6 +326,12 @@ export default function EvaluacionProveedores() {
                     {k.oc_pendientes > 0 && (
                       <Badge variant="outline" className="text-xs">{k.oc_pendientes} OC activa{k.oc_pendientes > 1 ? "s" : ""}</Badge>
                     )}
+                    {k.estatus_efos === "efos" && (
+                      <Badge className="bg-red-600 text-white text-xs border-0">⚠ EFOS SAT 69-B</Badge>
+                    )}
+                    {k.estatus_efos === "no_verificado" && (
+                      <Badge variant="outline" className="text-orange-600 border-orange-400 text-xs">RFC sin verificar</Badge>
+                    )}
                   </div>
                   <div className="mt-1.5 max-w-xs">
                     <ScoreBar score={k.score_total} />
@@ -387,6 +399,46 @@ export default function EvaluacionProveedores() {
                         {k.facturas_con_match === 0 && " · sin datos 3WM"}
                       </p>
                     </div>
+                  </div>
+
+                  {/* EFOS / SAT 69-B */}
+                  <div className="text-xs border rounded-md px-3 py-2 space-y-0.5 bg-muted/20">
+                    <p className="font-medium text-muted-foreground uppercase tracking-wide text-[10px]">Validación SAT 69-B</p>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        {k.rfc && <p>RFC: <span className="font-mono">{k.rfc}</span></p>}
+                        <p>
+                          Estatus EFOS:{" "}
+                          {k.estatus_efos === "efos"
+                            ? <span className="text-red-700 font-bold">EFOS — EN LISTA DEFINITIVA SAT 69-B</span>
+                            : k.estatus_efos === "vigente"
+                            ? <span className="text-green-700 font-semibold">Vigente (no en lista)</span>
+                            : k.estatus_efos === "no_encontrado"
+                            ? <span className="text-orange-600">No encontrado en SAT</span>
+                            : <span className="text-muted-foreground">No verificado</span>
+                          }
+                        </p>
+                        {k.ultima_verificacion_efos && (
+                          <p className="text-muted-foreground">
+                            Última verificación: {format(new Date(k.ultima_verificacion_efos), "dd/MM/yyyy", { locale: es })}
+                          </p>
+                        )}
+                      </div>
+                      <a
+                        href="https://www.sat.gob.mx/aplicacion/operacion/32495/consulta-tu-clave-en-el-rfc"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 underline underline-offset-2"
+                      >
+                        Verificar en SAT →
+                      </a>
+                    </div>
+                    {k.estatus_efos === "efos" && (
+                      <p className="text-red-700 font-medium pt-1">
+                        ⚠ Este proveedor aparece en la lista de empresas que facturan operaciones simuladas (EFOS).
+                        Las facturas emitidas por empresas EFOS no son deducibles fiscalmente.
+                      </p>
+                    )}
                   </div>
 
                   {/* Score breakdown table */}

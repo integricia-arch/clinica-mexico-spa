@@ -32,6 +32,10 @@ import PuntoReorden from "@/features/farmacia/PuntoReorden";
 import LibroControlControlados from "@/features/farmacia/LibroControlControlados";
 import SolicitudesCompra from "@/features/farmacia/SolicitudesCompra";
 import MedicamentoProveedoresPanel from "@/features/farmacia/MedicamentoProveedoresPanel";
+import BitacoraTemperaturaPanel from "@/features/farmacia/BitacoraTemperaturaPanel";
+import CotizacionesPanel from "@/features/farmacia/CotizacionesPanel";
+import PresupuestoPanel from "@/features/farmacia/PresupuestoPanel";
+import AuditLogPanel from "@/features/farmacia/AuditLogPanel";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -1120,6 +1124,12 @@ export default function Farmacia() {
               <TabsTrigger value="aging">Aging / Vencimientos</TabsTrigger>
               <TabsTrigger value="devoluciones">Devoluciones</TabsTrigger>
               <TabsTrigger value="evaluacion">Evaluación</TabsTrigger>
+              <TabsTrigger value="cotizaciones">Cotizaciones</TabsTrigger>
+              <TabsTrigger value="presupuesto">Presupuesto</TabsTrigger>
+              <TabsTrigger value="temperatura">Temperatura</TabsTrigger>
+              {hasRole("admin") || hasRole("manager") ? (
+                <TabsTrigger value="auditoria">Auditoría</TabsTrigger>
+              ) : null}
             </TabsList>
             <TabsContent value="dashboard" className="mt-4"><DashboardCompras /></TabsContent>
             <TabsContent value="solicitudes" className="mt-4"><SolicitudesCompra medicamentos={medicamentos} /></TabsContent>
@@ -1129,6 +1139,10 @@ export default function Farmacia() {
             <TabsContent value="aging" className="mt-4"><ReporteAgingCxP /></TabsContent>
             <TabsContent value="devoluciones" className="mt-4"><DevolucionesProveedor /></TabsContent>
             <TabsContent value="evaluacion" className="mt-4"><EvaluacionProveedores /></TabsContent>
+            <TabsContent value="cotizaciones" className="mt-4"><CotizacionesPanel /></TabsContent>
+            <TabsContent value="presupuesto" className="mt-4"><PresupuestoPanel /></TabsContent>
+            <TabsContent value="temperatura" className="mt-4"><BitacoraTemperaturaPanel /></TabsContent>
+            <TabsContent value="auditoria" className="mt-4"><AuditLogPanel /></TabsContent>
           </Tabs>
         </TabsContent>
         <TabsContent value="cierre" className="space-y-6">
