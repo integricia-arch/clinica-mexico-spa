@@ -156,6 +156,22 @@ export function useFacturasProveedor(clinicId: string | null) {
 
   const create = useCallback(async (input: FacturaInput): Promise<string> => {
     if (!clinicId) throw new Error("No hay clínica activa.");
+
+    // Detección de CFDI duplicado — bloquea si UUID ya existe en cualquier clínica
+    const uuidTrimmed = input.uuid_sat.trim();
+    if (uuidTrimmed) {
+      const { data: dup } = await untypedTable("facturas_proveedor")
+        .select("folio_interno, fecha_factura, proveedores(nombre)")
+        .eq("uuid_sat", uuidTrimmed)
+        .maybeSingle() as { data: { folio_interno: string; fecha_factura: string; proveedores: { nombre: string } | null } | null };
+      if (dup) {
+        const prov = dup.proveedores?.nombre ?? "proveedor desconocido";
+        throw new Error(
+          `UUID duplicado: este CFDI ya está registrado en ${dup.folio_interno} (${prov}, ${dup.fecha_factura}). No se puede registrar dos veces el mismo folio fiscal.`
+        );
+      }
+    }
+
     const folio = nextFolioFact(items.map((f) => f.folio_interno));
     const { data, error: cErr } = await untypedTable("facturas_proveedor")
       .insert({
