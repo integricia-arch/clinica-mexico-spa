@@ -17,6 +17,13 @@ import { friendlyError } from "@/lib/errors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SurtirReceta from "@/features/farmacia/SurtirReceta";
 import PuntoDeVenta from "@/features/farmacia/PuntoDeVenta";
+import OrdenesCompra from "@/features/farmacia/OrdenesCompra";
+import RecepcionMercancia from "@/features/farmacia/RecepcionMercancia";
+import FacturasProveedor from "@/features/farmacia/FacturasProveedor";
+import InventarioCiclico from "@/features/farmacia/InventarioCiclico";
+import ReporteCOFEPRIS from "@/features/farmacia/ReporteCOFEPRIS";
+import ReporteRotacionABC from "@/features/farmacia/ReporteRotacionABC";
+import ReporteAgingCxP from "@/features/farmacia/ReporteAgingCxP";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -84,7 +91,7 @@ export default function Farmacia() {
   const [savingMov, setSavingMov] = useState(false);
 
   // Faltantes (almacen_alertas)
-  const [inventarioView, setInventarioView] = useState<"catalogo" | "faltantes">("catalogo");
+  const [inventarioView, setInventarioView] = useState<"catalogo" | "faltantes" | "caducidades" | "conteos" | "cofepris" | "abc">("catalogo");
   const [alertas, setAlertas] = useState<any[]>([]);
   const [loadingAlertas, setLoadingAlertas] = useState(false);
   const [filtroAlertas, setFiltroAlertas] = useState<"pending" | "resolved" | "external">("pending");
@@ -132,9 +139,15 @@ export default function Farmacia() {
   const lotesDe = (medId: string) => lotes.filter(l => l.medicamento_id === medId);
 
   const hoy = new Date();
-  const en30 = new Date(); en30.setDate(hoy.getDate() + 30);
+  const en30 = new Date(hoy); en30.setDate(hoy.getDate() + 30);
+  const en60 = new Date(hoy); en60.setDate(hoy.getDate() + 60);
+  const en90 = new Date(hoy); en90.setDate(hoy.getDate() + 90);
   const bajosStock = medicamentos.filter(m => stockTotal(m.id) < m.stock_minimo);
-  const proxCaducidad = lotes.filter(l => new Date(l.fecha_caducidad) <= en30 && l.existencia > 0);
+  // Caducidad tiers: critico <30d, alerta 30-60d, atencion 60-90d
+  const lotesCriticos = lotes.filter(l => l.fecha_caducidad && new Date(l.fecha_caducidad) <= en30 && l.existencia > 0);
+  const lotesAlerta   = lotes.filter(l => l.fecha_caducidad && new Date(l.fecha_caducidad) > en30 && new Date(l.fecha_caducidad) <= en60 && l.existencia > 0);
+  const lotesAtencion = lotes.filter(l => l.fecha_caducidad && new Date(l.fecha_caducidad) > en60 && new Date(l.fecha_caducidad) <= en90 && l.existencia > 0);
+  const proxCaducidad = [...lotesCriticos, ...lotesAlerta, ...lotesAtencion];
 
   const filtered = medicamentos.filter(m => {
     const s = search.trim().toLowerCase();
@@ -339,6 +352,7 @@ export default function Farmacia() {
           <TabsTrigger value="pos">Punto de Venta</TabsTrigger>
           <TabsTrigger value="surtir">Surtir receta</TabsTrigger>
           <TabsTrigger value="inventario">Inventario</TabsTrigger>
+          <TabsTrigger value="compras">Compras</TabsTrigger>
           <TabsTrigger value="cierre">Cierre</TabsTrigger>
         </TabsList>
         <TabsContent value="pos" forceMount className={tab !== "pos" ? "hidden" : ""}>
@@ -352,15 +366,38 @@ export default function Farmacia() {
         <TabsContent value="inventario" className="space-y-6">
 
       {/* Sub-view toggle */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setInventarioView("catalogo")}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "catalogo" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
         >Catálogo</button>
         <button
+          onClick={() => setInventarioView("caducidades")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors relative ${inventarioView === "caducidades" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >
+          Caducidades
+          {proxCaducidad.length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold h-4 min-w-[1rem] px-1">
+              {proxCaducidad.length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setInventarioView("faltantes")}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "faltantes" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
         >Faltantes</button>
+        <button
+          onClick={() => setInventarioView("conteos")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "conteos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >Conteos</button>
+        <button
+          onClick={() => setInventarioView("cofepris")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "cofepris" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >COFEPRIS</button>
+        <button
+          onClick={() => setInventarioView("abc")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "abc" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >ABC / Rotación</button>
       </div>
 
       {/* Faltantes view */}
@@ -425,6 +462,88 @@ export default function Farmacia() {
         </div>
       )}
 
+      {/* Caducidades view */}
+      {inventarioView === "caducidades" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Lotes próximos a vencer</h2>
+            <p className="text-xs text-muted-foreground">Protocolo FEFO — despachar el más próximo a vencer primero</p>
+          </div>
+
+          {proxCaducidad.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <AlertTriangle className="mx-auto h-8 w-8 mb-2 opacity-30" />
+              <p className="text-sm">Sin lotes próximos a vencer en los próximos 90 días</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {[
+                { label: "🔴 Crítico — menos de 30 días", lotes: lotesCriticos, color: "border-destructive/40 bg-destructive/5", badge: "bg-destructive text-destructive-foreground" },
+                { label: "🟠 Alerta — 30 a 60 días", lotes: lotesAlerta, color: "border-orange-400/40 bg-orange-50 dark:bg-orange-950/20", badge: "bg-orange-500 text-white" },
+                { label: "🟡 Atención — 60 a 90 días", lotes: lotesAtencion, color: "border-yellow-400/40 bg-yellow-50 dark:bg-yellow-950/20", badge: "bg-yellow-500 text-white" },
+              ].map(({ label, lotes: tier, color, badge }) => tier.length > 0 && (
+                <div key={label} className={`rounded-xl border ${color} overflow-hidden`}>
+                  <div className="px-4 py-2 border-b border-inherit flex items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${badge}`}>{tier.length}</span>
+                    <span className="text-sm font-semibold">{label}</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-muted-foreground border-b border-inherit">
+                        <th className="px-4 py-2 text-left font-medium">Medicamento</th>
+                        <th className="px-4 py-2 text-left font-medium">Lote</th>
+                        <th className="px-4 py-2 text-center font-medium">Caducidad</th>
+                        <th className="px-4 py-2 text-center font-medium">Días</th>
+                        <th className="px-4 py-2 text-center font-medium">Existencia</th>
+                        <th className="px-4 py-2 text-left font-medium">Acción sugerida</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tier.map(lote => {
+                        const med = medicamentos.find(m => m.id === lote.medicamento_id);
+                        const diasRestantes = Math.ceil((new Date(lote.fecha_caducidad).getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+                        const accion = diasRestantes <= 15
+                          ? "Destrucción COFEPRIS"
+                          : diasRestantes <= 30
+                          ? "Oferta / devolución proveedor"
+                          : diasRestantes <= 60
+                          ? "Priorizar despacho (FEFO)"
+                          : "Monitorear";
+                        return (
+                          <tr key={lote.id} className="border-b border-inherit/50 hover:bg-muted/10 transition-colors">
+                            <td className="px-4 py-2 font-medium">{med?.nombre ?? "—"}</td>
+                            <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{lote.numero_lote}</td>
+                            <td className="px-4 py-2 text-center text-xs">
+                              {format(new Date(lote.fecha_caducidad), "dd/MM/yyyy")}
+                            </td>
+                            <td className="px-4 py-2 text-center font-bold">
+                              <span className={diasRestantes <= 30 ? "text-destructive" : diasRestantes <= 60 ? "text-orange-600" : "text-yellow-600"}>
+                                {diasRestantes}d
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-center">{lote.existencia}</td>
+                            <td className="px-4 py-2 text-xs text-muted-foreground">{accion}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Conteos view */}
+      {inventarioView === "conteos" && <InventarioCiclico />}
+
+      {/* COFEPRIS view */}
+      {inventarioView === "cofepris" && <ReporteCOFEPRIS />}
+
+      {/* ABC / Rotación view */}
+      {inventarioView === "abc" && <ReporteRotacionABC />}
+
       {/* Catálogo view */}
       {inventarioView === "catalogo" && <>
 
@@ -457,10 +576,20 @@ export default function Farmacia() {
         </div>
       )}
       {proxCaducidad.length > 0 && (
-        <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 flex items-start gap-3">
+        <button
+          onClick={() => setInventarioView("caducidades")}
+          className="w-full text-left rounded-xl border border-warning/30 bg-warning/5 p-4 flex items-start gap-3 hover:bg-warning/10 transition-colors"
+        >
           <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
-          <p className="text-sm font-medium">{proxCaducidad.length} lote{proxCaducidad.length > 1 ? "s" : ""} próximos a caducar (30 días)</p>
-        </div>
+          <div>
+            <p className="text-sm font-medium">
+              {lotesCriticos.length > 0 && <span className="text-destructive font-bold">{lotesCriticos.length} crítico{lotesCriticos.length > 1 ? "s" : ""} (&lt;30d) </span>}
+              {lotesAlerta.length > 0 && <span className="text-orange-600 font-semibold">{lotesAlerta.length} en alerta (30-60d) </span>}
+              {lotesAtencion.length > 0 && <span className="text-yellow-600">{lotesAtencion.length} en atención (60-90d) </span>}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">Ver detalle de lotes →</p>
+          </div>
+        </button>
       )}
 
       {/* Stats */}
@@ -893,6 +1022,20 @@ export default function Farmacia() {
         </DialogContent>
       </Dialog>
       </>}
+        </TabsContent>
+        <TabsContent value="compras" className="space-y-6">
+          <Tabs defaultValue="oc">
+            <TabsList>
+              <TabsTrigger value="oc">Órdenes de Compra</TabsTrigger>
+              <TabsTrigger value="recepcion">Recepción de Mercancía</TabsTrigger>
+              <TabsTrigger value="cxp">Cuentas por Pagar</TabsTrigger>
+              <TabsTrigger value="aging">Aging / Vencimientos</TabsTrigger>
+            </TabsList>
+            <TabsContent value="oc" className="mt-4"><OrdenesCompra /></TabsContent>
+            <TabsContent value="recepcion" className="mt-4"><RecepcionMercancia /></TabsContent>
+            <TabsContent value="cxp" className="mt-4"><FacturasProveedor /></TabsContent>
+            <TabsContent value="aging" className="mt-4"><ReporteAgingCxP /></TabsContent>
+          </Tabs>
         </TabsContent>
         <TabsContent value="cierre" className="space-y-6">
           <CajaTurno onTurnoCerrado={() => setTab("pos")} />

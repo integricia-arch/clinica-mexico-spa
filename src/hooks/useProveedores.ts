@@ -2,11 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { friendlyError } from "@/lib/errors";
 import { untypedTable } from "@/lib/untypedTable";
 
-/**
- * CRUD de la pestaña "Proveedores" del Inventario en /ajustes contra la tabla
- * `proveedores` (migración 20260605010000).
- */
-
 export interface Proveedor {
   id: string;
   nombre: string;
@@ -14,6 +9,18 @@ export interface Proveedor {
   telefono: string;
   email: string;
   activo: boolean;
+  rfc: string;
+  regimen_fiscal: string;
+  domicilio_fiscal: string;
+  clabe: string;
+  banco: string;
+  terminos_pago: number;
+  plazo_entrega: number;
+  requiere_cofepris: boolean;
+  clasificacion: "critico" | "regular" | "ocasional";
+  estatus_efos: "no_verificado" | "ok" | "alerta";
+  ultima_verificacion_efos: string | null;
+  notas: string;
 }
 
 export interface ProveedorInput {
@@ -22,6 +29,17 @@ export interface ProveedorInput {
   telefono: string;
   email: string;
   activo: boolean;
+  rfc: string;
+  regimen_fiscal: string;
+  domicilio_fiscal: string;
+  clabe: string;
+  banco: string;
+  terminos_pago: number;
+  plazo_entrega: number;
+  requiere_cofepris: boolean;
+  clasificacion: "critico" | "regular" | "ocasional";
+  estatus_efos: "no_verificado" | "ok" | "alerta";
+  notas: string;
 }
 
 interface ProveedorRow {
@@ -31,6 +49,18 @@ interface ProveedorRow {
   telefono: string | null;
   email: string | null;
   activo: boolean;
+  rfc: string | null;
+  regimen_fiscal: string | null;
+  domicilio_fiscal: string | null;
+  clabe: string | null;
+  banco: string | null;
+  terminos_pago: number | null;
+  plazo_entrega: number | null;
+  requiere_cofepris: boolean | null;
+  clasificacion: string | null;
+  estatus_efos: string | null;
+  ultima_verificacion_efos: string | null;
+  notas: string | null;
 }
 
 const toProveedor = (row: ProveedorRow): Proveedor => ({
@@ -40,6 +70,18 @@ const toProveedor = (row: ProveedorRow): Proveedor => ({
   telefono: row.telefono ?? "",
   email: row.email ?? "",
   activo: row.activo,
+  rfc: row.rfc ?? "",
+  regimen_fiscal: row.regimen_fiscal ?? "",
+  domicilio_fiscal: row.domicilio_fiscal ?? "",
+  clabe: row.clabe ?? "",
+  banco: row.banco ?? "",
+  terminos_pago: row.terminos_pago ?? 30,
+  plazo_entrega: row.plazo_entrega ?? 3,
+  requiere_cofepris: row.requiere_cofepris ?? false,
+  clasificacion: (row.clasificacion as Proveedor["clasificacion"]) ?? "regular",
+  estatus_efos: (row.estatus_efos as Proveedor["estatus_efos"]) ?? "no_verificado",
+  ultima_verificacion_efos: row.ultima_verificacion_efos ?? null,
+  notas: row.notas ?? "",
 });
 
 const toRow = (input: ProveedorInput) => ({
@@ -48,7 +90,25 @@ const toRow = (input: ProveedorInput) => ({
   telefono: input.telefono.trim() || null,
   email: input.email.trim() || null,
   activo: input.activo,
+  rfc: input.rfc.trim().toUpperCase() || null,
+  regimen_fiscal: input.regimen_fiscal.trim() || null,
+  domicilio_fiscal: input.domicilio_fiscal.trim() || null,
+  clabe: input.clabe.replace(/\s/g, "") || null,
+  banco: input.banco.trim() || null,
+  terminos_pago: input.terminos_pago,
+  plazo_entrega: input.plazo_entrega,
+  requiere_cofepris: input.requiere_cofepris,
+  clasificacion: input.clasificacion,
+  estatus_efos: input.estatus_efos,
+  notas: input.notas.trim() || null,
 });
+
+export const EMPTY_PROVEEDOR_INPUT: ProveedorInput = {
+  nombre: "", contacto: "", telefono: "", email: "", activo: true,
+  rfc: "", regimen_fiscal: "", domicilio_fiscal: "", clabe: "", banco: "",
+  terminos_pago: 30, plazo_entrega: 3, requiere_cofepris: false,
+  clasificacion: "regular", estatus_efos: "no_verificado", notas: "",
+};
 
 export function useProveedores(clinicId: string | null) {
   const [items, setItems] = useState<Proveedor[]>([]);
@@ -65,7 +125,7 @@ export function useProveedores(clinicId: string | null) {
     setError(null);
     try {
       const { data, error: qErr } = await untypedTable("proveedores")
-        .select("id, nombre, contacto, telefono, email, activo")
+        .select("id, nombre, contacto, telefono, email, activo, rfc, regimen_fiscal, domicilio_fiscal, clabe, banco, terminos_pago, plazo_entrega, requiere_cofepris, clasificacion, estatus_efos, ultima_verificacion_efos, notas")
         .eq("clinic_id", clinicId)
         .order("nombre");
       if (qErr) throw qErr;
@@ -121,5 +181,17 @@ export function useProveedores(clinicId: string | null) {
     [load],
   );
 
-  return { items, loading, error, create, update, toggleActivo, remove, refresh: load };
+  const marcarEfos = useCallback(
+    async (id: string, estatus: Proveedor["estatus_efos"]) => {
+      const { error: eErr } = await untypedTable("proveedores").update({
+        estatus_efos: estatus,
+        ultima_verificacion_efos: new Date().toISOString(),
+      }).eq("id", id);
+      if (eErr) throw new Error(friendlyError(eErr, "No se pudo actualizar el estatus EFOS."));
+      await load();
+    },
+    [load],
+  );
+
+  return { items, loading, error, create, update, toggleActivo, remove, marcarEfos, refresh: load };
 }

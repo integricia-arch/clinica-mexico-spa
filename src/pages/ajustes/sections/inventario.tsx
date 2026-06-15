@@ -515,6 +515,9 @@ function KitsTab({ clinicId, canEdit, insumos }: {
 
 const EMPTY_PROVEEDOR: ProveedorInput = {
   nombre: "", contacto: "", telefono: "", email: "", activo: true,
+  rfc: "", regimen_fiscal: "", domicilio_fiscal: "", clabe: "", banco: "",
+  terminos_pago: 30, plazo_entrega: 3, requiere_cofepris: false,
+  clasificacion: "regular", estatus_efos: "no_verificado", notas: "",
 };
 
 function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdit: boolean }) {
@@ -532,7 +535,13 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
   const openNew = () => { setEditing(null); setForm(EMPTY_PROVEEDOR); resetProvErrors(); setDialogOpen(true); };
   const openEdit = (p: Proveedor) => {
     setEditing(p);
-    setForm({ nombre: p.nombre, contacto: p.contacto, telefono: p.telefono, email: p.email, activo: p.activo });
+    setForm({
+      nombre: p.nombre, contacto: p.contacto, telefono: p.telefono, email: p.email, activo: p.activo,
+      rfc: p.rfc, regimen_fiscal: p.regimen_fiscal, domicilio_fiscal: p.domicilio_fiscal,
+      clabe: p.clabe, banco: p.banco, terminos_pago: p.terminos_pago, plazo_entrega: p.plazo_entrega,
+      requiere_cofepris: p.requiere_cofepris, clasificacion: p.clasificacion,
+      estatus_efos: p.estatus_efos, notas: p.notas,
+    });
     resetProvErrors();
     setDialogOpen(true);
   };
@@ -575,16 +584,44 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
         ) : (
           <Table>
             <TableHeader><TableRow>
-              <TableHead>Proveedor</TableHead><TableHead>Contacto</TableHead>
-              <TableHead>Teléfono</TableHead><TableHead>Email</TableHead><TableHead></TableHead>
+              <TableHead>Proveedor</TableHead>
+              <TableHead>RFC</TableHead>
+              <TableHead>Clasificación</TableHead>
+              <TableHead>Términos</TableHead>
+              <TableHead>EFOS</TableHead>
+              <TableHead>Contacto</TableHead>
+              <TableHead></TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {items.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.nombre}</TableCell>
-                  <TableCell>{p.contacto || "—"}</TableCell>
-                  <TableCell>{p.telefono || "—"}</TableCell>
-                  <TableCell>{p.email || "—"}</TableCell>
+                  <TableCell className="font-medium">
+                    {p.nombre}
+                    {p.requiere_cofepris && <span className="ml-1.5 text-xs text-blue-600 font-semibold">COFEPRIS</span>}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{p.rfc || "—"}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      p.clasificacion === "critico" ? "bg-destructive/10 text-destructive" :
+                      p.clasificacion === "regular" ? "bg-muted text-muted-foreground" :
+                      "bg-muted/50 text-muted-foreground"
+                    }`}>
+                      {p.clasificacion}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {p.terminos_pago === 0 ? "Contado" : `${p.terminos_pago}d`}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      p.estatus_efos === "ok" ? "bg-green-100 text-green-700" :
+                      p.estatus_efos === "alerta" ? "bg-destructive/10 text-destructive" :
+                      "bg-yellow-100 text-yellow-700"
+                    }`}>
+                      {p.estatus_efos === "ok" ? "✓ OK" : p.estatus_efos === "alerta" ? "⚠ Alerta" : "Sin verificar"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs">{p.contacto || p.email || p.telefono || "—"}</TableCell>
                   <TableCell className="text-right">
                     {canEdit && (
                       <div className="flex justify-end gap-1">
@@ -601,9 +638,12 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? "Editar proveedor" : "Nuevo proveedor"}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
+
+            {/* Datos básicos */}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Datos básicos</p>
             <Field label="Nombre *">
               <Input
                 id="field-nombre-prov"
@@ -622,6 +662,115 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
             </div>
             <Field label="Email">
               <Input type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} />
+            </Field>
+
+            {/* Datos fiscales */}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Datos fiscales (SAT)</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="RFC">
+                <Input
+                  value={form.rfc}
+                  onChange={(e) => setField("rfc", e.target.value.toUpperCase())}
+                  placeholder="XXXX000000XXX"
+                  maxLength={13}
+                />
+              </Field>
+              <Field label="Régimen fiscal">
+                <Input
+                  value={form.regimen_fiscal}
+                  onChange={(e) => setField("regimen_fiscal", e.target.value)}
+                  placeholder="Ej. 601 - General de Ley"
+                />
+              </Field>
+            </div>
+            <Field label="Domicilio fiscal">
+              <Input
+                value={form.domicilio_fiscal}
+                onChange={(e) => setField("domicilio_fiscal", e.target.value)}
+                placeholder="Calle, número, colonia, CP, ciudad"
+              />
+            </Field>
+
+            {/* Datos bancarios */}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Datos bancarios</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="CLABE (18 dígitos)">
+                <Input
+                  value={form.clabe}
+                  onChange={(e) => setField("clabe", e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000000000000000"
+                  maxLength={18}
+                />
+              </Field>
+              <Field label="Banco">
+                <Input
+                  value={form.banco}
+                  onChange={(e) => setField("banco", e.target.value)}
+                  placeholder="Ej. BBVA, HSBC, Banorte"
+                />
+              </Field>
+            </div>
+
+            {/* Condiciones comerciales */}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Condiciones comerciales</p>
+            <div className="grid grid-cols-3 gap-4">
+              <Field label="Términos de pago">
+                <select
+                  value={form.terminos_pago}
+                  onChange={(e) => setField("terminos_pago", Number(e.target.value))}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value={0}>Contado</option>
+                  <option value={8}>8 días</option>
+                  <option value={15}>15 días</option>
+                  <option value={30}>30 días</option>
+                  <option value={45}>45 días</option>
+                  <option value={60}>60 días</option>
+                </select>
+              </Field>
+              <Field label="Plazo entrega (días)">
+                <Input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={form.plazo_entrega}
+                  onChange={(e) => setField("plazo_entrega", Number(e.target.value))}
+                />
+              </Field>
+              <Field label="Clasificación">
+                <select
+                  value={form.clasificacion}
+                  onChange={(e) => setField("clasificacion", e.target.value as ProveedorInput["clasificacion"])}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="critico">Crítico</option>
+                  <option value="regular">Regular</option>
+                  <option value="ocasional">Ocasional</option>
+                </select>
+              </Field>
+            </div>
+
+            {/* Control y verificación */}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Control y verificación</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Estatus EFOS/EDOS (SAT)">
+                <select
+                  value={form.estatus_efos}
+                  onChange={(e) => setField("estatus_efos", e.target.value as ProveedorInput["estatus_efos"])}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="no_verificado">Sin verificar</option>
+                  <option value="ok">✓ Verificado OK</option>
+                  <option value="alerta">⚠ Alerta EFOS</option>
+                </select>
+              </Field>
+              <div className="flex items-center justify-between rounded-md border border-border p-3">
+                <Label className="text-sm">Requiere permiso COFEPRIS</Label>
+                <Switch checked={form.requiere_cofepris} onCheckedChange={(v) => setField("requiere_cofepris", v)} />
+              </div>
+            </div>
+            <Field label="Notas internas">
+              <Input value={form.notas} onChange={(e) => setField("notas", e.target.value)} placeholder="Condiciones especiales, observaciones…" />
             </Field>
             <div className="flex items-center justify-between rounded-md border border-border p-3">
               <Label className="text-sm">Activo</Label>

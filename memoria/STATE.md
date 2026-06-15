@@ -310,6 +310,115 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
   - telegram-webhook → GET /functions/v1/telegram-webhook → 200
 - [x] **Los 6 monitores BetterStack ahora están UP** (commit `6a8f2d8`)
 
+## Completado (Jun 15, 2026 — sesión 16)
+
+### Investigación formal: Almacén, Compras y Proveedores
+- [x] Investigación formal almacén/compras/proveedores → `memoria/proyectos/investigacion-almacen-compras-proveedores.md`
+  - Fuentes: NIF C-4, LIVA Art. 2-A, COFEPRIS, COSO, IIA, Odoo, SAP B1, Lightspeed, Square, Shopify
+  - Cubre: catálogo productos, lotes/caducidades, medicamentos controlados, OC, 3-way match, proveedores, CxP, retenciones, EFOS/EDOS
+- [x] Comparativa sistema actual vs. mejores prácticas → `memoria/proyectos/gaps-almacen-compras-proveedores.md`
+  - 24 gaps identificados (3 críticos, 10 altos, 11 medios/bajos)
+  - Plan de 5 fases de mejora documentado
+
+### Fix crítico: IVA medicamentos
+- [x] Migration `fix_medicamentos_tasa_iva_default_zero`: 13 medicamentos corregidos 16%→0% (Paracetamol, Ibuprofeno, Omeprazol, etc.)
+- [x] `ALTER TABLE medicamentos ALTER COLUMN tasa_iva SET DEFAULT 0.00` — nuevos productos ya no heredan 16%
+- [x] `PuntoDeVenta.tsx`: fallback `?? 0.16` → `?? 0` en 3 lugares (totalIva, baseGravable, exento)
+- [x] `tsc --noEmit` = 0 errores confirmado
+
+## Completado (Jun 15, 2026 — sesión 17) — Módulo Almacén/Compras/Proveedores COMPLETO
+
+### Proveedores — Fase 1 ✅
+- [x] Migration `enrich_proveedores_fiscal_fields`: 12 columnas nuevas (`rfc`, `regimen_fiscal`, `domicilio_fiscal`, `clabe`, `banco`, `terminos_pago`, `plazo_entrega`, `requiere_cofepris`, `clasificacion`, `estatus_efos`, `ultima_verificacion_efos`, `notas`)
+- [x] Migration `add_costo_unitario_to_lotes`: `costo_unitario_centavos`, `proveedor_id` FK en `lotes_medicamento`
+- [x] `src/hooks/useProveedores.ts` reescrito: interfaces extendidas, `EMPTY_PROVEEDOR_INPUT`, `marcarEfos()`
+- [x] `src/pages/ajustes/sections/inventario.tsx`: tabla con RFC/clasificación/EFOS badge; Dialog form expandido (datos básicos, fiscales SAT, bancarios, condiciones comerciales, EFOS/COFEPRIS)
+
+### Módulo Órdenes de Compra — Fase 2 ✅
+- [x] Migration `create_ordenes_compra_module`: 4 tablas con RLS + 9 índices + triggers updated_at
+  - `ordenes_compra` (folio OC-XXXX, estatus borrador→confirmada→parcial→recibida→cancelada)
+  - `ordenes_compra_items` (cantidad_pedida, cantidad_recibida, precio, tasa_iva, subtotal)
+  - `recepciones_mercancia` (folio REC-XXXX, vinculada a OC opcional, FEFO)
+  - `recepciones_items` (lote, caducidad, número_lote obligatorio, diferencia_nota)
+- [x] `src/hooks/useOrdenesCompra.ts`: CRUD + calcTotales + nextFolio + confirmar/cancelar + getItems
+- [x] `src/hooks/useRecepcionesMercancia.ts`: create (con auto-update OC estatus) + verificar + getItems
+- [x] `src/features/farmacia/OrdenesCompra.tsx`: lista acordeón + dialog nueva OC (proveedor, entrega, líneas dinámicas, totales)
+- [x] `src/features/farmacia/RecepcionMercancia.tsx`: lista + dialog vinculado a OC (pre-pobla items, FEFO warning, lote obligatorio, diferencia_nota)
+- [x] Tab "Compras" en `Farmacia.tsx` con sub-tabs: Órdenes de Compra | Recepción | CxP
+
+### CxP — Fase 3 ✅
+- [x] Migration `create_facturas_proveedor_pagos`: tablas `facturas_proveedor` + `pagos_proveedor` con RLS
+  - UUID SAT indexado, estatus pendiente→parcial→pagada, saldo_pendiente_centavos calculado
+  - `pagos_proveedor`: fecha_pago, monto, método (transferencia/cheque/efectivo/otro), referencia
+- [x] `src/hooks/useFacturasProveedor.ts`: create + registrarPago (actualiza saldo+estatus) + getPagos + pendientes/vencidas
+- [x] `src/features/farmacia/FacturasProveedor.tsx`: lista con alertas vencidas, filtros, dialog factura (UUID SAT con regex) + dialog pago
+
+### Inventario Cíclico — Fase 4 ✅
+- [x] Migration `create_inventario_ciclico_module`: tablas `conteos_inventario` + `conteos_items` con RLS
+  - `diferencia` columna generada: `existencia_contada - existencia_sistema`
+  - Tipos: ciclico/completo/aleatorio/turno
+- [x] `src/hooks/useInventarioCiclico.ts`: iniciarConteo (carga lotes sin mostrar sistema) + registrarConteo + cerrarConteo + getItems
+- [x] `src/features/farmacia/InventarioCiclico.tsx`: vista conteo activo (conteo ciego row-by-row, diff en tiempo real) + historial conteos
+- [x] Sub-view "Conteos" en tab Inventario de Farmacia.tsx
+
+### Conteo ciego apertura turno ✅
+- [x] Migration `add_apertura_conteo_to_turnos`: columnas `conteo_apertura`, `fondo_esperado`, `diferencia_apertura` GENERATED en `turnos`
+- [x] `TurnoOpenWizard.tsx` reescrito: flow select-caja → **conteo (ciego)** → **diff vs Z anterior** → confirm
+  - Lookup automático de `fondo_siguiente_turno` del último corte Z de la caja
+  - Muestra diferencia (verde/amarillo/rojo), alerta si |diff| > $100
+  - Guarda `conteo_apertura` + `fondo_esperado` en `turnos`
+
+### Reportes ✅
+- [x] `src/features/farmacia/ReporteCOFEPRIS.tsx`: Libro de Control psicotrópicos/estupefacientes
+  - Existencias por lote con registro sanitario, lote, caducidad
+  - Movimientos del período (entradas/salidas)
+  - Export CSV + imprimir · Art. 240 LGS
+- [x] `src/features/farmacia/ReporteRotacionABC.tsx`: Clasificación ABC por ingresos (70/90/100%)
+  - Rotación anual, días stock, tendencia (↑↓ o sin movimiento)
+  - Alerta productos Clase A con < 14 días de stock
+  - Export CSV
+- [x] Sub-views "COFEPRIS" y "ABC / Rotación" en tab Inventario de Farmacia.tsx
+
+### Estado final Farmacia.tsx — tab Inventario
+Sub-views: **Catálogo | Caducidades | Faltantes | Conteos | COFEPRIS | ABC / Rotación**
+
+### Estado final Farmacia.tsx — tab Compras
+Sub-tabs: **Órdenes de Compra | Recepción de Mercancía | Cuentas por Pagar**
+
+### tsc --noEmit = 0 errores en toda la sesión ✅
+
+## Completado (Jun 15, 2026 — sesión 18)
+
+### Denominaciones en apertura ✅
+- [x] `DenominacionCounter` wired en paso "conteo" de TurnoOpenWizard
+- [x] Input manual limpia breakdown; contador de denominaciones auto-rellena monto
+- [x] `denominaciones_apertura` JSON guardado en `turnos` al abrir (null si no se usó)
+
+### Aging CxP ✅
+- [x] `src/features/farmacia/ReporteAgingCxP.tsx`: reporte de vencimientos por proveedor
+  - KPI cards: por vencer / vencido / total CxP / pagado (período)
+  - Stacked bar visual con 5 buckets (corriente, 1–30d, 31–60d, 61–90d, >90d)
+  - Tabla aging por proveedor con saldos por bucket + plazo pactado + días pago real
+  - "Días pago real" = avg(fecha_pago - fecha_factura) desde `pagos_proveedor` join
+  - Color coding: verde si días real ≤ plazo, rojo si excede
+- [x] Sub-tab "Aging / Vencimientos" en tab Compras de Farmacia.tsx
+- [x] `tsc --noEmit` = 0 errores
+
+### Estado final Farmacia.tsx — tab Compras
+Sub-tabs: **Órdenes de Compra | Recepción de Mercancía | Cuentas por Pagar | Aging / Vencimientos**
+
+## Pendiente / Próximo
+
+### Módulo Almacén — pendientes menores
+- [ ] Flujo aprobación OC por nivel de monto (requiere roles y config)
+- [ ] Actas de merma digitales con firma de autorización supervisor
+- [ ] `uso_interno` como tipo en `movimientos_inventario`
+
+### Próximas prioridades sugeridas
+1. Flujo de aprobación OC (monto > umbral → requiere firma manager)
+2. Dashboard de compras: KPIs globales (total OC mes, rotación, proveedor top)
+3. Notificaciones por email/Telegram cuando factura vence en <3 días
+
 ## Completado (Jun 15, 2026 — sesión 15)
 
 ### ESLint warning cleanup — 0 errores TS mantenidos
