@@ -18,6 +18,8 @@ import OperationalAlerts, { type OperationalAlert } from "@/features/centro-cont
 import PatientOperationalDrawer from "@/features/centro-control/components/PatientOperationalDrawer";
 import QuickArrivalModal from "@/features/centro-control/components/QuickArrivalModal";
 import { useDashboardData } from "@/features/centro-control/hooks/useDashboardData";
+import { useFinancialDashboardData } from "@/features/centro-control/hooks/useFinancialDashboardData";
+import FinancialOperationsPanel from "@/features/centro-control/components/FinancialOperationsPanel";
 import { getKanbanColumnFor, getPatientOperationalRisk, minutesSince } from "@/features/centro-control/lib/journeyHelpers";
 
 export default function AdminDashboard() {
@@ -36,6 +38,7 @@ export default function AdminDashboard() {
   const [arrivalOpen, setArrivalOpen] = useState(false);
 
   const { data, loading, reload } = useDashboardData(filters.date);
+  const { data: finData, loading: finLoading } = useFinancialDashboardData();
 
   const rows: KanbanRow[] = useMemo(() => {
     return data.appointments.map((a: any) => {
@@ -239,6 +242,8 @@ export default function AdminDashboard() {
         <OperationalStatCard title="Bloqueados" value={stats.bloq} icon={AlertOctagon} variant="destructive" />
         <OperationalStatCard title="Alertas críticas" value={stats.alertas} icon={AlertTriangle} variant="destructive" />
       </div>
+
+      <FinancialOperationsPanel data={finData} loading={finLoading} />
 
       {loading && (
         <div className="flex items-center justify-center py-6">
