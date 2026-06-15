@@ -25,6 +25,7 @@ import ReporteCOFEPRIS from "@/features/farmacia/ReporteCOFEPRIS";
 import ReporteRotacionABC from "@/features/farmacia/ReporteRotacionABC";
 import ReporteAgingCxP from "@/features/farmacia/ReporteAgingCxP";
 import ActasMerma from "@/features/farmacia/ActasMerma";
+import DashboardCompras from "@/features/farmacia/DashboardCompras";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -1044,13 +1045,15 @@ export default function Farmacia() {
       </>}
         </TabsContent>
         <TabsContent value="compras" className="space-y-6">
-          <Tabs defaultValue="oc">
+          <Tabs defaultValue="dashboard">
             <TabsList>
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="oc">Órdenes de Compra</TabsTrigger>
               <TabsTrigger value="recepcion">Recepción de Mercancía</TabsTrigger>
               <TabsTrigger value="cxp">Cuentas por Pagar</TabsTrigger>
               <TabsTrigger value="aging">Aging / Vencimientos</TabsTrigger>
             </TabsList>
+            <TabsContent value="dashboard" className="mt-4"><DashboardCompras /></TabsContent>
             <TabsContent value="oc" className="mt-4"><OrdenesCompra /></TabsContent>
             <TabsContent value="recepcion" className="mt-4"><RecepcionMercancia /></TabsContent>
             <TabsContent value="cxp" className="mt-4"><FacturasProveedor /></TabsContent>
