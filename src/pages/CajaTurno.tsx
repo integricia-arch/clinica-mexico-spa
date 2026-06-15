@@ -464,8 +464,16 @@ function FondoMovimientoDialog({
 // ─── CorteXDialog ─────────────────────────────────────────────────────────────
 
 interface CorteXResult {
-  folio: number; tipo: string; opening_amount: number;
-  cash_cobros: number; fondos_net: number; expected_cash: number; tickets: number;
+  folio: number;
+  opening_amount: number;
+  cash_cobros: number;
+  fondos_net: number;
+  expected_cash: number;
+  tickets: number;
+  tarjeta_total: number;
+  transf_total: number;
+  otros_total: number;
+  total_general: number;
 }
 
 function CorteXDialog({
@@ -511,15 +519,29 @@ function CorteXDialog({
         ) : (
           <>
             <div className="space-y-3 py-1">
-              <p className="text-xs text-green-700 bg-green-50 rounded-md px-3 py-2 font-medium">
+              <p className="text-xs text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20 rounded-md px-3 py-2 font-medium">
                 Corte X generado — Folio X-{String(result.folio).padStart(6, "0")}
               </p>
+              {/* Desglose por método de pago */}
+              <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-1 text-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Cobros por método de pago</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  <ResultRow label="Efectivo" value={fmt(result.cash_cobros)} />
+                  <ResultRow label="Tarjeta" value={fmt(result.tarjeta_total)} />
+                  <ResultRow label="Transferencia" value={fmt(result.transf_total)} />
+                  {result.otros_total > 0 && <ResultRow label="Otros" value={fmt(result.otros_total)} />}
+                </div>
+                <div className="border-t border-border mt-2 pt-2 flex justify-between">
+                  <span className="text-[11px] font-semibold text-muted-foreground">Total cobrado</span>
+                  <span className="font-semibold text-sm">{fmt(result.total_general)}</span>
+                </div>
+              </div>
+              {/* Cuadre efectivo */}
               <div className="rounded-lg border border-border bg-muted/40 p-4 grid grid-cols-2 gap-2 text-sm">
-                <ResultRow label="Monto inicial" value={fmt(result.opening_amount)} />
-                <ResultRow label="Cobros efectivo" value={fmt(result.cash_cobros)} />
-                <ResultRow label="Neto fondos" value={fmt(result.fondos_net)} />
-                <ResultRow label="Efectivo esperado" value={fmt(result.expected_cash)} />
-                <ResultRow label="Tickets cobrados" value={String(result.tickets)} />
+                <ResultRow label="Fondo apertura" value={fmt(result.opening_amount)} />
+                <ResultRow label="Neto fondos manuales" value={fmt(result.fondos_net)} />
+                <ResultRow label="Efectivo esperado en caja" value={fmt(result.expected_cash)} />
+                <ResultRow label="Tickets" value={String(result.tickets)} />
               </div>
               <p className="text-xs text-muted-foreground">El turno permanece abierto. Este reporte es informativo.</p>
             </div>
