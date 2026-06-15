@@ -29,6 +29,7 @@ import EvaluacionProveedores from "@/features/farmacia/EvaluacionProveedores";
 import ActasMerma from "@/features/farmacia/ActasMerma";
 import DashboardCompras from "@/features/farmacia/DashboardCompras";
 import PuntoReorden from "@/features/farmacia/PuntoReorden";
+import LibroControlControlados from "@/features/farmacia/LibroControlControlados";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -53,6 +54,7 @@ const SALE_TYPES = [
 
 const EMPTY_MED = {
   nombre: "", categoria: "Analgésico", descripcion: "", precio_unitario: "", stock_minimo: "0", stock_maximo: "0", unidad: "tableta",
+  tipo_control: "otc",
   barcode: "", sku: "", codigo_interno: "",
   laboratorio: "", principio_activo: "", forma_farmaceutica: "", concentracion: "", presentacion: "",
   registro_sanitario: "",
@@ -96,7 +98,7 @@ export default function Farmacia() {
   const [savingMov, setSavingMov] = useState(false);
 
   // Faltantes (almacen_alertas)
-  const [inventarioView, setInventarioView] = useState<"catalogo" | "faltantes" | "caducidades" | "conteos" | "cofepris" | "abc" | "mermas" | "reorden">("catalogo");
+  const [inventarioView, setInventarioView] = useState<"catalogo" | "faltantes" | "caducidades" | "conteos" | "cofepris" | "abc" | "mermas" | "reorden" | "controlados">("catalogo");
   const [alertas, setAlertas] = useState<any[]>([]);
   const [loadingAlertas, setLoadingAlertas] = useState(false);
   const [filtroAlertas, setFiltroAlertas] = useState<"pending" | "resolved" | "external">("pending");
@@ -180,6 +182,7 @@ export default function Farmacia() {
       precio_unitario: String(m.precio_unitario),
       stock_minimo: String(m.stock_minimo),
       stock_maximo: String((m as Medicamento & { stock_maximo?: number }).stock_maximo ?? 0),
+      tipo_control: (m as Medicamento & { tipo_control?: string }).tipo_control ?? "otc",
       unidad: m.unidad,
       barcode: (m as Medicamento & { barcode?: string | null }).barcode ?? "",
       sku: (m as Medicamento & { sku?: string | null }).sku ?? "",
@@ -221,6 +224,7 @@ export default function Farmacia() {
       precio_unitario: parseFloat(medForm.precio_unitario) || 0,
       stock_minimo: parseInt(medForm.stock_minimo) || 0,
       stock_maximo: parseInt((medForm as typeof medForm & { stock_maximo?: string }).stock_maximo ?? "0") || 0,
+      tipo_control: (medForm as typeof medForm & { tipo_control?: string }).tipo_control ?? "otc",
       unidad: medForm.unidad,
       barcode: medForm.barcode.trim() || null,
       sku: medForm.sku.trim() || null,
@@ -415,11 +419,13 @@ export default function Farmacia() {
         >
           Reorden
           {bajosStock.length > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold h-4 min-w-[1rem] px-1">
-              {bajosStock.length}
-            </span>
+            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold h-4 min-w-[1rem] px-1">{bajosStock.length}</span>
           )}
         </button>
+        <button
+          onClick={() => setInventarioView("controlados")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "controlados" ? "bg-red-600 text-white" : "text-muted-foreground hover:bg-muted"}`}
+        >Controlados</button>
       </div>
 
       {/* Faltantes view */}
@@ -576,6 +582,11 @@ export default function Farmacia() {
           lotes={lotes}
           onOcCreada={() => setInventarioView("reorden")}
         />
+      )}
+
+      {/* Controlados view */}
+      {inventarioView === "controlados" && (
+        <LibroControlControlados medicamentos={medicamentos} />
       )}
 
       {/* Catálogo view */}
@@ -877,6 +888,19 @@ export default function Farmacia() {
 
             {/* Regulatorio */}
             <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+              <div className="space-y-1.5">
+                <Label>Control COFEPRIS</Label>
+                <Select value={(medForm as typeof medForm & { tipo_control?: string }).tipo_control ?? "otc"} onValueChange={v => setMedForm(f => ({ ...f, tipo_control: v } as typeof f))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="otc">OTC / Sin receta</SelectItem>
+                    <SelectItem value="rx_simple">Receta simple</SelectItem>
+                    <SelectItem value="psicotropico_iii">Psicotrópico Grupo III</SelectItem>
+                    <SelectItem value="psicotropico_i_ii">Psicotrópico Grupo I-II</SelectItem>
+                    <SelectItem value="estupefaciente">Estupefaciente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5">
                 <Label>Tipo de venta *</Label>
                 <Select value={medForm.sale_type} onValueChange={v => {
