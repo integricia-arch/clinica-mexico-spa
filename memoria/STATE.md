@@ -489,9 +489,28 @@ Todas las fases completadas. Sin pendientes.
 - [x] Build limpio (`tsc` 0 errores) · commit `689fb09` · deploy `cbdc09ca` · push `origin/main`
 - [x] Site verificado: `integrika.mx` → 200 OK, bundle correcto, sin errores startup
 
+## Completado (Jun 15, 2026 — sesión 24)
+
+### Dashboard clínico — Panel financiero operativo ✅
+- [x] `useFinancialDashboardData`: fetch paralelo de turnos activos + ventas por turno (pharmacy_sales) + alertas no-clínicas (actas merma, OC pendientes, CxP vencidas, faltantes farmacia)
+- [x] `FinancialOperationsPanel`: cards turno activo (caja nombre, tiempo abierto, fondo, ventas turno), chips alerta clickeables con navigate, "Sin turno activo" con botón abrir, auto-refresh 2min
+- [x] `AdminDashboard`: panel insertado entre KPI row y Kanban
+- [x] commit `07c1241` · deploy `4fb6723e`
+
+### Expediente clínico — Sync SOAP + Followup a BD real ✅
+- [x] `consultationNoteSync.ts`: dos servicios:
+  - `syncConsultationNote(appointmentId, patientId, soap)`: busca doctor_id en appointment, encuentra/crea expediente (patient+doctor), upsert en `notas_consulta` keyed por appointment_id (sin duplicados)
+  - `syncFollowup(...)`: inserta en `post_consultation_followups`
+- [x] `ConsultationForm`: al cerrar consulta → llama syncConsultationNote (non-blocking failure), toast "Nota persistida en expediente"
+- [x] `FollowupForm`: syncFollowup al confirmar, fecha requerida con validación, checkbox "requiere nueva cita"
+- [x] commit `0c11751` · deploy `e086195e` · push `689fb09..0c11751`
+
 ## Pendiente / Próximo
 
-Sin pendientes de módulo Almacén. Sin pendientes de Camino del Paciente (A+B+C completados). Próximos módulos a definir.
+Sin pendientes activos. Opciones para siguiente sesión:
+- **Agenda mejorada**: citas recurrentes, confirmación Telegram/SMS, bloqueos por doctor, vista semanal
+- **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
+- **DischargeForm mejorado**: resumen de alta más completo (diagnóstico final, documentos entregados)
 
 ## Completado (Jun 15, 2026 — sesión 15)
 
