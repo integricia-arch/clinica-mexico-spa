@@ -26,6 +26,7 @@ import ReporteRotacionABC from "@/features/farmacia/ReporteRotacionABC";
 import ReporteAgingCxP from "@/features/farmacia/ReporteAgingCxP";
 import ActasMerma from "@/features/farmacia/ActasMerma";
 import DashboardCompras from "@/features/farmacia/DashboardCompras";
+import PuntoReorden from "@/features/farmacia/PuntoReorden";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -49,7 +50,7 @@ const SALE_TYPES = [
 ] as const;
 
 const EMPTY_MED = {
-  nombre: "", categoria: "Analgésico", descripcion: "", precio_unitario: "", stock_minimo: "0", unidad: "tableta",
+  nombre: "", categoria: "Analgésico", descripcion: "", precio_unitario: "", stock_minimo: "0", stock_maximo: "0", unidad: "tableta",
   barcode: "", sku: "", codigo_interno: "",
   laboratorio: "", principio_activo: "", forma_farmaceutica: "", concentracion: "", presentacion: "",
   registro_sanitario: "",
@@ -93,7 +94,7 @@ export default function Farmacia() {
   const [savingMov, setSavingMov] = useState(false);
 
   // Faltantes (almacen_alertas)
-  const [inventarioView, setInventarioView] = useState<"catalogo" | "faltantes" | "caducidades" | "conteos" | "cofepris" | "abc" | "mermas">("catalogo");
+  const [inventarioView, setInventarioView] = useState<"catalogo" | "faltantes" | "caducidades" | "conteos" | "cofepris" | "abc" | "mermas" | "reorden">("catalogo");
   const [alertas, setAlertas] = useState<any[]>([]);
   const [loadingAlertas, setLoadingAlertas] = useState(false);
   const [filtroAlertas, setFiltroAlertas] = useState<"pending" | "resolved" | "external">("pending");
@@ -176,6 +177,7 @@ export default function Farmacia() {
       descripcion: m.descripcion ?? "",
       precio_unitario: String(m.precio_unitario),
       stock_minimo: String(m.stock_minimo),
+      stock_maximo: String((m as Medicamento & { stock_maximo?: number }).stock_maximo ?? 0),
       unidad: m.unidad,
       barcode: (m as Medicamento & { barcode?: string | null }).barcode ?? "",
       sku: (m as Medicamento & { sku?: string | null }).sku ?? "",
@@ -216,6 +218,7 @@ export default function Farmacia() {
       descripcion: medForm.descripcion || null,
       precio_unitario: parseFloat(medForm.precio_unitario) || 0,
       stock_minimo: parseInt(medForm.stock_minimo) || 0,
+      stock_maximo: parseInt((medForm as typeof medForm & { stock_maximo?: string }).stock_maximo ?? "0") || 0,
       unidad: medForm.unidad,
       barcode: medForm.barcode.trim() || null,
       sku: medForm.sku.trim() || null,
@@ -404,6 +407,17 @@ export default function Farmacia() {
           onClick={() => setInventarioView("mermas")}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${inventarioView === "mermas" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
         >Mermas</button>
+        <button
+          onClick={() => setInventarioView("reorden")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors relative ${inventarioView === "reorden" ? "bg-orange-500 text-white" : "text-muted-foreground hover:bg-muted"}`}
+        >
+          Reorden
+          {bajosStock.length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold h-4 min-w-[1rem] px-1">
+              {bajosStock.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Faltantes view */}
@@ -552,6 +566,15 @@ export default function Farmacia() {
 
       {/* Mermas view */}
       {inventarioView === "mermas" && <ActasMerma />}
+
+      {/* Reorden view */}
+      {inventarioView === "reorden" && (
+        <PuntoReorden
+          medicamentos={medicamentos}
+          lotes={lotes}
+          onOcCreada={() => setInventarioView("reorden")}
+        />
+      )}
 
       {/* Catálogo view */}
       {inventarioView === "catalogo" && <>
@@ -839,9 +862,14 @@ export default function Farmacia() {
                   onChange={e => setMedForm(f => ({ ...f, precio_unitario: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Stock mínimo</Label>
+                <Label>Stock mínimo (reorden)</Label>
                 <Input type="number" min="0" value={medForm.stock_minimo}
                   onChange={e => setMedForm(f => ({ ...f, stock_minimo: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Stock máximo (reponer hasta)</Label>
+                <Input type="number" min="0" value={(medForm as typeof medForm & { stock_maximo?: string }).stock_maximo ?? "0"}
+                  onChange={e => setMedForm(f => ({ ...f, stock_maximo: e.target.value } as typeof f))} />
               </div>
             </div>
 
