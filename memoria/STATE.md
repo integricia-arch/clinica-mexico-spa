@@ -536,10 +536,25 @@ Todas las fases completadas. Sin pendientes.
 - [x] `Farmacia.tsx`: campo "Stock máximo (reponer hasta)" en dialog edición de medicamentos
 - [x] commit `0b2c656` · deploy `773f6e11`
 
+## Completado (Jun 15, 2026 — sesión 27)
+
+### Gap #11 — Devoluciones a Proveedor ✅
+- [x] Migration `create_devoluciones_proveedor_module`:
+  - `devolucion_proveedor` añadido a `movimiento_tipo` enum
+  - `devoluciones_proveedor`: folio DEV-XXXX, proveedor_id, recepcion_id opcional, 6 motivos, 5 estatus, campos nota crédito, `inventario_revertido` flag
+  - `devoluciones_items`: medicamento_id, lote_id, cantidad_devuelta, precio_unitario_centavos
+  - RLS en ambas tablas
+- [x] `useDevolucionesProveedor.ts`: create, enviar (decrementa lotes + inserta movimientos devolucion_proveedor), actualizarEstatus, registrarNotaCredito, getItems
+- [x] `DevolucionesProveedor.tsx`: lista acordeón + dialog nueva devolución
+  - Seleccionar recepción → pre-llena ítems (cantidad editable, validada vs cantidad_recibida)
+  - Flujo estatus: Enviar → Aceptada/Rechazada → Nota de crédito
+  - Tabla de ítems con subtotales en accordion
+- [x] `Farmacia.tsx`: sub-tab "Devoluciones" en tab Compras
+- [x] commit `48a3d65` · deploy `67ef3651`
+
 ## Pendiente / Próximo
 
 Sin pendientes activos. Opciones para siguiente sesión:
-- **Gap #11 — Devoluciones a proveedor**: flujo de nota de crédito proveedor + reversa inventario
 - **Gap #14 — Evaluación de proveedores**: score automático (cumplimiento OC, diferencias recepción, CxP puntualidad)
 - **Agenda mejorada**: citas recurrentes, confirmación Telegram/SMS, bloqueos por doctor, vista semanal
 - **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
