@@ -18,6 +18,7 @@ import RecepcionDashboard from "@/pages/RecepcionDashboard";
 import Facturacion from "@/pages/Facturacion";
 import Expedientes from "@/pages/Expedientes";
 import Farmacia from "@/pages/Farmacia";
+import VincularTelegram from "@/pages/VincularTelegram";
 import Configuracion from "@/pages/Configuracion";
 import CaminoPacienteConfig from "@/pages/configuracion/CaminoPaciente";
 import MachoteReceta from "@/pages/configuracion/MachoteReceta";
@@ -78,6 +79,7 @@ const App = () => (
                         <Route path="/facturacion" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Facturacion /></ProtectedRoute>} />
                         <Route path="/expedientes" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Expedientes /></ProtectedRoute>} />
                         <Route path="/farmacia" element={<ProtectedRoute allowedRoles={["admin","nurse","receptionist","cajero"]}><TurnoGuard cajaFilter="farmacia"><Farmacia /></TurnoGuard></ProtectedRoute>} />
+                        <Route path="/perfil/vincular-telegram" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse","receptionist","cajero","manager"]}><VincularTelegram /></ProtectedRoute>} />
                         <Route path="/configuracion" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><Configuracion /></ProtectedRoute>} />
                         <Route path="/ajustes" element={<ProtectedRoute allowedRoles={["admin","doctor"]}><AjustesPlataforma /></ProtectedRoute>} />
                         <Route path="/configuracion/camino-paciente" element={<ProtectedRoute allowedRoles={["admin"]}><CaminoPacienteConfig /></ProtectedRoute>} />

@@ -18,6 +18,7 @@ import PacienteModal from "@/components/PacienteModal";
 interface Doctor  { id: string; nombre: string; apellidos: string; especialidad: string | null }
 interface Servicio { id: string; nombre: string }
 interface Patient { id: string; nombre: string; apellidos: string; telefono: string | null }
+interface Nurse { id: string; email: string | null }
 
 interface Props {
   open: boolean;
@@ -50,8 +51,11 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
   const [doctores,  setDoctores]  = useState<Doctor[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [pacientes, setPacientes] = useState<Patient[]>([]);
+  const [enfermeras, setEnfermeras] = useState<Nurse[]>([]);
   const [busqueda,  setBusqueda]  = useState("");
   const [searching, setSearching] = useState(false);
+  const [enfermeraOcupada, setEnfermeraOcupada] = useState(false);
+  const [checkingEnfermera, setCheckingEnfermera] = useState(false);
 
   const computeDefaultDatetime = () => {
     const base = defaultDate ? new Date(defaultDate + "T09:00:00") : new Date();
@@ -61,6 +65,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
   };
 
   const [doctorId,  setDoctorId]  = useState("");
+  const [enfermeraId, setEnfermeraId] = useState("__none__");
   const [pacienteId, setPacienteId] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [fechaInicio, setFechaInicio] = useState(() => computeDefaultDatetime());
@@ -93,18 +98,39 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
 
   useEffect(() => {
     if (!open) return;
-    setDoctorId(""); setPacienteId(""); setSelectedPatient(null); setBusqueda(""); setPacientes([]);
+    setDoctorId(""); setEnfermeraId("__none__"); setPacienteId(""); setSelectedPatient(null); setBusqueda(""); setPacientes([]);
     setFechaInicio(computeDefaultDatetime()); setDuracion("30");
     setServicioId("__none__"); setMotivo(""); setSaving(false);
 
     Promise.all([
       supabase.from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos"),
       supabase.from("servicios").select("id,nombre").order("nombre"),
-    ]).then(([{ data: d }, { data: s }]) => {
+      supabase.rpc("list_nurses"),
+    ]).then(([{ data: d }, { data: s }, { data: n }]) => {
       setDoctores((d ?? []) as Doctor[]);
       setServicios((s ?? []) as Servicio[]);
+      setEnfermeras((n ?? []) as Nurse[]);
     });
   }, [open]);
+
+  // Chequeo informativo libre/ocupada para la enfermera seleccionada
+  useEffect(() => {
+    if (enfermeraId === "__none__" || !fechaInicio) { setEnfermeraOcupada(false); return; }
+    setCheckingEnfermera(true);
+    const t = setTimeout(async () => {
+      const toUTC = (iso: string) => new Date(iso.includes("T") ? iso : iso + "T00:00:00").toISOString();
+      const { data } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("assigned_nurse_id", enfermeraId)
+        .not("status", "in", '("cancelada","liberada")')
+        .lt("fecha_inicio", toUTC(addMinutes(fechaInicio, Number(duracion))))
+        .gt("fecha_fin", toUTC(fechaInicio));
+      setEnfermeraOcupada((data ?? []).length > 0);
+      setCheckingEnfermera(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [enfermeraId, fechaInicio, duracion]);
 
   useEffect(() => {
     const q = busqueda.trim();
@@ -130,6 +156,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     if (!pacienteId) { toast.error("Selecciona un paciente"); return; }
     if (!fechaInicio) { toast.error("Fecha/hora requerida");  return; }
     if (recurrente && !recurrenciaHasta) { toast.error("Indica la fecha hasta cuándo se repite"); return; }
+    if (enfermeraId !== "__none__" && enfermeraOcupada) { toast.error("La enfermera seleccionada ya tiene una cita en ese horario"); return; }
 
     setSaving(true);
     const toUTC = (iso: string) => new Date(iso.includes("T") ? iso : iso + "T00:00:00").toISOString();
@@ -137,6 +164,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
 
     const basePayload = {
       doctor_id:       doctorId,
+      assigned_nurse_id: enfermeraId !== "__none__" ? enfermeraId : null,
       patient_id:      pacienteId,
       servicio_id:     servicioId !== "__none__" ? servicioId : null,
       motivo_consulta: motivo.trim() || null,
@@ -148,15 +176,18 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     };
 
     if (!recurrente) {
-      const { error } = await supabase.from("appointments").insert({
+      const { data: nueva, error } = await supabase.from("appointments").insert({
         ...basePayload,
         fecha_inicio: toUTC(fechaInicio),
         fecha_fin:    toUTC(fechaFin),
         recurrencia_num: 1,
-      });
+      }).select("id").single();
       setSaving(false);
       if (error) { toast.error("No se pudo crear la cita: " + error.message); return; }
       toast.success("Cita creada");
+      if (nueva && basePayload.assigned_nurse_id) {
+        supabase.functions.invoke("notify-nurse-assignment", { body: { appointment_id: nueva.id } }).catch(() => {});
+      }
       onSuccess();
       return;
     }
@@ -176,6 +207,10 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
       .select("id").single();
 
     if (e1 || !primera) { toast.error("Error al crear primera cita: " + e1?.message); setSaving(false); return; }
+
+    if (basePayload.assigned_nurse_id) {
+      supabase.functions.invoke("notify-nurse-assignment", { body: { appointment_id: primera.id } }).catch(() => {});
+    }
 
     if (fechas.length > 1) {
       const siguientes = fechas.slice(1).map((f, i) => ({
@@ -278,6 +313,29 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
             </Select>
           </div>
 
+          {/* Enfermera asignada (opcional) */}
+          <div className="space-y-1.5">
+            <Label>Enfermera asignada <span className="text-xs text-muted-foreground">(opcional)</span></Label>
+            <div className="flex items-center gap-2">
+              <Select value={enfermeraId} onValueChange={setEnfermeraId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sin asignar</SelectItem>
+                  {enfermeras.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.email ?? e.id}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {enfermeraId !== "__none__" && !checkingEnfermera && (
+                <span className={`text-xs font-medium px-2 py-1 rounded-md ${enfermeraOcupada ? "bg-red-500/15 text-red-700 dark:text-red-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"}`}>
+                  {enfermeraOcupada ? "Ocupada" : "Libre"}
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Fecha y duración */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -370,7 +428,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
 
         <DialogFooter>
           <Button variant="outline" onClick={onCancel} disabled={saving}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={saving || !doctorId || !pacienteId}>
+          <Button onClick={handleSubmit} disabled={saving || !doctorId || !pacienteId || (enfermeraId !== "__none__" && enfermeraOcupada)}>
             {saving ? "Guardando…" : "Crear cita"}
           </Button>
         </DialogFooter>

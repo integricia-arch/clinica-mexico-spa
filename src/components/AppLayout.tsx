@@ -6,7 +6,7 @@ import {
   CalendarPlus, Headset, ShieldCheck,
   MessageCircle, BellRing, ClipboardList, Stethoscope,
   CreditCard, Lock, UserRound, ChevronLeft, ChevronRight,
-  UserCog, BarChart2,
+  UserCog, BarChart2, Send,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -327,6 +327,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <UserRound className="h-4 w-4" />
                   Cambiar de usuario
                 </DropdownMenuItem>
+                {roles.includes("nurse") && (
+                  <DropdownMenuItem onClick={() => navigate("/perfil/vincular-telegram")} className="gap-2 cursor-pointer">
+                    <Send className="h-4 w-4" />
+                    Vincular Telegram
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleSignOut}

@@ -194,6 +194,11 @@ function pideNuevaConsulta(t: string): boolean {
 // MENSAJES DE TEXTO
 // ============================================================
 async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
+  const vincularMatch = (text ?? "").trim().match(/^\/vincular\s+(\d{6})$/i);
+  if (vincularMatch) {
+    return vincularStaffTelegram(chatId, vincularMatch[1]);
+  }
+
   const identidad = await obtenerOCrearIdentidad(chatId, rawMsg.from);
 
   if (text === "/nueva" || text === "/nuevo" || pideNuevaConsulta(text)) {
@@ -1455,6 +1460,32 @@ async function limpiarSesion(convId: string) {
 // ============================================================
 // IDENTIDAD / CONVERSACIÓN / MENSAJES
 // ============================================================
+// Vincula el chat_id de Telegram de un miembro del staff (enfermería, etc.)
+// usando un código corto generado desde /enfermeria/vincular-telegram.
+async function vincularStaffTelegram(chatId: string, code: string) {
+  const { data: link } = await supabase
+    .from("staff_link_codes")
+    .select("user_id, clinic_id, expires_at, used_at")
+    .eq("code", code)
+    .maybeSingle();
+
+  if (!link || link.used_at || new Date(link.expires_at) < new Date()) {
+    await enviarTelegram(chatId, "Código inválido o vencido. Genera uno nuevo desde tu perfil.");
+    return;
+  }
+
+  await supabase.from("staff_identidades_canal").upsert({
+    user_id: link.user_id,
+    canal_id: "telegram",
+    external_id: chatId,
+    clinic_id: link.clinic_id,
+  }, { onConflict: "user_id,canal_id" });
+
+  await supabase.from("staff_link_codes").update({ used_at: new Date().toISOString() }).eq("code", code);
+
+  await enviarTelegram(chatId, "Listo, tu cuenta quedó vinculada. Recibirás avisos de asignación aquí.");
+}
+
 async function obtenerOCrearIdentidad(chatId: string, from: any) {
   const { data: existente } = await supabase.from("identidades_canal").select("*")
     .eq("canal_id", "telegram").eq("external_id", chatId).maybeSingle();
