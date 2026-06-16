@@ -18,7 +18,27 @@ import PacienteModal from "@/components/PacienteModal";
 interface Doctor  { id: string; nombre: string; apellidos: string; especialidad: string | null }
 interface Servicio { id: string; nombre: string }
 interface Patient { id: string; nombre: string; apellidos: string; telefono: string | null }
-interface Nurse { id: string; email: string | null }
+interface Nurse {
+  id: string;
+  email: string | null;
+  nombre: string | null;
+  apellidos: string | null;
+  categoria: "licenciada" | "tecnica" | "auxiliar" | null;
+}
+
+const NURSE_CATEGORIA_LABEL: Record<string, string> = {
+  licenciada: "Lic.",
+  tecnica: "Téc.",
+  auxiliar: "Aux.",
+};
+
+function nurseLabel(e: Nurse): string {
+  if (e.nombre && e.apellidos) {
+    const cat = e.categoria ? `${NURSE_CATEGORIA_LABEL[e.categoria]} ` : "";
+    return `${cat}${e.nombre} ${e.apellidos}`;
+  }
+  return e.email ?? e.id;
+}
 
 interface Props {
   open: boolean;
@@ -324,7 +344,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
                 <SelectContent>
                   <SelectItem value="__none__">Sin asignar</SelectItem>
                   {enfermeras.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.email ?? e.id}</SelectItem>
+                    <SelectItem key={e.id} value={e.id}>{nurseLabel(e)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

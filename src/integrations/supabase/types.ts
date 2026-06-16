@@ -4739,6 +4739,65 @@ export type Database = {
           },
         ]
       }
+      nurses: {
+        Row: {
+          activo: boolean
+          apellidos: string
+          categoria: Database["public"]["Enums"]["nurse_categoria"]
+          cedula_profesional: string | null
+          clinic_id: string | null
+          created_at: string
+          especialidad: string | null
+          horario_fin: string
+          horario_inicio: string
+          id: string
+          nombre: string
+          telefono: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          activo?: boolean
+          apellidos: string
+          categoria?: Database["public"]["Enums"]["nurse_categoria"]
+          cedula_profesional?: string | null
+          clinic_id?: string | null
+          created_at?: string
+          especialidad?: string | null
+          horario_fin?: string
+          horario_inicio?: string
+          id?: string
+          nombre: string
+          telefono?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          activo?: boolean
+          apellidos?: string
+          categoria?: Database["public"]["Enums"]["nurse_categoria"]
+          cedula_profesional?: string | null
+          clinic_id?: string | null
+          created_at?: string
+          especialidad?: string | null
+          horario_fin?: string
+          horario_inicio?: string
+          id?: string
+          nombre?: string
+          telefono?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nurses_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ordenes_compra: {
         Row: {
           aprobada_at: string | null
@@ -6985,8 +7044,11 @@ export type Database = {
       list_nurses: {
         Args: never
         Returns: {
+          apellidos: string
+          categoria: Database["public"]["Enums"]["nurse_categoria"]
           email: string
           id: string
+          nombre: string
         }[]
       }
       log_audit: {
@@ -7196,6 +7258,7 @@ export type Database = {
         | "uso_interno"
         | "merma"
         | "devolucion_proveedor"
+      nurse_categoria: "licenciada" | "tecnica" | "auxiliar"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7394,6 +7457,7 @@ export const Constants = {
         "merma",
         "devolucion_proveedor",
       ],
+      nurse_categoria: ["licenciada", "tecnica", "auxiliar"],
     },
   },
 } as const
