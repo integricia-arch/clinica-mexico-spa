@@ -31,6 +31,7 @@ import DashboardCompras from "@/features/farmacia/DashboardCompras";
 import PuntoReorden from "@/features/farmacia/PuntoReorden";
 import LibroControlControlados from "@/features/farmacia/LibroControlControlados";
 import SolicitudesCompra from "@/features/farmacia/SolicitudesCompra";
+import SolicitudesInsumos from "@/features/farmacia/SolicitudesInsumos";
 import MedicamentoProveedoresPanel from "@/features/farmacia/MedicamentoProveedoresPanel";
 import BitacoraTemperaturaPanel from "@/features/farmacia/BitacoraTemperaturaPanel";
 import CotizacionesPanel from "@/features/farmacia/CotizacionesPanel";
@@ -369,6 +370,7 @@ export default function Farmacia() {
           <TabsTrigger value="pos">Punto de Venta</TabsTrigger>
           <TabsTrigger value="surtir">Surtir receta</TabsTrigger>
           <TabsTrigger value="inventario">Inventario</TabsTrigger>
+          <TabsTrigger value="insumos">Insumos</TabsTrigger>
           <TabsTrigger value="compras">Compras</TabsTrigger>
           <TabsTrigger value="cierre">Cierre</TabsTrigger>
         </TabsList>
@@ -379,6 +381,9 @@ export default function Farmacia() {
         </TabsContent>
         <TabsContent value="surtir">
           <SurtirReceta initialCode={prescriptionScan ?? undefined} />
+        </TabsContent>
+        <TabsContent value="insumos">
+          <SolicitudesInsumos medicamentos={medicamentos} />
         </TabsContent>
         <TabsContent value="inventario" className="space-y-6">
 
