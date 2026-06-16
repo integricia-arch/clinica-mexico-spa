@@ -5,29 +5,42 @@
 
 const SUPABASE_URL      = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SVC      = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const NOTIFY_SHARED_SECRET = Deno.env.get("NOTIFY_SHARED_SECRET") ?? "";
 const RESEND_API_KEY    = Deno.env.get("RESEND_API_KEY") ?? "";
 const RESEND_FROM       = Deno.env.get("RESEND_FROM") ?? "Integriclinica <onboarding@resend.dev>";
 const APP_URL           = "https://integrika.mx";
 
 const headers = { "Content-Type": "application/json" };
 
-async function getAdminEmails(): Promise<string[]> {
+async function getAdminEmails(): Promise<{ emails: string[]; debug: Record<string, unknown> }> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/user_roles?role=eq.admin&select=user_id`, {
     headers: { apikey: SUPABASE_SVC, Authorization: `Bearer ${SUPABASE_SVC}` },
   });
-  const rows: { user_id: string }[] = await res.json();
-  if (!rows.length) return [];
+  const rowsRaw = await res.text();
+  let rows: { user_id: string }[] = [];
+  try { rows = JSON.parse(rowsRaw); } catch { /* noop */ }
 
-  const ids = rows.map(r => r.user_id).join(",");
-  const usersRes = await fetch(
-    `${SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=1000`,
-    { headers: { apikey: SUPABASE_SVC, Authorization: `Bearer ${SUPABASE_SVC}` } },
-  );
-  const usersData: { users: { id: string; email: string }[] } = await usersRes.json();
-  return (usersData.users ?? [])
-    .filter(u => rows.some(r => r.user_id === u.id))
-    .map(u => u.email)
-    .filter(Boolean);
+  if (!Array.isArray(rows) || !rows.length) {
+    return { emails: [], debug: { step: "roles", status: res.status, body: rowsRaw, hasSvcKey: !!SUPABASE_SVC, svcKeyLen: SUPABASE_SVC.length } };
+  }
+
+  const emails: string[] = [];
+  const errors: Record<string, unknown>[] = [];
+  for (const row of rows) {
+    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${row.user_id}`, {
+      headers: { apikey: SUPABASE_SVC, Authorization: `Bearer ${SUPABASE_SVC}` },
+    });
+    const userRaw = await userRes.text();
+    if (!userRes.ok) {
+      errors.push({ user_id: row.user_id, status: userRes.status, body: userRaw });
+      continue;
+    }
+    try {
+      const u = JSON.parse(userRaw);
+      if (u.email) emails.push(u.email);
+    } catch { /* noop */ }
+  }
+  return { emails, debug: { step: "ok", rolesFound: rows.length, emailsFound: emails.length, errors } };
 }
 
 async function sendResend(to: string[], newEmail: string, newName: string) {
@@ -72,14 +85,10 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Validar service key (llamado desde trigger DB)
-  const auth = req.headers.get("Authorization") ?? "";
-  if (!auth.includes(SUPABASE_SVC.slice(-20))) {
-    // permitir también llamadas sin auth para db webhooks internos
-    // Solo rechazar si hay un token explícitamente incorrecto
-    if (auth && !auth.includes(SUPABASE_SVC)) {
-      return new Response(JSON.stringify({ error: "no autorizado" }), { status: 401, headers });
-    }
+  // Validar secreto compartido (enviado por el trigger DB desde vault.notify_new_user_secret)
+  const auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (!NOTIFY_SHARED_SECRET || auth !== NOTIFY_SHARED_SECRET) {
+    return new Response(JSON.stringify({ error: "no autorizado" }), { status: 401, headers });
   }
 
   let body: { user_id?: string; email?: string; full_name?: string; created_at?: string };
@@ -89,14 +98,14 @@ Deno.serve(async (req) => {
   if (!email) return new Response(JSON.stringify({ error: "email requerido" }), { status: 400, headers });
 
   try {
-    const adminEmails = await getAdminEmails();
+    const { emails: adminEmails, debug } = await getAdminEmails();
     if (adminEmails.length === 0) {
-      console.warn("[notify-new-user] Sin admins para notificar");
-      return new Response(JSON.stringify({ ok: true, notified: 0 }), { headers });
+      console.warn("[notify-new-user] Sin admins para notificar", debug);
+      return new Response(JSON.stringify({ ok: true, notified: 0, debug }), { headers });
     }
     await sendResend(adminEmails, email, full_name);
     console.log(`[notify-new-user] Notificado a ${adminEmails.length} admin(s) sobre nuevo usuario ${email}`);
-    return new Response(JSON.stringify({ ok: true, notified: adminEmails.length }), { headers });
+    return new Response(JSON.stringify({ ok: true, notified: adminEmails.length, hasResendKey: !!RESEND_API_KEY }), { headers });
   } catch (e) {
     console.error("[notify-new-user] Error:", e);
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers });
