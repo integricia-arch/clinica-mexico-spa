@@ -54,12 +54,30 @@ Deno.serve(async (req: Request) => {
 
     const { data: appointment } = await supabase
       .from("appointments")
-      .select("assigned_nurse_id, patient_id, fecha_inicio")
+      .select("assigned_nurse_id, patient_id, fecha_inicio, clinic_id")
       .eq("id", appointment_id)
       .maybeSingle();
 
     if (!appointment?.assigned_nurse_id) {
       return new Response(JSON.stringify({ ok: true, skipped: "sin enfermera asignada" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Regla configurable por rol/evento/canal (panel /configuracion/notificaciones).
+    // Si no hay regla o está deshabilitada, no se manda -- default seguro: enviar
+    // solo si existe una regla explícita habilitada para nurse+telegram en esta clínica.
+    const { data: rule } = await supabase
+      .from("notification_rules")
+      .select("enabled")
+      .eq("clinic_id", appointment.clinic_id)
+      .eq("role", "nurse")
+      .eq("event_type", "cita_asignada_enfermera")
+      .eq("channel", "telegram")
+      .maybeSingle();
+    if (rule && !rule.enabled) {
+      return new Response(JSON.stringify({ ok: true, skipped: "regla deshabilitada" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

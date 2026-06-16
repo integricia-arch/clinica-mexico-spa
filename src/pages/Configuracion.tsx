@@ -17,7 +17,7 @@ const secciones: Seccion[] = [
   { icon: Users, titulo: "Usuarios y roles", descripcion: "Administrar cuentas: Administrador, Recepción, Médico, Enfermería, Farmacia, Caja/Facturación.", to: "/admin/usuarios", adminOnly: true },
   { icon: Building2, titulo: "Datos del consultorio", descripcion: "Nombre, dirección, teléfono, logotipo y datos fiscales del establecimiento." },
   { icon: Shield, titulo: "Permisos y seguridad", descripcion: "Control de acceso por rol, sesiones activas y políticas de contraseña." },
-  { icon: Bell, titulo: "Notificaciones y recordatorios", descripcion: "Configurar recordatorios por WhatsApp, SMS o correo electrónico para citas y seguimientos." },
+  { icon: Bell, titulo: "Notificaciones por rol", descripcion: "Qué rol recibe cada tipo de aviso (asignación de enfermera, vencimientos, usuarios nuevos) y por qué canal: Telegram o email.", to: "/configuracion/notificaciones", adminOnly: true },
   { icon: Globe, titulo: "Localización", descripcion: "Zona horaria (Ciudad de México), formato de fecha (dd/mm/aaaa), moneda (MXN), idioma (Español)." },
   { icon: FileText, titulo: "Facturación y CFDI", descripcion: "Datos del emisor, régimen fiscal, certificados de sello digital y configuración de timbrado.", to: "/configuracion/facturacion", adminOnly: true },
   { icon: CreditCard, titulo: "Cobros y pagos digitales", descripcion: "Pasarela de pago: Stripe, OXXO Pay y transferencia SPEI. Terminal física en consultorio.", to: "/configuracion/pagos", adminOnly: true },

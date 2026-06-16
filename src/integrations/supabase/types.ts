@@ -4739,6 +4739,47 @@ export type Database = {
           },
         ]
       }
+      notification_rules: {
+        Row: {
+          channel: string
+          clinic_id: string | null
+          created_at: string
+          enabled: boolean
+          event_type: string
+          id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          clinic_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          event_type: string
+          id?: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          clinic_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          event_type?: string
+          id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_rules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nurses: {
         Row: {
           activo: boolean
