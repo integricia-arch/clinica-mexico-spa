@@ -5,15 +5,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
+
 interface AppointmentRequest {
   patient_id: string;
   doctor_id: string;
+  assigned_nurse_id?: string;
   room_id?: string;
   fecha_inicio: string;
   fecha_fin: string;
   motivo_consulta?: string;
   notas?: string;
   recursos?: { tipo_recurso: string; descripcion?: string }[];
+}
+
+async function enviarTelegram(chatId: string, text: string) {
+  if (!TELEGRAM_BOT_TOKEN) return;
+  const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text }),
+  });
+  if (!res.ok) console.error("[create-appointment] Telegram error:", await res.text());
 }
 
 Deno.serve(async (req: Request) => {
@@ -125,6 +138,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // 1b. Check nurse availability
+    if (body.assigned_nurse_id) {
+      const { data: nurseConflicts } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("assigned_nurse_id", body.assigned_nurse_id)
+        .not("status", "in", '("cancelada","liberada")')
+        .lt("fecha_inicio", body.fecha_fin)
+        .gt("fecha_fin", body.fecha_inicio);
+
+      if (nurseConflicts && nurseConflicts.length > 0) {
+        return new Response(
+          JSON.stringify({ error: "La enfermera ya tiene una cita asignada en ese horario" }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // 2. Check room availability (if room specified)
     if (body.room_id) {
       const { data: roomConflicts } = await supabase
@@ -163,6 +194,7 @@ Deno.serve(async (req: Request) => {
       .insert({
         patient_id: body.patient_id,
         doctor_id: body.doctor_id,
+        assigned_nurse_id: body.assigned_nurse_id || null,
         room_id: body.room_id || null,
         fecha_inicio: body.fecha_inicio,
         fecha_fin: body.fecha_fin,
@@ -179,6 +211,30 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "Error al crear la cita: " + insertError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // 4b. Notify assigned nurse via Telegram, if linked
+    if (body.assigned_nurse_id) {
+      const { data: nurseChat } = await supabase
+        .from("staff_identidades_canal")
+        .select("external_id")
+        .eq("user_id", body.assigned_nurse_id)
+        .eq("canal_id", "telegram")
+        .maybeSingle();
+
+      if (nurseChat?.external_id) {
+        const { data: patient } = await supabase
+          .from("patients")
+          .select("nombre, apellidos")
+          .eq("id", body.patient_id)
+          .maybeSingle();
+        const nombrePaciente = patient ? `${patient.nombre} ${patient.apellidos}` : "paciente";
+        const horaStr = inicio.toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" });
+        await enviarTelegram(
+          nurseChat.external_id,
+          `Nueva asignación: ${nombrePaciente}, ${horaStr}. Confirma con /ok.`,
+        );
+      }
     }
 
     // 5. Add resources if any
