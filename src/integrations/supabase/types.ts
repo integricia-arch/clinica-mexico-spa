@@ -608,6 +608,82 @@ export type Database = {
           },
         ]
       }
+      ayuda_chat_mensajes: {
+        Row: {
+          autor_id: string | null
+          contenido: string
+          created_at: string
+          id: string
+          rol: Database["public"]["Enums"]["ayuda_chat_rol_mensaje"]
+          sesion_id: string
+        }
+        Insert: {
+          autor_id?: string | null
+          contenido: string
+          created_at?: string
+          id?: string
+          rol: Database["public"]["Enums"]["ayuda_chat_rol_mensaje"]
+          sesion_id: string
+        }
+        Update: {
+          autor_id?: string | null
+          contenido?: string
+          created_at?: string
+          id?: string
+          rol?: Database["public"]["Enums"]["ayuda_chat_rol_mensaje"]
+          sesion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ayuda_chat_mensajes_sesion_id_fkey"
+            columns: ["sesion_id"]
+            isOneToOne: false
+            referencedRelation: "ayuda_chat_sesiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ayuda_chat_sesiones: {
+        Row: {
+          atendido_por: string | null
+          clinic_id: string | null
+          closed_at: string | null
+          estado: Database["public"]["Enums"]["ayuda_chat_estado"]
+          id: string
+          ruta_origen: string | null
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          atendido_por?: string | null
+          clinic_id?: string | null
+          closed_at?: string | null
+          estado?: Database["public"]["Enums"]["ayuda_chat_estado"]
+          id?: string
+          ruta_origen?: string | null
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          atendido_por?: string | null
+          clinic_id?: string | null
+          closed_at?: string | null
+          estado?: Database["public"]["Enums"]["ayuda_chat_estado"]
+          id?: string
+          ruta_origen?: string | null
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ayuda_chat_sesiones_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bitacora_temperatura: {
         Row: {
           alerta_enviada: boolean
@@ -4001,6 +4077,84 @@ export type Database = {
           },
         ]
       }
+      manual_consultas: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          id: string
+          manual_id: string
+          user_id: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          manual_id: string
+          user_id?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          manual_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_consultas_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_consultas_manual_id_fkey"
+            columns: ["manual_id"]
+            isOneToOne: false
+            referencedRelation: "manual_paginas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manual_paginas: {
+        Row: {
+          activo: boolean
+          created_at: string
+          id: string
+          modulo: string
+          ruta: string
+          slug: string
+          titulo: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          modulo: string
+          ruta: string
+          slug: string
+          titulo: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          modulo?: string
+          ruta?: string
+          slug?: string
+          titulo?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
       medicamento_codigos_proveedor: {
         Row: {
           activo: boolean
@@ -6978,6 +7132,7 @@ export type Database = {
       admin_list_auth_users: {
         Args: never
         Returns: {
+          banned_until: string
           created_at: string
           email: string
           id: string
@@ -7277,6 +7432,8 @@ export type Database = {
         | "paciente_creado_inbox"
         | "paciente_vinculado_inbox"
         | "doctor_unavailable_override"
+      ayuda_chat_estado: "abierta" | "escalada" | "cerrada"
+      ayuda_chat_rol_mensaje: "usuario" | "asistente_ia" | "humano" | "sistema"
       doctor_contact_channel: "phone" | "whatsapp" | "email" | "internal"
       doctor_contact_result:
         | "answered"
@@ -7472,6 +7629,8 @@ export const Constants = {
         "paciente_vinculado_inbox",
         "doctor_unavailable_override",
       ],
+      ayuda_chat_estado: ["abierta", "escalada", "cerrada"],
+      ayuda_chat_rol_mensaje: ["usuario", "asistente_ia", "humano", "sistema"],
       doctor_contact_channel: ["phone", "whatsapp", "email", "internal"],
       doctor_contact_result: [
         "answered",

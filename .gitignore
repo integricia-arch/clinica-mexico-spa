@@ -17,6 +17,8 @@ node_modules
 dist
 dist-ssr
 *.local
+manual-site/build
+manual-site/.docusaurus
 
 # Editor directories and files
 .vscode/*
@@ -49,6 +51,5 @@ dist_integrika.zip
 .agents/
 skills-lock.json
 
-# Obsidian vault memory (local only)
-memoria/
+# Obsidian vault config (local only) — memoria/ SÍ se versiona (ver CLAUDE.md)
 .obsidian/

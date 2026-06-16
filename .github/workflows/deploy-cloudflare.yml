@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Install manual-site dependencies
+        run: npm ci --legacy-peer-deps --prefix manual-site
+
       - name: Build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -28,7 +31,7 @@ jobs:
           VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           VITE_BETTERSTACK_TOKEN: ${{ secrets.VITE_BETTERSTACK_TOKEN }}
-        run: npm run build
+        run: npm run build:all
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3

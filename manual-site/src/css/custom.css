@@ -1,0 +1,201 @@
+/**
+ * Token system — heredado de la app principal (mismo teal clínico,
+ * hsl(174 62% 38%) en src/index.css), no un branding nuevo desconectado.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
+
+:root {
+  /* Marca — derivado del teal real de la app (consistencia, no novedad gratuita) */
+  --clinic-teal: #259d91;
+  --clinic-teal-deep: #18695c;
+  --clinic-mist: #eaf6f3;
+  --clinic-ink: #122a26;
+  --clinic-paper: #f7faf9;
+  --clinic-amber: #c97a2e; /* único acento cálido — "atención" en errores frecuentes */
+
+  --ifm-color-primary: var(--clinic-teal);
+  --ifm-color-primary-dark: #21897e;
+  --ifm-color-primary-darker: #1f8077;
+  --ifm-color-primary-darkest: #18695c;
+  --ifm-color-primary-light: #2eac9f;
+  --ifm-color-primary-lighter: #37b3a6;
+  --ifm-color-primary-lightest: #52c2b6;
+
+  --ifm-background-color: var(--clinic-paper);
+  --ifm-font-color-base: var(--clinic-ink);
+  --ifm-heading-font-family: 'Sora', system-ui, sans-serif;
+  --ifm-font-family-base: 'Inter', system-ui, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', monospace;
+  --ifm-code-font-size: 90%;
+  --ifm-heading-font-weight: 700;
+  --docusaurus-highlighted-code-line-bg: rgba(37, 157, 145, 0.12);
+}
+
+[data-theme='dark'] {
+  --clinic-mist: #102825;
+  --clinic-ink: #e8f5f2;
+  --clinic-paper: #0c1a18;
+
+  --ifm-color-primary: #3fc2b3;
+  --ifm-color-primary-dark: #2cb0a1;
+  --ifm-color-primary-darker: #29a497;
+  --ifm-color-primary-darkest: #22877d;
+  --ifm-color-primary-light: #5ccebf;
+  --ifm-color-primary-lighter: #6cd4c6;
+  --ifm-color-primary-lightest: #93e1d6;
+
+  --ifm-background-color: var(--clinic-paper);
+  --ifm-font-color-base: var(--clinic-ink);
+  --docusaurus-highlighted-code-line-bg: rgba(63, 194, 179, 0.18);
+}
+
+/* Hero funcional: el buscador ES el contenido, no decoración bajo un titular */
+.clinicHero {
+  background: linear-gradient(150deg, var(--clinic-teal) 0%, var(--clinic-teal-deep) 100%);
+  color: #fff;
+  padding: 3.5rem 1.5rem 3rem;
+}
+
+.clinicHero__eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.clinicHero__title {
+  font-family: 'Sora', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  margin: 0.4rem 0 0.5rem;
+}
+
+.clinicHero__subtitle {
+  font-size: 1rem;
+  opacity: 0.92;
+  max-width: 38ch;
+  margin-bottom: 1.5rem;
+}
+
+.clinicHero__searchTrigger {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255, 255, 255, 0.97);
+  color: var(--clinic-ink);
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.95rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.clinicHero__searchTrigger:hover,
+.clinicHero__searchTrigger:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.4);
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.clinicHero__searchTrigger kbd {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  background: var(--clinic-mist);
+  border-radius: 0.35rem;
+  padding: 0.15rem 0.4rem;
+  color: var(--clinic-teal-deep);
+}
+
+/* Directorio de módulos — misma agrupación que el sidebar real de la app */
+.clinicDirectory {
+  padding: 2.5rem 1.5rem 3.5rem;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.clinicDirectory__section + .clinicDirectory__section {
+  margin-top: 2rem;
+}
+
+.clinicDirectory__sectionLabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--clinic-teal-deep);
+  margin-bottom: 0.75rem;
+}
+
+.clinicDirectory__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.85rem;
+}
+
+.clinicCard {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.65rem;
+  background: var(--clinic-mist);
+  border: 1px solid transparent;
+  color: var(--clinic-ink);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.clinicCard:hover,
+.clinicCard:focus-visible {
+  border-color: var(--clinic-teal);
+  transform: translateY(-2px);
+  color: var(--clinic-ink);
+  outline: none;
+}
+
+.clinicCard__icon {
+  flex-shrink: 0;
+  color: var(--clinic-teal-deep);
+}
+
+.clinicCard--pending {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.clinicCard--pending .clinicCard__icon {
+  color: var(--clinic-ink);
+  opacity: 0.6;
+}
+
+.clinicCard--pending span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.clinicCard--pending small {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--clinic-amber);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clinicHero__searchTrigger,
+  .clinicCard {
+    transition: none;
+  }
+}

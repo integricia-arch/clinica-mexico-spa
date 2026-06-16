@@ -661,6 +661,15 @@ Todas las fases completadas. Sin pendientes.
 
 ## Pendiente / Próximo
 
+### Asignación enfermera por cita (Jun 16)
+- [x] Pantalla `/perfil/vincular-telegram` (`src/pages/VincularTelegram.tsx`) — genera código en `staff_link_codes`, instrucción `/vincular CODE`. Enlace en menú de usuario solo para rol `nurse`.
+- [x] `types.ts` regenerado — tenía drift grande, le faltaban `staff_link_codes`, `staff_identidades_canal`, `entregas_turno`, `solicitudes_insumos` (las 4 ya estaban en prod, ninguna en types ni en frontend)
+- [x] Migración `20260618000000_staff_link_codes.sql` agregada — cierra drift (tabla vivía en prod sin migración en git)
+- [x] `tsc --noEmit` 0 errores, eslint limpio
+- **Hallazgo importante**: `entregas_turno` (entrega de turno enfermería) y `solicitudes_insumos` (solicitud de insumos a farmacia) YA EXISTEN en prod (migración `20260617000000_enfermera_asignacion.sql`) pero **sin ninguna UI/frontend que las use** — cubren parte de Prioridad 3 (insumos) y Prioridad 5 (continuidad/turno) de la investigación. Construir UI sobre estas antes de diseñar tablas nuevas.
+- Pendiente: commitear `NuevaCitaDialog.tsx` + `telegram-webhook/index.ts` + `notify-nurse-assignment/` + `VincularTelegram.tsx` + `App.tsx` + `AppLayout.tsx` + `types.ts` + 2 migraciones nuevas (confirmar con usuario antes de commitear)
+- Ver investigación completa de perfil enfermería: `memoria/proyectos/investigacion-enfermeria-operativa.md`
+
 ### BI — mejoras fase 2 (no crítico)
 - Top 10 productos farmacia por ingresos (requiere join pharmacy_sale_items con filtro de fecha)
 - Heatmap citas por hora del día / día de semana
@@ -695,6 +704,29 @@ Diseñar y validar:
 - Aprobación de OC antes de enviar (flujo existente) vs envío automático sin aprobación (riesgo)
 - Integración con punto de reorden (gap #17 ya implementado)
 Preguntas: ¿cuándo es seguro el auto-envío sin aprobación humana? ¿COFEPRIS tiene restricciones para controlados?
+
+#### INV-D: Enfermería — validación de perfil y operación ✅ INVESTIGACIÓN COMPLETA (Jun 16)
+Ver `memoria/proyectos/investigacion-enfermeria-operativa.md`. Hallazgos clave:
+- `list_nurses()` solo trae `id, email` — sin cédula profesional, categoría, especialidad (NOM-019-SSA3-2013 lo exige)
+- `TriageForm` solo signos vitales, sin nota de enfermería PAE/PLACE (NOM-004)
+- Sin trazabilidad de insumos/instrumental por paciente (COFEPRIS, NOM-087, NOM-045)
+- `discharge` step no incluye rol `nurse` en `closeRoles`
+- `assigned_nurse_id` solo vive en `appointments` — no se propaga a `journey_instance_steps.assigned_to`, la enfermera se "pierde" tras el aviso inicial de Telegram
+- No existe tabla de horario/turno de enfermera (sí existe `doctor_bloqueos` para médicos) — se puede asignar enfermera fuera de su horario real
+**Investigación operativa de enfermería: CERRADA Jun 16.** Las 5 prioridades + los 2 estudios nuevos (quién asigna, panel notificaciones) están completos:
+- P1 catálogo `nurses` + cédula/categoría — `a213cdf`
+- P1b CRUD AdminUsuarios — `2b3e748`
+- P2 nota PAE en TriageForm — `65150ae`
+- P3 insumos con descuento FEFO — `ff9230b`
+- P5 horario + continuidad en journey — `435d185`
+- Reasignar enfermera + vista persistente (DetalleCita) — `f377cbb`
+- Panel notificaciones por rol/evento — `c4e2a5d`
+
+Pendiente no urgente: migrar `notify-cxp-vencimiento`/`notify-new-user` a `notification_rules` (mismo patrón ya probado). **Nuevos estudios agregados Jun 16** (planeación, no implementados): "¿quién asigna la enfermera?" (recomendación: híbrido recepción-asigna-por-default + doctor-reasigna-override) y "panel de configuración de notificaciones por rol/evento" (requiere decisión de negocio: ¿Telegram+email basta o se necesita SMS/WhatsApp real con costo recurrente?). Detalle completo en el archivo de investigación.
+
+**Prioridad 1 — COMPLETADA (Jun 16):** tabla `nurses` creada (espejo `doctors`: nombre, apellidos, `categoria` enum licenciada/tecnica/auxiliar, cédula, horario_inicio/fin, activo, clinic_id) + `list_nurses()` RPC actualizado (LEFT JOIN, devuelve nombre/apellidos/categoria, fallback a email si la enfermera no tiene fila en `nurses` todavía) + selector en `NuevaCitaDialog.tsx` muestra "Lic./Téc./Aux. Nombre Apellidos" en vez de email crudo.
+
+**Prioridad 1b — COMPLETADA (Jun 16):** tab "Enfermeras del registro" en `AdminUsuarios.tsx` (CRUD completo: crear/editar/eliminar/vincular/desvincular cuenta), espejo exacto del tab de médicos. Acciones `link_nurse_user`/`unlink_nurse_user` agregadas a edge function `admin-users` (deploy v14 ACTIVE). Validado: `tsc --noEmit` 0 errores, `npm run build` OK, `list_nurses()` probado en vivo simulando JWT admin. **No probado con click-through real en browser** (requeriría login manual).
 
 #### INV-C: Lectura CFDI XML/PDF para validación 4-way (anti-robo/fraude)
 Diseñar y validar:
@@ -774,12 +806,61 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 - `mcp__supabase__get_logs(service: "edge-function")` solo da logs de acceso (method/status/url/tiempo), nunca el `console.*` interno de la función. Para depurar lógica interna: hacer que la función regrese el debug en el JSON de respuesta y probar con `net.http_post` manual desde SQL + leer `net._http_response`.
 - Cuando un trigger DB y una edge function comparten un "secreto", verificar que AMBOS lados usen el mismo valor real — no asumir que el secreto del vault y el service role key son intercambiables.
 
+## Completado (Jun 16, 2026 — cuenta QA + verificación en browser)
+
+### Verificación real en browser de todas las features de enfermería de hoy
+- Levanté dev server + `agent-browser` (CDP) — login, AdminUsuarios (tab Enfermeras: crear/eliminar real), Farmacia (tab Insumos: solicitar+aprobar real con descuento FEFO confirmado en DB), Configuración/Notificaciones (toggle real confirmado en DB) — todo PASS, sin errores de consola
+- Hallazgo (no bug, mi error de automatización): clicks en opciones de Radix `Select` vía CDP no disparan `onValueChange` — usar teclado (`ArrowDown`+`Enter`) en su lugar
+- Hallazgo real (pre-existente, no de hoy): wizard de apertura de turno en Farmacia muestra "Caja: {nombre del cajero}" en vez del nombre real de la caja — pendiente investigar, no es de mis cambios
+
+### Cuenta de pruebas QA permanente
+- Creada `qa.pruebas@clinica-mexico-spa.test` (rol admin, acceso a todos los módulos), credenciales en `.claude/project-context.md` (gitignoreado, nunca en STATE.md)
+- **Deshabilitada por defecto** vía `banned_until` (Supabase Auth ban, no borra la cuenta) — admin debe habilitar antes de cada sesión de pruebas y deshabilitar al terminar
+- Nueva acción `toggle_ban` en edge function `admin-users` (v15) + botón 🔒/🔓 en tab "Cuentas de usuario" de AdminUsuarios — toggle real sin tocar SQL, probado en vivo con cuenta desechable separada (creada y borrada solo para esa prueba)
+- `admin_list_auth_users()` RPC actualizado para exponer `banned_until`
+- Gotcha real encontrado al crear el usuario por SQL directo: columnas de tokens (`confirmation_token`, etc.) no pueden ser NULL — GoTrue falla con "Database error querying schema" si lo son. Deben ser `''` explícito.
+
+## Completado (Jun 16, 2026 — captcha en prod + resync BD local + push)
+
+### Captcha Turnstile en producción — verificado funcionando
+- Site key + secret key configurados (Cloudflare Turnstile + Supabase Auth dashboard)
+- GitHub Actions secret `VITE_TURNSTILE_SITE_KEY` agregado vía `gh secret set`
+- Gotcha real: widget requiere hostnames explícitos en Cloudflare (`localhost`, `integrika.mx`) — error `110200` si falta, tarda ~1-2 min en propagar tras agregarlo
+- Confirmado en vivo: widget bloquea automatización CDP (`agent-browser`, error `600010`) — comportamiento esperado, prueba real la hizo el usuario en producción y confirmó que funciona
+
+### BD local SQL Server (`PABLO\LUCCA`, base `integrika`) — resync completo de esquema
+- Estaba congelada desde 12 jun con solo 31 tablas; prod tiene 113
+- Generé DDL T-SQL automático desde `information_schema` de Supabase (mapeo de tipos: uuid→UNIQUEIDENTIFIER, jsonb→NVARCHAR(MAX), enums→NVARCHAR(50) sin CHECK, timestamptz→DATETIMEOFFSET) — sin FKs (mirror estructural, no enforcement)
+- 82 tablas nuevas creadas, **113/113 ahora** — incluye camino del paciente completo, farmacia/POS, caja/turnos, CFDI, almacén/compras, enfermería, notificaciones
+- Datos de las 31 tablas viejas verificados intactos post-resync (medicamentos=51, etc.)
+- **Solo esquema, sin copiar datos** de las 82 tablas nuevas — eso sería el siguiente paso si se necesita
+
+### Git — 11 commits pusheados a origin/main
+- Disparó deploy automático (GitHub Actions / Lovable sync)
+
+## Completado (Jun 16, 2026 — resync completo BD local + backups)
+
+### BD local SQL Server — resync de DATOS (no solo esquema)
+- Detecté drift adicional: 31 tablas viejas (de antes del 12 jun) tenían **47 columnas faltantes** vs prod (ej. `clinic_id` en casi todas, `assigned_nurse_id` en appointments, columnas de proveedores/medicamentos nuevas) — agregadas con `ALTER TABLE`
+- Eliminé **todas las FK constraints** locales (40 constraints) — eran de la creación manual original, bloqueaban los DELETE; consistente con el diseño sin-FK ya usado en las 82 tablas nuevas (mirror estructural puro, sin enforcement)
+- Borré y recargué **41 tablas con datos reales** desde prod (942 filas) vía una sola query UNION en Supabase + generación de INSERT tipados (uuid, jsonb, booleanos, timestamps mapeados correctamente)
+- Verificado: conteos finales coinciden exacto con prod (mensajes=466, medicamentos=51, appointments=16, etc.)
+- Las tablas con 0 filas en prod también se vaciaron localmente (por si tenían data vieja de seeds anteriores)
+
+### Backup de código — 2 mecanismos
+1. **Git bundle** (resguardo real, recomendado): `C:\Users\pablo\Backups\clinica-mexico-spa\clinica-mexico-spa-YYYYMMDD-HHMMSS.bundle` — incluye TODO el historial (todas las ramas, stash, worktrees), verificado con `git bundle verify`. Restaurable 100% offline con `git clone archivo.bundle`.
+2. **Tabla SQL `project_files_backup`** (en `integrika`, consultable): `file_path`, `content` (texto) o `content_binary` (binarios), `size_bytes`, `commit_hash`, `snapshot_at`. 492/492 archivos del repo cargados (snapshot del estado actual, sin historial — no sustituye git).
+- Gotcha real: `sqlcmd` en modo texto interpreta líneas como `GO` **dentro del contenido de archivos** como comandos de batch, rompiendo la carga a mitad — no usar sqlcmd con SQL generado como texto plano para contenido arbitrario. Usar ADO.NET (`System.Data.SqlClient`) con parámetros tipados (`SqlParameter`) — inmune a esto, sin necesidad de escapar nada.
+- Estos son snapshots puntuales, no automatizados — repetir manualmente cuando se quiera refrescar.
+
 ## Reglas críticas
 - SQL con `$function$` → SIEMPRE escribir `_tmp_*.sql` y usar `--file`
 - Secrets: env-only, nunca en código
 - `patients.sexo` CHECK: solo `'M'`, `'F'`, `'Otro'`
 - `patients` no tiene `domicilio_ciudad` → usar `municipio`
 - `verify_jwt = false` en telegram-webhook
+- Crear usuarios auth.users por SQL: columnas `*_token` deben ser `''`, nunca NULL (GoTrue rompe)
+- `banned_until` (timestamp futuro) = forma de deshabilitar cuenta sin eliminarla; `null` = habilitada
 
 ## Archivos clave
 - `src/features/farmacia/PuntoDeVenta.tsx` — POS principal

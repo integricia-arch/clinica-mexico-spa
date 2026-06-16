@@ -79,7 +79,7 @@ Si el build local pasa pero el site está en blanco → el problema está en CI 
 ```powershell
 cd C:\Users\pablo\clinica-mexico-spa
 git pull origin main
-npm run build          # requiere .env con las 3 VITE_* vars
+npm run build:all      # vite build + manual-site (Docusaurus) + copia a dist/manual; requiere .env con las 3 VITE_* vars
 wrangler deploy
 ```
 
@@ -116,6 +116,22 @@ Setup manual requerido (no automatizable desde el agente, requiere acceso a dash
 3. Supabase dashboard → Authentication → Settings → Bot and Abuse Protection → habilitar, provider Turnstile, pegar **secret key**. Supabase valida el token server-side — nunca se escribe lógica de verificación propia.
 
 Si `VITE_TURNSTILE_SITE_KEY` no está configurada, el login funciona igual sin captcha (graceful degrade) — útil en desarrollo local.
+
+### Manual de usuario + portal público (`/manual`) <!-- /aprende 2026-06-16 -->
+
+Dos capas, una sola fuente de contenido (`docs/manual-usuario/*.md`):
+
+1. **Botón "?" en la app** (`src/components/ManualButton.tsx`): modal ligero, carga el `.md` crudo via `import.meta.glob`, resuelve qué manual mostrar según la ruta activa contra la tabla `manual_paginas`. Registra cada apertura en `manual_consultas` (analítica de fricción).
+2. **Portal público** (`manual-site/`, Docusaurus): sitio estático independiente, build propio (`npm run build --prefix manual-site`), output copiado a `dist/manual/` (`scripts/copy-manual-build.cjs`) para que el mismo Worker de Cloudflare lo sirva en `integrika.mx/manual` (Workers Assets resuelve archivos estáticos exactos antes del fallback SPA — sin necesidad de un segundo proyecto/dominio Cloudflare).
+
+**Build de producción siempre usa `npm run build:all`**, no `npm run build` a secas — si solo se corre `vite build`, `/manual` queda con el contenido viejo (`dist/manual` no se regenera).
+
+**Agregar un manual nuevo:**
+1. Copiar `docs/manual-usuario/_TEMPLATE.md` → `<slug>.md`.
+2. Insertar fila en `manual_paginas` (ruta, slug, titulo, modulo) — esto activa el botón "?" automáticamente.
+3. En `manual-site/src/components/HomepageFeatures/index.tsx`, cambiar `ready: false → true` para ese slug (si no, el build de Docusaurus falla por link roto a un doc inexistente).
+
+**Chat de ayuda ("hablar con humano"):** tablas `ayuda_chat_sesiones` / `ayuda_chat_mensajes` ya existen (estado por defecto `escalada`, sin IA conectada). UI pendiente. La columna `rol: asistente_ia` en `ayuda_chat_mensajes` queda lista para cuando se decida hosting de un modelo (Ollama requiere VM/servidor propio — Cloudflare Workers/Supabase Edge Functions no pueden correr un proceso persistente con modelo cargado); decisión pospuesta a propósito.
 
 ### Regla general post-Lovable
 

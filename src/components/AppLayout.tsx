@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import LockScreen from "@/components/LockScreen";
+import ManualButton from "@/components/ManualButton";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -296,6 +297,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <ManualButton />
             <button className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Bell className="h-[18px] w-[18px]" />
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
