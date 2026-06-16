@@ -20,9 +20,9 @@ import {
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-type AppRole = "admin" | "manager" | "receptionist" | "doctor" | "nurse" | "patient";
+type AppRole = "admin" | "manager" | "receptionist" | "doctor" | "nurse" | "patient" | "cajero";
 
-const ROLE_OPTIONS: AppRole[] = ["admin", "manager", "receptionist", "doctor", "nurse", "patient"];
+const ROLE_OPTIONS: AppRole[] = ["admin", "manager", "receptionist", "doctor", "nurse", "patient", "cajero"];
 
 const ROLE_LABELS: Record<AppRole, string> = {
   admin: "Administrador",
@@ -31,6 +31,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
   doctor: "Médico",
   nurse: "Enfermería",
   patient: "Paciente",
+  cajero: "Cajero",
 };
 
 const ROLE_BADGE: Record<AppRole, string> = {
@@ -40,6 +41,7 @@ const ROLE_BADGE: Record<AppRole, string> = {
   doctor: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   nurse: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   patient: "bg-muted text-muted-foreground",
+  cajero: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300",
 };
 
 interface UsuarioRow {
@@ -209,7 +211,7 @@ export default function AdminUsuarios() {
   }, [users, unlinkedDoctorRows, doctorByUserId, query, roleFilter]);
 
   const roleCounts = useMemo(() => {
-    const c: Record<string, number> = { all: users.length + unlinkedDoctorRows.length, admin: 0, manager: 0, receptionist: 0, doctor: unlinkedDoctorRows.length, nurse: 0, patient: 0 };
+    const c: Record<string, number> = { all: users.length + unlinkedDoctorRows.length, admin: 0, manager: 0, receptionist: 0, doctor: unlinkedDoctorRows.length, nurse: 0, patient: 0, cajero: 0 };
     for (const u of users) {
       for (const r of u.roles) c[r] = (c[r] ?? 0) + 1;
       if (u.roles.length === 0) c.patient += 1;
@@ -590,7 +592,7 @@ export default function AdminUsuarios() {
               />
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {(["all", "admin", "manager", "receptionist", "doctor", "nurse", "patient"] as const).map((r) => (
+              {(["all", "admin", "manager", "receptionist", "doctor", "nurse", "patient", "cajero"] as const).map((r) => (
                 <Button
                   key={r}
                   size="sm"
