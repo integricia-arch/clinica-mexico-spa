@@ -1,9 +1,17 @@
-import { Heart, LogOut, Mail } from "lucide-react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Heart, LogOut, Mail, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SinAcceso() {
-  const { user, signOut } = useAuth();
+  const { user, roles, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  // Navegar automáticamente cuando el admin asigne un rol
+  useEffect(() => {
+    if (roles.length > 0) navigate("/", { replace: true });
+  }, [roles, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -28,6 +36,10 @@ export default function SinAcceso() {
                 <Mail className="h-4 w-4" />
                 Contactar soporte
               </a>
+            </Button>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Verificar acceso
             </Button>
             <Button variant="ghost" onClick={signOut} className="text-muted-foreground">
               <LogOut className="mr-2 h-4 w-4" />
