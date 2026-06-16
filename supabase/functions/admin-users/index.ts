@@ -224,6 +224,51 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "link_nurse_user") {
+      // Vincula una enfermera (nurses.id) con un usuario auth. Si no existe, lo crea.
+      const { nurse_id, email, password, existing_user_id } = body as {
+        nurse_id?: string; email?: string; password?: string; existing_user_id?: string;
+      };
+      if (!nurse_id) return json({ error: "nurse_id requerido" }, 400);
+
+      let userId = existing_user_id;
+      if (!userId) {
+        if (!email || !password) return json({ error: "email y contraseña requeridos para crear cuenta" }, 400);
+        if (password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
+        const { data: existing } = await admin.rpc("admin_list_auth_users");
+        const found = (existing as { id: string; email: string | null }[] | null)?.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase(),
+        );
+        if (found) {
+          userId = found.id;
+        } else {
+          const { data: created, error: createErr } = await admin.auth.admin.createUser({
+            email, password, email_confirm: true,
+          });
+          if (createErr) throw createErr;
+          userId = created.user?.id;
+        }
+      }
+      if (!userId) return json({ error: "No se pudo obtener user_id" }, 500);
+
+      await admin.from("user_roles").upsert(
+        { user_id: userId, role: "nurse" },
+        { onConflict: "user_id,role" },
+      );
+      const { error: nErr } = await admin.from("nurses").update({ user_id: userId }).eq("id", nurse_id);
+      if (nErr) throw nErr;
+
+      return json({ ok: true, user_id: userId });
+    }
+
+    if (action === "unlink_nurse_user") {
+      const { nurse_id } = body as { nurse_id?: string };
+      if (!nurse_id) return json({ error: "nurse_id requerido" }, 400);
+      const { error: nErr } = await admin.from("nurses").update({ user_id: null }).eq("id", nurse_id);
+      if (nErr) throw nErr;
+      return json({ ok: true });
+    }
+
     if (action === "delete") {
       const { user_id } = body as { user_id?: string };
       if (!user_id) return json({ error: "user_id requerido" }, 400);

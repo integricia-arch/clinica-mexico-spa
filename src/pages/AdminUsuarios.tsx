@@ -17,7 +17,11 @@ import { toast } from "sonner";
 import {
   ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
   Trash2, ShieldAlert, Lock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle, Plus,
+  HeartPulse,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type AppRole = "admin" | "manager" | "receptionist" | "doctor" | "nurse" | "patient" | "cajero";
@@ -68,6 +72,29 @@ interface DoctorRow {
   duracion_cita_min?: number;
 }
 
+type NurseCategoria = "licenciada" | "tecnica" | "auxiliar";
+
+const NURSE_CATEGORIA_LABELS: Record<NurseCategoria, string> = {
+  licenciada: "Licenciada",
+  tecnica: "Técnica",
+  auxiliar: "Auxiliar",
+};
+
+interface NurseRow {
+  id: string;
+  nombre: string;
+  apellidos: string;
+  categoria: NurseCategoria;
+  especialidad: string | null;
+  cedula_profesional: string | null;
+  telefono: string | null;
+  activo: boolean;
+  user_id: string | null;
+  user_email?: string | null;
+  horario_inicio?: string;
+  horario_fin?: string;
+}
+
 // Typed envelope returned by the admin-users edge function
 interface AdminUsersPayload {
   error?: string;
@@ -83,6 +110,8 @@ export default function AdminUsuarios() {
   const [users, setUsers] = useState<UsuarioRow[]>([]);
   const [doctors, setDoctors] = useState<DoctorRow[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [nurses, setNurses] = useState<NurseRow[]>([]);
+  const [loadingNurses, setLoadingNurses] = useState(true);
   const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
   const [query, setQuery] = useState("");
   const [busyUser, setBusyUser] = useState<string | null>(null);
@@ -147,9 +176,24 @@ export default function AdminUsuarios() {
     setDoctors((data ?? []) as DoctorRow[]);
   };
 
+  const fetchNurses = async () => {
+    setLoadingNurses(true);
+    const { data, error } = await supabase
+      .from("nurses")
+      .select("id, nombre, apellidos, categoria, especialidad, cedula_profesional, telefono, activo, user_id, horario_inicio, horario_fin")
+      .order("apellidos");
+    setLoadingNurses(false);
+    if (error) {
+      toast.error("No se pudieron cargar las enfermeras");
+      return;
+    }
+    setNurses((data ?? []) as NurseRow[]);
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchDoctors();
+    fetchNurses();
   }, []);
 
   // Enriquecer doctores con email del usuario vinculado
@@ -165,8 +209,24 @@ export default function AdminUsuarios() {
     return m;
   }, [doctors]);
 
-  // Filas virtuales para médicos sin cuenta vinculada (para que aparezcan en la pestaña de usuarios)
-  type UnlinkedDoctorRow = UsuarioRow & { _unlinkedDoctor?: DoctorRow; _linkedDoctor?: DoctorRow };
+  // Enriquecer enfermeras con email del usuario vinculado
+  const nursesEnriched = useMemo<NurseRow[]>(() => {
+    const byId = new Map(users.map((u) => [u.id, u.email]));
+    return nurses.map((n) => ({ ...n, user_email: n.user_id ? byId.get(n.user_id) ?? null : null }));
+  }, [nurses, users]);
+
+  // Mapa: user_id → enfermera vinculada
+  const nurseByUserId = useMemo(() => {
+    const m = new Map<string, NurseRow>();
+    for (const n of nurses) if (n.user_id) m.set(n.user_id, n);
+    return m;
+  }, [nurses]);
+
+  // Filas virtuales para médicos/enfermeras sin cuenta vinculada (para que aparezcan en la pestaña de usuarios)
+  type UnlinkedDoctorRow = UsuarioRow & {
+    _unlinkedDoctor?: DoctorRow; _linkedDoctor?: DoctorRow;
+    _unlinkedNurse?: NurseRow; _linkedNurse?: NurseRow;
+  };
   const unlinkedDoctorRows = useMemo<UnlinkedDoctorRow[]>(() => {
     return doctors
       .filter((d) => !d.user_id && d.activo)
@@ -181,13 +241,28 @@ export default function AdminUsuarios() {
       }));
   }, [doctors]);
 
+  const unlinkedNurseRows = useMemo<UnlinkedDoctorRow[]>(() => {
+    return nurses
+      .filter((n) => !n.user_id && n.activo)
+      .map((n) => ({
+        id: `nurse:${n.id}`,
+        email: null,
+        created_at: null,
+        last_sign_in_at: null,
+        roles: ["nurse" as AppRole],
+        is_permanent_admin: false,
+        _unlinkedNurse: n,
+      }));
+  }, [nurses]);
+
   const filtered = useMemo<UnlinkedDoctorRow[]>(() => {
     const q = query.trim().toLowerCase();
     const enrichedUsers: UnlinkedDoctorRow[] = users.map((u) => ({
       ...u,
       _linkedDoctor: doctorByUserId.get(u.id),
+      _linkedNurse: nurseByUserId.get(u.id),
     }));
-    const combined: UnlinkedDoctorRow[] = [...enrichedUsers, ...unlinkedDoctorRows];
+    const combined: UnlinkedDoctorRow[] = [...enrichedUsers, ...unlinkedDoctorRows, ...unlinkedNurseRows];
     let list = combined;
     if (roleFilter !== "all") {
       list = list.filter((u) =>
@@ -199,7 +274,7 @@ export default function AdminUsuarios() {
     if (!q) return list;
     return list.filter((u) => {
       if (u.email?.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)) return true;
-      const d = u._unlinkedDoctor ?? u._linkedDoctor;
+      const d = u._unlinkedDoctor ?? u._linkedDoctor ?? u._unlinkedNurse ?? u._linkedNurse;
       if (d) {
         return (
           `${d.nombre} ${d.apellidos}`.toLowerCase().includes(q) ||
@@ -208,16 +283,20 @@ export default function AdminUsuarios() {
       }
       return false;
     });
-  }, [users, unlinkedDoctorRows, doctorByUserId, query, roleFilter]);
+  }, [users, unlinkedDoctorRows, unlinkedNurseRows, doctorByUserId, nurseByUserId, query, roleFilter]);
 
   const roleCounts = useMemo(() => {
-    const c: Record<string, number> = { all: users.length + unlinkedDoctorRows.length, admin: 0, manager: 0, receptionist: 0, doctor: unlinkedDoctorRows.length, nurse: 0, patient: 0, cajero: 0 };
+    const c: Record<string, number> = {
+      all: users.length + unlinkedDoctorRows.length + unlinkedNurseRows.length,
+      admin: 0, manager: 0, receptionist: 0, doctor: unlinkedDoctorRows.length,
+      nurse: unlinkedNurseRows.length, patient: 0, cajero: 0,
+    };
     for (const u of users) {
       for (const r of u.roles) c[r] = (c[r] ?? 0) + 1;
       if (u.roles.length === 0) c.patient += 1;
     }
     return c;
-  }, [users, unlinkedDoctorRows]);
+  }, [users, unlinkedDoctorRows, unlinkedNurseRows]);
 
   const toggleRole = async (user: UsuarioRow, role: AppRole) => {
     const has = user.roles.includes(role);
@@ -536,6 +615,178 @@ export default function AdminUsuarios() {
     fetchDoctors();
   };
 
+  // ---- Vinculación de enfermeras ----
+  const [linkNurse, setLinkNurse] = useState<NurseRow | null>(null);
+  const [linkNurseEmail, setLinkNurseEmail] = useState("");
+  const [linkNursePassword, setLinkNursePassword] = useState("");
+  const [linkNurseExistingUserId, setLinkNurseExistingUserId] = useState<string>("");
+  const [linkNurseMode, setLinkNurseMode] = useState<"new" | "existing">("new");
+  const [linkingNurse, setLinkingNurse] = useState(false);
+  const [unlinkNurse, setUnlinkNurse] = useState<NurseRow | null>(null);
+  const [unlinkingNurse, setUnlinkingNurse] = useState(false);
+
+  const openLinkNurse = (n: NurseRow) => {
+    setLinkNurse(n);
+    setLinkNurseEmail("");
+    setLinkNursePassword("");
+    setLinkNurseExistingUserId("");
+    setLinkNurseMode("new");
+  };
+
+  const handleLinkNurse = async () => {
+    if (!linkNurse) return;
+    setLinkingNurse(true);
+    const payload: Record<string, unknown> = { action: "link_nurse_user", nurse_id: linkNurse.id };
+    if (linkNurseMode === "existing") {
+      if (!linkNurseExistingUserId) { setLinkingNurse(false); toast.error("Selecciona un usuario"); return; }
+      payload.existing_user_id = linkNurseExistingUserId;
+    } else {
+      if (!linkNurseEmail || linkNursePassword.length < 12) { setLinkingNurse(false); toast.error("Correo y contraseña (mínimo 12 caracteres) requeridos"); return; }
+      payload.email = linkNurseEmail;
+      payload.password = linkNursePassword;
+    }
+    const { data, error } = await supabase.functions.invoke("admin-users", { body: payload });
+    setLinkingNurse(false);
+    const linkPayload = data as AdminUsersPayload | null;
+    if (error || linkPayload?.error) {
+      toast.error(linkPayload?.error || "No se pudo vincular");
+      return;
+    }
+    toast.success(`Enfermera ${linkNurse.nombre} ${linkNurse.apellidos} vinculada`);
+    setLinkNurse(null);
+    fetchUsers();
+    fetchNurses();
+  };
+
+  const handleUnlinkNurse = async () => {
+    if (!unlinkNurse) return;
+    setUnlinkingNurse(true);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "unlink_nurse_user", nurse_id: unlinkNurse.id },
+    });
+    setUnlinkingNurse(false);
+    const unlinkPayload = data as AdminUsersPayload | null;
+    if (error || unlinkPayload?.error) {
+      toast.error(unlinkPayload?.error || "No se pudo desvincular");
+      setUnlinkNurse(null);
+      return;
+    }
+    toast.success("Enfermera desvinculada");
+    setUnlinkNurse(null);
+    fetchNurses();
+  };
+
+  // ---- CRUD de enfermeras ----
+  type NurseForm = {
+    nombre: string;
+    apellidos: string;
+    categoria: NurseCategoria;
+    especialidad: string;
+    cedula_profesional: string;
+    telefono: string;
+    horario_inicio: string;
+    horario_fin: string;
+    activo: boolean;
+  };
+  const emptyNurse: NurseForm = {
+    nombre: "", apellidos: "", categoria: "auxiliar", especialidad: "", cedula_profesional: "",
+    telefono: "", horario_inicio: "08:00", horario_fin: "18:00", activo: true,
+  };
+  const [nurseEdit, setNurseEdit] = useState<NurseRow | null>(null);
+  const [nurseForm, setNurseForm] = useState<NurseForm>(emptyNurse);
+  const [nurseDialogOpen, setNurseDialogOpen] = useState(false);
+  const [savingNurse, setSavingNurse] = useState(false);
+  const [nurseDel, setNurseDel] = useState<NurseRow | null>(null);
+  const [deletingNurse, setDeletingNurse] = useState(false);
+
+  const openNurseNew = () => {
+    setNurseEdit(null);
+    setNurseForm(emptyNurse);
+    setNurseDialogOpen(true);
+  };
+  const openNurseEdit = (n: NurseRow) => {
+    setNurseEdit(n);
+    setNurseForm({
+      nombre: n.nombre ?? "",
+      apellidos: n.apellidos ?? "",
+      categoria: n.categoria,
+      especialidad: n.especialidad ?? "",
+      cedula_profesional: n.cedula_profesional ?? "",
+      telefono: n.telefono ?? "",
+      horario_inicio: (n.horario_inicio ?? "08:00:00").slice(0, 5),
+      horario_fin: (n.horario_fin ?? "18:00:00").slice(0, 5),
+      activo: n.activo,
+    });
+    setNurseDialogOpen(true);
+  };
+
+  const validateNurseForm = (): string | null => {
+    const f = nurseForm;
+    if (!f.nombre.trim()) return "El nombre es requerido";
+    if (!f.apellidos.trim()) return "Los apellidos son requeridos";
+    if (f.nombre.length > 80) return "Nombre demasiado largo";
+    if (f.apellidos.length > 80) return "Apellidos demasiado largos";
+    if (f.cedula_profesional && !/^[A-Za-z0-9-]{4,20}$/.test(f.cedula_profesional.trim())) {
+      return "Cédula profesional: solo letras, números y guiones (4 a 20 caracteres)";
+    }
+    if (f.telefono && !/^[+\d\s()-]{7,20}$/.test(f.telefono.trim())) {
+      return "Teléfono inválido (usa solo dígitos, +, espacios o guiones)";
+    }
+    const hi = (f.horario_inicio || "").slice(0, 5);
+    const hf = (f.horario_fin || "").slice(0, 5);
+    if (!/^\d{2}:\d{2}$/.test(hi) || !/^\d{2}:\d{2}$/.test(hf)) {
+      return "Horario inválido (formato HH:MM)";
+    }
+    if (hi >= hf) return "El horario de fin debe ser posterior al inicio";
+    return null;
+  };
+
+  const handleSaveNurse = async () => {
+    const err = validateNurseForm();
+    if (err) { toast.error(err); return; }
+    setSavingNurse(true);
+    const payload = {
+      nombre: nurseForm.nombre.trim(),
+      apellidos: nurseForm.apellidos.trim(),
+      categoria: nurseForm.categoria,
+      especialidad: nurseForm.especialidad.trim() || null,
+      cedula_profesional: nurseForm.cedula_profesional.trim() || null,
+      telefono: nurseForm.telefono.trim() || null,
+      horario_inicio: nurseForm.horario_inicio.slice(0, 5) + ":00",
+      horario_fin: nurseForm.horario_fin.slice(0, 5) + ":00",
+      activo: nurseForm.activo,
+    };
+    let error;
+    if (nurseEdit) {
+      ({ error } = await supabase.from("nurses").update(payload).eq("id", nurseEdit.id));
+    } else {
+      ({ error } = await supabase.from("nurses").insert({ ...payload, clinic_id: activeClinicId } as never));
+    }
+    setSavingNurse(false);
+    if (error) {
+      toast.error(error.message || "No se pudo guardar la enfermera");
+      return;
+    }
+    toast.success(nurseEdit ? "Enfermera actualizada" : "Enfermera creada");
+    setNurseDialogOpen(false);
+    fetchNurses();
+  };
+
+  const handleDeleteNurse = async () => {
+    if (!nurseDel) return;
+    setDeletingNurse(true);
+    const { error } = await supabase.from("nurses").delete().eq("id", nurseDel.id);
+    setDeletingNurse(false);
+    if (error) {
+      toast.error("No se puede eliminar: la enfermera tiene registros relacionados. Márcala como Inactiva en su lugar.");
+      setNurseDel(null);
+      return;
+    }
+    toast.success("Enfermera eliminada");
+    setNurseDel(null);
+    fetchNurses();
+  };
+
   const fmt = (d: string | null) =>
     d ? new Date(d).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" }) : "—";
 
@@ -552,7 +803,7 @@ export default function AdminUsuarios() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => { fetchUsers(); fetchDoctors(); }} disabled={loading}>Recargar</Button>
+          <Button variant="outline" onClick={() => { fetchUsers(); fetchDoctors(); fetchNurses(); }} disabled={loading}>Recargar</Button>
           <Button variant="outline" onClick={() => setBaseOpen(true)}>
             <Lock className="h-4 w-4 mr-1.5" />
             Contraseña base
@@ -574,6 +825,14 @@ export default function AdminUsuarios() {
             {doctors.some((d) => !d.user_id) && (
               <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
                 {doctors.filter((d) => !d.user_id).length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="enfermeras" className="gap-1.5">
+            <HeartPulse className="h-4 w-4" /> Enfermeras del registro ({nurses.length})
+            {nurses.some((n) => !n.user_id) && (
+              <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                {nurses.filter((n) => !n.user_id).length}
               </span>
             )}
           </TabsTrigger>
@@ -640,20 +899,26 @@ export default function AdminUsuarios() {
 
                   {!loading && filtered.map((u) => {
                     const unlinked = u._unlinkedDoctor;
-                    if (unlinked) {
+                    const unlinkedN = u._unlinkedNurse;
+                    if (unlinked || unlinkedN) {
+                      const prefix = unlinked ? "Dr(a)." : "Enf.";
+                      const persona = unlinked ?? unlinkedN!;
+                      const role = unlinked ? "doctor" : "nurse";
                       return (
                         <tr key={u.id} className="border-t border-border align-top bg-amber-500/5">
                           <td className="px-4 py-3">
                             <div className="font-medium flex items-center gap-1.5">
-                              Dr(a). {unlinked.nombre} {unlinked.apellidos}
+                              {prefix} {persona.nombre} {persona.apellidos}
                               <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-300">
                                 <AlertCircle className="h-3 w-3" /> Sin cuenta
                               </Badge>
                             </div>
-                            <div className="text-xs text-muted-foreground mt-0.5">{unlinked.especialidad}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {unlinked ? unlinked.especialidad : NURSE_CATEGORIA_LABELS[unlinkedN!.categoria]}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
-                            <Badge className={ROLE_BADGE.doctor}>{ROLE_LABELS.doctor}</Badge>
+                            <Badge className={ROLE_BADGE[role]}>{ROLE_LABELS[role]}</Badge>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">—</td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">
@@ -661,7 +926,7 @@ export default function AdminUsuarios() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-1">
-                              <Button size="sm" onClick={() => openLinkDoctor(unlinked)}>
+                              <Button size="sm" onClick={() => unlinked ? openLinkDoctor(unlinked) : openLinkNurse(unlinkedN!)}>
                                 <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
                               </Button>
                             </div>
@@ -678,6 +943,11 @@ export default function AdminUsuarios() {
                               <Stethoscope className="h-3.5 w-3.5 text-emerald-600" />
                               Dr(a). {u._linkedDoctor.nombre} {u._linkedDoctor.apellidos}
                             </>
+                          ) : u._linkedNurse ? (
+                            <>
+                              <HeartPulse className="h-3.5 w-3.5 text-amber-600" />
+                              Enf. {u._linkedNurse.nombre} {u._linkedNurse.apellidos}
+                            </>
                           ) : (
                             u.email ?? "(sin correo)"
                           )}
@@ -692,7 +962,12 @@ export default function AdminUsuarios() {
                             {u._linkedDoctor.especialidad} · {u.email}
                           </div>
                         )}
-                        {!u._linkedDoctor && (
+                        {u._linkedNurse && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {NURSE_CATEGORIA_LABELS[u._linkedNurse.categoria]} · {u.email}
+                          </div>
+                        )}
+                        {!u._linkedDoctor && !u._linkedNurse && (
                           <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
                         )}
                       </td>
@@ -847,6 +1122,101 @@ export default function AdminUsuarios() {
                             variant="ghost"
                             className="text-destructive hover:text-destructive"
                             onClick={() => setDoctorDel(d)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB: Enfermeras del registro clínico */}
+        <TabsContent value="enfermeras" className="space-y-4 mt-4">
+          <div className="rounded-xl border border-border bg-card p-4 flex items-start justify-between gap-3 flex-wrap">
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Lista de todas las enfermeras registradas. Edita los datos (cédula, categoría, horario…)
+              o crea una nueva. Si una enfermera no tiene cuenta vinculada, no podrá iniciar sesión.
+            </p>
+            <Button onClick={openNurseNew}>
+              <Plus className="h-4 w-4 mr-1.5" /> Nueva enfermera
+            </Button>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Enfermera</th>
+                    <th className="text-left px-4 py-3 font-medium">Categoría</th>
+                    <th className="text-left px-4 py-3 font-medium">Cédula</th>
+                    <th className="text-left px-4 py-3 font-medium">Horario</th>
+                    <th className="text-left px-4 py-3 font-medium">Cuenta</th>
+                    <th className="text-right px-4 py-3 font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingNurses && Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="border-t border-border">
+                      <td className="px-4 py-3" colSpan={6}><Skeleton className="h-6 w-full" /></td>
+                    </tr>
+                  ))}
+                  {!loadingNurses && nursesEnriched.length === 0 && (
+                    <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                      <HeartPulse className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                      Sin enfermeras registradas
+                    </td></tr>
+                  )}
+                  {!loadingNurses && nursesEnriched.map((n) => (
+                    <tr key={n.id} className="border-t border-border align-top">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">Enf. {n.nombre} {n.apellidos}</div>
+                        {n.telefono && <div className="text-xs text-muted-foreground">{n.telefono}</div>}
+                        {!n.activo && <Badge variant="outline" className="text-[10px] mt-0.5">Inactiva</Badge>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{NURSE_CATEGORIA_LABELS[n.categoria]}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{n.cedula_profesional ?? "—"}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {(n.horario_inicio ?? "").slice(0, 5)}–{(n.horario_fin ?? "").slice(0, 5)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {n.user_id ? (
+                          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span className="text-xs">{n.user_email ?? n.user_id.slice(0, 8) + "…"}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="text-xs">Sin cuenta</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1 flex-wrap">
+                          <Button size="sm" variant="ghost" onClick={() => openNurseEdit(n)} title="Editar datos">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          {n.user_id ? (
+                            <Button size="sm" variant="outline" onClick={() => setUnlinkNurse(n)}>
+                              <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
+                            </Button>
+                          ) : (
+                            <Button size="sm" onClick={() => openLinkNurse(n)}>
+                              <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setNurseDel(n)}
                             title="Eliminar"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1017,6 +1387,172 @@ export default function AdminUsuarios() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setLinkDoctor(null)}>Cancelar</Button>
             <Button onClick={handleLinkDoctor} disabled={linking}>{linking ? "Vinculando…" : "Vincular"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Crear / Editar enfermera */}
+      <Dialog open={nurseDialogOpen} onOpenChange={setNurseDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{nurseEdit ? "Editar enfermera" : "Nueva enfermera"}</DialogTitle>
+            <DialogDescription>
+              {nurseEdit
+                ? `Actualiza los datos de Enf. ${nurseEdit.nombre} ${nurseEdit.apellidos}.`
+                : "Registra una nueva enfermera en el sistema clínico."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>Nombre(s) *</Label>
+              <Input value={nurseForm.nombre} maxLength={80}
+                onChange={(e) => setNurseForm({ ...nurseForm, nombre: e.target.value })} />
+            </div>
+            <div>
+              <Label>Apellidos *</Label>
+              <Input value={nurseForm.apellidos} maxLength={80}
+                onChange={(e) => setNurseForm({ ...nurseForm, apellidos: e.target.value })} />
+            </div>
+            <div>
+              <Label>Categoría *</Label>
+              <Select value={nurseForm.categoria} onValueChange={(v) => setNurseForm({ ...nurseForm, categoria: v as NurseCategoria })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(NURSE_CATEGORIA_LABELS) as NurseCategoria[]).map((c) => (
+                    <SelectItem key={c} value={c}>{NURSE_CATEGORIA_LABELS[c]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">NOM-019-SSA3-2013: identificación por categoría/competencia.</p>
+            </div>
+            <div>
+              <Label>Especialidad</Label>
+              <Input value={nurseForm.especialidad} maxLength={100} placeholder="Ej. Quirúrgica, Pediátrica… (opcional)"
+                onChange={(e) => setNurseForm({ ...nurseForm, especialidad: e.target.value })} />
+            </div>
+            <div>
+              <Label>Cédula profesional</Label>
+              <Input value={nurseForm.cedula_profesional} maxLength={20} placeholder="Ej. 12345678"
+                onChange={(e) => setNurseForm({ ...nurseForm, cedula_profesional: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground mt-1">SEP / DGP. Solo letras, números y guiones.</p>
+            </div>
+            <div>
+              <Label>Teléfono</Label>
+              <Input value={nurseForm.telefono} maxLength={20} placeholder="+52 55 1234 5678"
+                onChange={(e) => setNurseForm({ ...nurseForm, telefono: e.target.value })} />
+            </div>
+            <div>
+              <Label>Horario de inicio *</Label>
+              <Input type="time" value={nurseForm.horario_inicio}
+                onChange={(e) => setNurseForm({ ...nurseForm, horario_inicio: e.target.value })} />
+            </div>
+            <div>
+              <Label>Horario de fin *</Label>
+              <Input type="time" value={nurseForm.horario_fin}
+                onChange={(e) => setNurseForm({ ...nurseForm, horario_fin: e.target.value })} />
+            </div>
+            <div className="flex items-end">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={nurseForm.activo}
+                  onChange={(e) => setNurseForm({ ...nurseForm, activo: e.target.checked })} />
+                Enfermera activa
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNurseDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveNurse} disabled={savingNurse}>
+              {savingNurse ? "Guardando…" : nurseEdit ? "Guardar cambios" : "Crear enfermera"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar eliminación de enfermera */}
+      <AlertDialog open={!!nurseDel} onOpenChange={(o) => !o && setNurseDel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar a Enf. {nurseDel?.nombre} {nurseDel?.apellidos}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es permanente. Si la enfermera tiene citas o registros asociados,
+              no podrá eliminarse — en ese caso márcala como <strong>Inactiva</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingNurse}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteNurse} disabled={deletingNurse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deletingNurse ? "Eliminando…" : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmar desvincular enfermera */}
+      <AlertDialog open={!!unlinkNurse} onOpenChange={(o) => !o && setUnlinkNurse(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Desvincular cuenta de Enf. {unlinkNurse?.nombre} {unlinkNurse?.apellidos}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La cuenta de usuario no se elimina. La enfermera quedará sin acceso al sistema hasta que se vincule otra cuenta.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unlinkingNurse}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnlinkNurse} disabled={unlinkingNurse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {unlinkingNurse ? "Desvinculando…" : "Desvincular"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog: Vincular enfermera */}
+      <Dialog open={!!linkNurse} onOpenChange={(o) => !o && setLinkNurse(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular cuenta a enfermera</DialogTitle>
+            <DialogDescription>
+              Enf. {linkNurse?.nombre} {linkNurse?.apellidos}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-1.5">
+              <Button size="sm" variant={linkNurseMode === "new" ? "default" : "outline"} onClick={() => setLinkNurseMode("new")}>
+                Crear cuenta nueva
+              </Button>
+              <Button size="sm" variant={linkNurseMode === "existing" ? "default" : "outline"} onClick={() => setLinkNurseMode("existing")}>
+                Usar cuenta existente
+              </Button>
+            </div>
+            {linkNurseMode === "new" ? (
+              <>
+                <div>
+                  <Label>Correo</Label>
+                  <Input type="email" value={linkNurseEmail} onChange={(e) => setLinkNurseEmail(e.target.value)} placeholder="enfermera@clinica.mx" />
+                </div>
+                <div>
+                  <Label>Contraseña inicial</Label>
+                  <Input type="password" value={linkNursePassword} onChange={(e) => setLinkNursePassword(e.target.value)} placeholder="mínimo 12 caracteres" />
+                </div>
+              </>
+            ) : (
+              <div>
+                <Label>Usuario existente</Label>
+                <select
+                  className="w-full mt-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={linkNurseExistingUserId}
+                  onChange={(e) => setLinkNurseExistingUserId(e.target.value)}
+                >
+                  <option value="">Selecciona…</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.email}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkNurse(null)}>Cancelar</Button>
+            <Button onClick={handleLinkNurse} disabled={linkingNurse}>{linkingNurse ? "Vinculando…" : "Vincular"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
