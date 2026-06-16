@@ -30,6 +30,9 @@ export default function ProtectedRoute({ children, allowedRoles }: Props) {
 
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
 
+  // Usuario autenticado pero sin roles asignados → pendiente de activación
+  if (roles.length === 0) return <Navigate to="/sin-acceso" replace />;
+
   if (allowedRoles && !allowedRoles.some((r) => roles.includes(r))) {
     const primaryRole = roles[0] as AppRole | undefined;
     const home = (primaryRole && ROLE_HOME[primaryRole]) ?? "/";

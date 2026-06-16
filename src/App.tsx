@@ -44,6 +44,7 @@ import Caja from "@/pages/Caja";
 import TurnoGuard from "@/components/TurnoGuard";
 import AjustesPlataforma from "@/pages/ajustes/AjustesPlataforma";
 import BI from "@/pages/BI";
+import SinAcceso from "./pages/SinAcceso";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
           <ActiveClinicProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/sin-acceso" element={<SinAcceso />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/pitch" element={<Pitch />} />
               <Route path="/verificar-receta/:id" element={<VerificarReceta />} />
