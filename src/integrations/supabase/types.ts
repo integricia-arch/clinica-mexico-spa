@@ -6943,6 +6943,10 @@ export type Database = {
           last_sign_in_at: string
         }[]
       }
+      aprobar_solicitud_insumo: {
+        Args: { p_solicitud_id: string }
+        Returns: string
+      }
       can_configure_caja: { Args: { _user_id: string }; Returns: boolean }
       cfdi_get_secret: { Args: { p_id: string }; Returns: string }
       cfdi_upsert_secret: {
@@ -7047,6 +7051,8 @@ export type Database = {
           apellidos: string
           categoria: Database["public"]["Enums"]["nurse_categoria"]
           email: string
+          horario_fin: string
+          horario_inicio: string
           id: string
           nombre: string
         }[]
@@ -7149,6 +7155,10 @@ export type Database = {
           p_proveedor_id?: string
         }
         Returns: string
+      }
+      rechazar_solicitud_insumo: {
+        Args: { p_solicitud_id: string }
+        Returns: undefined
       }
       set_supervisor_pin: {
         Args: { p_pin: string; p_user_id: string }

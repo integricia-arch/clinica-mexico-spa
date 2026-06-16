@@ -24,6 +24,8 @@ interface Nurse {
   nombre: string | null;
   apellidos: string | null;
   categoria: "licenciada" | "tecnica" | "auxiliar" | null;
+  horario_inicio: string | null;
+  horario_fin: string | null;
 }
 
 const NURSE_CATEGORIA_LABEL: Record<string, string> = {
@@ -151,6 +153,16 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     }, 300);
     return () => clearTimeout(t);
   }, [enfermeraId, fechaInicio, duracion]);
+
+  // Advertencia (no bloqueante): la cita cae fuera del horario laboral de la enfermera
+  const enfermeraFueraHorario = (() => {
+    if (enfermeraId === "__none__" || !fechaInicio) return false;
+    const enf = enfermeras.find((e) => e.id === enfermeraId);
+    if (!enf?.horario_inicio || !enf?.horario_fin) return false;
+    const horaCita = fechaInicio.slice(11, 16);
+    if (!horaCita) return false;
+    return horaCita < enf.horario_inicio.slice(0, 5) || horaCita > enf.horario_fin.slice(0, 5);
+  })();
 
   useEffect(() => {
     const q = busqueda.trim();
@@ -354,6 +366,11 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
                 </span>
               )}
             </div>
+            {enfermeraFueraHorario && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Fuera del horario laboral de la enfermera. Puedes asignarla igual si es necesario.
+              </p>
+            )}
           </div>
 
           {/* Fecha y duración */}

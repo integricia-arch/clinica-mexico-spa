@@ -56,7 +56,7 @@ export async function createJourneyFromAppointment(
 ): Promise<JourneyServiceResult<{ journey_instance_id: string; created: boolean }>> {
   const { data: appt, error: ae } = await supabase
     .from("appointments")
-    .select("id, patient_id, doctor_id, room_id")
+    .select("id, patient_id, doctor_id, room_id, assigned_nurse_id")
     .eq("id", appointmentId)
     .maybeSingle();
   if (ae || !appt) return { ok: false, error: "Cita no encontrada" };
@@ -105,13 +105,17 @@ export async function createJourneyFromAppointment(
     .single();
   if (ie || !instance) return { ok: false, error: ie?.message ?? "No se pudo crear el camino" };
 
-  // Crear los 13 hitos operativos
+  // Crear los 13 hitos operativos. Si la cita tiene enfermera asignada, se
+  // prellena assigned_to en cada step donde enfermería puede actuar — así la
+  // responsabilidad queda trazable en todo el camino, no solo en el aviso
+  // inicial de Telegram (ver investigación operativa de enfermería).
   const stepsPayload = OPERATIONAL_STEPS.map((s) => ({
     journey_instance_id: instance.id,
     step_key: s.key,
     step_name: s.name,
     step_order: s.order,
     status: "pending",
+    assigned_to: appt.assigned_nurse_id && s.closeRoles.includes("nurse") ? appt.assigned_nurse_id : null,
   }));
   const { error: se } = await supabase.from("journey_instance_steps").insert(stepsPayload);
   if (se) return { ok: false, error: se.message };
