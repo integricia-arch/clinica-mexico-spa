@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Heart, LogIn, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
 
 type View = "login" | "signup" | "forgot";
@@ -16,6 +19,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -51,17 +56,24 @@ export default function Login() {
 
   const handleLoginSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast({ variant: "destructive", title: "Verificación requerida", description: "Completa la verificación de seguridad antes de continuar." });
+      return;
+    }
     setLoading(true);
     try {
       if (view === "signup") {
         const { error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: window.location.origin, captchaToken: captchaToken ?? undefined },
         });
         if (error) throw error;
         toast({ title: "Cuenta creada", description: "Revisa tu correo para confirmar tu cuenta." });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email, password,
+          options: { captchaToken: captchaToken ?? undefined },
+        });
         if (error) throw error;
         const from = (location.state as { from?: string } | null)?.from ?? "/";
         navigate(from, { replace: true });
@@ -71,6 +83,9 @@ export default function Login() {
       toast({ variant: "destructive", title, description });
     } finally {
       setLoading(false);
+      // Token Turnstile es de un solo uso -- resetear siempre tras el intento.
+      turnstileRef.current?.reset();
+      setCaptchaToken(null);
     }
   };
 
@@ -235,7 +250,17 @@ export default function Login() {
                   />
                   {view === "signup" && <PasswordStrengthMeter password={password} />}
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                {TURNSTILE_SITE_KEY && (
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={setCaptchaToken}
+                    onExpire={() => setCaptchaToken(null)}
+                    onError={() => setCaptchaToken(null)}
+                    options={{ size: "flexible" }}
+                  />
+                )}
+                <Button type="submit" className="w-full" disabled={loading || (!!TURNSTILE_SITE_KEY && !captchaToken)}>
                   <LogIn className="mr-2 h-4 w-4" />
                   {loading ? "Procesando..." : view === "signup" ? "Registrarse" : "Entrar"}
                 </Button>

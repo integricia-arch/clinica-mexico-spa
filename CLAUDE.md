@@ -102,8 +102,20 @@ Secrets requeridos:
 - `VITE_SUPABASE_PROJECT_ID`
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
+- `VITE_TURNSTILE_SITE_KEY` (opcional — captcha login, ver sección Captcha abajo)
 
 Una vez configurados, los deploys automáticos de Lovable funcionarán sin intervención.
+
+### Captcha en login (Cloudflare Turnstile) <!-- /aprende 2026-06-16 -->
+
+Login por correo/contraseña usa Turnstile (`@marsidev/react-turnstile` en `Login.tsx`). El botón Google **no** lleva captcha — OAuth ya filtra bots.
+
+Setup manual requerido (no automatizable desde el agente, requiere acceso a dashboards externos):
+1. Cloudflare dashboard → Turnstile → crear site → copiar **site key** (pública) y **secret key**.
+2. `VITE_TURNSTILE_SITE_KEY` en `.env` local y en GitHub Actions secrets (deploy).
+3. Supabase dashboard → Authentication → Settings → Bot and Abuse Protection → habilitar, provider Turnstile, pegar **secret key**. Supabase valida el token server-side — nunca se escribe lógica de verificación propia.
+
+Si `VITE_TURNSTILE_SITE_KEY` no está configurada, el login funciona igual sin captcha (graceful degrade) — útil en desarrollo local.
 
 ### Regla general post-Lovable
 
