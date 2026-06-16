@@ -25,7 +25,7 @@ export interface JourneyServiceResult<T = unknown> {
 }
 
 /** Audit helper */
-async function audit(
+export async function audit(
   journey_instance_id: string,
   action: string,
   opts: {

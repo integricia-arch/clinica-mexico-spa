@@ -18,6 +18,7 @@ import { ArrowLeft, Clock, User, Stethoscope, MapPin, FileText, Bot, CheckCircle
 import type { Database } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
 import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
+import { audit } from "@/features/camino-paciente/services/journeyEngine";
 import QuickArrivalModal from "@/features/centro-control/components/QuickArrivalModal";
 import type { JourneyInstanceLite } from "@/features/centro-control/lib/journeyHelpers";
 import StripePaymentModal from "@/features/pagos/StripePaymentModal";
@@ -97,6 +98,20 @@ export default function DetalleCita() {
   const [journeyInstance, setJourneyInstance] = useState<JourneyInstanceLite | null>(null);
   const [arrivalOpen, setArrivalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [enfermeraInfo, setEnfermeraInfo] = useState<{ nombre: string; apellidos: string; categoria: string } | null>(null);
+  const [nursesOptions, setNursesOptions] = useState<{ user_id: string; nombre: string; apellidos: string; categoria: string }[]>([]);
+  const [reassigningNurse, setReassigningNurse] = useState(false);
+  const puedeReasignarEnfermera = hasRole("admin") || hasRole("doctor");
+
+  const loadEnfermeraInfo = async (assignedNurseId: string | null) => {
+    if (!assignedNurseId) { setEnfermeraInfo(null); return; }
+    const { data } = await supabase
+      .from("nurses")
+      .select("nombre, apellidos, categoria")
+      .eq("user_id", assignedNurseId)
+      .maybeSingle();
+    setEnfermeraInfo(data ?? null);
+  };
 
   const reloadJourney = async () => {
     if (!id) return;
@@ -248,6 +263,7 @@ export default function DetalleCita() {
       setAppointment(aRes.data as AppointmentRecord);
       setResources((rRes.data ?? []) as ResourceRecord[]);
       setRecordatorios(remRes.data ?? []);
+      await loadEnfermeraInfo((aRes.data as { assigned_nurse_id?: string | null } | null)?.assigned_nurse_id ?? null);
       if (aRes.data?.patient_id) {
         const { data: icData } = await supabase
           .from("identidades_canal")
@@ -267,6 +283,45 @@ export default function DetalleCita() {
     })();
     reloadJourney();
   }, [id]);
+
+  useEffect(() => {
+    if (!puedeReasignarEnfermera) return;
+    supabase
+      .from("nurses")
+      .select("user_id, nombre, apellidos, categoria")
+      .eq("activo", true)
+      .not("user_id", "is", null)
+      .order("apellidos")
+      .then(({ data }) => setNursesOptions((data ?? []) as never));
+  }, [puedeReasignarEnfermera]);
+
+  const handleReasignarEnfermera = async (nuevoUserId: string | null) => {
+    if (!id) return;
+    const anterior = appointment?.assigned_nurse_id ?? null;
+    setReassigningNurse(true);
+    const { error } = await supabase
+      .from("appointments")
+      .update({ assigned_nurse_id: nuevoUserId })
+      .eq("id", id);
+    if (error) {
+      setReassigningNurse(false);
+      toast({ variant: "destructive", title: "Error", description: friendlyError(error) });
+      return;
+    }
+    if (nuevoUserId) {
+      supabase.functions.invoke("notify-nurse-assignment", { body: { appointment_id: id } }).catch(() => {});
+    }
+    if (journeyInstance) {
+      await audit(journeyInstance.id, "nurse_reasignada", {
+        old_value: { assigned_nurse_id: anterior },
+        new_value: { assigned_nurse_id: nuevoUserId },
+      });
+    }
+    setAppointment((prev) => (prev ? { ...prev, assigned_nurse_id: nuevoUserId } as AppointmentRecord : prev));
+    await loadEnfermeraInfo(nuevoUserId);
+    setReassigningNurse(false);
+    toast({ title: nuevoUserId ? "Enfermera reasignada" : "Enfermera removida de la cita" });
+  };
 
   const updateStatus = async (newStatus: AppointmentStatus) => {
     const oldStatus = appointment!.status;
@@ -485,6 +540,34 @@ export default function DetalleCita() {
                 Dr(a). {(a.doctors as Record<string, unknown>)?.nombre as string} {(a.doctors as Record<string, unknown>)?.apellidos as string}
               </p>
               <p className="text-xs text-muted-foreground">{(a.doctors as Record<string, unknown>)?.especialidad as string}</p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <User className="h-5 w-5 text-primary mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Enfermera responsable</p>
+              {puedeReasignarEnfermera ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <Select
+                    value={(a.assigned_nurse_id as string) ?? "__none__"}
+                    onValueChange={(v) => handleReasignarEnfermera(v === "__none__" ? null : v)}
+                    disabled={reassigningNurse}
+                  >
+                    <SelectTrigger className="h-8 text-sm max-w-xs"><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sin asignar</SelectItem>
+                      {nursesOptions.map((n) => (
+                        <SelectItem key={n.user_id} value={n.user_id}>{n.nombre} {n.apellidos}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {enfermeraInfo ? `${enfermeraInfo.nombre} ${enfermeraInfo.apellidos}` : "Sin asignar"}
+                </p>
+              )}
             </div>
           </div>
 
