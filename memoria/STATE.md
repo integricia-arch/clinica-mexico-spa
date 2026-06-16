@@ -759,6 +759,21 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 ### Bugs conocidos
 - (ninguno activo)
 
+## Completado (Jun 16, 2026 — sesión 31)
+
+### Fix crítico: notificación admin de usuarios nuevos no funcionaba ✅
+- [x] **Root cause real**: edge function `notify-new-user` validaba `Authorization` contra `SUPABASE_SERVICE_ROLE_KEY`, pero el trigger DB (`public.notify_new_user_signup()`) manda el secreto guardado en `vault.notify_new_user_secret` (un UUID, no el service role key) — siempre rechazaba con 401 "no autorizado". Ningún usuario nuevo notificó jamás a un admin.
+- [x] Fix: nuevo Supabase Secret `NOTIFY_SHARED_SECRET` (mismo valor que `vault.notify_new_user_secret`), edge function ahora compara contra ese
+- [x] Bug secundario encontrado tras el primero: `/auth/v1/admin/users?per_page=1000` devolvía 500 "Database error finding users" → reemplazado por lookup individual `/auth/v1/admin/users/{id}` por cada admin (más robusto, evita el bug de listado masivo)
+- [x] Debug info agregado a la respuesta JSON (`debug: {...}`) porque `get_logs` de edge functions NO muestra `console.log`/`console.warn` internos, solo logs de acceso HTTP — truco útil: invocar función manualmente vía `net.http_post` desde SQL y leer `net._http_response.content`
+- [x] Verificado extremo a extremo: test manual → `{"ok":true,"notified":1,"hasResendKey":true}` → email confirmado recibido en `integric.ia@gmail.com`
+- [x] Notificación real disparada manualmente para los 2 usuarios que quedaron atascados sin notificar: `puntoabarrotespv@gmail.com`, `pablorios.vsn@gmail.com`
+- [x] Deploy `notify-new-user` v7 ACTIVE · commit `437ecb9`
+
+### Aprendizaje permanente
+- `mcp__supabase__get_logs(service: "edge-function")` solo da logs de acceso (method/status/url/tiempo), nunca el `console.*` interno de la función. Para depurar lógica interna: hacer que la función regrese el debug en el JSON de respuesta y probar con `net.http_post` manual desde SQL + leer `net._http_response`.
+- Cuando un trigger DB y una edge function comparten un "secreto", verificar que AMBOS lados usen el mismo valor real — no asumir que el secreto del vault y el service role key son intercambiables.
+
 ## Reglas críticas
 - SQL con `$function$` → SIEMPRE escribir `_tmp_*.sql` y usar `--file`
 - Secrets: env-only, nunca en código

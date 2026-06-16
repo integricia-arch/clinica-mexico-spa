@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     };
 
     if (action === "list") {
-      const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const { data: list, error: listErr } = await admin.rpc("admin_list_auth_users");
       if (listErr) throw listErr;
 
       const { data: roles, error: rolesErr } = await admin.from("user_roles").select("user_id, role");
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
       }
 
       const permanent = await getPermanentAdminEmails();
-      const users = (list?.users ?? []).map((u) => ({
+      const users = (list ?? []).map((u: { id: string; email: string | null; created_at: string; last_sign_in_at: string | null }) => ({
         id: u.id,
         email: u.email,
         created_at: u.created_at,
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       if (!password || password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
 
       const permanent = await getPermanentAdminEmails();
-      const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const { data: list, error: listErr } = await admin.rpc("admin_list_auth_users");
       if (listErr) throw listErr;
 
       let targetIds: Set<string> | null = null;
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       let updated = 0;
       let skipped = 0;
       const errors: string[] = [];
-      for (const u of list?.users ?? []) {
+      for (const u of (list ?? []) as { id: string; email: string | null }[]) {
         if (u.email && permanent.has(u.email.toLowerCase())) { skipped++; continue; }
         if (targetIds && !targetIds.has(u.id)) { skipped++; continue; }
         const { error: pErr } = await admin.auth.admin.updateUserById(u.id, { password });
@@ -188,8 +188,10 @@ Deno.serve(async (req) => {
         if (!email || !password) return json({ error: "email y contraseña requeridos para crear cuenta" }, 400);
         if (password.length < 8) return json({ error: "La contraseña debe tener al menos 8 caracteres" }, 400);
         // Si ya existe un usuario con ese email, reutilízalo
-        const { data: existing } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const found = existing?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+        const { data: existing } = await admin.rpc("admin_list_auth_users");
+        const found = (existing as { id: string; email: string | null }[] | null)?.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase(),
+        );
         if (found) {
           userId = found.id;
         } else {
