@@ -59,13 +59,14 @@ Deno.serve(async (req) => {
       }
 
       const permanent = await getPermanentAdminEmails();
-      const users = (list ?? []).map((u: { id: string; email: string | null; created_at: string; last_sign_in_at: string | null }) => ({
+      const users = (list ?? []).map((u: { id: string; email: string | null; created_at: string; last_sign_in_at: string | null; banned_until: string | null }) => ({
         id: u.id,
         email: u.email,
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at,
         roles: rolesByUser.get(u.id) ?? [],
         is_permanent_admin: u.email ? permanent.has(u.email.toLowerCase()) : false,
+        banned: !!u.banned_until && new Date(u.banned_until) > new Date(),
       }));
 
       return json({ users });
@@ -266,6 +267,25 @@ Deno.serve(async (req) => {
       if (!nurse_id) return json({ error: "nurse_id requerido" }, 400);
       const { error: nErr } = await admin.from("nurses").update({ user_id: null }).eq("id", nurse_id);
       if (nErr) throw nErr;
+      return json({ ok: true });
+    }
+
+    if (action === "toggle_ban") {
+      const { user_id, banned } = body as { user_id?: string; banned?: boolean };
+      if (!user_id) return json({ error: "user_id requerido" }, 400);
+      if (user_id === userData.user.id) return json({ error: "No puedes deshabilitar tu propia cuenta" }, 403);
+      const { data: u } = await admin.auth.admin.getUserById(user_id);
+      const permanent = await getPermanentAdminEmails();
+      if (u?.user?.email && permanent.has(u.user.email.toLowerCase())) {
+        return json({ error: "No se puede deshabilitar a un administrador permanente" }, 403);
+      }
+      // ban_duration acepta texto tipo "876000h" o "none"; usamos updateUserById
+      // con un timestamp lejano vía SQL no es soportado por el SDK, así que
+      // usamos el parámetro nativo ban_duration.
+      const { error: banErr } = await admin.auth.admin.updateUserById(user_id, {
+        ban_duration: banned ? "876000h" : "none",
+      } as never);
+      if (banErr) throw banErr;
       return json({ ok: true });
     }
 

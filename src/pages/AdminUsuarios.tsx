@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import {
   ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
-  Trash2, ShieldAlert, Lock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle, Plus,
+  Trash2, ShieldAlert, Lock, Unlock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle, Plus,
   HeartPulse,
 } from "lucide-react";
 import {
@@ -55,6 +55,7 @@ interface UsuarioRow {
   last_sign_in_at: string | null;
   roles: AppRole[];
   is_permanent_admin?: boolean;
+  banned?: boolean;
 }
 
 interface DoctorRow {
@@ -418,6 +419,22 @@ export default function AdminUsuarios() {
     }
     toast.success("Usuario eliminado");
     setDelUser(null);
+    fetchUsers();
+  };
+
+  const [busyBan, setBusyBan] = useState<string | null>(null);
+  const handleToggleBan = async (user: UsuarioRow) => {
+    setBusyBan(user.id);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "toggle_ban", user_id: user.id, banned: !user.banned },
+    });
+    setBusyBan(null);
+    const payload = data as AdminUsersPayload | null;
+    if (error || payload?.error) {
+      toast.error(payload?.error || "No se pudo actualizar el acceso");
+      return;
+    }
+    toast.success(user.banned ? "Acceso habilitado" : "Acceso deshabilitado");
     fetchUsers();
   };
 
@@ -956,6 +973,11 @@ export default function AdminUsuarios() {
                               <ShieldAlert className="h-3 w-3" /> Permanente
                             </Badge>
                           )}
+                          {u.banned && (
+                            <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-300">
+                              <Lock className="h-3 w-3" /> Deshabilitada
+                            </Badge>
+                          )}
                         </div>
                         {u._linkedDoctor && (
                           <div className="text-xs text-muted-foreground mt-0.5">
@@ -1014,6 +1036,16 @@ export default function AdminUsuarios() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title={u.banned ? "Habilitar acceso" : "Deshabilitar acceso (no elimina la cuenta)"}
+                            className={u.banned ? "text-amber-600 hover:text-amber-700" : ""}
+                            disabled={u.is_permanent_admin || busyBan === u.id}
+                            onClick={() => handleToggleBan(u)}
+                          >
+                            {u.banned ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                          </Button>
                           <Button size="sm" variant="ghost" onClick={() => { setEditUser(u); setEditEmail(u.email ?? ""); }}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
