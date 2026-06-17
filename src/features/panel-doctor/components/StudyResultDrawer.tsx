@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { friendlyError } from "@/lib/errors";
 import { registerStudyResult, reviewStudy, type PatientStudy } from "../services/studiesService";
 import { advancePatientJourneyFromClinicalEvent } from "@/features/camino-paciente/services/clinicalEvents";
+import { Upload, Link, HardDrive } from "lucide-react";
+
+const LOCAL_SERVER_URL = import.meta.env.VITE_LOCAL_FILE_SERVER ?? "http://localhost:3001";
+const LOCAL_SERVER_KEY = import.meta.env.VITE_LOCAL_FILE_SERVER_KEY ?? "clinica-local-2024";
 
 interface Props {
   open: boolean;
@@ -24,6 +28,30 @@ export default function StudyResultDrawer({ open, onClose, study, journeyInstanc
   const [laboratorio, setLaboratorio] = useState(study?.laboratorio_origen ?? "");
   const [interpretacion, setInterpretacion] = useState(study?.interpretacion_medica ?? "");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadToLocal = async (file: File) => {
+    setUploading(true);
+    try {
+      // Nombre único: timestamp + nombre original sanitizado
+      const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+      const resp = await fetch(`${LOCAL_SERVER_URL}/upload/${encodeURIComponent(safeName)}`, {
+        method: "PUT",
+        headers: { "X-API-Key": LOCAL_SERVER_KEY, "Content-Type": "application/octet-stream" },
+        body: file,
+      });
+      if (!resp.ok) throw new Error(`Servidor local respondió ${resp.status}`);
+      const { url } = await resp.json();
+      setArchivoUrl(url);
+      toast({ title: "Archivo guardado localmente", description: url });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast({ variant: "destructive", title: "Error al subir al servidor local", description: msg + ". Verifica que el servidor esté corriendo: node scripts/local-file-server.cjs" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (!study) return null;
 
@@ -90,8 +118,43 @@ export default function StudyResultDrawer({ open, onClose, study, journeyInstanc
                 <Textarea value={resumen} onChange={(e) => setResumen(e.target.value)} rows={4} />
               </div>
               <div>
-                <Label className="text-xs">URL del archivo</Label>
-                <Input value={archivoUrl} onChange={(e) => setArchivoUrl(e.target.value)} placeholder="https://..." />
+                <Label className="text-xs">Archivo del estudio</Label>
+                <div className="space-y-2">
+                  {/* Subida al servidor local de la clínica */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.dcm,.zip,.xml"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadToLocal(f); }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <HardDrive className="h-3.5 w-3.5" />
+                    {uploading ? "Subiendo…" : "Guardar en servidor local (sin nube)"}
+                  </Button>
+                  {/* URL manual (nube o ruta conocida) */}
+                  <div className="flex items-center gap-2">
+                    <Link className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <Input
+                      value={archivoUrl}
+                      onChange={(e) => setArchivoUrl(e.target.value)}
+                      placeholder="http://192.168.x.x:3001/files/… o https://…"
+                      className="text-xs"
+                    />
+                  </div>
+                  {archivoUrl && (
+                    <a href={archivoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
+                      <Upload className="h-3 w-3" /> Abrir archivo
+                    </a>
+                  )}
+                </div>
               </div>
               <div>
                 <Label className="text-xs">Laboratorio de origen</Label>

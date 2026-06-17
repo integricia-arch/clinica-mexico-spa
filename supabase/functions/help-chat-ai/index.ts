@@ -1,0 +1,156 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+const ESCALADA_KEYWORDS = ["error", "no puedo", "se trabó", "se trabó", "bloqueado", "urgente", "emergencia", "no funciona", "fallo", "problema grave"];
+const MAX_IA_MESSAGES = 3; // tras 3 sin resolver, escalar a humano
+
+interface RequestBody {
+  sesion_id: string;
+  mensaje: string;
+  manual_contexto?: string; // contenido del manual de la pantalla activa
+  ruta_activa?: string;
+}
+
+async function callClaude(systemPrompt: string, messages: { role: "user" | "assistant"; content: string }[]): Promise<string> {
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": ANTHROPIC_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      system: systemPrompt,
+      messages,
+    }),
+  });
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error(`Claude API error ${resp.status}: ${err}`);
+  }
+  const data = await resp.json();
+  return data.content?.[0]?.text ?? "";
+}
+
+function shouldEscalate(texto: string, iaMessageCount: number): boolean {
+  if (iaMessageCount >= MAX_IA_MESSAGES) return true;
+  const lower = texto.toLowerCase();
+  return ESCALADA_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type" } });
+  }
+
+  if (!ANTHROPIC_KEY) {
+    return new Response(JSON.stringify({ ok: false, error: "ANTHROPIC_API_KEY no configurado" }), { status: 500 });
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) return new Response(JSON.stringify({ ok: false, error: "No autorizado" }), { status: 401 });
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+  // Verificar JWT del usuario
+  const { data: { user }, error: authErr } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    .auth.getUser(authHeader.replace("Bearer ", ""));
+  if (authErr || !user) return new Response(JSON.stringify({ ok: false, error: "No autorizado" }), { status: 401 });
+
+  const body: RequestBody = await req.json();
+  const { sesion_id, mensaje, manual_contexto, ruta_activa } = body;
+
+  if (!sesion_id || !mensaje?.trim()) {
+    return new Response(JSON.stringify({ ok: false, error: "sesion_id y mensaje requeridos" }), { status: 400 });
+  }
+
+  // Verificar que la sesión pertenece al usuario
+  const { data: sesion } = await supabase
+    .from("ayuda_chat_sesiones")
+    .select("id, estado, user_id")
+    .eq("id", sesion_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!sesion) return new Response(JSON.stringify({ ok: false, error: "Sesión no encontrada" }), { status: 404 });
+  if (sesion.estado === "cerrada") return new Response(JSON.stringify({ ok: false, error: "Sesión cerrada" }), { status: 400 });
+  if (sesion.estado === "escalada") {
+    // Ya escalada — no responde IA, espera humano
+    return new Response(JSON.stringify({ ok: true, escalated: true, message: "Un miembro del equipo te responderá en breve." }), { status: 200 });
+  }
+
+  // Historial de mensajes para contexto (últimos 10)
+  const { data: historial } = await supabase
+    .from("ayuda_chat_mensajes")
+    .select("rol, contenido")
+    .eq("sesion_id", sesion_id)
+    .order("created_at", { ascending: true })
+    .limit(10);
+
+  const iaMessageCount = (historial ?? []).filter((m) => m.rol === "asistente_ia").length;
+
+  // Construir system prompt con el manual de la pantalla activa
+  const manualSection = manual_contexto
+    ? `\n\n## Manual de la pantalla actual (${ruta_activa ?? ""})\n\n${manual_contexto}`
+    : "";
+
+  const systemPrompt = `Eres el asistente de soporte interno de Integriclinica, un sistema clínico SaaS para clínicas y spas en México.
+Tu rol: responder preguntas operativas del personal (cajeros, recepcionistas, enfermeras, doctores, administradores) sobre cómo usar el sistema.
+Responde siempre en español, de forma breve y clara (máximo 3 oraciones). Si la respuesta está en el manual, cítala directamente.
+Si no sabes la respuesta con certeza, dilo y sugiere escalar a un humano.
+NO respondas preguntas médicas, diagnósticos ni información clínica de pacientes.
+NO inventes procedimientos o botones que no existen en el manual.${manualSection}`;
+
+  // Convertir historial a formato Claude
+  const claudeMessages: { role: "user" | "assistant"; content: string }[] = [];
+  for (const m of historial ?? []) {
+    if (m.rol === "usuario") claudeMessages.push({ role: "user", content: m.contenido });
+    else if (m.rol === "asistente_ia") claudeMessages.push({ role: "assistant", content: m.contenido });
+  }
+  // Agregar mensaje actual
+  claudeMessages.push({ role: "user", content: mensaje });
+
+  let respuestaIA = "";
+  let escalated = false;
+
+  // Verificar si debe escalar antes de llamar a Claude
+  if (shouldEscalate(mensaje, iaMessageCount)) {
+    escalated = true;
+    respuestaIA = "Voy a conectarte con alguien del equipo que te puede ayudar mejor. Un momento.";
+  } else {
+    try {
+      respuestaIA = await callClaude(systemPrompt, claudeMessages);
+      // Si Claude responde con incertidumbre, escalar
+      const lower = respuestaIA.toLowerCase();
+      if (lower.includes("no tengo información") || lower.includes("no encuentro") || lower.includes("no puedo ayudarte")) {
+        escalated = true;
+      }
+    } catch (err) {
+      console.error("Error llamando a Claude:", err);
+      respuestaIA = "Tuve un problema al procesar tu consulta. Te conecto con el equipo.";
+      escalated = true;
+    }
+  }
+
+  // Guardar respuesta de la IA
+  await supabase.from("ayuda_chat_mensajes").insert({
+    sesion_id,
+    rol: "asistente_ia",
+    autor_id: null,
+    contenido: respuestaIA,
+  });
+
+  // Escalar si aplica
+  if (escalated) {
+    await supabase.from("ayuda_chat_sesiones").update({ estado: "escalada" }).eq("id", sesion_id);
+  }
+
+  return new Response(JSON.stringify({ ok: true, escalated, respuesta: respuestaIA }), {
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+  });
+});
