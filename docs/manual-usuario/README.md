@@ -12,10 +12,12 @@ botón "?" de cada pantalla abre el manual correspondiente resolviendo
   ("Cómo aprobar una solicitud de insumos"), no "Descripción del botón Aprobar".
   Ver `_TEMPLATE.md` para la estructura exacta.
 - **Voz activa, imperativo, sin jerga.** "Da clic en Guardar", no "El usuario deberá proceder a hacer clic".
+- **Escribe para quien realmente lo lee** (cajero, recepción, enfermera, doctor) — no para un dev. "Tú", palabras simples, cero términos de sistemas en las secciones de usuario.
+- **Verifica los pasos contra la pantalla real** (lee el .tsx) antes de documentar — los flujos suelen tener pasos intermedios (wizards, gates) que no son obvios desde afuera. Si hay un paso previo obligatorio (ej. "abrir turno antes de cobrar"), va primero.
 - **Tres tipos de duda que cada manual debe resolver:**
   1. **Operación** — cómo usar la pantalla en el día a día.
   2. **Reglas de negocio** — por qué el sistema se comporta así (ej. "por qué no me deja cobrar sin turno abierto").
-  3. **Implementación / extensión** — cómo agregar un campo, un rol, una regla nueva (para el siguiente dev/agente, no para el usuario final).
+  3. **Implementación / extensión** — cómo agregar un campo, un rol, una regla nueva (para el siguiente dev/agente, no para el usuario final). El botón "?" dentro de la app **corta el contenido automáticamente** antes de esta sección (ver `paraUsuarioFinal()` en `ManualButton.tsx`) — el usuario final nunca la ve.
 - **Markdown plano**, renderizado en la app con un visor markdown (no HTML embebido).
 
 ## Agregar un manual nuevo
