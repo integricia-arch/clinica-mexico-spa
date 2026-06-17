@@ -14,6 +14,12 @@ const MANUAL_MODULES = import.meta.glob("/docs/manual-usuario/*.md", {
   import: "default",
 }) as Record<string, () => Promise<string>>;
 
+// Corta todo a partir de "## Implementación" — esa sección es para el siguiente
+// dev/agente, no para quien usa el sistema (cajero, recepción, doctor, etc.).
+function paraUsuarioFinal(md: string): string {
+  return md.split(/\n##\s+Implementaci[oó]n\b/i)[0].trim();
+}
+
 interface ManualPagina {
   id: string;
   slug: string;
@@ -54,7 +60,7 @@ export default function ManualButton() {
       const path = `/docs/manual-usuario/${pagina.slug}.md`;
       const loader = MANUAL_MODULES[path];
       const md = loader ? await loader() : null;
-      setContenido(md ?? "_Manual pendiente de redactar para esta pantalla._");
+      setContenido(md ? paraUsuarioFinal(md) : "_Manual pendiente de redactar para esta pantalla._");
       if (user) {
         await supabase.from("manual_consultas").insert({ manual_id: pagina.id, user_id: user.id });
       }

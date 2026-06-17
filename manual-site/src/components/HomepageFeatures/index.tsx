@@ -1,9 +1,9 @@
 import type {ReactNode} from 'react';
 import Link from '@docusaurus/Link';
 import {
-  Headset, Users, CalendarDays, ClipboardList, Stethoscope, FileText,
-  Pill, BellRing, CreditCard, Receipt, MessageCircle, BarChart2,
-  UserCog, ShieldCheck, Settings,
+  LayoutDashboard, Headset, Users, CalendarDays, ClipboardList, Stethoscope, FileText,
+  BellRing, CreditCard, Receipt, MessageCircle, BarChart2,
+  UserCog, ShieldCheck, Settings, LifeBuoy,
 } from 'lucide-react';
 
 type ModuleItem = {
@@ -21,31 +21,34 @@ const SECTIONS: { label: string; items: ModuleItem[] }[] = [
   {
     label: 'Clínica',
     items: [
-      { slug: 'recepcion', label: 'Recepción', Icon: Headset, ready: false },
-      { slug: 'pacientes', label: 'Pacientes', Icon: Users, ready: false },
-      { slug: 'agenda', label: 'Agenda', Icon: CalendarDays, ready: false },
-      { slug: 'citas', label: 'Citas', Icon: ClipboardList, ready: false },
-      { slug: 'panel-doctor', label: 'Panel del doctor', Icon: Stethoscope, ready: false },
-      { slug: 'expedientes', label: 'Expedientes', Icon: FileText, ready: false },
-      { slug: 'recetas', label: 'Recetas', Icon: FileText, ready: false },
-      { slug: 'recordatorios', label: 'Recordatorios', Icon: BellRing, ready: false },
+      { slug: 'panel-principal', label: 'Panel principal', Icon: LayoutDashboard, ready: true },
+      { slug: 'recepcion', label: 'Recepción', Icon: Headset, ready: true },
+      { slug: 'pacientes', label: 'Pacientes', Icon: Users, ready: true },
+      { slug: 'agenda', label: 'Agenda', Icon: CalendarDays, ready: true },
+      { slug: 'citas', label: 'Citas', Icon: ClipboardList, ready: true },
+      { slug: 'panel-doctor', label: 'Panel del doctor', Icon: Stethoscope, ready: true },
+      { slug: 'expedientes', label: 'Expedientes', Icon: FileText, ready: true },
+      { slug: 'recetas', label: 'Recetas', Icon: FileText, ready: true },
+      { slug: 'recordatorios', label: 'Recordatorios', Icon: BellRing, ready: true },
     ],
   },
   {
     label: 'Operaciones',
     items: [
       { slug: 'farmacia', label: 'Farmacia / Caja', Icon: CreditCard, ready: true },
-      { slug: 'facturacion', label: 'Facturación', Icon: Receipt, ready: false },
-      { slug: 'conversaciones', label: 'Conversaciones', Icon: MessageCircle, ready: false },
+      { slug: 'facturacion', label: 'Facturación', Icon: Receipt, ready: true },
+      { slug: 'conversaciones', label: 'Conversaciones', Icon: MessageCircle, ready: true },
     ],
   },
   {
     label: 'Admin',
     items: [
-      { slug: 'inteligencia-bi', label: 'Inteligencia BI', Icon: BarChart2, ready: false },
-      { slug: 'admin-usuarios', label: 'Usuarios', Icon: UserCog, ready: false },
-      { slug: 'auditoria', label: 'Auditoría', Icon: ShieldCheck, ready: false },
-      { slug: 'configuracion', label: 'Configuración', Icon: Settings, ready: false },
+      { slug: 'inteligencia-bi', label: 'Inteligencia BI', Icon: BarChart2, ready: true },
+      { slug: 'admin-usuarios', label: 'Usuarios', Icon: UserCog, ready: true },
+      { slug: 'auditoria', label: 'Auditoría', Icon: ShieldCheck, ready: true },
+      { slug: 'configuracion', label: 'Configuración', Icon: Settings, ready: true },
+      { slug: 'configuracion-notificaciones', label: 'Reglas de notificaciones', Icon: BellRing, ready: true },
+      { slug: 'ayuda-interna', label: 'Ayuda interna', Icon: LifeBuoy, ready: true },
     ],
   },
 ];

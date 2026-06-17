@@ -6,7 +6,7 @@ import {
   CalendarPlus, Headset, ShieldCheck,
   MessageCircle, BellRing, ClipboardList, Stethoscope,
   CreditCard, Lock, UserRound, ChevronLeft, ChevronRight,
-  UserCog, BarChart2, Send,
+  UserCog, BarChart2, Send, LifeBuoy,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import LockScreen from "@/components/LockScreen";
 import ManualButton from "@/components/ManualButton";
+import HelpChatWidget from "@/components/HelpChatWidget";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -47,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
   // ── Admin ──
   { section: "Admin", to: "/inteligencia", icon: BarChart2, label: "Inteligencia BI", roles: ["admin", "manager"] },
+  { to: "/ayuda-interna", icon: LifeBuoy, label: "Ayuda interna", roles: ["admin", "manager", "receptionist"] },
   { to: "/admin/usuarios", icon: UserCog, label: "Usuarios", roles: ["admin"] },
   { to: "/auditoria", icon: ShieldCheck, label: "Auditoría", roles: ["admin"] },
   { to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin", "doctor"] },
@@ -72,6 +74,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { activeClinicId, error: clinicError } = useActiveClinic();
   const { isOpen: sidebarOpen, isCollapsed, close: closeSidebar, openDrawer, toggle, isTablet } = useSidebarState();
   const [escaladasCount, setEscaladasCount] = useState(0);
+  const [ayudaEscaladaCount, setAyudaEscaladaCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -116,6 +119,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user, activeClinicId]);
+
+  useEffect(() => {
+    if (!user || !roles.some((r) => ["admin", "manager", "receptionist"].includes(r))) return;
+    const fetchAyudaCount = async () => {
+      const { count } = await supabase
+        .from("ayuda_chat_sesiones")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "escalada");
+      setAyudaEscaladaCount(count ?? 0);
+    };
+    fetchAyudaCount();
+    const ch = supabase
+      .channel("layout-ayuda-escaladas")
+      .on("postgres_changes", { event: "*", schema: "public", table: "ayuda_chat_sesiones" }, fetchAyudaCount)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user, roles]);
 
   // Sidebar width classes
   const sidebarWidth = isCollapsed ? "w-16" : "w-64";
@@ -187,7 +207,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 const isActive = item.to === "/"
                   ? location.pathname === "/"
                   : location.pathname.startsWith(item.to);
-                const showBadge = item.to === "/inbox" && escaladasCount > 0;
+                const showBadge =
+                  (item.to === "/inbox" && escaladasCount > 0) ||
+                  (item.to === "/ayuda-interna" && ayudaEscaladaCount > 0);
+                const badgeCount = item.to === "/inbox" ? escaladasCount : ayudaEscaladaCount;
                 return (
                   <div key={item.to}>
                     {showSection && !isCollapsed && (
@@ -217,7 +240,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           <span className="flex-1 truncate">{item.label}</span>
                           {showBadge && (
                             <span className="inline-flex items-center justify-center min-w-[20px] h-5 text-[10px] font-bold rounded-full bg-red-500 text-white px-1.5">
-                              {escaladasCount}
+                              {badgeCount}
                             </span>
                           )}
                         </>
@@ -349,6 +372,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
         <main className="flex-1 overflow-y-auto p-4 xl:p-6">{children}</main>
       </div>
+      <HelpChatWidget />
     </div>
   );
 }

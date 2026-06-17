@@ -7143,6 +7143,14 @@ export type Database = {
         Args: { p_solicitud_id: string }
         Returns: string
       }
+      ayuda_chat_resolver_usuarios: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          email: string
+          full_name: string
+          user_id: string
+        }[]
+      }
       can_configure_caja: { Args: { _user_id: string }; Returns: boolean }
       cfdi_get_secret: { Args: { p_id: string }; Returns: string }
       cfdi_upsert_secret: {
