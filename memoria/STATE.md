@@ -820,6 +820,23 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 - `admin_list_auth_users()` RPC actualizado para exponer `banned_until`
 - Gotcha real encontrado al crear el usuario por SQL directo: columnas de tokens (`confirmation_token`, etc.) no pueden ser NULL — GoTrue falla con "Database error querying schema" si lo son. Deben ser `''` explícito.
 
+## Completado (Jun 17, 2026 — Chat IA verificado + archivos locales)
+
+### Chat IA (help-chat-ai) — VERIFICADO FUNCIONANDO ✅
+- Edge function v5 ACTIVE, `verify_jwt=true`
+- Prueba real via endpoint temporal `GET /ping-ia` confirmó: Claude Haiku responde, `ANTHROPIC_API_KEY` configurada (`sk-ant-...`)
+- Endpoint de prueba eliminado — producción limpia, solo acepta JWT válidos
+- QA user `qa.pruebas@clinica-mexico-spa.test` re-deshabilitado: `banned_until=2126-06-17`
+
+### Servidor local de archivos (`scripts/local-file-server.cjs`) ✅
+- Cero dependencias externas para core (http/fs/path/os)
+- Sharp opcional: imágenes → WebP quality 82, ~35-60% menos peso
+- PUT `/upload/:nombre` → guarda en `~/Clinica/Estudios`, retorna URL local
+- GET `/files/:nombre` → sirve inline (PDF/imágenes) o como descarga
+- `StudyResultDrawer.tsx` usa el servidor para adjuntar estudios a pacientes
+- Ejecutar: `node scripts/local-file-server.cjs`
+- Migración futura: Cloudflare R2 (sin egress fees, 10GB free)
+
 ## Completado (Jun 16, 2026 — captcha en prod + resync BD local + push)
 
 ### Captcha Turnstile en producción — verificado funcionando
