@@ -3,28 +3,21 @@
  *
  * Almacena estudios, radiografías, PDFs y documentos de la clínica
  * en una carpeta local. NO sube nada a la nube.
+ * Imágenes se convierten automáticamente a WebP (Sharp).
  *
  * Uso:
  *   node scripts/local-file-server.cjs
  *
- * Variables de entorno (opcional):
- *   PORT=3001              Puerto del servidor (default: 3001)
- *   FILES_DIR=C:\Clinica\Estudios    Carpeta donde guardar los archivos
- *   API_KEY=tu-clave-secreta         Clave de autenticación
+ * Variables de entorno:
+ *   PORT=3001
+ *   FILES_DIR=C:\Clinica\Estudios
+ *   API_KEY=clinica-local-2024
  *
  * Endpoints:
  *   GET  /health           → { ok: true }
- *   GET  /files/:nombre    → descarga o muestra el archivo
- *   PUT  /upload/:nombre   → sube un archivo (body = binario del archivo)
- *   GET  /list             → lista todos los archivos con tamaño y fecha
- *
- * Ejemplo de subida desde browser:
- *   const res = await fetch('http://localhost:3001/upload/paciente-123-rx.pdf', {
- *     method: 'PUT',
- *     headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/octet-stream' },
- *     body: archivoBlob,
- *   });
- *   const { url } = await res.json(); // guarda esta URL en Supabase
+ *   GET  /files/:nombre    → descarga/muestra el archivo
+ *   PUT  /upload/:nombre   → sube archivo (body binario), imágenes → WebP automático
+ *   GET  /list             → lista archivos con tamaño y fecha
  */
 
 const http = require('http');
@@ -35,39 +28,43 @@ const os = require('os');
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 const FILES_DIR = process.env.FILES_DIR ?? path.join(os.homedir(), 'Clinica', 'Estudios');
 const API_KEY = process.env.API_KEY ?? 'clinica-local-2024';
-const HOST = process.env.HOST ?? '0.0.0.0'; // escucha en toda la red local
+const HOST = process.env.HOST ?? '0.0.0.0';
 
-// Crear carpeta si no existe
-if (!fs.existsSync(FILES_DIR)) {
-  fs.mkdirSync(FILES_DIR, { recursive: true });
-  console.log(`[FileServer] Carpeta creada: ${FILES_DIR}`);
+// Sharp es opcional — si no está instalado, imágenes se guardan sin convertir
+let sharp = null;
+try {
+  sharp = require('sharp');
+  console.log('[FileServer] Sharp disponible — imágenes se convertirán a WebP');
+} catch {
+  console.warn('[FileServer] Sharp no disponible — imágenes se guardan sin comprimir');
+  console.warn('[FileServer]   Para activar: npm install sharp');
 }
 
-// MIME types comunes en clínica
+// Extensiones que se convierten a WebP cuando Sharp está disponible
+const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.tiff', '.tif', '.bmp']);
+
 const MIME = {
-  '.pdf': 'application/pdf',
-  '.jpg': 'image/jpeg',
+  '.pdf':  'application/pdf',
+  '.jpg':  'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
+  '.png':  'image/png',
   '.webp': 'image/webp',
-  '.gif': 'image/gif',
-  '.dcm': 'application/dicom',
-  '.zip': 'application/zip',
-  '.xml': 'application/xml',
-  '.txt': 'text/plain',
+  '.gif':  'image/gif',
+  '.tiff': 'image/tiff',
+  '.dcm':  'application/dicom',
+  '.zip':  'application/zip',
+  '.xml':  'application/xml',
+  '.txt':  'text/plain',
 };
 
 function getMime(filename) {
-  const ext = path.extname(filename).toLowerCase();
-  return MIME[ext] ?? 'application/octet-stream';
+  return MIME[path.extname(filename).toLowerCase()] ?? 'application/octet-stream';
 }
 
-// Sanitiza el nombre de archivo: evita path traversal
 function sanitize(name) {
   return path.basename(name.replace(/\.\./g, ''));
 }
 
-// Obtiene la IP local para mostrarla en el inicio
 function getLocalIP() {
   const nets = os.networkInterfaces();
   for (const name of Object.keys(nets)) {
@@ -78,15 +75,34 @@ function getLocalIP() {
   return 'localhost';
 }
 
+// Convierte imagen a WebP con Sharp. Retorna el nombre final guardado.
+async function processImage(inputBuffer, originalName) {
+  const ext = path.extname(originalName).toLowerCase();
+  const base = path.basename(originalName, ext);
+  const outName = `${base}.webp`;
+  const outPath = path.join(FILES_DIR, outName);
+
+  await sharp(inputBuffer)
+    .webp({ quality: 82 })   // 82% = excelente calidad, ~35% más pequeño que JPEG
+    .toFile(outPath);
+
+  return outName;
+}
+
+if (!fs.existsSync(FILES_DIR)) {
+  fs.mkdirSync(FILES_DIR, { recursive: true });
+  console.log(`[FileServer] Carpeta creada: ${FILES_DIR}`);
+}
+
 const server = http.createServer((req, res) => {
-  const corsHeaders = {
+  const cors = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'X-API-Key, Content-Type',
   };
 
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, corsHeaders);
+    res.writeHead(204, cors);
     return res.end();
   }
 
@@ -95,40 +111,44 @@ const server = http.createServer((req, res) => {
 
   // ── GET /health ────────────────────────────────────────────────
   if (req.method === 'GET' && url.pathname === '/health') {
-    res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ ok: true, filesDir: FILES_DIR, port: PORT }));
+    res.writeHead(200, { ...cors, 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({
+      ok: true,
+      filesDir: FILES_DIR,
+      port: PORT,
+      sharp: !!sharp,
+    }));
   }
 
   // ── GET /list ──────────────────────────────────────────────────
   if (req.method === 'GET' && url.pathname === '/list') {
     if (req.headers['x-api-key'] !== API_KEY) {
-      res.writeHead(401, corsHeaders);
+      res.writeHead(401, cors);
       return res.end(JSON.stringify({ error: 'No autorizado' }));
     }
     const files = fs.readdirSync(FILES_DIR).map((name) => {
       const stat = fs.statSync(path.join(FILES_DIR, name));
       return { name, size: stat.size, modified: stat.mtime };
     });
-    res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ files }));
+    res.writeHead(200, { ...cors, 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ files, count: files.length }));
   }
 
   // ── GET /files/:nombre ─────────────────────────────────────────
   if (req.method === 'GET' && segments[0] === 'files' && segments[1]) {
-    const filename = sanitize(segments[1]);
+    const filename = sanitize(decodeURIComponent(segments[1]));
     const filepath = path.join(FILES_DIR, filename);
     if (!fs.existsSync(filepath)) {
-      res.writeHead(404, corsHeaders);
+      res.writeHead(404, cors);
       return res.end(JSON.stringify({ error: 'Archivo no encontrado' }));
     }
     const mime = getMime(filename);
     const stat = fs.statSync(filepath);
-    // PDFs e imágenes se muestran inline en el browser; el resto se descargan
     const disposition = (mime.startsWith('image/') || mime === 'application/pdf')
       ? `inline; filename="${filename}"`
       : `attachment; filename="${filename}"`;
     res.writeHead(200, {
-      ...corsHeaders,
+      ...cors,
       'Content-Type': mime,
       'Content-Length': stat.size,
       'Content-Disposition': disposition,
@@ -140,58 +160,76 @@ const server = http.createServer((req, res) => {
   // ── PUT /upload/:nombre ────────────────────────────────────────
   if (req.method === 'PUT' && segments[0] === 'upload' && segments[1]) {
     if (req.headers['x-api-key'] !== API_KEY) {
-      res.writeHead(401, corsHeaders);
+      res.writeHead(401, cors);
       return res.end(JSON.stringify({ error: 'No autorizado' }));
     }
 
-    const filename = sanitize(decodeURIComponent(segments[1]));
-    const filepath = path.join(FILES_DIR, filename);
-    const writeStream = fs.createWriteStream(filepath);
-    let size = 0;
+    const rawName = sanitize(decodeURIComponent(segments[1]));
+    const ext = path.extname(rawName).toLowerCase();
+    const chunks = [];
 
-    req.on('data', (chunk) => { size += chunk.length; writeStream.write(chunk); });
-    req.on('end', () => {
-      writeStream.end();
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', async () => {
+      const buffer = Buffer.concat(chunks);
       const localIP = getLocalIP();
-      const fileUrl = `http://${localIP}:${PORT}/files/${encodeURIComponent(filename)}`;
-      console.log(`[FileServer] ✓ Guardado: ${filename} (${(size / 1024).toFixed(1)} KB)`);
-      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, filename, url: fileUrl, size }));
+      let savedName = rawName;
+
+      // Convertir imagen a WebP si Sharp está disponible
+      if (sharp && IMAGE_EXTS.has(ext)) {
+        try {
+          savedName = await processImage(buffer, rawName);
+          const origKB = (buffer.length / 1024).toFixed(1);
+          const newStat = fs.statSync(path.join(FILES_DIR, savedName));
+          const newKB = (newStat.size / 1024).toFixed(1);
+          console.log(`[FileServer] ✓ Imagen optimizada: ${rawName} → ${savedName} (${origKB} KB → ${newKB} KB)`);
+        } catch (sharpErr) {
+          console.warn('[FileServer] Sharp falló, guardando original:', sharpErr.message);
+          fs.writeFileSync(path.join(FILES_DIR, rawName), buffer);
+          savedName = rawName;
+        }
+      } else {
+        // PDF u otro archivo — guardar directamente
+        fs.writeFileSync(path.join(FILES_DIR, rawName), buffer);
+        console.log(`[FileServer] ✓ Guardado: ${rawName} (${(buffer.length / 1024).toFixed(1)} KB)`);
+      }
+
+      const fileUrl = `http://${localIP}:${PORT}/files/${encodeURIComponent(savedName)}`;
+      res.writeHead(200, { ...cors, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        ok: true,
+        filename: savedName,
+        originalName: rawName,
+        url: fileUrl,
+        size: fs.statSync(path.join(FILES_DIR, savedName)).size,
+      }));
     });
+
     req.on('error', (err) => {
-      console.error('[FileServer] Error al recibir archivo:', err);
-      res.writeHead(500, corsHeaders);
+      console.error('[FileServer] Error al recibir:', err);
+      res.writeHead(500, cors);
       res.end(JSON.stringify({ error: err.message }));
     });
     return;
   }
 
-  // 404 genérico
-  res.writeHead(404, { ...corsHeaders, 'Content-Type': 'application/json' });
+  res.writeHead(404, { ...cors, 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Ruta no encontrada' }));
 });
 
 server.listen(PORT, HOST, () => {
   const localIP = getLocalIP();
   console.log('');
-  console.log('╔═══════════════════════════════════════════╗');
-  console.log('║   Servidor local de archivos — Integriclinica');
-  console.log(`║   Escuchando en: http://${localIP}:${PORT}`);
-  console.log(`║   Carpeta:       ${FILES_DIR}`);
-  console.log(`║   API Key:       ${API_KEY}`);
-  console.log('╠═══════════════════════════════════════════╣');
-  console.log('║   Endpoints:');
-  console.log(`║   GET  http://${localIP}:${PORT}/health`);
-  console.log(`║   GET  http://${localIP}:${PORT}/files/:nombre`);
-  console.log(`║   PUT  http://${localIP}:${PORT}/upload/:nombre`);
-  console.log(`║   GET  http://${localIP}:${PORT}/list`);
-  console.log('╚═══════════════════════════════════════════╝');
-  console.log('');
+  console.log('╔══════════════════════════════════════════════╗');
+  console.log('║  Servidor local de archivos — Integriclinica  ║');
+  console.log(`║  http://${localIP}:${PORT}                    `);
+  console.log(`║  Carpeta: ${FILES_DIR}`);
+  console.log(`║  Imágenes → WebP: ${sharp ? 'ACTIVO' : 'inactivo (npm install sharp)'}`);
+  console.log('╚══════════════════════════════════════════════╝');
 });
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`[FileServer] ✗ Puerto ${PORT} ocupado. Cambia PORT= o cierra el proceso que lo usa.`);
+    console.error(`[FileServer] Puerto ${PORT} ocupado. Cambia PORT= o cierra el proceso.`);
   } else {
     console.error('[FileServer] Error:', err);
   }
