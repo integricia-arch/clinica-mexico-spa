@@ -211,6 +211,7 @@ export default function HelpChatWidget() {
             mensaje: contenido,
             manual_contexto: manual_contexto ?? undefined,
             ruta_activa: location.pathname,
+            clinic_id: activeClinicId ?? undefined,
           }),
         }
       );
