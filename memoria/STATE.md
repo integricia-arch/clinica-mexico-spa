@@ -853,6 +853,31 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 - Gotcha real: `sqlcmd` en modo texto interpreta líneas como `GO` **dentro del contenido de archivos** como comandos de batch, rompiendo la carga a mitad — no usar sqlcmd con SQL generado como texto plano para contenido arbitrario. Usar ADO.NET (`System.Data.SqlClient`) con parámetros tipados (`SqlParameter`) — inmune a esto, sin necesidad de escapar nada.
 - Estos son snapshots puntuales, no automatizados — repetir manualmente cuando se quiera refrescar.
 
+## Completado (Jun 16, 2026 — manuales de usuario + chat de ayuda + portal Docusaurus)
+
+### Manuales in-app
+- `ManualButton.tsx` — botón "?" en header de toda la app, resuelve manual por ruta vs `manual_paginas`, corta en "## Implementación" antes de mostrar al usuario final
+- Tablas `manual_paginas` (18 filas) + `manual_consultas` (auditoría)
+- **18/18 manuales** en `docs/manual-usuario/` — uno por pantalla real, tono "tú"/cajero, sección técnica oculta del usuario final, escritos verificando cada .tsx real (no inventados)
+
+### Chat de ayuda ("hablar con humano")
+- `HelpChatWidget.tsx` (botón flotante, cualquier usuario) + `AyudaInterna.tsx` (`/ayuda-interna`, staff: tomar/responder/cerrar sesiones)
+- Tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes` + RPC `ayuda_chat_resolver_usuarios`
+- IA (Ollama) pospuesta a propósito — Cloudflare Workers/Supabase Edge no pueden hostear un modelo persistente
+
+### Portal público Docusaurus
+- `manual-site/` → `integrika.mx/manual` (mismo Worker, sin proyecto Cloudflare extra)
+- `npm run build:all` = vite build + Docusaurus build + copia a `dist/manual/`
+- Branding propio derivado del teal de la app (skill `frontend-design`)
+
+### Fixes de seguridad/proceso encontrados en el camino
+- `public.profiles.supervisor_pin_hash` sin RLS (hash de PIN expuesto a cualquiera con anon key) → RLS habilitado, solo admin
+- `.gitignore` excluía `memoria/` completo sin justificación → removida, 22 archivos subidos a git (sin secretos reales, verificado)
+
+### Pendiente inmediato
+- **Commit + push del bloque completo de manuales/chat/Docusaurus/fixes — todavía NO se ha hecho** (todo validado: tsc, build, build:all, lint — solo falta el commit)
+- Dev server local corriendo en background (`localhost:8080`) — apagar si ya no se prueba
+
 ## Reglas críticas
 - SQL con `$function$` → SIEMPRE escribir `_tmp_*.sql` y usar `--file`
 - Secrets: env-only, nunca en código
@@ -861,6 +886,8 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 - `verify_jwt = false` en telegram-webhook
 - Crear usuarios auth.users por SQL: columnas `*_token` deben ser `''`, nunca NULL (GoTrue rompe)
 - `banned_until` (timestamp futuro) = forma de deshabilitar cuenta sin eliminarla; `null` = habilitada
+- Comentarios HTML (`<!-- -->`) en `.md` rompen build MDX/Docusaurus — usar cursiva `_texto_`
+- Antes de declarar un backup "completo": `git ls-files <carpeta>` vs `find <carpeta> -type f` — `.gitignore` puede contradecir la documentación en silencio
 
 ## Archivos clave
 - `src/features/farmacia/PuntoDeVenta.tsx` — POS principal
