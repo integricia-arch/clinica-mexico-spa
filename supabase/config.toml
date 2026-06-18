@@ -30,3 +30,6 @@ verify_jwt = false
 
 [functions.confirmar-cita]
 verify_jwt = false
+
+[functions.google-oauth-callback]
+verify_jwt = false
