@@ -79,6 +79,91 @@ async function buscarFaqTelegram(pregunta: string): Promise<string | null> {
 // ============================================================
 // TIER 2: HAIKU INTENT CLASSIFIER
 // ============================================================
+
+const PADECIMIENTO_MAP: { regex: RegExp; especialidades: string[] }[] = [
+  { regex: /cabeza|migraña|jaqueca|mareo|vértigo|cefalea/i, especialidades: ["Medicina general", "Neurología"] },
+  { regex: /corazón|pecho|presión|hipertensión|taquicardia|arritmia|cardiovascular/i, especialidades: ["Cardiología"] },
+  { regex: /piel|acné|mancha|dermatitis|lunar|erupción|urticaria|sarpullido/i, especialidades: ["Dermatología"] },
+  { regex: /niño|bebé|pediatr|fiebre.*niño|hijo.*fiebre/i, especialidades: ["Pediatría"] },
+  { regex: /diente|muela|encía|caries|dental|boca|dentista/i, especialidades: ["Odontología"] },
+  { regex: /embaraz|menstrua|ginecolog|ovario|útero|vaginal|pap|anticonceptiv/i, especialidades: ["Ginecología"] },
+  { regex: /peso|nutrición|dieta|obesidad|colesterol|triglicérid|sobrepeso/i, especialidades: ["Nutrición"] },
+  { regex: /ansied|depresión|estrés|insomnio|psicolog|ánimo|tristeza|pánico|ansiedad/i, especialidades: ["Psicología"] },
+  { regex: /análisis|laboratorio|estudio|sangre.*exam|examen.*sangre|prueba.*sangre/i, especialidades: ["Estudios y Laboratorio"] },
+  { regex: /espalda|columna|rodilla|hueso|articulación|fractura|ortoped|cadera/i, especialidades: ["Medicina general"] },
+  { regex: /garganta|tos|gripe|resfriado|fiebre|catarro|moco|nariz.*tapada/i, especialidades: ["Medicina general"] },
+  { regex: /estómago|abdomen|gastritis|colitis|diarrea|estreñimiento|digestiv|vómito/i, especialidades: ["Medicina general"] },
+];
+
+function espToKey(esp: string): string {
+  const MAP: Record<string, string> = {
+    "Medicina general": "medgen",
+    "Odontología": "odo",
+    "Dermatología": "derm",
+    "Pediatría": "ped",
+    "Ginecología": "gine",
+    "Cardiología": "card",
+    "Nutrición": "nut",
+    "Psicología": "psi",
+    "Estudios y Laboratorio": "lab",
+    "Neurología": "medgen",
+  };
+  return MAP[esp] ?? "medgen";
+}
+
+async function manejarConsultaLibre(
+  chatId: string,
+  conv: { id: string },
+  texto: string,
+): Promise<void> {
+  let especialidades: string[] = [];
+  let mensajeBase = "";
+
+  // 1. Regex match rápido
+  const match = PADECIMIENTO_MAP.find((p) => p.regex.test(texto));
+  if (match) {
+    especialidades = match.especialidades;
+    mensajeBase = `Entiendo que tienes molestias. Nuestros especialistas en *${especialidades.join("* o *")}* pueden ayudarte.`;
+  } else {
+    // 2. Haiku fallback para padecimientos no mapeados
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 50,
+          system: `Eres asistente de clínica médica en México. El paciente describe un padecimiento.
+Responde SOLO con el nombre exacto de la especialidad más adecuada (una o máximo dos separadas por coma):
+Medicina general, Cardiología, Dermatología, Ginecología, Neurología, Nutrición, Odontología, Pediatría, Psicología, Estudios y Laboratorio.
+No des diagnóstico. Solo la especialidad.`,
+          messages: [{ role: "user", content: texto }],
+        }),
+      });
+      if (resp.ok) {
+        const data = await resp.json() as { content?: { text: string }[] };
+        const esp = (data.content?.[0]?.text ?? "Medicina general").trim();
+        especialidades = esp.split(",").map((e: string) => e.trim()).filter(Boolean).slice(0, 2);
+      }
+    } catch {
+      // fallback below
+    }
+    if (especialidades.length === 0) especialidades = ["Medicina general"];
+    mensajeBase = `Para lo que describes, nuestros especialistas en *${especialidades.join("* o *")}* pueden orientarte.`;
+  }
+
+  const mensaje = `${mensajeBase}\n\n¿Te gustaría agendar una cita?`;
+  const botones = especialidades.map((esp) => ([{ text: `📅 Agendar con ${esp}`, callback_data: `cat:${espToKey(esp)}` }]));
+  botones.push([{ text: "ℹ️ Más información", callback_data: "consulta:" }]);
+  botones.push([{ text: "👤 Hablar con alguien", callback_data: "humano:" }]);
+
+  await enviarTelegramConBotones(chatId, mensaje, botones);
+  await guardarMensajeAsistente(conv.id, mensaje);
+}
 type BotIntent = "booking" | "consulta" | "info" | "gestion" | "humano" | "otro";
 
 async function clasificarIntentHaiku(text: string): Promise<BotIntent> {
@@ -442,7 +527,9 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
       case "booking":
         await enviarMenuCategorias(chatId, "Elige la especialidad:");
         return;
-      // case "consulta": // TODO Task 6 — manejarConsultaLibre
+      case "consulta":
+        await manejarConsultaLibre(chatId, conv, text);
+        return;
       case "gestion":
         await verMiCita(chatId, conv);
         return;
