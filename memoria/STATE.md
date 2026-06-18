@@ -820,6 +820,18 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 - `admin_list_auth_users()` RPC actualizado para exponer `banned_until`
 - Gotcha real encontrado al crear el usuario por SQL directo: columnas de tokens (`confirmation_token`, etc.) no pueden ser NULL — GoTrue falla con "Database error querying schema" si lo son. Deben ser `''` explícito.
 
+## Completado (Jun 17, 2026 — notification_rules + .env local file server)
+
+### Migración notify-cxp-vencimiento / notify-new-user → notification_rules ✅
+- [x] `notify-cxp-vencimiento` v6 ACTIVE: `getEnabledChannels(clinic_id, event_type)` consulta `notification_rules` antes de enviar email/telegram por clínica
+- [x] `notify-new-user` v9 ACTIVE: check REST `notification_rules?event_type=usuario_nuevo&channel=email&enabled=true` antes de enviar; si no hay regla activa, retorna `{reason:"notification_rule disabled"}`
+- [x] Admin puede controlar ambas notificaciones desde `/configuracion/notificaciones` (panel ya existente)
+
+### `.env` local file server ✅
+- [x] `VITE_LOCAL_FILE_SERVER=http://localhost:3001`
+- [x] `VITE_LOCAL_FILE_SERVER_KEY=clinica-local-2024`
+- (.env gitignoreado — no se commitea)
+
 ## Completado (Jun 17, 2026 — Chat IA 3-tier FAQ + cerrar consulta + inactividad)
 
 ### Chat IA — cerrar sesión + auto-cierre 5 min ✅

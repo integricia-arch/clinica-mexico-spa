@@ -31,6 +31,16 @@ function json(data: unknown, status = 200) {
 
 const svc = createClient(SUPABASE_URL, SUPABASE_SVC);
 
+async function getEnabledChannels(clinicId: string, eventType: string): Promise<Set<string>> {
+  const { data } = await svc
+    .from("notification_rules")
+    .select("channel")
+    .eq("clinic_id", clinicId)
+    .eq("event_type", eventType)
+    .eq("enabled", true);
+  return new Set((data ?? []).map((r: { channel: string }) => r.channel));
+}
+
 interface FacturaRow {
   id: string;
   clinic_id: string;
@@ -169,8 +179,9 @@ async function procesarNotificaciones() {
     const porVencer  = group.facturas.filter((f) => f.fecha_vencimiento >= now.toISOString().split("T")[0]);
     const totalSaldo = group.facturas.reduce((s, f) => s + f.saldo_pendiente_centavos, 0);
 
-    const emailSent  = await enviarEmail(group, vencidas, porVencer, totalSaldo);
-    const tgSent     = await enviarTelegram(group, vencidas, porVencer, totalSaldo);
+    const channels   = await getEnabledChannels(group.clinic_id, "cxp_vencimiento");
+    const emailSent  = channels.has("email")    ? await enviarEmail(group, vencidas, porVencer, totalSaldo)    : false;
+    const tgSent     = channels.has("telegram") ? await enviarTelegram(group, vencidas, porVencer, totalSaldo) : false;
 
     if (emailSent || tgSent) {
       totalEnviadas++;

@@ -98,6 +98,18 @@ Deno.serve(async (req) => {
   if (!email) return new Response(JSON.stringify({ error: "email requerido" }), { status: 400, headers });
 
   try {
+    // Check notification_rules: only send if rule exists and is enabled
+    const rulesRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/notification_rules?event_type=eq.usuario_nuevo&channel=eq.email&enabled=eq.true&limit=1&select=id`,
+      { headers: { apikey: SUPABASE_SVC, Authorization: `Bearer ${SUPABASE_SVC}` } },
+    );
+    const rulesRaw = await rulesRes.text();
+    let rulesData: { id: string }[] = [];
+    try { rulesData = JSON.parse(rulesRaw); } catch { /* noop */ }
+    if (!Array.isArray(rulesData) || rulesData.length === 0) {
+      return new Response(JSON.stringify({ ok: true, notified: 0, reason: "notification_rule disabled" }), { headers });
+    }
+
     const { emails: adminEmails, debug } = await getAdminEmails();
     if (adminEmails.length === 0) {
       console.warn("[notify-new-user] Sin admins para notificar", debug);
