@@ -420,10 +420,10 @@ fecha_local: `Dr(a). ${doctor.nombre} ${doctor.apellidos} · ${doctor.especialid
 
 ---
 
-## 12. Orden de Implementación
+## 12. Orden de Implementación — Proyecto 1
 
-1. **DB:** Migration seed horario clínica
-2. **UI:** HorarioClinica component + integración en Configuracion.tsx
+1. **DB:** Migration seed horario clínica en `clinic_settings`
+2. **UI:** `HorarioClinica` component + integración en `Configuracion.tsx`
 3. **Bot — Schedule:** `getClinicSchedule()` + `listarHorariosDisponibles()` refactor
 4. **Bot — FAQ layer:** `buscarFaqTelegram()` antes del agente
 5. **Bot — Intent Haiku:** `clasificarIntentHaiku()` + routing
@@ -431,11 +431,11 @@ fecha_local: `Dr(a). ${doctor.nombre} ${doctor.apellidos} · ${doctor.especialid
 7. **Bot — Learning:** `chat_registrar_pendiente` tras respuesta Sonnet
 8. **Bot — Memoria:** nueva estructura `MemoriaPaciente` + Haiku prompt
 9. **Bot — Doctor perfil:** campo especialidad en slots
-10. **Deploy:** `wrangler deploy` + verificación en producción
+10. **Deploy P1:** `wrangler deploy` + verificación en producción
 
 ---
 
-## 13. Criterios de Éxito
+## 13. Criterios de Éxito — Proyecto 1
 
 - Admin puede cambiar horario clínica desde UI y bot lo refleja sin deploy
 - Pregunta repetida (ej. "¿cuánto cuesta la consulta?") responde vía FAQ sin gastar tokens Sonnet
@@ -446,13 +446,125 @@ fecha_local: `Dr(a). ${doctor.nombre} ${doctor.apellidos} · ${doctor.especialid
 
 ---
 
-## 14. Proyecto 2 (Referencia — No implementar ahora)
+## 14. Proyecto 2 — Google Calendar Bidireccional
 
-**Google Calendar Integration:**
-- OAuth 2.0 por doctor (Google Identity Platform)
-- Webhook/poll para sincronizar eventos de Google Calendar → tabla `doctor_bloqueos`
-- `listarHorariosDisponibles()` lee `doctor_bloqueos` además de `appointments`
-- UI: panel en perfil de doctor para conectar/desconectar su calendario
-- Cada evento de Google Calendar que no sea en esta clínica = bloqueo automático
+### Objetivo
+Sincronización completa: el bot lee los huecos libres del calendario del doctor y al confirmar una cita la escribe en su Google Calendar. El doctor ve todas sus citas de la clínica en su agenda personal.
 
-*Trigger para iniciar: cuando clínica tenga >3 doctores con múltiples hospitales.*
+### Prerequisito externo (manual, una sola vez)
+1. Google Cloud Console → crear proyecto → habilitar **Google Calendar API**
+2. Crear credenciales OAuth 2.0 (tipo "Web application")
+3. Añadir URI de redirección: `https://kyfkvdyxpvpiacyymldc.supabase.co/functions/v1/google-oauth-callback`
+4. Guardar `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` como secrets de Supabase Edge Functions
+
+### Componentes técnicos
+
+#### DB — nueva tabla `doctor_calendars`
+```sql
+CREATE TABLE doctor_calendars (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  doctor_id     uuid NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
+  clinic_id     uuid NOT NULL REFERENCES clinics(id),
+  google_email  text NOT NULL,
+  calendar_id   text NOT NULL DEFAULT 'primary',
+  access_token  text NOT NULL,       -- cifrado vía pgsodium o secreto en env
+  refresh_token text NOT NULL,       -- larga duración, necesario para renovar
+  token_expiry  timestamptz NOT NULL,
+  activo        boolean NOT NULL DEFAULT true,
+  connected_at  timestamptz DEFAULT now(),
+  UNIQUE(doctor_id, clinic_id)
+);
+```
+
+#### Edge Functions nuevas
+
+**`google-oauth-callback`** — Recibe el `code` de Google tras el consentimiento del doctor:
+- Intercambia `code` → `access_token` + `refresh_token` vía POST a `https://oauth2.googleapis.com/token`
+- Upsert en `doctor_calendars`
+- Redirige al doctor a `/configuracion` con mensaje de éxito
+
+**`google-calendar-sync`** (helper compartido, no HTTP endpoint):
+- `getAccessToken(doctorId)` — refresca si `token_expiry < now + 5min`
+- `getFreeBusy(doctorId, timeMin, timeMax)` — llama `calendar.freeBusy` API
+- `createEvent(doctorId, appointment)` — crea evento en calendar del doctor
+- `updateEvent(doctorId, googleEventId, appointment)` — actualiza slot tras reagendar
+- `deleteEvent(doctorId, googleEventId)` — cancela evento en Google al cancelar cita
+
+#### Modificaciones al bot (`telegram-webhook`)
+
+**`listarHorariosDisponibles()`:**
+```typescript
+// Para cada doctor conectado a Google Calendar:
+const busyTimes = await getFreeBusy(doctor.id, windowStart, windowEnd);
+// Filtrar slots que colisionan con busyTimes (además de appointments internos)
+```
+
+**`crearCitaDesdeSesion()`** — tras insertar appointment:
+```typescript
+const cal = await getDoctorCalendar(doctor_id);
+if (cal) {
+  const eventId = await createEvent(cal, {
+    summary: `Cita: ${servicio.nombre} — ${patient.nombre} ${patient.apellidos}`,
+    start: fecha_inicio,
+    end: fecha_fin,
+    description: `Paciente: ${patient.nombre}\nServicio: ${servicio.nombre}\nOrigen: Telegram bot`,
+  });
+  // Guardar google_event_id en appointment para poder actualizar/cancelar después
+  await supabase.from("appointments").update({ google_event_id: eventId }).eq("id", apptId);
+}
+```
+
+**`confirmarCancelacionCita()`** — si appointment tiene `google_event_id`:
+```typescript
+await deleteEvent(doctorCalendar, appointment.google_event_id);
+```
+
+**`confirmarReagendar()`** — actualiza el evento en Google:
+```typescript
+await updateEvent(doctorCalendar, appointment.google_event_id, newSlot);
+```
+
+#### UI — Panel conexión Google Calendar
+
+En `src/pages/AdminUsuarios.tsx` (perfil doctor) o nueva sección en `Configuracion.tsx`:
+
+```
+┌─ Google Calendar — Dr. Martínez ───────────────────────┐
+│                                                          │
+│  Estado: ● Conectado (dr.martinez@gmail.com)            │
+│  Última sincronización: hace 2 min                       │
+│                                                          │
+│  [Desconectar]                                           │
+│                                                          │
+│  ── Sin conectar ──                                      │
+│  Estado: ○ No conectado                                  │
+│  [Conectar Google Calendar]  ← abre OAuth flow          │
+└──────────────────────────────────────────────────────────┘
+```
+
+El botón "Conectar" genera URL de autorización Google y redirige al doctor. La URL incluye `state=doctorId:clinicId` para identificar al doctor en el callback.
+
+#### Columna adicional en `appointments`
+```sql
+ALTER TABLE appointments ADD COLUMN google_event_id text;
+```
+
+### Orden de implementación — Proyecto 2
+
+1. **Prerequisito:** Admin configura Google Cloud Console (manual externo)
+2. **DB:** `doctor_calendars` table + `appointments.google_event_id` column
+3. **Edge:** `google-oauth-callback` function
+4. **Edge:** módulo `google-calendar-sync.ts` (helper compartido)
+5. **Bot:** `listarHorariosDisponibles()` + free/busy check
+6. **Bot:** `crearCitaDesdeSesion()` + `createEvent()`
+7. **Bot:** `confirmarCancelacionCita()` + `deleteEvent()`
+8. **Bot:** `confirmarReagendar()` + `updateEvent()`
+9. **UI:** Panel conexión/desconexión por doctor
+10. **Deploy P2:** `supabase functions deploy` + `wrangler deploy`
+
+### Criterios de éxito — Proyecto 2
+- Doctor conecta su Google Calendar desde la UI sin ayuda técnica
+- Bot no ofrece slots donde el doctor tiene evento en Google Calendar
+- Al confirmar cita → aparece evento en Google Calendar del doctor en < 5 seg
+- Al cancelar/reagendar → evento en Google Calendar se actualiza automáticamente
+- Si doctor no tiene Google Calendar conectado → bot funciona igual que antes (backward compatible)
