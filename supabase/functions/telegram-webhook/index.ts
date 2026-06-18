@@ -76,6 +76,44 @@ async function buscarFaqTelegram(pregunta: string): Promise<string | null> {
   }
 }
 
+// ============================================================
+// TIER 2: HAIKU INTENT CLASSIFIER
+// ============================================================
+type BotIntent = "booking" | "consulta" | "info" | "gestion" | "humano" | "otro";
+
+async function clasificarIntentHaiku(text: string): Promise<BotIntent> {
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 10,
+        system: `Clasifica el mensaje de un paciente de clínica médica en UNA sola palabra:
+booking: quiere agendar cita
+consulta: pregunta sobre síntoma o padecimiento
+info: pregunta de precios, ubicación, horarios, pagos
+gestion: ver, cancelar o reagendar cita existente
+humano: quiere hablar con persona real
+otro: no encaja en ninguna categoría
+Responde SOLO la palabra, sin puntuación ni explicación.`,
+        messages: [{ role: "user", content: text }],
+      }),
+    });
+    if (!resp.ok) return "otro";
+    const data = await resp.json() as { content?: { text: string }[] };
+    const raw = (data.content?.[0]?.text ?? "otro").trim().toLowerCase();
+    const validos: BotIntent[] = ["booking", "consulta", "info", "gestion", "humano", "otro"];
+    return validos.includes(raw as BotIntent) ? (raw as BotIntent) : "otro";
+  } catch {
+    return "otro";
+  }
+}
+
 const CATEGORIAS: Record<string, { label: string; especialidades: string[] }> = {
   medgen: { label: "🩺 Medicina general", especialidades: ["Medicina general"] },
   odo:    { label: "🦷 Odontología", especialidades: ["Odontología"] },
@@ -394,6 +432,25 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
       await enviarTelegram(chatId, faqRespuesta);
       await guardarMensajeAsistente(conv.id, faqRespuesta);
       return;
+    }
+  }
+
+  // Tier 2: Haiku intent triage
+  if (text && text.length >= 5) {
+    const intent = await clasificarIntentHaiku(text);
+    switch (intent) {
+      case "booking":
+        await enviarMenuCategorias(chatId, "Elige la especialidad:");
+        return;
+      // case "consulta": // TODO Task 6 — manejarConsultaLibre
+      case "gestion":
+        await verMiCita(chatId, conv);
+        return;
+      case "humano":
+        await escalarConversacion(conv, { razon: "Solicitado por paciente" });
+        await enviarTelegram(chatId, "Claro 🙌 En un momento una persona de nuestro equipo te atiende por aquí.\nCuando quieras agendar una cita, solo escríbeme \"hola\".");
+        return;
+      // "info" and "otro" fall through to correrAgente() below
     }
   }
 
