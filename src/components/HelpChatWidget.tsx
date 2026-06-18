@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { LifeBuoy, X, Send, Bot, User, Users } from "lucide-react";
+import { LifeBuoy, X, Send, Bot, User, Users, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -82,6 +82,10 @@ export default function HelpChatWidget() {
   const [sending, setSending] = useState(false);
   const [iaThinking, setIaThinking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inactivityRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sesionIdRef = useRef<string | null>(null);
+
+  const INACTIVITY_MS = 5 * 60 * 1000;
 
   const ensureSesion = async (): Promise<Sesion | null> => {
     if (!user) return null;
@@ -107,6 +111,33 @@ export default function HelpChatWidget() {
     return created as Sesion;
   };
 
+  useEffect(() => {
+    sesionIdRef.current = sesion?.id ?? null;
+  }, [sesion?.id]);
+
+  const despedirseYCerrar = async () => {
+    const sid = sesionIdRef.current;
+    if (!sid) return;
+    const despedida = "No recibí respuesta en 5 minutos. Si necesitas más ayuda, abre una nueva consulta. ¡Hasta luego!";
+    await supabase.from("ayuda_chat_mensajes").insert({
+      sesion_id: sid, rol: "asistente_ia", autor_id: null, contenido: despedida,
+    });
+    await supabase.from("ayuda_chat_sesiones").update({ estado: "cerrada" }).eq("id", sid);
+    setSesion((prev) => prev ? { ...prev, estado: "cerrada" } : prev);
+  };
+
+  const resetInactivityTimer = () => {
+    if (inactivityRef.current) clearTimeout(inactivityRef.current);
+    inactivityRef.current = setTimeout(despedirseYCerrar, INACTIVITY_MS);
+  };
+
+  const cerrarSesion = async () => {
+    if (!sesion || sesion.estado === "cerrada") return;
+    if (inactivityRef.current) clearTimeout(inactivityRef.current);
+    await supabase.from("ayuda_chat_sesiones").update({ estado: "cerrada" }).eq("id", sesion.id);
+    setSesion((prev) => prev ? { ...prev, estado: "cerrada" } : prev);
+  };
+
   const loadMensajes = async (sesionId: string) => {
     const { data } = await supabase
       .from("ayuda_chat_mensajes")
@@ -126,6 +157,14 @@ export default function HelpChatWidget() {
     }
   };
 
+  const iniciarNuevaConsulta = async () => {
+    if (inactivityRef.current) clearTimeout(inactivityRef.current);
+    setSesion(null);
+    setMensajes([]);
+    const s = await ensureSesion();
+    if (s) { setSesion(s); await loadMensajes(s.id); }
+  };
+
   // Realtime: escuchar mensajes nuevos (respuesta IA o humano)
   useEffect(() => {
     if (!sesion) return;
@@ -140,13 +179,18 @@ export default function HelpChatWidget() {
             return exists ? prev : [...prev, payload.new as Mensaje];
           });
           setIaThinking(false);
+          resetInactivityTimer();
         }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "ayuda_chat_sesiones", filter: `id=eq.${sesion.id}` },
         (payload) => {
-          setSesion((prev) => prev ? { ...prev, estado: (payload.new as Sesion).estado } : prev);
+          const nuevoEstado = (payload.new as Sesion).estado;
+          setSesion((prev) => prev ? { ...prev, estado: nuevoEstado } : prev);
+          if (nuevoEstado !== "abierta" && inactivityRef.current) {
+            clearTimeout(inactivityRef.current);
+          }
         }
       )
       .subscribe();
@@ -186,6 +230,7 @@ export default function HelpChatWidget() {
         id: crypto.randomUUID(), rol: "usuario", contenido,
         created_at: new Date().toISOString(), autor_id: user.id,
       }]);
+      resetInactivityTimer();
 
       // Si la sesión está escalada, no llamar a la IA
       if (activeSesion.estado === "escalada") return;
@@ -229,24 +274,36 @@ export default function HelpChatWidget() {
   if (!user) return null;
 
   const escalada = sesion?.estado === "escalada";
+  const cerrada = sesion?.estado === "cerrada";
 
   return (
     <div className="fixed bottom-5 right-5 z-50">
       {open ? (
         <div className="flex h-[500px] w-80 flex-col rounded-xl border border-border bg-card shadow-2xl">
           {/* Header */}
-          <div className={`flex items-center justify-between rounded-t-xl px-4 py-3 text-primary-foreground ${escalada ? "bg-amber-600" : "bg-primary"}`}>
+          <div className={`flex items-center justify-between rounded-t-xl px-4 py-3 text-primary-foreground ${cerrada ? "bg-slate-500" : escalada ? "bg-amber-600" : "bg-primary"}`}>
             <div>
               <p className="text-sm font-semibold">
-                {escalada ? "Conectando con el equipo…" : "Asistente de ayuda"}
+                {cerrada ? "Consulta cerrada" : escalada ? "Conectando con el equipo…" : "Asistente de ayuda"}
               </p>
               <p className="text-xs opacity-80">
-                {escalada ? "Un humano te responde aquí" : "IA + equipo disponible"}
+                {cerrada ? "Puedes iniciar una nueva" : escalada ? "Un humano te responde aquí" : "IA + equipo disponible"}
               </p>
             </div>
-            <button onClick={() => setOpen(false)} className="text-primary-foreground/80 hover:text-primary-foreground">
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {!cerrada && (
+                <button
+                  onClick={cerrarSesion}
+                  title="Cerrar consulta"
+                  className="text-primary-foreground/70 hover:text-primary-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              )}
+              <button onClick={() => setOpen(false)} className="text-primary-foreground/80 hover:text-primary-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Mensajes */}
@@ -294,25 +351,38 @@ export default function HelpChatWidget() {
                 </div>
               </div>
             )}
+            {cerrada && (
+              <div className="mt-3 text-center">
+                <p className="text-xs text-muted-foreground mb-2">Consulta cerrada</p>
+                <button
+                  onClick={iniciarNuevaConsulta}
+                  className="text-xs text-primary underline hover:opacity-80"
+                >
+                  Iniciar nueva consulta
+                </button>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
 
           {/* Input */}
-          <div className="flex items-end gap-2 border-t border-border p-3">
-            <Textarea
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-              }}
-              placeholder={escalada ? "Escribe al equipo…" : "Pregunta algo sobre el sistema…"}
-              className="min-h-[40px] resize-none text-sm"
-              rows={1}
-            />
-            <Button size="icon" onClick={handleSend} disabled={sending || !texto.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
+          {!cerrada && (
+            <div className="flex items-end gap-2 border-t border-border p-3">
+              <Textarea
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+                }}
+                placeholder={escalada ? "Escribe al equipo…" : "Pregunta algo sobre el sistema…"}
+                className="min-h-[40px] resize-none text-sm"
+                rows={1}
+              />
+              <Button size="icon" onClick={handleSend} disabled={sending || !texto.trim()}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <button

@@ -820,6 +820,27 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 - `admin_list_auth_users()` RPC actualizado para exponer `banned_until`
 - Gotcha real encontrado al crear el usuario por SQL directo: columnas de tokens (`confirmation_token`, etc.) no pueden ser NULL — GoTrue falla con "Database error querying schema" si lo son. Deben ser `''` explícito.
 
+## Completado (Jun 17, 2026 — Chat IA 3-tier FAQ + cerrar consulta + inactividad)
+
+### Chat IA — cerrar sesión + auto-cierre 5 min ✅
+- [x] `HelpChatWidget.tsx`: botón `LogOut` en header → cierra sesión manual (`estado='cerrada'`)
+- [x] Timer 5 min inactividad (`inactivityRef`): si sin respuesta → mensaje de despedida → `estado='cerrada'`
+- [x] Reset timer en cada mensaje enviado/recibido (incluyendo realtime IA)
+- [x] Limpia timer cuando sesión pasa a `escalada` o `cerrada` (via realtime UPDATE)
+- [x] Estado `cerrada` en widget: banner "Consulta cerrada" + botón "Iniciar nueva consulta"
+- [x] Input y botón enviar ocultos cuando sesión cerrada
+- [x] Aprendizaje: ya estaba funcionando vía `chat_registrar_pendiente` en edge function v7 (cada respuesta Claude se guarda automáticamente)
+
+### Chat IA — sistema FAQ 3 tiers + roles/módulo ✅
+- [x] Migration `20260617000001`: DEFAULT `estado='abierta'` (era 'escalada')
+- [x] Migration `20260617000002`: tablas `faq_items` + `chat_preguntas_pendientes` + RPCs
+- [x] Edge function `help-chat-ai` v7: Tier 0 (saludo) → Tier 1 (FAQ DB) → Tier 2 (Claude Haiku) → Tier 3 (humano)
+- [x] `faq_buscar` RPC filtra por `p_rol` y `p_ruta` (roles array + ruta exacta/prefijo)
+- [x] `HelpChatWidget.tsx` envía `clinic_id` + `user_role: roles[0]`
+- [x] `AyudaInterna.tsx`: tab "Base de conocimiento" (FAQ activos + Para revisar candidatos con badge)
+- [x] Skill `~/.claude/skills/clinica-faq-bot/SKILL.md` — gestión FAQ desde Claude Code
+- [x] 25 FAQs semilla con triggers naturales (no comandos de máquina)
+
 ## Completado (Jun 17, 2026 — Chat IA verificado + archivos locales)
 
 ### Chat IA (help-chat-ai) — VERIFICADO FUNCIONANDO ✅
