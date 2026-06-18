@@ -13,6 +13,7 @@ interface RequestBody {
   manual_contexto?: string;
   ruta_activa?: string;
   clinic_id?: string;
+  user_role?: string;
 }
 
 // ── Tier 0: Saludos hardcoded (0 tokens, 0 DB) ────────────────────────────
@@ -79,7 +80,7 @@ Deno.serve(async (req) => {
   if (authErr || !user) return new Response(JSON.stringify({ ok: false, error: "No autorizado" }), { status: 401 });
 
   const body: RequestBody = await req.json();
-  const { sesion_id, mensaje, manual_contexto, ruta_activa, clinic_id } = body;
+  const { sesion_id, mensaje, manual_contexto, ruta_activa, clinic_id, user_role } = body;
 
   if (!sesion_id || !mensaje?.trim()) {
     return new Response(JSON.stringify({ ok: false, error: "sesion_id y mensaje requeridos" }), { status: 400 });
@@ -114,9 +115,10 @@ Deno.serve(async (req) => {
 
   // ── Tier 1: FAQ DB ────────────────────────────────────────────────────────
   const { data: faq } = await supabase.rpc("faq_buscar", {
-    p_pregunta: mensaje,
+    p_pregunta:  mensaje,
     p_clinic_id: clinic_id ?? null,
-    p_ruta: ruta_activa ?? null,
+    p_ruta:      ruta_activa ?? null,
+    p_rol:       user_role ?? null,
   });
 
   if (faq && faq.length > 0) {

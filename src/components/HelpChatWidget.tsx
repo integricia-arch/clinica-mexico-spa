@@ -72,7 +72,7 @@ interface Sesion {
 }
 
 export default function HelpChatWidget() {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const { activeClinicId } = useActiveClinic();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -212,6 +212,7 @@ export default function HelpChatWidget() {
             manual_contexto: manual_contexto ?? undefined,
             ruta_activa: location.pathname,
             clinic_id: activeClinicId ?? undefined,
+            user_role: roles[0] ?? undefined,
           }),
         }
       );
