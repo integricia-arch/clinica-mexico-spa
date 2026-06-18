@@ -139,6 +139,37 @@ function espToKey(esp: string): string {
   return MAP[esp] ?? "medgen";
 }
 
+function buildGCalLink(params: {
+  titulo: string;
+  fechaInicio: string; // ISO string "2026-06-20T10:00:00-06:00"
+  fechaFin: string;   // ISO string "2026-06-20T11:00:00-06:00"
+  descripcion: string;
+  ubicacion: string;
+}): string {
+  // Format: YYYYMMDDTHHmmss (local time, no timezone suffix)
+  const fmt = (iso: string) => {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return (
+      d.getFullYear().toString() +
+      pad(d.getMonth() + 1) +
+      pad(d.getDate()) +
+      "T" +
+      pad(d.getHours()) +
+      pad(d.getMinutes()) +
+      "00"
+    );
+  };
+  const p = new URLSearchParams({
+    action: "TEMPLATE",
+    text: params.titulo,
+    dates: `${fmt(params.fechaInicio)}/${fmt(params.fechaFin)}`,
+    details: params.descripcion,
+    location: params.ubicacion,
+  });
+  return `https://calendar.google.com/calendar/render?${p.toString()}`;
+}
+
 async function manejarConsultaLibre(
   chatId: string,
   conv: { id: string },
@@ -1415,6 +1446,8 @@ async function wizardConfirm(chatId: string, conv: any, val: string) {
       [{ text: "← Menú principal", callback_data: "menu_principal:" }],
     ]);
   }
+  // Read session data before clearing — needed to build GCal link
+  const sesionParaGcal = await obtenerSesion(conv.id);
   const result = await crearCitaDesdeSesion(conv);
   if ((result as any).error) {
     return enviarTelegramConBotones(chatId, `No pude crear la cita: ${(result as any).error}.`, [
@@ -1423,8 +1456,37 @@ async function wizardConfirm(chatId: string, conv: any, val: string) {
     ]);
   }
   await limpiarSesion(conv.id);
+
+  let mensajeConfirmacion =
+    "✅ ¡Tu cita quedó *CONFIRMADA*! Te enviaremos un recordatorio antes de tu cita.\n\nSi necesitas cambiar algo o hablar con una persona, solo dímelo.";
+
+  try {
+    const slotInicio = sesionParaGcal?.slot_propuesto;
+    const servicioNombre = sesionParaGcal?.flow_data?.servicio_nombre ?? "Cita médica";
+    const doctorNombre = sesionParaGcal?.flow_data?.doctor_nombre ?? "";
+    if (slotInicio) {
+      const { data: svcDur } = await supabase
+        .from("servicios")
+        .select("duracion_minutos")
+        .eq("id", sesionParaGcal?.servicio_id)
+        .single();
+      const durMin = svcDur?.duracion_minutos ?? 30;
+      const finIso = new Date(new Date(slotInicio).getTime() + durMin * 60000).toISOString();
+      const gcalLink = buildGCalLink({
+        titulo: `Cita: ${servicioNombre}`,
+        fechaInicio: slotInicio,
+        fechaFin: finIso,
+        descripcion: doctorNombre ? `${doctorNombre} · ${CLINIC_NAME}` : CLINIC_NAME,
+        ubicacion: CLINIC_NAME,
+      });
+      mensajeConfirmacion += `\n\n📅 [Agregar a Google Calendar](${gcalLink})`;
+    }
+  } catch (e) {
+    console.error("gcal link error:", e);
+  }
+
   await enviarTelegramConBotones(chatId,
-    "✅ ¡Tu cita quedó *CONFIRMADA*! Te enviaremos un recordatorio antes de tu cita.\n\nSi necesitas cambiar algo o hablar con una persona, solo dímelo.",
+    mensajeConfirmacion,
     [[{ text: "← Menú principal", callback_data: "menu_principal:" }]]
   );
 }
