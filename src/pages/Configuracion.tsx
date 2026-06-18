@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard, Mail } from "lucide-react";
+import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard, Mail, BarChart2, LifeBuoy, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,11 @@ import { friendlyError } from "@/lib/errors";
 type Seccion = { icon: any; titulo: string; descripcion: string; to?: string; adminOnly?: boolean };
 
 const secciones: Seccion[] = [
-  { icon: SlidersHorizontal, titulo: "Configuración avanzada (demo)", descripcion: "Vista previa del centro de control: horarios, citas, recordatorios, facturación CFDI, inventario, permisos y más. Maqueta visual, sin persistencia.", to: "/ajustes" },
+  { icon: BarChart2, titulo: "Inteligencia BI", descripcion: "Reportes y análisis de citas, pacientes, ingresos y rendimiento de la clínica.", to: "/inteligencia", adminOnly: true },
+  { icon: LifeBuoy, titulo: "Ayuda interna", descripcion: "Sesiones de soporte del personal: gestión de tickets escalados y base de conocimiento (FAQ).", to: "/ayuda-interna", adminOnly: true },
   { icon: Users, titulo: "Usuarios y roles", descripcion: "Administrar cuentas: Administrador, Recepción, Médico, Enfermería, Farmacia, Caja/Facturación.", to: "/admin/usuarios", adminOnly: true },
+  { icon: ShieldCheck, titulo: "Auditoría", descripcion: "Historial de accesos y cambios en agenda, expedientes, farmacia y caja. Seguimientos y errores POS.", to: "/auditoria", adminOnly: true },
+  { icon: SlidersHorizontal, titulo: "Configuración avanzada (demo)", descripcion: "Vista previa del centro de control: horarios, citas, recordatorios, facturación CFDI, inventario, permisos y más. Maqueta visual, sin persistencia.", to: "/ajustes" },
   { icon: Building2, titulo: "Datos del consultorio", descripcion: "Nombre, dirección, teléfono, logotipo y datos fiscales del establecimiento." },
   { icon: Shield, titulo: "Permisos y seguridad", descripcion: "Control de acceso por rol, sesiones activas y políticas de contraseña." },
   { icon: Bell, titulo: "Notificaciones por rol", descripcion: "Qué rol recibe cada tipo de aviso (asignación de enfermera, vencimientos, usuarios nuevos) y por qué canal: Telegram o email.", to: "/configuracion/notificaciones", adminOnly: true },
