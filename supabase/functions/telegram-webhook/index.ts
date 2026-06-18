@@ -21,11 +21,44 @@ const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const ANTHROPIC_MODEL_MEMORIA = "claude-haiku-4-5-20251001"; // barato: resumen de memoria del paciente
 const MAX_AGENT_ITERATIONS = 8;
 const AVISO_PRIVACIDAD_VERSION = "v1.0";
-const DIAS_LABORALES = [1, 2, 3, 4, 5];
+const CLINIC_ID = Deno.env.get("CLINIC_ID") ?? "";
 const MX_TZ_OFFSET = "-06:00";
 const MX_TZ_OFFSET_MS = -6 * 3600000;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+interface ClinicSchedule {
+  dias_laborales: number[];
+  hora_apertura: string;
+  hora_cierre: string;
+}
+
+const SCHEDULE_DEFAULT: ClinicSchedule = {
+  dias_laborales: [1, 2, 3, 4, 5],
+  hora_apertura: "09:00",
+  hora_cierre: "18:00",
+};
+
+async function getClinicSchedule(): Promise<ClinicSchedule> {
+  if (!CLINIC_ID) return SCHEDULE_DEFAULT;
+  try {
+    const { data } = await supabase
+      .from("clinic_settings")
+      .select("data")
+      .eq("clinic_id", CLINIC_ID)
+      .eq("section", "horario")
+      .maybeSingle();
+    if (!data?.data) return SCHEDULE_DEFAULT;
+    const d = data.data as Partial<ClinicSchedule>;
+    return {
+      dias_laborales: d.dias_laborales ?? SCHEDULE_DEFAULT.dias_laborales,
+      hora_apertura: d.hora_apertura ?? SCHEDULE_DEFAULT.hora_apertura,
+      hora_cierre: d.hora_cierre ?? SCHEDULE_DEFAULT.hora_cierre,
+    };
+  } catch {
+    return SCHEDULE_DEFAULT;
+  }
+}
 
 const CATEGORIAS: Record<string, { label: string; especialidades: string[] }> = {
   medgen: { label: "🩺 Medicina general", especialidades: ["Medicina general"] },
@@ -1385,6 +1418,8 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
     .in("doctor_id", docIds).gte("fecha_inicio", ahora.toISOString()).lte("fecha_inicio", finRango.toISOString());
 
   const ocupadas = (existentes ?? []).filter((a: any) => !["cancelada", "cancelado", "no_show", "no_asistio"].includes(String(a.status).toLowerCase()));
+  const schedule = await getClinicSchedule();
+  const DIAS_LABORALES = schedule.dias_laborales;
   const horarios: any[] = [];
   const ahoraMxMs = ahora.getTime() + MX_TZ_OFFSET_MS;
 
