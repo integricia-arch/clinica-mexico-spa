@@ -33,6 +33,34 @@ interface ClinicSchedule {
   hora_cierre: string;
 }
 
+interface MemoriaPaciente {
+  resumen: string;
+  preferencias: {
+    especialidad_favorita?: string;
+    doctor_favorito_nombre?: string;
+  };
+  datos_clinicos: {
+    condiciones_cronicas?: string;
+  };
+  historial: {
+    ultima_cita_servicio?: string;
+    veces_agendado: number;
+    ultima_interaccion: string;
+  };
+  meta: {
+    interacciones: number;
+    updated_at: string;
+  };
+}
+
+const MEMORIA_DEFAULT: MemoriaPaciente = {
+  resumen: "",
+  preferencias: {},
+  datos_clinicos: {},
+  historial: { veces_agendado: 0, ultima_interaccion: new Date().toISOString() },
+  meta: { interacciones: 0, updated_at: new Date().toISOString() },
+};
+
 const SCHEDULE_DEFAULT: ClinicSchedule = {
   dias_laborales: [1, 2, 3, 4, 5],
   hora_apertura: "09:00",
@@ -242,13 +270,15 @@ Si genuinamente no sabes qué quiere el paciente y hace falta que elija: llama m
 
 // Memoria del paciente (lo aprendido en conversaciones previas) se inyecta aquí.
 // Mantiene al bot con contexto humano entre sesiones, no solo dentro de un chat.
-function buildSystemPrompt(memoria: any): string {
-  const resumen = (memoria?.resumen ?? "").toString().trim();
-  if (!resumen) return SYSTEM_PROMPT_BASE;
-  return `${SYSTEM_PROMPT_BASE}
-
-LO QUE YA SABES DE ESTA PERSONA (de conversaciones anteriores; úsalo con naturalidad, no lo recites):
-${resumen}`;
+function buildSystemPrompt(memoria: MemoriaPaciente | null): string {
+  if (!memoria?.resumen) return SYSTEM_PROMPT_BASE;
+  const partes: string[] = [SYSTEM_PROMPT_BASE, "\n── CONTEXTO DEL PACIENTE (no mencionar explícitamente) ──"];
+  if (memoria.resumen) partes.push(memoria.resumen);
+  if (memoria.datos_clinicos?.condiciones_cronicas)
+    partes.push(`Condición mencionada por el paciente: ${memoria.datos_clinicos.condiciones_cronicas}`);
+  if (memoria.preferencias?.doctor_favorito_nombre)
+    partes.push(`Ha consultado antes con Dr(a). ${memoria.preferencias.doctor_favorito_nombre}`);
+  return partes.join("\n");
 }
 
 const TOOLS = [
@@ -544,7 +574,7 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
 
   let respuesta = "";
   try {
-    respuesta = await correrAgente(conv, chatId);
+    respuesta = await correrAgente(conv, chatId, text);
   } catch (err) {
     console.error("agente error:", err);
     respuesta = "Tuve un problema técnico. ¿Puedes repetirme tu última frase?";
@@ -1459,9 +1489,9 @@ async function crearCitaDesdeSesion(conv: any) {
 // ============================================================
 // AGENTE CLAUDE
 // ============================================================
-async function correrAgente(conv: any, chatId: string): Promise<string> {
+async function correrAgente(conv: any, chatId: string, userText?: string): Promise<string> {
   const messages = await cargarHistorialParaAnthropic(conv.id);
-  return ejecutarAgenteLoop(conv, chatId, messages);
+  return ejecutarAgenteLoop(conv, chatId, messages, userText);
 }
 
 async function correrAgenteConsulta(conv: any, chatId: string, texto: string): Promise<string> {
@@ -1469,10 +1499,10 @@ async function correrAgenteConsulta(conv: any, chatId: string, texto: string): P
   if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
     messages.push({ role: "user", content: texto });
   }
-  return ejecutarAgenteLoop(conv, chatId, messages);
+  return ejecutarAgenteLoop(conv, chatId, messages, texto);
 }
 
-async function ejecutarAgenteLoop(conv: any, chatId: string, messages: any[]): Promise<string> {
+async function ejecutarAgenteLoop(conv: any, chatId: string, messages: any[], userText?: string): Promise<string> {
   const memoria = await cargarMemoria(conv.identidad_canal_id);
   const systemPrompt = buildSystemPrompt(memoria);
   for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
@@ -1480,7 +1510,17 @@ async function ejecutarAgenteLoop(conv: any, chatId: string, messages: any[]): P
 
     if (resp.stop_reason === "end_turn" || resp.stop_reason === "stop_sequence") {
       const text = resp.content.find((b: any) => b.type === "text")?.text?.trim();
-      if (text) return text;
+      if (text) {
+        if (userText && text && userText.length >= 10) {
+          supabase.rpc("chat_registrar_pendiente", {
+            p_pregunta: userText,
+            p_clinic_id: CLINIC_ID || null,
+            p_ruta: null,
+            p_respuesta: text,
+          } as never).catch(() => {});
+        }
+        return text;
+      }
       if ((resp.content?.length ?? 0) > 0) {
         messages.push({ role: "assistant", content: resp.content });
         messages.push({ role: "user", content: "Continúa." });
@@ -1753,29 +1793,54 @@ async function actualizarMemoria(identidadId: string, conversacionId: string) {
     const msgs = (data ?? []).reverse();
     if (msgs.length < 2) return;
 
-    const previo = await cargarMemoria(identidadId);
-    const resumenPrevio = (previo?.resumen ?? "").toString().trim();
+    const memoriaActual = await cargarMemoria(identidadId) as MemoriaPaciente | null;
+    const resumenPrevio = (memoriaActual?.resumen ?? "").toString().trim();
     const transcript = msgs.map((m: any) => `${m.rol === "user" ? "Paciente" : "Bot"}: ${(m.contenido ?? "").slice(0, 300)}`).join("\n");
 
-    const sys = `Eres un componente de memoria de un asistente de agendamiento de clínica. Mantienes una nota breve (máx 6 líneas) sobre UNA persona: sus necesidades, preferencias (horarios, especialidad, doctor), tono, y datos útiles para atenderla mejor la próxima vez. NUNCA incluyas datos clínicos sensibles ni diagnósticos. Devuelve SOLO la nota actualizada en español, sin preámbulos.`;
-    const input = `NOTA ACTUAL:\n${resumenPrevio || "(vacía)"}\n\nCONVERSACIÓN RECIENTE:\n${transcript}\n\nDevuelve la NOTA ACTUALIZADA (fusiona lo relevante, descarta lo trivial, máx 6 líneas):`;
+    const systemPromptHaiku = `Mantén una nota estructurada sobre este paciente de clínica en JSON estricto.
+Extrae SOLO lo que el paciente mencionó explícitamente en la conversación:
+- resumen: narrativo breve (máximo 80 palabras) sobre quién es y sus necesidades
+- preferencias.especialidad_favorita: especialidad preferida si la mencionó
+- preferencias.doctor_favorito_nombre: nombre del doctor si pidió al mismo más de una vez
+- datos_clinicos.condiciones_cronicas: condición SOLO si el paciente lo dijo explícitamente (NUNCA diagnostiques)
+- historial.ultima_cita_servicio: nombre del servicio agendado en esta sesión (si se agendó)
+- historial.veces_agendado: cuántas veces ha agendado (suma 1 si agendó en esta sesión)
+REGLA CRÍTICA: NO eres médico. NO interpretes síntomas. Solo registra lo que el paciente dijo textualmente.
+Responde SOLO con JSON válido, sin explicación ni markdown.`;
+
+    const input = `MEMORIA ACTUAL:\n${resumenPrevio || "(vacía)"}\n\nCONVERSACIÓN RECIENTE:\n${transcript}\n\nDevuelve la memoria actualizada como JSON:`;
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: ANTHROPIC_MODEL_MEMORIA, max_tokens: 400, system: sys, messages: [{ role: "user", content: input }] }),
+      body: JSON.stringify({ model: ANTHROPIC_MODEL_MEMORIA, max_tokens: 400, system: systemPromptHaiku, messages: [{ role: "user", content: input }] }),
     });
     if (!res.ok) { console.error("actualizarMemoria Anthropic", res.status, await res.text()); return; }
     const json = await res.json();
-    const nuevoResumen = json.content?.find((b: any) => b.type === "text")?.text?.trim();
-    if (!nuevoResumen) return;
+    const haikuResponseText = json.content?.find((b: any) => b.type === "text")?.text?.trim();
+    if (!haikuResponseText) return;
 
-    const memoria = {
-      resumen: nuevoResumen.slice(0, 1200),
-      datos: { ...(previo?.datos ?? {}), interacciones: ((previo?.datos?.interacciones ?? 0) + 1) },
-      updated_at: new Date().toISOString(),
-    };
-    await guardarMemoria(identidadId, memoria);
+    try {
+      const parsed = JSON.parse(haikuResponseText) as Partial<MemoriaPaciente>;
+      const nuevaMemoria: MemoriaPaciente = {
+        resumen: parsed.resumen ?? memoriaActual?.resumen ?? "",
+        preferencias: { ...MEMORIA_DEFAULT.preferencias, ...(memoriaActual?.preferencias ?? {}), ...(parsed.preferencias ?? {}) },
+        datos_clinicos: { ...MEMORIA_DEFAULT.datos_clinicos, ...(memoriaActual?.datos_clinicos ?? {}), ...(parsed.datos_clinicos ?? {}) },
+        historial: {
+          ...MEMORIA_DEFAULT.historial,
+          ...(memoriaActual?.historial ?? {}),
+          ...(parsed.historial ?? {}),
+          ultima_interaccion: new Date().toISOString(),
+        },
+        meta: {
+          interacciones: (memoriaActual?.meta?.interacciones ?? 0) + 1,
+          updated_at: new Date().toISOString(),
+        },
+      };
+      await guardarMemoria(identidadId, nuevaMemoria);
+    } catch {
+      // JSON parse failed — skip silently
+    }
   } catch (err) {
     console.error("actualizarMemoria error:", err);
   }
