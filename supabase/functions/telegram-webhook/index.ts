@@ -123,7 +123,7 @@ async function manejarConsultaLibre(
   const match = PADECIMIENTO_MAP.find((p) => p.regex.test(texto));
   if (match) {
     especialidades = match.especialidades;
-    mensajeBase = `Entiendo que tienes molestias. Nuestros especialistas en *${especialidades.join("* o *")}* pueden ayudarte.`;
+    mensajeBase = `Solo soy un asistente de agendamiento, no un médico. Para cualquier malestar, lo indicado es consultar en persona con el especialista. Te puedo ayudar a agendar con *${especialidades.join("* o *")}*. Si es una emergencia, llama al *911* o ve a urgencias.`;
   } else {
     // 2. Haiku fallback para padecimientos no mapeados
     try {
@@ -153,7 +153,7 @@ No des diagnóstico. Solo la especialidad.`,
       // fallback below
     }
     if (especialidades.length === 0) especialidades = ["Medicina general"];
-    mensajeBase = `Para lo que describes, nuestros especialistas en *${especialidades.join("* o *")}* pueden orientarte.`;
+    mensajeBase = `Solo soy un asistente de agendamiento, no un médico. Para evaluar cualquier malestar necesitas ver al doctor en persona. Te puedo agendar con *${especialidades.join("* o *")}*. Si es urgente, llama al *911* o ve a urgencias.`;
   }
 
   const mensaje = `${mensajeBase}\n\n¿Te gustaría agendar una cita?`;
@@ -217,9 +217,10 @@ TU ROL: Ayudar a agendar citas, informar horarios/precios/ubicación y conectar 
 
 REGLAS DURAS:
 - Hablas español mexicano natural, cálido y profesional. Mensajes cortos (1-3 oraciones).
-- NUNCA das consejo, diagnóstico ni interpretación médica. Si alguien describe síntomas: "Para eso necesitas hablar con el doctor en consulta. ¿Te ayudo a agendar?"
-- Si preguntan si tienen X enfermedad, si un medicamento es correcto, o qué significa un resultado: "Eso solo puede responderlo tu médico. ¿Te agendo una consulta?"
-- Si alguien te pregunta si eres humano o médico: responde siempre que eres un asistente virtual de agendamiento, no personal médico.
+- NUNCA das consejo, diagnóstico ni interpretación médica. Si alguien describe síntomas: "Solo soy un asistente de agendamiento. Para eso necesitas hablar con el doctor en consulta. ¿Te ayudo a agendar?"
+- Si preguntan si tienen X enfermedad, si un medicamento es correcto, o qué significa un resultado: "Eso solo puede evaluarlo tu médico en consulta. ¿Te agendo una cita?"
+- Si alguien te pregunta si eres humano o médico: responde siempre que eres un asistente virtual de agendamiento, no personal médico ni de salud.
+- EMERGENCIAS: Si la persona describe dolor intenso, dificultad para respirar, sangrado, pérdida de conciencia, accidente o cualquier situación que pueda ser urgente: responde SIEMPRE "Si es una emergencia, llama al 911 o ve a urgencias de inmediato. Yo solo puedo ayudarte a agendar citas." y usa escalar_a_humano.
 - Si la situación parece urgente o la persona necesita apoyo humano inmediato: usa escalar_a_humano y dile que recepción la contactará.
 - Para agendar: llama mostrar_menu_categorias. NO listes servicios en texto plano.
 - Para texto libre como "limpieza", "muela": busca con buscar_servicios y propón con botones.
