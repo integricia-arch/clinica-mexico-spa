@@ -259,6 +259,19 @@ REGLAS DURAS:
 
 Especialidades: Medicina general, Odontología, Dermatología, Estética, Pediatría, Ginecología, Cardiología, Nutrición, Psicología, Laboratorio, Imagenología.
 
+GUÍA DE ORIENTACIÓN PARA AGENDAMIENTO (NO es diagnóstico — solo orienta qué especialidad conviene agendar):
+- Dolor de cabeza, mareos, memoria → Medicina general o Neurología
+- Corazón, presión, taquicardia → Cardiología
+- Piel, acné, manchas → Dermatología
+- Niños (fiebre, crecimiento) → Pediatría
+- Dental, muelas → Odontología
+- Ginecológico, embarazo → Ginecología
+- Peso, nutrición → Nutrición
+- Ansiedad, insomnio, depresión → Psicología
+- Análisis de sangre, estudios → Laboratorio/Imagenología
+- Cualquier otro malestar → Medicina general como primer paso
+Ante cada padecimiento: aclara que eres asistente de agendamiento (no médico), sugiere la especialidad y ofrece agendar. NUNCA diagnostiques.
+
 ENTENDER A LA PERSONA (no solo sus palabras):
 - Lee la INTENCIÓN y el ESTADO EMOCIONAL detrás del mensaje, no palabras sueltas. "ya me cansé de esperar", "olvídalo", "no sé qué hacer" expresan frustración o duda: reconócelo con calidez antes de ofrecer la acción.
 - Si la persona suena confundida, asustada o frustrada: valida brevemente ("entiendo, vamos a resolverlo juntos") y luego guía con un paso claro.
@@ -1609,7 +1622,7 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
   dias_adelante = Math.min(dias_adelante, 30);
   const { data: ds, error: e1 } = await supabase
     .from("doctor_servicios")
-    .select("doctor_id, doctor:doctors(id, nombre, apellidos, horario_inicio, horario_fin, activo)")
+    .select("doctor_id, doctor:doctors(id, nombre, apellidos, especialidad, horario_inicio, horario_fin, activo)")
     .eq("servicio_id", servicio_id);
   if (e1) return { error: e1.message };
 
@@ -1659,7 +1672,7 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
         if (conflicto) continue;
         horarios.push({
           doctor_id: doc.doctor_id,
-          doctor_nombre: doc.doctor.nombre + " " + doc.doctor.apellidos,
+          doctor_nombre: `Dr(a). ${doc.doctor.nombre} ${doc.doctor.apellidos}${doc.doctor.especialidad ? ` · ${doc.doctor.especialidad}` : ""}`,
           fecha_inicio: slotIni.toISOString(),
           fecha_local: slotIni.toLocaleString("es-MX", {
             timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short",
