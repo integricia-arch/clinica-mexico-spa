@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard, Mail, BarChart2, LifeBuoy, ShieldCheck } from "lucide-react";
+import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard, Mail, BarChart2, LifeBuoy, ShieldCheck, Clock, CheckSquare, Square } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,121 @@ const secciones: Seccion[] = [
 ];
 
 interface Room { id: string; nombre: string; piso: string | null; activo: boolean; capacidad: number }
+
+const DIAS = [
+  { num: 1, label: "Lun" }, { num: 2, label: "Mar" }, { num: 3, label: "Mié" },
+  { num: 4, label: "Jue" }, { num: 5, label: "Vie" }, { num: 6, label: "Sáb" },
+  { num: 0, label: "Dom" },
+];
+
+function HorarioClinicaSection() {
+  const { activeClinicId } = useActiveClinic();
+  const [dias, setDias] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [apertura, setApertura] = useState("09:00");
+  const [cierre, setCierre] = useState("18:00");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!activeClinicId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("clinic_settings")
+        .select("data")
+        .eq("clinic_id", activeClinicId)
+        .eq("section", "horario")
+        .maybeSingle();
+      if (data?.data) {
+        const d = data.data as { dias_laborales: number[]; hora_apertura: string; hora_cierre: string };
+        setDias(d.dias_laborales ?? [1, 2, 3, 4, 5]);
+        setApertura(d.hora_apertura ?? "09:00");
+        setCierre(d.hora_cierre ?? "18:00");
+      }
+      setLoading(false);
+    })();
+  }, [activeClinicId]);
+
+  const toggleDia = (num: number) =>
+    setDias((prev) => prev.includes(num) ? prev.filter((d) => d !== num) : [...prev, num].sort((a, b) => a - b));
+
+  const save = async () => {
+    if (!activeClinicId) return;
+    if (dias.length === 0) { toast.error("Selecciona al menos un día"); return; }
+    if (apertura >= cierre) { toast.error("La apertura debe ser antes del cierre"); return; }
+    setSaving(true);
+    const { error } = await supabase
+      .from("clinic_settings")
+      .upsert(
+        { clinic_id: activeClinicId, section: "horario", data: { dias_laborales: dias, hora_apertura: apertura, hora_cierre: cierre } },
+        { onConflict: "clinic_id,section" }
+      );
+    setSaving(false);
+    if (error) toast.error("No se pudo guardar: " + error.message);
+    else toast.success("Horario guardado");
+  };
+
+  if (loading) return null;
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+      <div className="flex items-center gap-2 mb-4">
+        <Clock className="h-5 w-5 text-primary" />
+        <h2 className="text-display font-semibold text-card-foreground">Horario de atención</h2>
+      </div>
+      <div className="space-y-4">
+        <div>
+          <Label className="text-sm text-muted-foreground mb-2 block">Días laborales</Label>
+          <div className="flex gap-2 flex-wrap">
+            {DIAS.map(({ num, label }) => {
+              const activo = dias.includes(num);
+              return (
+                <button
+                  key={num}
+                  onClick={() => toggleDia(num)}
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activo
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {activo ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div>
+            <Label htmlFor="apertura" className="text-sm text-muted-foreground">Apertura</Label>
+            <input
+              id="apertura"
+              type="time"
+              value={apertura}
+              onChange={(e) => setApertura(e.target.value)}
+              className="mt-1 block rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+            />
+          </div>
+          <div>
+            <Label htmlFor="cierre" className="text-sm text-muted-foreground">Cierre</Label>
+            <input
+              id="cierre"
+              type="time"
+              value={cierre}
+              onChange={(e) => setCierre(e.target.value)}
+              className="mt-1 block rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={save} disabled={saving} size="sm">
+            {saving ? "Guardando…" : "Guardar horario"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Configuracion() {
   const { hasRole } = useAuth();
@@ -180,6 +296,8 @@ export default function Configuracion() {
           </div>
         )}
       </div>
+
+      {isAdmin && <HorarioClinicaSection />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {secciones.filter((s) => !s.adminOnly || isAdmin).map((s) => {
