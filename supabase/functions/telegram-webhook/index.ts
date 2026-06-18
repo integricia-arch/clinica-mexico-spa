@@ -60,6 +60,22 @@ async function getClinicSchedule(): Promise<ClinicSchedule> {
   }
 }
 
+async function buscarFaqTelegram(pregunta: string): Promise<string | null> {
+  if (!CLINIC_ID) return null;
+  try {
+    const { data, error } = await supabase.rpc("faq_buscar", {
+      p_pregunta: pregunta,
+      p_clinic_id: CLINIC_ID,
+      p_ruta: null,
+    } as never);
+    if (error || !data || (data as { id: string; respuesta: string; uso_count: number }[]).length === 0) return null;
+    const match = (data as { id: string; respuesta: string; uso_count: number }[])[0];
+    return match.respuesta ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const CATEGORIAS: Record<string, { label: string; especialidades: string[] }> = {
   medgen: { label: "🩺 Medicina general", especialidades: ["Medicina general"] },
   odo:    { label: "🦷 Odontología", especialidades: ["Odontología"] },
@@ -369,6 +385,16 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
   }
   if (sesion?.flow_step === "consulta_abierta") {
     return manejarConsultaAbierta(chatId, conv, text);
+  }
+
+  // Tier 1: FAQ lookup (0 tokens Sonnet)
+  if (text && text.length >= 5) {
+    const faqRespuesta = await buscarFaqTelegram(text);
+    if (faqRespuesta) {
+      await enviarTelegram(chatId, faqRespuesta);
+      await guardarMensajeAsistente(conv.id, faqRespuesta);
+      return;
+    }
   }
 
   let respuesta = "";
