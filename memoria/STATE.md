@@ -659,7 +659,62 @@ Todas las fases completadas. Sin pendientes.
 - [x] Edge function `auto-reorder` v3 ACTIVE — fix: `.eq("active", true)` → `.eq("status", "active")` (línea 166)
 - **Pendiente**: correr test post-fix para confirmar 200 (query `net.http_post` → revisar `net._http_response`)
 
+## Completado (Jun 18, 2026 — sesión actual)
+
+### Sidebar — Admin simplificado ✅
+- [x] `AppLayout.tsx`: eliminados Inteligencia BI, Ayuda interna, Usuarios, Auditoría del menú principal (eran 4 ítems de admin que no son operativos diarios)
+- [x] Sección Admin del sidebar ahora tiene solo: **Configuración** como punto de entrada único
+- [x] `Configuracion.tsx`: añadidos como tarjetas en grid (BarChart2, LifeBuoy, ShieldCheck) — Inteligencia BI, Ayuda interna, Auditoría — junto a "Usuarios y roles" ya existente
+- [x] Imports limpiados en AppLayout.tsx (Heart preservado, era usado en línea 178)
+
+### Bot Telegram — Spec + Plan completo ✅
+- [x] Spec `docs/superpowers/specs/2026-06-18-bot-mejoras-horario-clinica-design.md` — 6 componentes (A-F):
+  - A: Horario clínica configurable (clinic_settings section='horario')
+  - B: 3-tier FAQ→Haiku→Sonnet (60-70% reducción tokens estimada)
+  - C: manejarConsultaLibre con PADECIMIENTO_MAP + Haiku fallback
+  - D: Learning pipeline via chat_registrar_pendiente
+  - E: MemoriaPaciente estructurada (interface con preferencias, datos_clinicos, historial)
+  - F: Especialidad doctor en label de slots
+- [x] Proyecto 2 agregado al spec: Google Calendar bidireccional por doctor
+  - Tabla `doctor_calendars` (tokens OAuth)
+  - Edge fn `google-oauth-callback`
+  - Módulo `google-calendar.ts` (getDoctorCalendar, getFreeBusy, createEvent, updateEvent, deleteEvent)
+  - Integración en bot (slots filtrados por busy, cita→evento, cancelar→eliminar, reagendar→actualizar)
+  - UI: columna "Google Calendar" en AdminUsuarios — doctor conecta su propio calendar al darlo de alta
+- [x] Plan `docs/superpowers/plans/2026-06-18-bot-mejoras-horario-google-calendar.md` — 17 tasks detallados con código real
+- [x] **Task 1 EJECUTADO**: Migration `20260626000000_horario_clinica_seed.sql` aplicada — clinic_settings section='horario' con días [1,2,3,4,5], apertura 09:00, cierre 18:00
+
 ## Pendiente / Próximo
+
+### 🔴 CONTINUAR AQUÍ — Bot + Horario + Google Calendar (Plan activo)
+Plan: `docs/superpowers/plans/2026-06-18-bot-mejoras-horario-google-calendar.md`
+Task 1 ✅ completada. **Continuar en Task 2.**
+
+| Task | Estado | Descripción |
+|------|--------|-------------|
+| 1 | ✅ DONE | DB migration horario clínica seed |
+| 2 | ⏳ NEXT | UI HorarioClinicaSection en Configuracion.tsx |
+| 3 | ⏳ | Bot: getClinicSchedule() + listarHorariosDisponibles refactor |
+| 4 | ⏳ | Bot: FAQ tier 1 (buscarFaqTelegram) |
+| 5 | ⏳ | Bot: Haiku intent classifier tier 2 |
+| 6 | ⏳ | Bot: manejarConsultaLibre + PADECIMIENTO_MAP |
+| 7 | ⏳ | Bot: learning pipeline (chat_registrar_pendiente tras Sonnet) |
+| 8 | ⏳ | Bot: MemoriaPaciente estructurada |
+| 9 | ⏳ | Bot: especialidad doctor en slots + system prompt |
+| 10 | ⏳ | Deploy Proyecto 1 |
+| 11 | ⏳ | DB: doctor_calendars + appointments.google_event_id |
+| 12 | ⏳ | Edge fn: google-oauth-callback |
+| 13 | ⏳ | Módulo: google-calendar.ts helper |
+| 14 | ⏳ | Bot: free/busy check en listarHorariosDisponibles |
+| 15 | ⏳ | Bot: crear/actualizar/eliminar eventos Google Calendar |
+| 16 | ⏳ | UI: panel Google Calendar en AdminUsuarios |
+| 17 | ⏳ | Deploy Proyecto 2 |
+
+**Prerequisito Proyecto 2** (hacer ANTES de Task 11):
+1. Google Cloud Console → nuevo proyecto → habilitar Google Calendar API
+2. Crear credenciales OAuth 2.0 → Authorized redirect URI: `https://kyfkvdyxpvpiacyymldc.supabase.co/functions/v1/google-oauth-callback`
+3. `supabase secrets set GOOGLE_CLIENT_ID="..." GOOGLE_CLIENT_SECRET="..." --project-ref kyfkvdyxpvpiacyymldc`
+4. Añadir `VITE_GOOGLE_CLIENT_ID` a `.env` local y GitHub Actions secrets
 
 ### Asignación enfermera por cita (Jun 16)
 - [x] Pantalla `/perfil/vincular-telegram` (`src/pages/VincularTelegram.tsx`) — genera código en `staff_link_codes`, instrucción `/vincular CODE`. Enlace en menú de usuario solo para rol `nurse`.
@@ -852,6 +907,23 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 - [x] `AyudaInterna.tsx`: tab "Base de conocimiento" (FAQ activos + Para revisar candidatos con badge)
 - [x] Skill `~/.claude/skills/clinica-faq-bot/SKILL.md` — gestión FAQ desde Claude Code
 - [x] 25 FAQs semilla con triggers naturales (no comandos de máquina)
+
+## Completado (Jun 17, 2026 — Flujo completo tab + security fix)
+
+### Tab "Flujo completo" en CaminoPaciente ✅
+- [x] `FlujoPacientePanel` component: 7 etapas del flujo operativo (desde `memoria/proyectos/flujo1-camino-paciente-completo.md`)
+- [x] Cada etapa: número badge coloreado + nombre + sub-pasos
+- [x] Sección objetivos del sistema (7 puntos)
+- [x] Sección preguntas abiertas (CSF por chat, digitalización estudios)
+- [x] Sin imports nuevos — usa `ListChecks` y `ShieldCheck` ya importados
+- [x] Tab "Flujo completo" agregado al TabsList en `/configuracion/camino-paciente`
+- [x] commit `8968f94`
+
+### Fix seguridad: v_presupuesto_ejecucion SECURITY DEFINER ✅
+- [x] Vista `public.v_presupuesto_ejecucion` tenía `SECURITY DEFINER` (alerta crítica Supabase Advisors)
+- [x] Recreada con `WITH (security_invoker = on)` — ahora respeta RLS del usuario que consulta
+- [x] Migration aplicada via MCP: `fix_v_presupuesto_ejecucion_security_invoker`
+- [x] Verificado: `reloptions=[security_invoker=on]` en `pg_class`
 
 ## Completado (Jun 17, 2026 — Chat IA verificado + archivos locales)
 
