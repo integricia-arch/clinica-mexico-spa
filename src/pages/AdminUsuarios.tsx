@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
   Trash2, ShieldAlert, Lock, Unlock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle, Plus,
-  HeartPulse,
+  HeartPulse, CalendarDays,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -145,6 +145,34 @@ export default function AdminUsuarios() {
   const [pinValue, setPinValue] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [savingPin, setSavingPin] = useState(false);
+  const [doctorCalendars, setDoctorCalendars] = useState<Record<string, string>>({});
+
+  const GOOGLE_CLIENT_ID_PUBLIC = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+  const SUPABASE_FUNCTIONS_URL = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "") + "/functions/v1";
+
+  const generateGoogleOAuthUrl = (doctorId: string) => {
+    const state = btoa(`${doctorId}:${activeClinicId ?? ""}`);
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID_PUBLIC,
+      redirect_uri: `${SUPABASE_FUNCTIONS_URL}/google-oauth-callback`,
+      response_type: "code",
+      scope: "https://www.googleapis.com/auth/calendar",
+      access_type: "offline",
+      prompt: "consent",
+      state,
+    });
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  };
+
+  const fetchDoctorCalendars = async () => {
+    if (!activeClinicId) return;
+    const { data } = await supabase.rpc("get_doctor_calendars", { p_clinic_id: activeClinicId });
+    const map: Record<string, string> = {};
+    ((data ?? []) as { doctor_id: string; google_email: string }[]).forEach((c) => {
+      map[c.doctor_id] = c.google_email;
+    });
+    setDoctorCalendars(map);
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -195,7 +223,8 @@ export default function AdminUsuarios() {
     fetchUsers();
     fetchDoctors();
     fetchNurses();
-  }, []);
+    fetchDoctorCalendars();
+  }, [activeClinicId]);
 
   // Enriquecer doctores con email del usuario vinculado
   const doctorsEnriched = useMemo<DoctorRow[]>(() => {
@@ -1094,17 +1123,18 @@ export default function AdminUsuarios() {
                     <th className="text-left px-4 py-3 font-medium">Cédula</th>
                     <th className="text-left px-4 py-3 font-medium">Horario / Cita</th>
                     <th className="text-left px-4 py-3 font-medium">Cuenta</th>
+                    <th className="text-left px-4 py-3 font-medium">Google Calendar</th>
                     <th className="text-right px-4 py-3 font-medium">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingDoctors && Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i} className="border-t border-border">
-                      <td className="px-4 py-3" colSpan={6}><Skeleton className="h-6 w-full" /></td>
+                      <td className="px-4 py-3" colSpan={7}><Skeleton className="h-6 w-full" /></td>
                     </tr>
                   ))}
                   {!loadingDoctors && doctorsEnriched.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                    <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                       <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-40" />
                       Sin médicos registrados
                     </td></tr>
@@ -1133,6 +1163,26 @@ export default function AdminUsuarios() {
                             <AlertCircle className="h-4 w-4" />
                             <span className="text-xs">Sin cuenta</span>
                           </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {doctorCalendars[d.id] ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                            <span className="text-xs text-muted-foreground truncate max-w-[140px]" title={doctorCalendars[d.id]}>
+                              {doctorCalendars[d.id]}
+                            </span>
+                          </div>
+                        ) : GOOGLE_CLIENT_ID_PUBLIC ? (
+                          <button
+                            onClick={() => window.open(generateGoogleOAuthUrl(d.id), "_blank", "width=600,height=700")}
+                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            Conectar
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">

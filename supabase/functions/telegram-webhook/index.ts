@@ -9,6 +9,14 @@
 // =================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  getDoctorCalendar,
+  getFreeBusy,
+  createCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
+  type BusySlot,
+} from "./google-calendar.ts";
 
 const TELEGRAM_BOT_TOKEN   = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const ANTHROPIC_API_KEY    = Deno.env.get("ANTHROPIC_API_KEY")!;
@@ -1012,8 +1020,21 @@ async function confirmarCancelacionCita(chatId: string, conv: any, citaId: strin
     return enviarTelegram(chatId, "No encontré esa cita.");
   }
 
+  const { data: citaPreCancel } = await supabase
+    .from("appointments").select("google_event_id, doctor_id").eq("id", citaId).maybeSingle();
+
   const { error } = await supabase.from("appointments").update({ status: "cancelada" }).eq("id", citaId);
   if (error) return enviarTelegram(chatId, "No pude cancelar. Por favor llama a recepción.");
+
+  // Eliminar evento de Google Calendar del doctor en background
+  (async () => {
+    try {
+      if (citaPreCancel?.google_event_id && citaPreCancel?.doctor_id) {
+        const cal = await getDoctorCalendar(citaPreCancel.doctor_id);
+        if (cal) await deleteCalendarEvent(cal, citaPreCancel.google_event_id);
+      }
+    } catch { /* no crítico */ }
+  })();
 
   await registrarAudit(conv, "cita_cancelada_bot", { cita_id: citaId });
 
@@ -1161,6 +1182,25 @@ async function confirmarReagendar(chatId: string, conv: any, arg: string) {
   if (nuevosRecs.length) await supabase.from("recordatorios_cita").insert(nuevosRecs);
 
   await registrarAudit(conv, "cita_reagendada_bot", { cita_id: citaId, nuevo_slot: slot.fecha_inicio });
+
+  // Actualizar evento de Google Calendar del doctor en background
+  (async () => {
+    try {
+      const { data: citaGcal } = await supabase
+        .from("appointments").select("google_event_id, doctor_id").eq("id", citaId).maybeSingle();
+      if (citaGcal?.google_event_id && citaGcal?.doctor_id) {
+        const cal = await getDoctorCalendar(citaGcal.doctor_id);
+        if (cal) {
+          await updateCalendarEvent(cal, citaGcal.google_event_id, {
+            summary: `Cita: ${(cita.servicios as any)?.nombre ?? "Consulta"} (reagendada)`,
+            description: `Cita reagendada vía Bot Telegram`,
+            startIso: inicio.toISOString(),
+            endIso: fin.toISOString(),
+          });
+        }
+      }
+    } catch { /* no crítico */ }
+  })();
 
   const fechaStr = inicio.toLocaleString("es-MX", {
     timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short",
@@ -1558,6 +1598,24 @@ async function crearCitaDesdeSesion(conv: any) {
     if (rows.length) await supabase.from("recordatorios_cita").insert(rows);
   } catch (e) { console.error("recordatorios:", e); }
 
+  // Crear evento en Google Calendar del doctor (background, no bloquea confirmación)
+  (async () => {
+    try {
+      const cal = await getDoctorCalendar(sesion.doctor_id);
+      if (!cal) return;
+      const { data: svcNombre } = await supabase.from("servicios").select("nombre").eq("id", sesion.servicio_id).single();
+      const eventId = await createCalendarEvent(cal, {
+        summary: `Cita: ${svcNombre?.nombre ?? "Consulta"} — ${b.nombre} ${b.apellidos}`,
+        description: `Paciente: ${b.nombre} ${b.apellidos}\nServicio: ${svcNombre?.nombre ?? ""}\nOrigen: Bot Telegram`,
+        startIso: inicio.toISOString(),
+        endIso: fin.toISOString(),
+      });
+      if (eventId) {
+        await supabase.from("appointments").update({ google_event_id: eventId }).eq("id", cita.id);
+      }
+    } catch { /* Google Calendar no crítico */ }
+  })();
+
   return { ok: true, appointment_id: cita.id };
 }
 
@@ -1704,6 +1762,16 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
     .in("doctor_id", docIds).gte("fecha_inicio", ahora.toISOString()).lte("fecha_inicio", finRango.toISOString());
 
   const ocupadas = (existentes ?? []).filter((a: any) => !["cancelada", "cancelado", "no_show", "no_asistio"].includes(String(a.status).toLowerCase()));
+
+  // Pre-cargar Google Calendar busy slots de cada doctor (fire concurrentemente)
+  const gcalBusy: Record<string, BusySlot[]> = {};
+  const windowStart = ahora.toISOString();
+  const windowEnd = finRango.toISOString();
+  await Promise.all(doctores.map(async (ds: any) => {
+    const cal = await getDoctorCalendar(ds.doctor_id);
+    if (cal) gcalBusy[ds.doctor_id] = await getFreeBusy(cal, windowStart, windowEnd);
+  }));
+
   const schedule = await getClinicSchedule();
   const DIAS_LABORALES = schedule.dias_laborales;
   const horarios: any[] = [];
@@ -1732,6 +1800,14 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
           a.doctor_id === doc.doctor_id && new Date(a.fecha_inicio) < slotFin && new Date(a.fecha_fin) > slotIni
         );
         if (conflicto) continue;
+        // Filtrar slots ocupados en Google Calendar del doctor
+        const googleBusy = gcalBusy[doc.doctor_id] ?? [];
+        const googleConflicto = googleBusy.some((b) => {
+          const bs = new Date(b.start).getTime();
+          const be = new Date(b.end).getTime();
+          return slotIni.getTime() < be && slotFin.getTime() > bs;
+        });
+        if (googleConflicto) continue;
         horarios.push({
           doctor_id: doc.doctor_id,
           doctor_nombre: `Dr(a). ${doc.doctor.nombre} ${doc.doctor.apellidos}${doc.doctor.especialidad ? ` · ${doc.doctor.especialidad}` : ""}`,
