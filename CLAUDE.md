@@ -242,8 +242,33 @@ Nine functions disable JWT verification in `supabase/config.toml` and implement 
 | enviar-recordatorios | Bearer (service_role o JWT usuario) | ✅ Implementado |
 | notify-cxp-vencimiento | Bearer NOTIFY_CXP_CRON_SECRET | ✅ Implementado |
 | auto-reorder | Bearer AUTO_REORDER_CRON_SECRET | ✅ Implementado |
-| cfdi-parse | Bearer (solo verifica presencia, no valor) | ⚠️ Incompleto — agregar validación de token |
+| cfdi-parse | Bearer + supabase.auth.getUser() | ✅ Implementado (Jun 21) |
 | confirmar-cita | Bearer + supabase.auth.getUser() | ✅ Implementado |
 | google-oauth-callback | OAuth 2.0 state param (base64 doctorId:clinicId) | ⚠️ Enrutamiento, no auth — OAuth exchange valida el `code` |
 
-**Recomendación:** `cfdi-parse` debe validar Bearer token contra env var `CFDI_PARSE_SECRET` (ver `docs/edge-functions-auth.md` línea ~320).
+---
+
+## Supabase CLI + Migrations (learnings Jun 21, 2026) <!-- /aprende 2026-06-21 -->
+
+### Syntax SQL NO soportada en PostgreSQL (causa error en `supabase db push`)
+
+- `CREATE POLICY IF NOT EXISTS "name" ON t` → **NO EXISTE** en ninguna versión PG. Fix: `DROP POLICY IF EXISTS "name" ON t;` + `CREATE POLICY "name" ON t`.
+- `ALTER TABLE t ADD CONSTRAINT IF NOT EXISTS name` → **NO EXISTE**. Fix: `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='name') THEN ALTER TABLE t ADD CONSTRAINT name ...; END IF; END $$;`
+- `CREATE INDEX CONCURRENTLY` vía CLI → falla siempre (CLI usa pipeline/transacción). Fix: quitar CONCURRENTLY, usar `CREATE INDEX IF NOT EXISTS` dentro de `BEGIN/COMMIT`. Para tablas pequeñas el lock es imperceptible.
+
+### Historial de migrations Lovable vs CLI
+
+Lovable aplica migrations directamente a la DB sin pasar por el CLI. Resultado: historial diverge. Pasos para reparar:
+
+1. `supabase migration list --linked` — identificar entradas remotas sin archivo local y locales sin registro remoto
+2. `supabase migration repair --status reverted <version>` — eliminar del historial las entradas remotas sin archivo local (Lovable-only)
+3. `supabase migration repair --status applied <version>` — marcar como ya aplicadas las migraciones locales que ya están en la DB sin haber pasado por CLI
+4. Versiones con formato corto (8 dígitos, ej. `20260602`) → CLI nunca las empareja bien. **Mover a `supabase/scripts/`** y marcar como reverted.
+
+### Comando para push out-of-order
+
+Cuando hay migrations con timestamps anteriores al último registrado en la DB, usar:
+```bash
+supabase db push --linked --include-all
+```
+Sin `--include-all` el CLI rechaza migrations "fuera de orden".
