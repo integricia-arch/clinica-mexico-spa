@@ -338,7 +338,7 @@ serve(async (req: Request) => {
   }
 
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
+  if (!authHeader?.startsWith("Bearer ")) {
     return new Response(
       JSON.stringify({ error: "No autorizado" }),
       { status: 401 }
@@ -349,6 +349,15 @@ serve(async (req: Request) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
+
+  const token = authHeader.slice(7);
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return new Response(
+      JSON.stringify({ error: "Token inválido o expirado" }),
+      { status: 401 }
+    );
+  }
 
   try {
     // Extraer parámetros
