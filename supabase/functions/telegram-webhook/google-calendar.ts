@@ -47,7 +47,7 @@ export async function getDoctorCalendar(doctorId: string): Promise<DoctorCalenda
     supabase.rpc("doctor_calendar_get_token", { p_doctor_id: doctorId, p_clinic_id: cal_row.clinic_id, p_token_type: "refresh" }),
   ]);
 
-  if (accessResult.error || refreshResult.error || accessResult.data === null || refreshResult.data === null) {
+  if (accessResult.error || refreshResult.error || !accessResult.data || !refreshResult.data) {
     console.error("[GCal] Vault token fetch failed", accessResult.error, refreshResult.error);
     return null;
   }
@@ -80,7 +80,7 @@ async function refreshAccessToken(cal: DoctorCalendar): Promise<string | null> {
       }),
     });
     if (!resp.ok) return null;
-    const tokens = await resp.json() as { access_token: string; expires_in: number };
+    const tokens = await resp.json() as { access_token: string; expires_in: number; refresh_token?: string };
     const newExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
     // Update the access token in Vault (upsert by name — reuses the existing secret id)
@@ -91,6 +91,17 @@ async function refreshAccessToken(cal: DoctorCalendar): Promise<string | null> {
     if (vaultErr) {
       console.error("[GCal] refreshAccessToken: Vault upsert failed", vaultErr);
       return null;
+    }
+
+    // If Google rotated the refresh token, persist the new one
+    if (tokens.refresh_token) {
+      const { error: rtError } = await supabase.rpc(
+        "doctor_calendar_upsert_token",
+        { p_doctor_id: cal.doctor_id, p_clinic_id: cal.clinic_id, p_token_type: "refresh", p_token_value: tokens.refresh_token },
+      );
+      if (rtError) {
+        console.error("[GCal] Error upserting rotated refresh_token:", rtError);
+      }
     }
 
     // Update token_expiry and (in case the vault id changed) vault_access_token_id
