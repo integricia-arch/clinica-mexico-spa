@@ -210,3 +210,19 @@ memoria/
 
 ### Diseño pendiente
 - Plan farmacia responsive: `docs/superpowers/plans/2026-06-09-farmacia-responsive.md` — 11 tasks, NO ejecutado. Empezar en Task 1 (useIsTablet). Branch: `feat/pos-criticos-iva-devoluciones`. <!-- /aprende 2026-06-09 -->
+
+## Learnings (added by /aprende 2026-06-21)
+
+### Supabase Edge Functions
+- `console.log`/`console.error` internos NO aparecen en ningún log del Dashboard — solo logs de acceso HTTP. Para depurar: `console.error("[Módulo]", id, e)` + persistir error en DB (ej. `gcal_last_error`). Nunca `catch{}` vacío. <!-- /aprende 2026-06-21 -->
+- `(async()=>{})()` fire-and-forget es matado por Deno cuando el handler retorna. Solo el trabajo en `EdgeRuntime.waitUntil(promise)` o en `await` directo garantiza completar. Buscar `(async` + `})()` en Edge Functions — cada uno es bug latente. <!-- /aprende 2026-06-21 -->
+- `supabase functions logs <nombre>` no existe como subcommand CLI. Debug de lógica interna: `SELECT net.http_post(...)` desde SQL → leer `net._http_response` (columnas: `status_code`, `content` — NO `status`). <!-- /aprende 2026-06-21 -->
+
+### PostgREST
+- Filtros embedded de 2 niveles (`tabla.join1.join2.campo`) devuelven `[]` vacío SIN error en producción. Max 1 nivel: desde `doctor_servicios` con `.eq("doctors.activo", true)`, no desde `servicios` con `.eq("doctor_servicios.doctors.activo", true)`. <!-- /aprende 2026-06-21 -->
+
+### Google Calendar (Supabase + GCP)
+- OAuth puede conectar y guardar tokens sin error aunque `calendar-json.googleapis.com` esté deshabilitada en GCP. El 403 solo aparece al primer API call real. Al conectar un doctor nuevo, verificar que la API esté habilitada en GCP proyecto 545467181522. <!-- /aprende 2026-06-21 -->
+
+### Bot Telegram
+- `esSaludo()` debe llamar `limpiarSesion()` + `enviarMenuPrincipal()` + `return` **siempre**, sin condición `enWizard`. Cualquier condicional permite al agente LLM ser invocado con sesión activa y disparar menús duplicados. <!-- /aprende 2026-06-21 -->
