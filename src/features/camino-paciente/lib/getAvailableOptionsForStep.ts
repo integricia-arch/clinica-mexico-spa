@@ -41,7 +41,7 @@ const OPTIONS_BY_STEP: Record<string, StepOption[]> = {
     { key: "diagnostico_cie10", label: "Diagnóstico CIE-10", fieldType: "diagnostico" },
     { key: "plan_medico", label: "Plan médico", fieldType: "texto_largo" },
     { key: "solicitar_analisis", label: "Solicitar análisis", fieldType: "si_no" },
-    { key: "requiere_receta", label: "Requiere receta", fieldType: "si_no" },
+    { key: "requires_prescription", label: "Requiere receta", fieldType: "si_no" },
     { key: "requiere_seguimiento", label: "Requiere seguimiento", fieldType: "si_no" },
     { key: "requiere_referencia", label: "Requiere referencia", fieldType: "si_no" },
   ],

@@ -1,3 +1,4 @@
+Initialising login role...
 export type Json =
   | string
   | number
@@ -11,6 +12,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.4"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -283,6 +309,8 @@ export type Database = {
           doctor_id: string
           fecha_fin: string
           fecha_inicio: string
+          gcal_last_error: string | null
+          google_event_id: string | null
           id: string
           motivo_consulta: string | null
           notas: string | null
@@ -310,6 +338,8 @@ export type Database = {
           doctor_id: string
           fecha_fin: string
           fecha_inicio: string
+          gcal_last_error?: string | null
+          google_event_id?: string | null
           id?: string
           motivo_consulta?: string | null
           notas?: string | null
@@ -337,6 +367,8 @@ export type Database = {
           doctor_id?: string
           fecha_fin?: string
           fecha_inicio?: string
+          gcal_last_error?: string | null
+          google_event_id?: string | null
           id?: string
           motivo_consulta?: string | null
           notas?: string | null
@@ -923,7 +955,15 @@ export type Database = {
           nombre?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cajas_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       canales: {
         Row: {
@@ -1254,6 +1294,60 @@ export type Database = {
           },
         ]
       }
+      chat_preguntas_pendientes: {
+        Row: {
+          aprobado: boolean
+          clinic_id: string | null
+          created_at: string
+          faq_id: string | null
+          id: string
+          pregunta: string
+          repeticiones: number
+          respuesta_ia: string | null
+          ruta_activa: string | null
+          updated_at: string
+        }
+        Insert: {
+          aprobado?: boolean
+          clinic_id?: string | null
+          created_at?: string
+          faq_id?: string | null
+          id?: string
+          pregunta: string
+          repeticiones?: number
+          respuesta_ia?: string | null
+          ruta_activa?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aprobado?: boolean
+          clinic_id?: string | null
+          created_at?: string
+          faq_id?: string | null
+          id?: string
+          pregunta?: string
+          repeticiones?: number
+          respuesta_ia?: string | null
+          ruta_activa?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_preguntas_pendientes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_preguntas_pendientes_faq_id_fkey"
+            columns: ["faq_id"]
+            isOneToOne: false
+            referencedRelation: "faq_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklists: {
         Row: {
           activo: boolean
@@ -1471,7 +1565,15 @@ export type Database = {
           tipo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conceptos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consentimientos: {
         Row: {
@@ -1812,6 +1914,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "cortes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cortes_pharmacy_shift_id_fkey"
             columns: ["pharmacy_shift_id"]
@@ -2165,6 +2274,60 @@ export type Database = {
           },
           {
             foreignKeyName: "doctor_bloqueos_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_calendars: {
+        Row: {
+          activo: boolean
+          calendar_id: string
+          clinic_id: string | null
+          connected_at: string | null
+          doctor_id: string
+          google_email: string
+          id: string
+          token_expiry: string
+          vault_access_token_id: string | null
+          vault_refresh_token_id: string | null
+        }
+        Insert: {
+          activo?: boolean
+          calendar_id?: string
+          clinic_id?: string | null
+          connected_at?: string | null
+          doctor_id: string
+          google_email: string
+          id?: string
+          token_expiry: string
+          vault_access_token_id?: string | null
+          vault_refresh_token_id?: string | null
+        }
+        Update: {
+          activo?: boolean
+          calendar_id?: string
+          clinic_id?: string | null
+          connected_at?: string | null
+          doctor_id?: string
+          google_email?: string
+          id?: string
+          token_expiry?: string
+          vault_access_token_id?: string | null
+          vault_refresh_token_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_calendars_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_calendars_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
@@ -2733,6 +2896,62 @@ export type Database = {
           },
         ]
       }
+      faq_items: {
+        Row: {
+          activo: boolean
+          aprobado: boolean
+          clinic_id: string | null
+          created_at: string
+          id: string
+          origen: string
+          pregunta: string
+          respuesta: string
+          roles: string[]
+          ruta_activa: string | null
+          triggers: string[]
+          updated_at: string
+          uso_count: number
+        }
+        Insert: {
+          activo?: boolean
+          aprobado?: boolean
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          origen?: string
+          pregunta: string
+          respuesta: string
+          roles?: string[]
+          ruta_activa?: string | null
+          triggers?: string[]
+          updated_at?: string
+          uso_count?: number
+        }
+        Update: {
+          activo?: boolean
+          aprobado?: boolean
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          origen?: string
+          pregunta?: string
+          respuesta?: string
+          roles?: string[]
+          ruta_activa?: string | null
+          triggers?: string[]
+          updated_at?: string
+          uso_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faq_items_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fondos_movimientos: {
         Row: {
           clinic_id: string
@@ -3102,7 +3321,15 @@ export type Database = {
           tipo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "impresoras_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       insumos: {
         Row: {
@@ -4290,7 +4517,6 @@ export type Database = {
           codigo_interno: string | null
           concentracion: string | null
           contraindicaciones: string | null
-          controlado: boolean
           created_at: string
           descripcion: string | null
           equivalence_group_key: string | null
@@ -4309,7 +4535,6 @@ export type Database = {
           registro_cofepris: string | null
           registro_sanitario: string | null
           regulatory_notes: string | null
-          requiere_receta: boolean
           requires_prescription: boolean
           requires_retained_prescription: boolean
           requires_special_prescription: boolean
@@ -4333,7 +4558,6 @@ export type Database = {
           codigo_interno?: string | null
           concentracion?: string | null
           contraindicaciones?: string | null
-          controlado?: boolean
           created_at?: string
           descripcion?: string | null
           equivalence_group_key?: string | null
@@ -4352,7 +4576,6 @@ export type Database = {
           registro_cofepris?: string | null
           registro_sanitario?: string | null
           regulatory_notes?: string | null
-          requiere_receta?: boolean
           requires_prescription?: boolean
           requires_retained_prescription?: boolean
           requires_special_prescription?: boolean
@@ -4376,7 +4599,6 @@ export type Database = {
           codigo_interno?: string | null
           concentracion?: string | null
           contraindicaciones?: string | null
-          controlado?: boolean
           created_at?: string
           descripcion?: string | null
           equivalence_group_key?: string | null
@@ -4395,7 +4617,6 @@ export type Database = {
           registro_cofepris?: string | null
           registro_sanitario?: string | null
           regulatory_notes?: string | null
-          requiere_receta?: boolean
           requires_prescription?: boolean
           requires_retained_prescription?: boolean
           requires_special_prescription?: boolean
@@ -4497,7 +4718,15 @@ export type Database = {
           nombre?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "metodos_pago_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       monitoring_alerts: {
         Row: {
@@ -4741,6 +4970,13 @@ export type Database = {
             columns: ["caja_id"]
             isOneToOne: false
             referencedRelation: "cajas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
           {
@@ -5585,7 +5821,15 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_cash_shifts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pharmacy_return_items: {
         Row: {
@@ -5691,6 +5935,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "pharmacy_returns_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pharmacy_returns_original_sale_id_fkey"
             columns: ["original_sale_id"]
             isOneToOne: false
@@ -5753,6 +6004,13 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "pharmacy_sale_items_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pharmacy_sale_items_lote_id_fkey"
             columns: ["lote_id"]
@@ -5911,7 +6169,15 @@ export type Database = {
           total_iva?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_sales_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pos_error_logs: {
         Row: {
@@ -6586,6 +6852,29 @@ export type Database = {
           },
         ]
       }
+      recetas_folio_contadores: {
+        Row: {
+          clinic_id: string
+          ultimo_folio: number
+        }
+        Insert: {
+          clinic_id: string
+          ultimo_folio?: number
+        }
+        Update: {
+          clinic_id?: string
+          ultimo_folio?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recetas_folio_contadores_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recordatorios_cita: {
         Row: {
           appointment_id: string | null
@@ -7074,6 +7363,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "turnos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "turnos_pharmacy_shift_id_fkey"
             columns: ["pharmacy_shift_id"]
             isOneToOne: false
@@ -7152,6 +7448,7 @@ export type Database = {
         }[]
       }
       can_configure_caja: { Args: { _user_id: string }; Returns: boolean }
+      cancelar_citas_prueba: { Args: { dias?: number }; Returns: number }
       cfdi_get_secret: { Args: { p_id: string }; Returns: string }
       cfdi_upsert_secret: {
         Args: {
@@ -7161,6 +7458,15 @@ export type Database = {
           p_secret: string
         }
         Returns: string
+      }
+      chat_registrar_pendiente: {
+        Args: {
+          p_clinic_id: string
+          p_pregunta: string
+          p_respuesta?: string
+          p_ruta?: string
+        }
+        Returns: undefined
       }
       cleanup_abandoned_bot_sesiones: { Args: never; Returns: number }
       corte_set_fondo: {
@@ -7175,6 +7481,42 @@ export type Database = {
         Args: { p_corte_id: string; p_tpv_declarado: number }
         Returns: number
       }
+      doctor_calendar_get_token: {
+        Args: { p_clinic_id: string; p_doctor_id: string; p_token_type: string }
+        Returns: string
+      }
+      doctor_calendar_upsert_token: {
+        Args: {
+          p_clinic_id: string
+          p_doctor_id: string
+          p_token_type: string
+          p_token_value: string
+        }
+        Returns: string
+      }
+      faq_buscar:
+        | {
+            Args: { p_clinic_id?: string; p_pregunta: string; p_ruta?: string }
+            Returns: {
+              id: string
+              respuesta: string
+              uso_count: number
+            }[]
+          }
+        | {
+            Args: {
+              p_clinic_id?: string
+              p_pregunta: string
+              p_rol?: string
+              p_ruta?: string
+            }
+            Returns: {
+              id: string
+              respuesta: string
+              uso_count: number
+            }[]
+          }
+      faq_incrementar_uso: { Args: { p_id: string }; Returns: undefined }
       firmar_acta_merma: {
         Args: { p_acta_id: string; p_pin: string; p_supervisor_id: string }
         Returns: undefined
@@ -7197,6 +7539,13 @@ export type Database = {
         Returns: number
       }
       get_corte_tarjeta_total: { Args: { p_corte_id: string }; Returns: number }
+      get_doctor_calendars: {
+        Args: { p_clinic_id: string }
+        Returns: {
+          doctor_id: string
+          google_email: string
+        }[]
+      }
       get_medicamentos_en_reorden: {
         Args: { p_clinic_id: string }
         Returns: {
@@ -7272,6 +7621,7 @@ export type Database = {
         Returns: undefined
       }
       multiclinic_diagnostics: { Args: never; Returns: Json }
+      next_receta_folio: { Args: { p_clinic_id: string }; Returns: number }
       pharmacy_close_shift:
         | {
             Args: { p_cash_count: number; p_notes?: string; p_shift_id: string }
@@ -7368,6 +7718,8 @@ export type Database = {
         Args: { p_pin: string; p_user_id: string }
         Returns: undefined
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       turno_close: {
         Args: {
           p_cash_count: number
@@ -7398,6 +7750,8 @@ export type Database = {
         }
         Returns: string
       }
+      unaccent: { Args: { "": string }; Returns: string }
+      unaccent_immutable: { Args: { "": string }; Returns: string }
       update_journey_progress: {
         Args: { _journey_instance_id: string }
         Returns: undefined
@@ -7600,6 +7954,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: [
@@ -7679,3 +8036,5 @@ export const Constants = {
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.107.0 (currently installed v)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

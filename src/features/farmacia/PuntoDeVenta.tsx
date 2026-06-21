@@ -156,7 +156,7 @@ export default function PuntoDeVenta({
   const [payment, setPayment] = useState<typeof PAYMENT_METHODS[number]>("efectivo");
 
   const hasControlledInCart = useMemo(
-    () => cart.some((c) => c.med.is_controlled || c.med.controlado),
+    () => cart.some((c) => c.med.is_controlled),
     [cart],
   );
 
@@ -174,7 +174,7 @@ export default function PuntoDeVenta({
   const [patientId, setPatientId] = useState<string>("");
 
   const [recetaModalOpen, setRecetaModalOpen] = useState(false);
-  const [recetaMedsInfo, setRecetaMedsInfo] = useState<{ nombre: string; controlado: boolean }[]>([]);
+  const [recetaMedsInfo, setRecetaMedsInfo] = useState<{ nombre: string; is_controlled: boolean }[]>([]);
   const [pendingRxSaleId, setPendingRxSaleId] = useState<string | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
@@ -460,7 +460,7 @@ export default function PuntoDeVenta({
     if (!perms.canPosSell || cart.length === 0) return;
     const bd = bdOverride ?? breakdown;
     const rxMeds = cart.filter(
-      (c) => c.med.requiere_receta || c.med.controlado || c.med.is_controlled || !!blockReasonForDirectSale(c.med),
+      (c) => c.med.requires_prescription || c.med.is_controlled || !!blockReasonForDirectSale(c.med),
     );
 
     // Bloqueo PCI: nunca aceptar número completo de tarjeta en ningún campo.
@@ -619,7 +619,7 @@ export default function PuntoDeVenta({
       setPendingRxSaleId(saleId as unknown as string);
       setRecetaMedsInfo(rxMeds.map((c) => ({
         nombre: c.med.nombre,
-        controlado: !!(c.med.controlado || c.med.is_controlled),
+        is_controlled: !!c.med.is_controlled,
       })));
       setRecetaModalOpen(true);
     }

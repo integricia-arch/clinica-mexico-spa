@@ -42,8 +42,6 @@ export type Med = {
   is_controlled: boolean | null;
   requires_prescription: boolean | null;
   allow_direct_sale: boolean | null;
-  controlado?: boolean | null;
-  requiere_receta?: boolean | null;
   descripcion?: string | null;
   barcode?: string | null;
   sku?: string | null;

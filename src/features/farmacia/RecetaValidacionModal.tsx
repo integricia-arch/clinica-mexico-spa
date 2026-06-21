@@ -22,7 +22,7 @@ export type RecetaData = {
 };
 
 type Props = {
-  medsConReceta: { nombre: string; controlado: boolean }[];
+  medsConReceta: { nombre: string; is_controlled: boolean }[];
   onConfirm: (data: RecetaData) => void;
   onCancel: () => void;
 };
@@ -45,7 +45,7 @@ export function RecetaValidacionModal({ medsConReceta, onConfirm, onCancel }: Pr
   const [form, setForm] = useState<RecetaData>(empty);
   const [errors, setErrors] = useState<string[]>([]);
 
-  const hayControlados = medsConReceta.some((m) => m.controlado);
+  const hayControlados = medsConReceta.some((m) => m.is_controlled);
   const grupo = hayControlados ? ("IV" as const) : form.grupo;
 
   const set = (k: keyof RecetaData, v: string | boolean) =>
@@ -88,8 +88,8 @@ export function RecetaValidacionModal({ medsConReceta, onConfirm, onCancel }: Pr
           {/* Medicamentos que requieren receta */}
           <div className="flex flex-wrap gap-1">
             {medsConReceta.map((m) => (
-              <Badge key={m.nombre} variant={m.controlado ? "destructive" : "secondary"} className="text-xs">
-                {m.controlado && <Shield className="h-3 w-3 mr-1" />}
+              <Badge key={m.nombre} variant={m.is_controlled ? "destructive" : "secondary"} className="text-xs">
+                {m.is_controlled && <Shield className="h-3 w-3 mr-1" />}
                 {m.nombre}
               </Badge>
             ))}
