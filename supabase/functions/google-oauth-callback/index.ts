@@ -101,6 +101,29 @@ Deno.serve(async (req: Request) => {
     return html("Error interno", "<p>No se pudo guardar la conexión. Inténtalo de nuevo.</p>");
   }
 
+  // Health check: verify Calendar API is enabled in the GCP project.
+  // Common failure: OAuth works fine but calendar-json.googleapis.com is disabled → silent 403 on all calendar ops.
+  const calCheck = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary", {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+  if (!calCheck.ok) {
+    const calErr = await calCheck.text();
+    console.error("[GCal] health check failed", calCheck.status, calErr);
+    if (calCheck.status === 403) {
+      return html(
+        "⚠️ Google Calendar API deshabilitada",
+        `<p>La cuenta <strong>${googleEmail}</strong> se conectó correctamente, pero la API de Google Calendar no está habilitada en el proyecto de Google Cloud.</p>
+        <p>El administrador del sistema debe habilitar <strong>calendar-json.googleapis.com</strong> en Google Cloud Console (proyecto 545467181522).</p>
+        <p>La conexión se guardó — vuelve a intentar una vez habilitada la API.</p>`,
+      );
+    }
+    return html(
+      "⚠️ Error verificando Google Calendar",
+      `<p>La cuenta <strong>${googleEmail}</strong> se conectó, pero no se pudo verificar el acceso al calendario (status ${calCheck.status}).</p>
+      <p>Contacta al administrador del sistema.</p>`,
+    );
+  }
+
   return html(
     "✅ Google Calendar conectado",
     `<p>Cuenta: <strong>${googleEmail}</strong></p>

@@ -1100,7 +1100,10 @@ async function confirmarCancelacionCita(chatId: string, conv: any, citaId: strin
       const cal = await getDoctorCalendar(citaPreCancel.doctor_id);
       if (cal) await deleteCalendarEvent(cal, citaPreCancel.google_event_id);
     }
-  } catch { /* no crítico */ }
+  } catch (e) {
+    console.error("[GCal] cancelar evento", citaId, e);
+    await supabase.from("appointments").update({ gcal_last_error: String(e) }).eq("id", citaId).catch(() => {});
+  }
 
   await registrarAudit(conv, "cita_cancelada_bot", { cita_id: citaId });
 
@@ -1280,7 +1283,10 @@ async function confirmarReagendar(chatId: string, conv: any, arg: string) {
         });
       }
     }
-  } catch { /* no crítico */ }
+  } catch (e) {
+    console.error("[GCal] reagendar evento", citaId, e);
+    await supabase.from("appointments").update({ gcal_last_error: String(e) }).eq("id", citaId).catch(() => {});
+  }
 
   const fechaStr = inicio.toLocaleString("es-MX", {
     timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short",
@@ -1727,7 +1733,10 @@ async function crearCitaDesdeSesion(conv: any) {
         await supabase.from("appointments").update({ google_event_id: eventId }).eq("id", cita.id);
       }
     }
-  } catch { /* Google Calendar no crítico */ }
+  } catch (e) {
+    console.error("[GCal] crear evento", cita.id, e);
+    await supabase.from("appointments").update({ gcal_last_error: String(e) }).eq("id", cita.id).catch(() => {});
+  }
 
   return { ok: true, appointment_id: cita.id };
 }
