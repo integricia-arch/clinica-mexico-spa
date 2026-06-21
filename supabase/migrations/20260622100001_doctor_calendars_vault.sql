@@ -11,19 +11,20 @@ ALTER TABLE public.doctor_calendars
 --    Crea o actualiza el secreto en vault.secrets y devuelve su id.
 CREATE OR REPLACE FUNCTION public.doctor_calendar_upsert_token(
   p_doctor_id   uuid,
+  p_clinic_id   uuid,
   p_token_type  text,  -- 'access' | 'refresh'
   p_token_value text
 ) RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = ''
+SET search_path = public, vault
 AS $$
 DECLARE
   v_secret_name text;
   v_existing_id uuid;
   v_vault_id    uuid;
 BEGIN
-  v_secret_name := 'doctor_calendar_' || p_token_type || '_' || p_doctor_id;
+  v_secret_name := 'doctor_calendar_' || p_token_type || '_' || p_doctor_id || '_' || COALESCE(p_clinic_id::text, 'null');
 
   -- Check if a secret with this name already exists
   SELECT id INTO v_existing_id
@@ -43,23 +44,24 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.doctor_calendar_upsert_token(uuid, text, text) FROM public, authenticated;
-GRANT EXECUTE ON FUNCTION public.doctor_calendar_upsert_token(uuid, text, text) TO service_role;
+REVOKE ALL ON FUNCTION public.doctor_calendar_upsert_token(uuid, uuid, text, text) FROM public, authenticated;
+GRANT EXECUTE ON FUNCTION public.doctor_calendar_upsert_token(uuid, uuid, text, text) TO service_role;
 
 -- 3. RPC para leer token OAuth descifrado (solo service_role puede llamar)
 CREATE OR REPLACE FUNCTION public.doctor_calendar_get_token(
   p_doctor_id  uuid,
+  p_clinic_id  uuid,
   p_token_type text
 ) RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = ''
+SET search_path = public, vault
 AS $$
 DECLARE
   v_secret_name text;
   v_decrypted   text;
 BEGIN
-  v_secret_name := 'doctor_calendar_' || p_token_type || '_' || p_doctor_id;
+  v_secret_name := 'doctor_calendar_' || p_token_type || '_' || p_doctor_id || '_' || COALESCE(p_clinic_id::text, 'null');
   SELECT decrypted_secret INTO v_decrypted
   FROM vault.decrypted_secrets
   WHERE name = v_secret_name
@@ -68,5 +70,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.doctor_calendar_get_token(uuid, text) FROM public, authenticated;
-GRANT EXECUTE ON FUNCTION public.doctor_calendar_get_token(uuid, text) TO service_role;
+REVOKE ALL ON FUNCTION public.doctor_calendar_get_token(uuid, uuid, text) FROM public, authenticated;
+GRANT EXECUTE ON FUNCTION public.doctor_calendar_get_token(uuid, uuid, text) TO service_role;

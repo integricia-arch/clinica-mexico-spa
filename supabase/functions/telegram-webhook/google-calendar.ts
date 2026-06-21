@@ -12,6 +12,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 export interface DoctorCalendar {
   id: string;
   doctor_id: string;
+  clinic_id: string | null;
   calendar_id: string;
   /** Decrypted access token, loaded from Vault after fetching the row. */
   access_token: string;
@@ -32,25 +33,27 @@ export interface BusySlot {
 export async function getDoctorCalendar(doctorId: string): Promise<DoctorCalendar | null> {
   const { data } = await supabase
     .from("doctor_calendars")
-    .select("id, doctor_id, calendar_id, token_expiry, vault_access_token_id, vault_refresh_token_id")
+    .select("id, doctor_id, clinic_id, calendar_id, token_expiry, vault_access_token_id, vault_refresh_token_id")
     .eq("doctor_id", doctorId)
     .eq("activo", true)
     .maybeSingle();
   if (!data) return null;
 
+  const cal_row = data as { id: string; doctor_id: string; clinic_id: string | null; calendar_id: string; token_expiry: string; vault_access_token_id: string; vault_refresh_token_id: string };
+
   // Decrypt both tokens from Vault via service_role RPC
   const [accessResult, refreshResult] = await Promise.all([
-    supabase.rpc("doctor_calendar_get_token", { p_doctor_id: doctorId, p_token_type: "access" }),
-    supabase.rpc("doctor_calendar_get_token", { p_doctor_id: doctorId, p_token_type: "refresh" }),
+    supabase.rpc("doctor_calendar_get_token", { p_doctor_id: doctorId, p_clinic_id: cal_row.clinic_id, p_token_type: "access" }),
+    supabase.rpc("doctor_calendar_get_token", { p_doctor_id: doctorId, p_clinic_id: cal_row.clinic_id, p_token_type: "refresh" }),
   ]);
 
-  if (!accessResult.data || !refreshResult.data) {
-    console.error("[GCal] Failed to decrypt tokens from Vault", accessResult.error, refreshResult.error);
+  if (accessResult.error || refreshResult.error || accessResult.data === null || refreshResult.data === null) {
+    console.error("[GCal] Vault token fetch failed", accessResult.error, refreshResult.error);
     return null;
   }
 
   const cal: DoctorCalendar = {
-    ...(data as Omit<DoctorCalendar, "access_token" | "refresh_token">),
+    ...cal_row,
     access_token: accessResult.data as string,
     refresh_token: refreshResult.data as string,
   };
@@ -83,7 +86,7 @@ async function refreshAccessToken(cal: DoctorCalendar): Promise<string | null> {
     // Update the access token in Vault (upsert by name — reuses the existing secret id)
     const { data: newVaultId, error: vaultErr } = await supabase.rpc(
       "doctor_calendar_upsert_token",
-      { p_doctor_id: cal.doctor_id, p_token_type: "access", p_token_value: tokens.access_token },
+      { p_doctor_id: cal.doctor_id, p_clinic_id: cal.clinic_id, p_token_type: "access", p_token_value: tokens.access_token },
     );
     if (vaultErr) {
       console.error("[GCal] refreshAccessToken: Vault upsert failed", vaultErr);
@@ -91,10 +94,15 @@ async function refreshAccessToken(cal: DoctorCalendar): Promise<string | null> {
     }
 
     // Update token_expiry and (in case the vault id changed) vault_access_token_id
-    await supabase.from("doctor_calendars").update({
+    const { error: updateError } = await supabase.from("doctor_calendars").update({
       vault_access_token_id: newVaultId,
       token_expiry: newExpiry,
     }).eq("id", cal.id);
+    if (updateError) {
+      console.error("[GCal] Failed to update token_expiry after refresh:", updateError);
+      // Don't throw — return the new token anyway so this calendar call succeeds
+      // but log it so the stale expiry is visible
+    }
 
     return tokens.access_token;
   } catch (e) {

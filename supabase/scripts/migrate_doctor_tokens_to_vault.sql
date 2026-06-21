@@ -17,14 +17,14 @@ DECLARE
   v_count      integer := 0;
 BEGIN
   FOR r IN
-    SELECT id, doctor_id, access_token, refresh_token
+    SELECT id, doctor_id, clinic_id, access_token, refresh_token
     FROM public.doctor_calendars
     WHERE access_token IS NOT NULL
   LOOP
     -- Upsert access token into vault
-    v_access_id := public.doctor_calendar_upsert_token(r.doctor_id, 'access', r.access_token);
+    v_access_id := public.doctor_calendar_upsert_token(r.doctor_id, r.clinic_id, 'access', r.access_token);
     -- Upsert refresh token into vault
-    v_refresh_id := public.doctor_calendar_upsert_token(r.doctor_id, 'refresh', r.refresh_token);
+    v_refresh_id := public.doctor_calendar_upsert_token(r.doctor_id, r.clinic_id, 'refresh', r.refresh_token);
 
     -- Store vault UUIDs back in the row
     UPDATE public.doctor_calendars

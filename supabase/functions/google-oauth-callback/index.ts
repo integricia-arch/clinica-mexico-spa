@@ -88,7 +88,7 @@ Deno.serve(async (req: Request) => {
   // doctor_calendar_upsert_token is SECURITY DEFINER, service_role only.
   const { data: accessVaultId, error: accessVaultErr } = await supabase.rpc(
     "doctor_calendar_upsert_token",
-    { p_doctor_id: doctorId, p_token_type: "access", p_token_value: tokens.access_token },
+    { p_doctor_id: doctorId, p_clinic_id: clinicId || null, p_token_type: "access", p_token_value: tokens.access_token },
   );
   if (accessVaultErr || !accessVaultId) {
     console.error("Vault upsert error (access_token):", accessVaultErr);
@@ -97,7 +97,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: refreshVaultId, error: refreshVaultErr } = await supabase.rpc(
     "doctor_calendar_upsert_token",
-    { p_doctor_id: doctorId, p_token_type: "refresh", p_token_value: tokens.refresh_token },
+    { p_doctor_id: doctorId, p_clinic_id: clinicId || null, p_token_type: "refresh", p_token_value: tokens.refresh_token },
   );
   if (refreshVaultErr || !refreshVaultId) {
     console.error("Vault upsert error (refresh_token):", refreshVaultErr);
