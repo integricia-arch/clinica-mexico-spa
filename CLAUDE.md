@@ -226,3 +226,24 @@ memoria/
 
 ### Bot Telegram
 - `esSaludo()` debe llamar `limpiarSesion()` + `enviarMenuPrincipal()` + `return` **siempre**, sin condición `enWizard`. Cualquier condicional permite al agente LLM ser invocado con sesión activa y disparar menús duplicados. <!-- /aprende 2026-06-21 -->
+
+---
+
+## Edge Functions con verify_jwt=false
+
+Nine functions disable JWT verification in `supabase/config.toml` and implement alternative auth.  
+**Full audit:** See `docs/edge-functions-auth.md`
+
+| Función | Auth alternativa | Estado |
+|---------|-----------------|--------|
+| telegram-webhook | X-Telegram-Bot-Api-Secret-Token header | ✅ Implementado |
+| stripe-webhook | X-Stripe-Signature (HMAC-SHA256) | ✅ Implementado |
+| stripe-checkout | Público — montos server-side, sin secretos | ✅ Aceptable |
+| enviar-recordatorios | Bearer (service_role o JWT usuario) | ✅ Implementado |
+| notify-cxp-vencimiento | Bearer NOTIFY_CXP_CRON_SECRET | ✅ Implementado |
+| auto-reorder | Bearer AUTO_REORDER_CRON_SECRET | ✅ Implementado |
+| cfdi-parse | Bearer (solo verifica presencia, no valor) | ⚠️ Incompleto — agregar validación de token |
+| confirmar-cita | Bearer + supabase.auth.getUser() | ✅ Implementado |
+| google-oauth-callback | OAuth 2.0 state param (base64 doctorId:clinicId) | ⚠️ Enrutamiento, no auth — OAuth exchange valida el `code` |
+
+**Recomendación:** `cfdi-parse` debe validar Bearer token contra env var `CFDI_PARSE_SECRET` (ver `docs/edge-functions-auth.md` línea ~320).
