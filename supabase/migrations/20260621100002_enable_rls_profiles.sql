@@ -4,22 +4,19 @@
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Usuario lee/actualiza solo su propio perfil
-CREATE POLICY "profiles_own_select" ON public.profiles
+CREATE POLICY IF NOT EXISTS "profiles_own_select" ON public.profiles
   FOR SELECT TO authenticated
-  USING (id = auth.uid())
-  IF NOT EXISTS;
+  USING (id = auth.uid());
 
-CREATE POLICY "profiles_own_update" ON public.profiles
+CREATE POLICY IF NOT EXISTS "profiles_own_update" ON public.profiles
   FOR UPDATE TO authenticated
   USING (id = auth.uid())
-  WITH CHECK (id = auth.uid())
-  IF NOT EXISTS;
+  WITH CHECK (id = auth.uid());
 
 -- Admin puede leer todos los perfiles
-CREATE POLICY "profiles_admin_select" ON public.profiles
+CREATE POLICY IF NOT EXISTS "profiles_admin_select" ON public.profiles
   FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'))
-  IF NOT EXISTS;
+  USING (public.has_role(auth.uid(), 'admin'));
 
 -- Service role mantiene acceso total para RPCs internos
 -- (service_role bypasses RLS by default en Supabase)
@@ -27,3 +24,6 @@ CREATE POLICY "profiles_admin_select" ON public.profiles
 -- Revocar UPDATE directo de supervisor_pin_hash desde la API pública.
 -- El hash solo se modifica via RPC set_supervisor_pin() (SECURITY DEFINER).
 REVOKE UPDATE (supervisor_pin_hash) ON public.profiles FROM authenticated;
+
+-- Permitir que usuarios autenticados puedan actualizar su full_name
+GRANT UPDATE (full_name) ON public.profiles TO authenticated;
