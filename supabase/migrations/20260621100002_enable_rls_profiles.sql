@@ -4,17 +4,20 @@
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Usuario lee/actualiza solo su propio perfil
-CREATE POLICY IF NOT EXISTS "profiles_own_select" ON public.profiles
+DROP POLICY IF EXISTS "profiles_own_select" ON public.profiles;
+CREATE POLICY "profiles_own_select" ON public.profiles
   FOR SELECT TO authenticated
   USING (id = auth.uid());
 
-CREATE POLICY IF NOT EXISTS "profiles_own_update" ON public.profiles
+DROP POLICY IF EXISTS "profiles_own_update" ON public.profiles;
+CREATE POLICY "profiles_own_update" ON public.profiles
   FOR UPDATE TO authenticated
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
 
 -- Admin puede leer todos los perfiles
-CREATE POLICY IF NOT EXISTS "profiles_admin_select" ON public.profiles
+DROP POLICY IF EXISTS "profiles_admin_select" ON public.profiles;
+CREATE POLICY "profiles_admin_select" ON public.profiles
   FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 

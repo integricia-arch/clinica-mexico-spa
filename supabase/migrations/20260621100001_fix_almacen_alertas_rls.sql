@@ -10,8 +10,8 @@ DROP POLICY IF EXISTS "almacen_alertas_clinic_member_insert" ON public.almacen_a
 DROP POLICY IF EXISTS "almacen_alertas_clinic_member_update" ON public.almacen_alertas;
 DROP POLICY IF EXISTS "almacen_alertas_clinic_member_delete" ON public.almacen_alertas;
 
--- CREAR políticas correctas (idempotent with IF NOT EXISTS in Postgres 15+)
-CREATE POLICY IF NOT EXISTS "almacen_alertas_select" ON public.almacen_alertas
+-- CREAR políticas correctas (DROP primero arriba, luego CREATE)
+CREATE POLICY "almacen_alertas_select" ON public.almacen_alertas
   FOR SELECT TO authenticated
   USING (
     clinic_id IN (
@@ -21,7 +21,7 @@ CREATE POLICY IF NOT EXISTS "almacen_alertas_select" ON public.almacen_alertas
     OR public.is_global_admin(auth.uid())
   );
 
-CREATE POLICY IF NOT EXISTS "almacen_alertas_insert" ON public.almacen_alertas
+CREATE POLICY "almacen_alertas_insert" ON public.almacen_alertas
   FOR INSERT TO authenticated
   WITH CHECK (
     clinic_id IN (
@@ -32,7 +32,7 @@ CREATE POLICY IF NOT EXISTS "almacen_alertas_insert" ON public.almacen_alertas
     OR public.is_global_admin(auth.uid())
   );
 
-CREATE POLICY IF NOT EXISTS "almacen_alertas_update" ON public.almacen_alertas
+CREATE POLICY "almacen_alertas_update" ON public.almacen_alertas
   FOR UPDATE TO authenticated
   USING (
     clinic_id IN (
@@ -43,7 +43,7 @@ CREATE POLICY IF NOT EXISTS "almacen_alertas_update" ON public.almacen_alertas
     OR public.is_global_admin(auth.uid())
   );
 
-CREATE POLICY IF NOT EXISTS "almacen_alertas_delete" ON public.almacen_alertas
+CREATE POLICY "almacen_alertas_delete" ON public.almacen_alertas
   FOR DELETE TO authenticated
   USING (
     clinic_id IN (
