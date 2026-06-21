@@ -156,7 +156,7 @@ export default function AdminUsuarios() {
       client_id: GOOGLE_CLIENT_ID_PUBLIC,
       redirect_uri: `${SUPABASE_FUNCTIONS_URL}/google-oauth-callback`,
       response_type: "code",
-      scope: "https://www.googleapis.com/auth/calendar",
+      scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email",
       access_type: "offline",
       prompt: "consent",
       state,

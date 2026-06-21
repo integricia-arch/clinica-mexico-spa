@@ -62,7 +62,7 @@ Deno.serve(async (req: Request) => {
   if (!tokenResp.ok) {
     const err = await tokenResp.text();
     console.error("Token exchange failed:", err);
-    return html("Error de autenticación", `<p>No se pudo completar la autenticación con Google.</p>`);
+    return html("Error de autenticación", "<p>No se pudo completar la autenticación con Google.</p>");
   }
 
   const tokens = await tokenResp.json() as {
