@@ -584,6 +584,9 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     await enviarTelegram(chatId, "Usa los botones de arriba para confirmar o cancelar tu cita.");
     return mostrarConfirmacion(chatId, conv);
   }
+  if (sesion?.flow_step === "await_day_pick" && sesion?.servicio_id) {
+    return enviarHorariosDeServicio(chatId, conv, sesion.servicio_id);
+  }
   if (sesion?.flow_step && pasoEsperaTexto(sesion.flow_step)) {
     return manejarTextoWizard(chatId, conv, sesion, text);
   }
@@ -835,6 +838,7 @@ async function manejarCallback(cq: any) {
     case "menu":            return enviarMenuCategorias(chatId, "Elige una categoría:");
     case "cat":             return enviarServiciosDeCategoria(chatId, conv, arg);
     case "srv":             return enviarHorariosDeServicio(chatId, conv, arg);
+    case "dia":             return mostrarSlotsDia(chatId, conv, arg);
     case "slot":            return iniciarCapturaPaciente(chatId, conv, arg);
     case "sex":             return wizardSetSexo(chatId, conv, arg);
     case "extra":           return wizardDecisionExtra(chatId, conv, arg);
@@ -1345,11 +1349,18 @@ async function enviarServiciosDeCategoria(chatId: string, conv: any, catKey: str
   await enviarTelegramConBotones(chatId, `${cat.label}\nElige un servicio:`, rows);
 }
 
+function formatDayLabel(dateKey: string): string {
+  const d = new Date(dateKey + "T12:00:00" + MX_TZ_OFFSET);
+  return d.toLocaleDateString("es-MX", {
+    weekday: "short", day: "numeric", month: "short", timeZone: "America/Mexico_City",
+  });
+}
+
 async function enviarHorariosDeServicio(chatId: string, conv: any, servicioId: string) {
-  const result = await listarHorariosDisponibles({ servicio_id: servicioId, dias_adelante: 14 });
+  const result = await listarHorariosDisponibles({ servicio_id: servicioId, dias_adelante: 14, max_horarios: 200 });
   if ((result as any).error) return enviarTelegram(chatId, "Error consultando horarios. Intenta de nuevo.");
 
-  const horarios = (result as any).horarios ?? [];
+  const horarios: any[] = (result as any).horarios ?? [];
   if (horarios.length === 0) {
     return enviarTelegramConBotones(chatId, "No encontré horarios disponibles en los próximos 14 días.", [
       [{ text: "← Volver", callback_data: "menu_agendar:" }],
@@ -1357,25 +1368,104 @@ async function enviarHorariosDeServicio(chatId: string, conv: any, servicioId: s
     ]);
   }
 
-  const { data: svc } = await supabase.from("servicios").select("nombre, duracion_minutos").eq("id", servicioId).single();
+  const { data: svc } = await supabase.from("servicios").select("nombre").eq("id", servicioId).single();
+
+  // Store ALL slots indexed so mostrarSlotsDia can look them up by key
   const slotMap: Record<string, any> = {};
-  const rows = horarios.slice(0, 8).map((h: any, idx: number) => {
-    const key = String(idx);
-    slotMap[key] = { fecha_inicio: h.fecha_inicio, doctor_id: h.doctor_id, doctor_nombre: h.doctor_nombre, fecha_local: h.fecha_local };
-    return [{ text: `${h.fecha_local} · ${h.doctor_nombre}`, callback_data: `slot:${key}` }];
+  for (let i = 0; i < horarios.length; i++) {
+    const h = horarios[i];
+    slotMap[String(i)] = {
+      fecha_inicio: h.fecha_inicio,
+      doctor_id: h.doctor_id,
+      doctor_nombre: h.doctor_nombre,
+      fecha_local: h.fecha_local,
+    };
+  }
+
+  await upsertSesion(conv.id, {
+    servicio_id: servicioId,
+    flow_step: "await_day_pick",
+    flow_data: { servicio_nombre: svc?.nombre, slots: slotMap },
   });
+
+  // Group slots by CDMX calendar date
+  const byDay: Record<string, boolean> = {};
+  for (const h of horarios) {
+    const dayKey = new Date(h.fecha_inicio).toLocaleDateString("sv-SE", { timeZone: "America/Mexico_City" });
+    byDay[dayKey] = true;
+  }
+  const days = Object.keys(byDay).sort();
+
+  // Build day selection buttons (2 per row)
+  const rows: any[] = [];
+  for (let i = 0; i < days.length; i += 2) {
+    const row: any[] = [{ text: formatDayLabel(days[i]), callback_data: `dia:${days[i]}:${servicioId}` }];
+    if (days[i + 1]) row.push({ text: formatDayLabel(days[i + 1]), callback_data: `dia:${days[i + 1]}:${servicioId}` });
+    rows.push(row);
+  }
   rows.push([
     { text: "← Volver", callback_data: "menu_agendar:" },
     { text: "🧑 Hablar con alguien", callback_data: "humano:" },
   ]);
 
-  await upsertSesion(conv.id, {
-    servicio_id: servicioId,
-    flow_step: "await_slot_pick",
-    flow_data: { servicio_nombre: svc?.nombre, slots: slotMap },
+  await enviarTelegramConBotones(chatId, `*${svc?.nombre ?? ""}* — ¿Qué día te viene mejor?`, rows);
+}
+
+async function mostrarSlotsDia(chatId: string, conv: any, arg: string) {
+  // arg = "YYYY-MM-DD:servicio-uuid"
+  const colonIdx = arg.indexOf(":");
+  const dayKey = arg.slice(0, colonIdx);
+  const servicioId = arg.slice(colonIdx + 1);
+
+  const sesion = await obtenerSesion(conv.id);
+  const slotMap: Record<string, any> = sesion?.flow_data?.slots ?? {};
+
+  // Filter slots for this CDMX date
+  const daySlots = Object.entries(slotMap)
+    .filter(([, h]) => {
+      const d = new Date((h as any).fecha_inicio)
+        .toLocaleDateString("sv-SE", { timeZone: "America/Mexico_City" });
+      return d === dayKey;
+    })
+    .sort(([, a], [, b]) => (a as any).fecha_inicio.localeCompare((b as any).fecha_inicio));
+
+  if (daySlots.length === 0) {
+    return enviarTelegramConBotones(chatId, "Ya no hay horarios disponibles ese día.", [
+      [{ text: "← Ver otros días", callback_data: `srv:${servicioId}` }],
+    ]);
+  }
+
+  const diaLabel = new Date(dayKey + "T12:00:00" + MX_TZ_OFFSET).toLocaleDateString("es-MX", {
+    weekday: "long", day: "numeric", month: "long", timeZone: "America/Mexico_City",
   });
 
-  await enviarTelegramConBotones(chatId, `Horarios para *${svc?.nombre}*:`, rows);
+  // Multiple doctors on same day? Show doctor name in button text
+  const doctoresUnicos = new Set(daySlots.map(([, h]) => (h as any).doctor_id));
+  const mostrarDoc = doctoresUnicos.size > 1;
+
+  const rows: any[] = [];
+  for (let i = 0; i < daySlots.length; i += 2) {
+    const [key0, slot0] = daySlots[i] as [string, any];
+    const hora0 = new Date(slot0.fecha_inicio).toLocaleTimeString("es-MX", {
+      hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City",
+    });
+    const lbl0 = mostrarDoc ? `${hora0} · ${slot0.doctor_nombre.split("·")[0].trim()}` : hora0;
+    const row: any[] = [{ text: lbl0, callback_data: `slot:${key0}` }];
+
+    if (daySlots[i + 1]) {
+      const [key1, slot1] = daySlots[i + 1] as [string, any];
+      const hora1 = new Date(slot1.fecha_inicio).toLocaleTimeString("es-MX", {
+        hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City",
+      });
+      const lbl1 = mostrarDoc ? `${hora1} · ${slot1.doctor_nombre.split("·")[0].trim()}` : hora1;
+      row.push({ text: lbl1, callback_data: `slot:${key1}` });
+    }
+    rows.push(row);
+  }
+  rows.push([{ text: "← Ver otros días", callback_data: `srv:${servicioId}` }]);
+
+  await upsertSesion(conv.id, { flow_step: "await_slot_pick" });
+  await enviarTelegramConBotones(chatId, `📅 *${diaLabel}* — Elige un horario:`, rows);
 }
 
 // ============================================================
@@ -1880,8 +1970,9 @@ async function llamarClaude(messages: any[], systemPrompt: string = SYSTEM_PROMP
 // ============================================================
 // LISTAR HORARIOS
 // ============================================================
-async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any) {
+async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7, max_horarios = 8 }: any) {
   dias_adelante = Math.min(dias_adelante, 30);
+  const MAX = Math.min(max_horarios, 300);
   const { data: ds, error: e1 } = await supabase
     .from("doctor_servicios")
     .select("doctor_id, doctor:doctors(id, nombre, apellidos, especialidad, horario_inicio, horario_fin, activo)")
@@ -1919,7 +2010,7 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
   const horarios: any[] = [];
   const ahoraMxMs = ahora.getTime() + MX_TZ_OFFSET_MS;
 
-  for (let d = 0; d < dias_adelante && horarios.length < 16; d++) {
+  for (let d = 0; d < dias_adelante && horarios.length < MAX; d++) {
     const diaMx = new Date(ahoraMxMs + d * 86400000);
     if (!DIAS_LABORALES.includes(diaMx.getUTCDay())) continue;
     const yyyy = diaMx.getUTCFullYear();
@@ -1959,12 +2050,12 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
             hour: "2-digit", minute: "2-digit",
           }),
         });
-        if (horarios.length >= 16) break;
+        if (horarios.length >= MAX) break;
       }
-      if (horarios.length >= 16) break;
+      if (horarios.length >= MAX) break;
     }
   }
-  return { horarios: horarios.slice(0, 8) };
+  return { horarios };
 }
 
 async function escalarConversacion(conv: any, { razon }: { razon: string }) {
