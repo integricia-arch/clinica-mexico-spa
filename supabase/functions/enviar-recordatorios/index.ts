@@ -174,21 +174,22 @@ function construirMensaje(tipo: string, cita: any): string {
     timeZone: "America/Mexico_City",
   });
 
-  const t = String(tipo ?? "").toLowerCase();
-  if (t === "t24h" || t === "t-24h") {
+  const t = String(tipo ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (t === "t24h" || t === "24h") {
     return (
-      `Hola ${nombre}, te recordamos que mañana tienes cita en ClínicaMX:\n\n` +
+      `Hola ${nombre}, te recordamos que tienes cita mañana en ClínicaMX:\n\n` +
       `Servicio: ${servicio}\n` +
       `Médico: ${doctor}\n` +
-      `Fecha: ${fechaStr} a las ${horaStr}\n\n` +
+      `📅 ${fechaStr} a las ${horaStr}\n\n` +
       `Si necesitas cambiar o cancelar, escríbenos aquí mismo.`
     );
   }
+  // t2h and any other type
   return (
-    `Hola ${nombre}, tu cita es en 2 horas:\n\n` +
+    `Hola ${nombre}, tu cita es en aproximadamente 2 horas:\n\n` +
     `Servicio: ${servicio}\n` +
     `Médico: ${doctor}\n` +
-    `Hora: ${horaStr} de hoy\n\n` +
+    `⏰ ${horaStr} de hoy\n\n` +
     `¡Te esperamos en ClínicaMX!`
   );
 }

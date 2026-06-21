@@ -15,11 +15,22 @@ AS $$
 DECLARE
   n INT;
 BEGIN
+  -- Cancel pending reminders first to avoid them firing after cancellation.
+  UPDATE recordatorios_cita
+  SET status = 'cancelado'
+  WHERE appointment_id IN (
+    SELECT id FROM appointments
+    WHERE created_at >= now() - (dias || ' days')::interval
+      AND status NOT IN ('cancelada', 'liberada')
+      AND origen = 'telegram'
+  )
+  AND status = 'pendiente';
+
   UPDATE appointments
   SET status = 'cancelada', gcal_last_error = NULL
   WHERE created_at >= now() - (dias || ' days')::interval
     AND status NOT IN ('cancelada', 'liberada')
-    AND canal = 'telegram';
+    AND origen = 'telegram';
   GET DIAGNOSTICS n = ROW_COUNT;
   RETURN n;
 END;

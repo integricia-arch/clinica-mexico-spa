@@ -1094,6 +1094,12 @@ async function confirmarCancelacionCita(chatId: string, conv: any, citaId: strin
   const { error } = await supabase.from("appointments").update({ status: "cancelada" }).eq("id", citaId);
   if (error) return enviarTelegram(chatId, "No pude cancelar. Por favor llama a recepción.");
 
+  // Cancel pending reminders so they don't fire after the appointment is cancelled.
+  await supabase.from("recordatorios_cita")
+    .update({ status: "cancelado" })
+    .eq("appointment_id", citaId)
+    .eq("status", "pendiente");
+
   // Eliminar evento de Google Calendar del doctor (await — IIFE fire-and-forget muere con el runtime)
   try {
     if (citaPreCancel?.google_event_id && citaPreCancel?.doctor_id) {
@@ -1574,7 +1580,19 @@ async function wizardConfirm(chatId: string, conv: any, val: string) {
       [{ text: "← Menú principal", callback_data: "menu_principal:" }],
     ]);
   }
-  // Read session data before clearing — needed to build GCal link
+  // Optimistic lock: atomically flip flow_step to "procesando_cita".
+  // Telegram can retry the same callback to a different Edge Function instance where
+  // processedCallbackIds Set is empty. Only the first update wins; retries get nothing.
+  const { data: locked } = await supabase
+    .from("bot_sesiones")
+    .update({ flow_step: "procesando_cita" })
+    .eq("conversacion_id", conv.id)
+    .eq("flow_step", "await_confirm")
+    .select("id")
+    .maybeSingle();
+  if (!locked) return; // already processed by a concurrent/retry request
+
+  // Read session data before creating — needed to build GCal link
   const sesionParaGcal = await obtenerSesion(conv.id);
   const result = await crearCitaDesdeSesion(conv);
   if ((result as any).error) {
