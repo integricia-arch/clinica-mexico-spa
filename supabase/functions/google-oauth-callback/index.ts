@@ -84,13 +84,33 @@ Deno.serve(async (req: Request) => {
 
   const tokenExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
+  // Store tokens in Supabase Vault instead of plaintext columns.
+  // doctor_calendar_upsert_token is SECURITY DEFINER, service_role only.
+  const { data: accessVaultId, error: accessVaultErr } = await supabase.rpc(
+    "doctor_calendar_upsert_token",
+    { p_doctor_id: doctorId, p_token_type: "access", p_token_value: tokens.access_token },
+  );
+  if (accessVaultErr || !accessVaultId) {
+    console.error("Vault upsert error (access_token):", accessVaultErr);
+    return html("Error interno", "<p>No se pudo guardar el token de acceso. Inténtalo de nuevo.</p>");
+  }
+
+  const { data: refreshVaultId, error: refreshVaultErr } = await supabase.rpc(
+    "doctor_calendar_upsert_token",
+    { p_doctor_id: doctorId, p_token_type: "refresh", p_token_value: tokens.refresh_token },
+  );
+  if (refreshVaultErr || !refreshVaultId) {
+    console.error("Vault upsert error (refresh_token):", refreshVaultErr);
+    return html("Error interno", "<p>No se pudo guardar el token de refresco. Inténtalo de nuevo.</p>");
+  }
+
   const { error: dbError } = await supabase.from("doctor_calendars").upsert({
     doctor_id: doctorId,
     clinic_id: clinicId || null,
     google_email: googleEmail,
     calendar_id: "primary",
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
+    vault_access_token_id: accessVaultId,
+    vault_refresh_token_id: refreshVaultId,
     token_expiry: tokenExpiry,
     activo: true,
     connected_at: new Date().toISOString(),
