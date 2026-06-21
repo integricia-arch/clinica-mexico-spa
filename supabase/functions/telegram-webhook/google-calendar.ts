@@ -94,6 +94,15 @@ export async function getFreeBusy(
   }
 }
 
+// Convert a UTC ISO string to a local ISO string in America/Mexico_City (no UTC offset).
+// Google Calendar ignores timeZone when the dateTime has an explicit UTC offset (Z),
+// so we must pass local time without Z for the timeZone field to take effect.
+function toMexicoLocalISO(utcIso: string): string {
+  const d = new Date(utcIso);
+  // sv-SE locale produces "YYYY-MM-DD HH:MM:SS" in the given timezone
+  return d.toLocaleString("sv-SE", { timeZone: "America/Mexico_City" }).replace(" ", "T");
+}
+
 export async function createCalendarEvent(
   cal: DoctorCalendar,
   event: { summary: string; description: string; startIso: string; endIso: string },
@@ -110,8 +119,8 @@ export async function createCalendarEvent(
         body: JSON.stringify({
           summary: event.summary,
           description: event.description,
-          start: { dateTime: event.startIso, timeZone: "America/Mexico_City" },
-          end: { dateTime: event.endIso, timeZone: "America/Mexico_City" },
+          start: { dateTime: toMexicoLocalISO(event.startIso), timeZone: "America/Mexico_City" },
+          end: { dateTime: toMexicoLocalISO(event.endIso), timeZone: "America/Mexico_City" },
         }),
       },
     );
@@ -140,8 +149,8 @@ export async function updateCalendarEvent(
         body: JSON.stringify({
           summary: event.summary,
           description: event.description,
-          start: { dateTime: event.startIso, timeZone: "America/Mexico_City" },
-          end: { dateTime: event.endIso, timeZone: "America/Mexico_City" },
+          start: { dateTime: toMexicoLocalISO(event.startIso), timeZone: "America/Mexico_City" },
+          end: { dateTime: toMexicoLocalISO(event.endIso), timeZone: "America/Mexico_City" },
         }),
       },
     );

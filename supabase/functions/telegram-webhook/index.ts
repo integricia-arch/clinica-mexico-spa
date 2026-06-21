@@ -158,19 +158,14 @@ function buildGCalLink(params: {
   descripcion: string;
   ubicacion: string;
 }): string {
-  // Format: YYYYMMDDTHHmmss (local time, no timezone suffix)
+  // Format: YYYYMMDDTHHmmss in CDMX local time (no UTC suffix).
+  // GCal interprets suffix-less times as the calendar owner's local time.
+  // Deno runs in UTC so d.getHours() would give UTC — must use toLocaleString.
   const fmt = (iso: string) => {
     const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return (
-      d.getFullYear().toString() +
-      pad(d.getMonth() + 1) +
-      pad(d.getDate()) +
-      "T" +
-      pad(d.getHours()) +
-      pad(d.getMinutes()) +
-      "00"
-    );
+    const local = d.toLocaleString("sv-SE", { timeZone: "America/Mexico_City" });
+    // sv-SE gives "2026-06-22 08:30:00" → "20260622T083000"
+    return local.replace(/-/g, "").replace(" ", "T").replace(/:/g, "");
   };
   const p = new URLSearchParams({
     action: "TEMPLATE",
@@ -1003,7 +998,7 @@ async function verMiCita(chatId: string, conv: any) {
     .select("id, fecha_inicio, status, doctors(nombre, apellidos), servicios(nombre)")
     .eq("patient_id", identidad.patient_id)
     .gte("fecha_inicio", new Date().toISOString())
-    .not("status", "in", "(cancelada,cancelado,no_show)")
+    .not("status", "in", "(cancelada,liberada)")
     .order("fecha_inicio", { ascending: true })
     .limit(3);
 
@@ -1056,7 +1051,7 @@ async function iniciarCancelacionCita(chatId: string, conv: any) {
     .select("id, fecha_inicio, servicios(nombre)")
     .eq("patient_id", identidad.patient_id)
     .gte("fecha_inicio", new Date().toISOString())
-    .not("status", "in", "(cancelada,cancelado,no_show)")
+    .not("status", "in", "(cancelada,liberada)")
     .order("fecha_inicio", { ascending: true })
     .limit(3);
 
@@ -1145,7 +1140,7 @@ async function iniciarReagendarCita(chatId: string, conv: any) {
     .select("id, fecha_inicio, servicio_id, servicios(nombre)")
     .eq("patient_id", identidad.patient_id)
     .gte("fecha_inicio", new Date().toISOString())
-    .not("status", "in", "(cancelada,cancelado,no_show)")
+    .not("status", "in", "(cancelada,liberada)")
     .order("fecha_inicio", { ascending: true })
     .limit(3);
 
