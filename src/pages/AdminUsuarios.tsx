@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
   Trash2, ShieldAlert, Lock, Unlock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle, Plus,
-  HeartPulse, CalendarDays,
+  HeartPulse, CalendarDays, ClipboardList, Loader2,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -146,6 +146,56 @@ export default function AdminUsuarios() {
   const [pinConfirm, setPinConfirm] = useState("");
   const [savingPin, setSavingPin] = useState(false);
   const [doctorCalendars, setDoctorCalendars] = useState<Record<string, string>>({});
+
+  // Servicios por doctor
+  type ServicioCatalog = { id: string; nombre: string; especialidad: string; duracion_minutos: number; precio_centavos: number };
+  const [serviciosDialog, setServiciosDialog] = useState<{ doctor: DoctorRow } | null>(null);
+  const [catalogoServicios, setCatalogoServicios] = useState<ServicioCatalog[]>([]);
+  const [asignadosIds, setAsignadosIds] = useState<Set<string>>(new Set());
+  const [loadingServicios, setLoadingServicios] = useState(false);
+  const [savingServicios, setSavingServicios] = useState(false);
+
+  const openServiciosDialog = async (d: DoctorRow) => {
+    setServiciosDialog({ doctor: d });
+    setLoadingServicios(true);
+    try {
+      const [catRes, asigRes] = await Promise.all([
+        supabase.from("servicios").select("id,nombre,especialidad,duracion_minutos,precio_centavos").eq("activo", true).order("nombre"),
+        supabase.from("doctor_servicios").select("servicio_id").eq("doctor_id", d.id),
+      ]);
+      setCatalogoServicios((catRes.data ?? []) as ServicioCatalog[]);
+      setAsignadosIds(new Set(((asigRes.data ?? []) as { servicio_id: string }[]).map((r) => r.servicio_id)));
+    } finally {
+      setLoadingServicios(false);
+    }
+  };
+
+  const toggleServicio = (id: string) =>
+    setAsignadosIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const saveServicios = async () => {
+    if (!serviciosDialog) return;
+    setSavingServicios(true);
+    try {
+      const doctorId = serviciosDialog.doctor.id;
+      await supabase.from("doctor_servicios").delete().eq("doctor_id", doctorId);
+      if (asignadosIds.size > 0) {
+        await supabase.from("doctor_servicios").insert(
+          [...asignadosIds].map((sid) => ({ doctor_id: doctorId, servicio_id: sid }))
+        );
+      }
+      toast.success("Servicios actualizados");
+      setServiciosDialog(null);
+    } catch {
+      toast.error("No se pudieron guardar los servicios");
+    } finally {
+      setSavingServicios(false);
+    }
+  };
 
   const GOOGLE_CLIENT_ID_PUBLIC = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
   const SUPABASE_FUNCTIONS_URL = (import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/$/, "") + "/functions/v1";
@@ -1190,6 +1240,9 @@ export default function AdminUsuarios() {
                           <Button size="sm" variant="ghost" onClick={() => openDoctorEdit(d)} title="Editar datos">
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
+                          <Button size="sm" variant="ghost" onClick={() => openServiciosDialog(d)} title="Servicios">
+                            <ClipboardList className="h-3.5 w-3.5" />
+                          </Button>
                           {d.user_id ? (
                             <Button size="sm" variant="outline" onClick={() => setUnlinkDoctor(d)}>
                               <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
@@ -1379,6 +1432,43 @@ export default function AdminUsuarios() {
             <Button variant="outline" onClick={() => setDoctorDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSaveDoctor} disabled={savingDoctor}>
               {savingDoctor ? "Guardando…" : doctorEdit ? "Guardar cambios" : "Crear médico"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Servicios del médico */}
+      <Dialog open={!!serviciosDialog} onOpenChange={(o) => !o && setServiciosDialog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Servicios — Dr(a). {serviciosDialog?.doctor.nombre} {serviciosDialog?.doctor.apellidos}</DialogTitle>
+            <DialogDescription>Selecciona los servicios que ofrece este médico.</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto space-y-1 py-2">
+            {loadingServicios ? (
+              <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
+            ) : catalogoServicios.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground text-center">Sin servicios en el catálogo. Agrégalos en Ajustes → Servicios.</p>
+            ) : catalogoServicios.map((s) => (
+              <label key={s.id} className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={asignadosIds.has(s.id)}
+                  onChange={() => toggleServicio(s.id)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <span className="flex-1 text-sm font-medium">{s.nombre}</span>
+                <span className="text-xs text-muted-foreground">{s.duracion_minutos} min</span>
+                {s.precio_centavos > 0 && (
+                  <span className="text-xs text-muted-foreground">${(s.precio_centavos / 100).toLocaleString("es-MX")}</span>
+                )}
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setServiciosDialog(null)} disabled={savingServicios}>Cancelar</Button>
+            <Button onClick={saveServicios} disabled={savingServicios || loadingServicios}>
+              {savingServicios ? "Guardando…" : "Guardar"}
             </Button>
           </DialogFooter>
         </DialogContent>
