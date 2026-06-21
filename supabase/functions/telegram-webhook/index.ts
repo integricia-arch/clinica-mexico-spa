@@ -35,6 +35,10 @@ const MX_TZ_OFFSET_MS = -6 * 3600000;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+// In-process dedup for callback_query_id — prevents double-tap on buttons
+// within the same isolate invocation window.
+const processedCallbackIds = new Set<string>();
+
 interface ClinicSchedule {
   dias_laborales: number[];
   hora_apertura: string;
@@ -547,16 +551,15 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
 
   // Saludo o intención de iniciar (en sus palabras o con /start). No interrumpe una cita en curso.
   if (text === "/start" || esSaludo(text)) {
-    const sesionActual = await obtenerSesion(conv.id);
-    const enWizard = !!sesionActual?.flow_step && sesionActual.flow_step !== "consulta_abierta";
-    if (text === "/start" || !enWizard) {
-      await guardarMensajeUsuario(conv.id, text, rawMsg);
-      await limpiarSesion(conv.id);
-      const bienvenida = `¡Hola! 👋 Soy el asistente de ${CLINIC_NAME}. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo.\n\n¿En qué te puedo ayudar hoy?`;
-      await guardarMensajeAsistente(conv.id, bienvenida);
-      await enviarMenuPrincipal(chatId, bienvenida);
-      return;
-    }
+    // Always reset: clear any in-progress wizard and show main menu.
+    // Prevents "hola" from falling through to the agent when a stale session exists,
+    // which caused the agent to call mostrar_menu_categorias unintentionally.
+    await guardarMensajeUsuario(conv.id, text, rawMsg);
+    await limpiarSesion(conv.id);
+    const bienvenida = `¡Hola! 👋 Soy el asistente de ${CLINIC_NAME}. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo.\n\n¿En qué te puedo ayudar hoy?`;
+    await guardarMensajeAsistente(conv.id, bienvenida);
+    await enviarMenuPrincipal(chatId, bienvenida);
+    return;
   }
 
   await guardarMensajeUsuario(conv.id, text, rawMsg);
@@ -659,12 +662,51 @@ async function enviarMenuPrincipal(chatId: string, header: string) {
   ]);
 }
 
+// Returns servicio_ids that have at least one active doctor.
+// Uses only 1 level of embedded filter — PostgREST 2-level nesting is unreliable.
+async function getServiciosConDoctorActivo(): Promise<Set<string>> {
+  const { data } = await supabase
+    .from("doctor_servicios")
+    .select("servicio_id, doctors!inner(activo)")
+    .eq("doctors.activo", true);
+  return new Set<string>((data ?? []).map((ds: any) => ds.servicio_id).filter(Boolean));
+}
+
+async function getCategoriasDisponibles(): Promise<Array<{ key: string; label: string }>> {
+  const [validIds, svcResult] = await Promise.all([
+    getServiciosConDoctorActivo(),
+    supabase.from("servicios").select("id, especialidad").eq("activo", true),
+  ]);
+
+  const especialidades = new Set<string>(
+    ((svcResult.data ?? []) as any[])
+      .filter((s) => validIds.has(s.id) && s.especialidad)
+      .map((s) => s.especialidad)
+  );
+
+  const result: Array<{ key: string; label: string }> = [];
+  for (const [key, cat] of Object.entries(CATEGORIAS)) {
+    if (cat.especialidades.some((esp) => especialidades.has(esp))) {
+      result.push({ key, label: cat.label });
+    }
+  }
+  return result;
+}
+
 async function enviarMenuCategorias(chatId: string, header: string) {
-  const keys = Object.keys(CATEGORIAS);
+  const disponibles = await getCategoriasDisponibles();
+
+  if (disponibles.length === 0) {
+    return enviarTelegramConBotones(chatId, "No hay especialidades disponibles en este momento. ¿Te comunico con alguien?", [
+      [{ text: "🧑 Hablar con alguien", callback_data: "humano:" }],
+      [{ text: "← Menú principal", callback_data: "menu_principal:" }],
+    ]);
+  }
+
   const rows: any[] = [];
-  for (let i = 0; i < keys.length; i += 2) {
-    const row = [{ text: CATEGORIAS[keys[i]].label, callback_data: `cat:${keys[i]}` }];
-    if (keys[i + 1]) row.push({ text: CATEGORIAS[keys[i + 1]].label, callback_data: `cat:${keys[i + 1]}` });
+  for (let i = 0; i < disponibles.length; i += 2) {
+    const row = [{ text: disponibles[i].label, callback_data: `cat:${disponibles[i].key}` }];
+    if (disponibles[i + 1]) row.push({ text: disponibles[i + 1].label, callback_data: `cat:${disponibles[i + 1].key}` });
     rows.push(row);
   }
   rows.push([
@@ -762,9 +804,23 @@ async function manejarCallback(cq: any) {
   const chatId = String(cq.message?.chat?.id);
   const data: string = cq.data ?? "";
   const from = cq.from;
+  const msgId: number = cq.message?.message_id;
+
+  // Dedup: same callback_query_id (Telegram edge case / double-tap within same isolate)
+  if (processedCallbackIds.has(cq.id)) {
+    await answerCallback(cq.id);
+    return;
+  }
+  processedCallbackIds.add(cq.id);
+  setTimeout(() => processedCallbackIds.delete(cq.id), 30000);
 
   await answerCallback(cq.id);
   if (!chatId) return;
+
+  // Remove the keyboard from the tapped message immediately.
+  // This prevents a second tap on the same button from doing anything
+  // because the buttons visually disappear before the second callback fires.
+  if (msgId) await limpiarTeclado(chatId, msgId);  // await: keyboard must be gone before processing
 
   const identidad = await obtenerOCrearIdentidad(chatId, from);
   const conv = await obtenerOCrearConversacion(identidad.id);
@@ -821,6 +877,18 @@ async function answerCallback(callback_query_id: string) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ callback_query_id }),
   });
+}
+
+// Remove inline keyboard from a previously sent message.
+// Called after navigation buttons so double-taps on the same button do nothing.
+async function limpiarTeclado(chatId: string, messageId: number) {
+  try {
+    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }),
+    });
+  } catch { /* non-critical */ }
 }
 
 // ============================================================
@@ -1164,8 +1232,24 @@ async function confirmarReagendar(chatId: string, conv: any, arg: string) {
 
   if (eu) {
     if (eu.code === "23P01" || /exclude|exclusion/i.test(eu.message)) {
-      return enviarTelegramConBotones(chatId, "Ese horario ya fue tomado. Elige otro.", [
-        [{ text: "🔄 Ver otros horarios", callback_data: `reagendar_pick:${citaId}` }],
+      // Fetch next available slots and offer them immediately
+      const nextResult = await listarHorariosDisponibles({ servicio_id: cita.servicio_id, dias_adelante: 14 });
+      const siguientes = (nextResult as any).horarios ?? [];
+      if (siguientes.length > 0) {
+        const slotMap2: Record<string, any> = {};
+        const rows2 = siguientes.slice(0, 6).map((h: any, idx: number) => {
+          const k = String(idx);
+          slotMap2[k] = { fecha_inicio: h.fecha_inicio, doctor_id: h.doctor_id, doctor_nombre: h.doctor_nombre, fecha_local: h.fecha_local };
+          return [{ text: `${h.fecha_local} · ${h.doctor_nombre}`, callback_data: `reagendar_slot:${citaId}:${k}` }];
+        });
+        rows2.push([{ text: "← Volver", callback_data: "reagendar:" }]);
+        await upsertSesion(conv.id, {
+          flow_data: { ...(await obtenerSesion(conv.id))?.flow_data ?? {}, reagendar_slots: slotMap2, reagendar_cita_id: citaId },
+        });
+        return enviarTelegramConBotones(chatId, "⚠️ Ese horario acaba de ser tomado. Elige otro:", rows2);
+      }
+      return enviarTelegramConBotones(chatId, "⚠️ Ese horario ya fue tomado y no hay más en 14 días.", [
+        [{ text: "🧑 Hablar con alguien", callback_data: "humano:" }],
       ]);
     }
     return enviarTelegram(chatId, "No pude reagendar. Por favor llama a recepción.");
@@ -1223,16 +1307,18 @@ async function enviarServiciosDeCategoria(chatId: string, conv: any, catKey: str
   const cat = CATEGORIAS[catKey];
   if (!cat) return enviarMenuCategorias(chatId, "Categoría no reconocida:");
 
-  const { data: servicios } = await supabase
-    .from("servicios")
-    .select("id, nombre, duracion_minutos, precio_centavos, especialidad, doctor_servicios!inner(doctor_id, doctors!inner(activo))")
-    .eq("activo", true)
-    .in("especialidad", cat.especialidades)
-    .eq("doctor_servicios.doctors.activo", true);
+  const [validIds, svcResult] = await Promise.all([
+    getServiciosConDoctorActivo(),
+    supabase
+      .from("servicios")
+      .select("id, nombre, duracion_minutos, precio_centavos, especialidad")
+      .eq("activo", true)
+      .in("especialidad", cat.especialidades),
+  ]);
 
   const vistos = new Set<string>();
-  const lista = (servicios ?? []).filter((s: any) => {
-    if (vistos.has(s.id)) return false;
+  const lista = ((svcResult.data ?? []) as any[]).filter((s) => {
+    if (!validIds.has(s.id) || vistos.has(s.id)) return false;
     vistos.add(s.id);
     return true;
   });
@@ -1490,6 +1576,34 @@ async function wizardConfirm(chatId: string, conv: any, val: string) {
   const sesionParaGcal = await obtenerSesion(conv.id);
   const result = await crearCitaDesdeSesion(conv);
   if ((result as any).error) {
+    const esSlotTomado = (result as any).slotTomado === true;
+    if (esSlotTomado) {
+      // Slot taken: re-fetch next available slots for same service and offer them
+      const sesion = await obtenerSesion(conv.id);
+      const servicioId = sesion?.servicio_id;
+      if (servicioId) {
+        const nextResult = await listarHorariosDisponibles({ servicio_id: servicioId, dias_adelante: 14 });
+        const siguientes = (nextResult as any).horarios ?? [];
+        if (siguientes.length > 0) {
+          const slotMap: Record<string, any> = {};
+          const rows = siguientes.slice(0, 6).map((h: any, idx: number) => {
+            const key = String(idx);
+            slotMap[key] = { fecha_inicio: h.fecha_inicio, doctor_id: h.doctor_id, doctor_nombre: h.doctor_nombre, fecha_local: h.fecha_local };
+            return [{ text: `${h.fecha_local} · ${h.doctor_nombre}`, callback_data: `slot:${key}` }];
+          });
+          rows.push([{ text: "← Ver categorías", callback_data: "menu_agendar:" }]);
+          await upsertSesion(conv.id, { flow_step: "await_slot_pick", flow_data: { ...(sesion?.flow_data ?? {}), slots: slotMap } });
+          return enviarTelegramConBotones(chatId,
+            "⚠️ Ese horario acaba de ser tomado por otro paciente. Elige uno disponible:",
+            rows
+          );
+        }
+      }
+      return enviarTelegramConBotones(chatId, "⚠️ Ese horario ya fue tomado. No encontré más slots en los próximos días.", [
+        [{ text: "🔄 Buscar otra fecha", callback_data: "menu_agendar:" }],
+        [{ text: "🧑 Hablar con alguien", callback_data: "humano:" }],
+      ]);
+    }
     return enviarTelegramConBotones(chatId, `No pude crear la cita: ${(result as any).error}.`, [
       [{ text: "🔄 Intentar de nuevo", callback_data: "menu_agendar:" }],
       [{ text: "🧑 Hablar con alguien", callback_data: "humano:" }],
@@ -1580,7 +1694,9 @@ async function crearCitaDesdeSesion(conv: any) {
   }).select("id, fecha_inicio").single();
 
   if (ea) {
-    if (ea.code === "23P01" || /exclude|exclusion/i.test(ea.message)) return { error: "El horario ya fue tomado" };
+    if (ea.code === "23P01" || /exclude|exclusion/i.test(ea.message)) {
+      return { error: "El horario ya fue tomado", slotTomado: true };
+    }
     return { error: ea.message };
   }
 
@@ -1706,10 +1822,17 @@ async function ejecutarToolClaude(name: string, input: any, conv: any, chatId: s
 async function buscarServicios(query: string, chatId: string) {
   const q = (query ?? "").trim().toLowerCase();
   if (!q) return { error: "query vacía" };
-  const { data } = await supabase.from("servicios").select("id, nombre, especialidad, duracion_minutos, precio_centavos").eq("activo", true);
-  const filtrados = (data ?? []).filter((s: any) =>
-    s.nombre.toLowerCase().includes(q) || (s.especialidad ?? "").toLowerCase().includes(q)
-  ).slice(0, 5);
+  const [validIds, svcResult] = await Promise.all([
+    getServiciosConDoctorActivo(),
+    supabase.from("servicios").select("id, nombre, especialidad, duracion_minutos, precio_centavos").eq("activo", true),
+  ]);
+
+  const vistos = new Set<string>();
+  const filtrados = ((svcResult.data ?? []) as any[]).filter((s) => {
+    if (!validIds.has(s.id) || vistos.has(s.id)) return false;
+    vistos.add(s.id);
+    return s.nombre.toLowerCase().includes(q) || (s.especialidad ?? "").toLowerCase().includes(q);
+  }).slice(0, 5);
 
   if (filtrados.length === 0) {
     await enviarMenuCategorias(chatId, `No encontré "${query}". Elige una especialidad:`);
