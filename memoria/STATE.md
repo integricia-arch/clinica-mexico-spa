@@ -684,37 +684,48 @@ Todas las fases completadas. Sin pendientes.
 - [x] Plan `docs/superpowers/plans/2026-06-18-bot-mejoras-horario-google-calendar.md` — 17 tasks detallados con código real
 - [x] **Task 1 EJECUTADO**: Migration `20260626000000_horario_clinica_seed.sql` aplicada — clinic_settings section='horario' con días [1,2,3,4,5], apertura 09:00, cierre 18:00
 
+## Completado (Jun 20, 2026 — sesión bot bugs)
+
+### Bot Telegram — bugs menú doble + servicios vacíos + doble-booking ✅ (commit `e64ce37`)
+- [x] `esSaludo()` siempre limpia sesión y retorna — sin caída al agente con sesión stale
+- [x] `getServiciosConDoctorActivo()`: helper query 1-nivel `doctor_servicios→doctors` — reemplaza filtro PostgREST 2-niveles que devolvía vacío en prod (bug conocido: PostgREST solo soporta 1 nivel de `.eq()` nested)
+- [x] `getCategoriasDisponibles()`, `enviarServiciosDeCategoria()`, `buscarServicios()` usan el helper
+- [x] `limpiarTeclado()`: await (no fire-and-forget) — keyboard borrado antes de procesar callback
+- [x] `processedCallbackIds` Set con TTL 30s — dedup por callback_query_id
+- [x] `crearCitaDesdeSesion`: detecta error 23P01 → `slotTomado: true`
+- [x] `wizardConfirm` / `confirmarReagendar`: ofrecen siguiente slot disponible en colisión concurrente
+- [x] Migration `20260621000001`: `appointments_no_double_booking` EXCLUDE USING gist (btree_gist)
+- [x] Verificado en prod: menú único (10:58), servicios reales (11:00), horarios (11:01) ✅
+- **Pendiente externo:** `VITE_GOOGLE_CLIENT_ID` en `.env` local y GitHub Actions secrets (botón "Conectar" GCal en AdminUsuarios)
+
 ## Pendiente / Próximo
 
-### 🔴 CONTINUAR AQUÍ — Bot + Horario + Google Calendar (Plan activo)
+### ✅ Bot + Horario + Google Calendar — PLAN COMPLETO (Jun 20, 2026)
 Plan: `docs/superpowers/plans/2026-06-18-bot-mejoras-horario-google-calendar.md`
-Task 1 ✅ completada. **Continuar en Task 2.**
+Commit final: `66bf606` · Deploy Workers: `e58cf44d`
 
 | Task | Estado | Descripción |
 |------|--------|-------------|
-| 1 | ✅ DONE | DB migration horario clínica seed |
-| 2 | ⏳ NEXT | UI HorarioClinicaSection en Configuracion.tsx |
-| 3 | ⏳ | Bot: getClinicSchedule() + listarHorariosDisponibles refactor |
-| 4 | ⏳ | Bot: FAQ tier 1 (buscarFaqTelegram) |
-| 5 | ⏳ | Bot: Haiku intent classifier tier 2 |
-| 6 | ⏳ | Bot: manejarConsultaLibre + PADECIMIENTO_MAP |
-| 7 | ⏳ | Bot: learning pipeline (chat_registrar_pendiente tras Sonnet) |
-| 8 | ⏳ | Bot: MemoriaPaciente estructurada |
-| 9 | ⏳ | Bot: especialidad doctor en slots + system prompt |
-| 10 | ⏳ | Deploy Proyecto 1 |
-| 11 | ⏳ | DB: doctor_calendars + appointments.google_event_id |
-| 12 | ⏳ | Edge fn: google-oauth-callback |
-| 13 | ⏳ | Módulo: google-calendar.ts helper |
-| 14 | ⏳ | Bot: free/busy check en listarHorariosDisponibles |
-| 15 | ⏳ | Bot: crear/actualizar/eliminar eventos Google Calendar |
-| 16 | ⏳ | UI: panel Google Calendar en AdminUsuarios |
-| 17 | ⏳ | Deploy Proyecto 2 |
+| 1 | ✅ | DB migration horario clínica seed |
+| 2 | ✅ | UI HorarioClinicaSection en Configuracion.tsx |
+| 3 | ✅ | Bot: getClinicSchedule() + listarHorariosDisponibles refactor |
+| 4 | ✅ | Bot: FAQ tier 1 (buscarFaqTelegram) |
+| 5 | ✅ | Bot: Haiku intent classifier tier 2 |
+| 6 | ✅ | Bot: manejarConsultaLibre + PADECIMIENTO_MAP |
+| 7 | ✅ | Bot: learning pipeline (chat_registrar_pendiente tras Sonnet) |
+| 8 | ✅ | Bot: MemoriaPaciente estructurada |
+| 9 | ✅ | Bot: especialidad doctor en slots + system prompt |
+| 10 | ✅ | Deploy Proyecto 1 |
+| 11 | ✅ | DB: doctor_calendars + appointments.google_event_id |
+| 12 | ✅ | Edge fn: google-oauth-callback |
+| 13 | ✅ | Módulo: google-calendar.ts helper |
+| 14 | ✅ | Bot: free/busy check en listarHorariosDisponibles |
+| 15 | ✅ | Bot: crear/actualizar/eliminar eventos Google Calendar |
+| 16 | ✅ | UI: panel Google Calendar en AdminUsuarios |
+| 17 | ✅ | Deploy Proyecto 2 |
 
-**Prerequisito Proyecto 2** (hacer ANTES de Task 11):
-1. Google Cloud Console → nuevo proyecto → habilitar Google Calendar API
-2. Crear credenciales OAuth 2.0 → Authorized redirect URI: `https://kyfkvdyxpvpiacyymldc.supabase.co/functions/v1/google-oauth-callback`
-3. `supabase secrets set GOOGLE_CLIENT_ID="..." GOOGLE_CLIENT_SECRET="..." --project-ref kyfkvdyxpvpiacyymldc`
-4. Añadir `VITE_GOOGLE_CLIENT_ID` a `.env` local y GitHub Actions secrets
+**Secrets configurados:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` en Supabase.
+**Pendiente externo:** añadir `VITE_GOOGLE_CLIENT_ID` a `.env` local y GitHub Actions secrets para que el botón "Conectar" aparezca en AdminUsuarios.
 
 ### Asignación enfermera por cita (Jun 16)
 - [x] Pantalla `/perfil/vincular-telegram` (`src/pages/VincularTelegram.tsx`) — genera código en `staff_link_codes`, instrucción `/vincular CODE`. Enlace en menú de usuario solo para rol `nurse`.
