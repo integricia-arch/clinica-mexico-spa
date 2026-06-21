@@ -25,5 +25,9 @@ CREATE POLICY IF NOT EXISTS "profiles_admin_select" ON public.profiles
 -- El hash solo se modifica via RPC set_supervisor_pin() (SECURITY DEFINER).
 REVOKE UPDATE (supervisor_pin_hash) ON public.profiles FROM authenticated;
 
+-- Admin SELECT policy exposes supervisor_pin_hash to all admins — revoke column-level access.
+-- PIN comparison must go through RPC verify_supervisor_pin() (SECURITY DEFINER).
+REVOKE SELECT (supervisor_pin_hash) ON public.profiles FROM authenticated;
+
 -- Permitir que usuarios autenticados puedan actualizar su full_name
 GRANT UPDATE (full_name) ON public.profiles TO authenticated;

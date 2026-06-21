@@ -5,9 +5,7 @@ BEGIN;
 
 -- 1. Cleanup abandoned bot_sesiones (PII/GDPR) — hourly
 -- Drop existing job if present, then schedule
-SELECT cron.unschedule('cleanup-bot-sesiones') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'cleanup-bot-sesiones'
-);
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'cleanup-bot-sesiones';
 
 SELECT cron.schedule(
   'cleanup-bot-sesiones',
@@ -16,9 +14,7 @@ SELECT cron.schedule(
 );
 
 -- 2. VACUUM ANALYZE audit_logs — Sunday 3 AM UTC
-SELECT cron.unschedule('vacuum-audit-logs') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'vacuum-audit-logs'
-);
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'vacuum-audit-logs';
 
 SELECT cron.schedule(
   'vacuum-audit-logs',
@@ -27,9 +23,7 @@ SELECT cron.schedule(
 );
 
 -- 3. VACUUM ANALYZE movimientos_inventario — Sunday 3 AM UTC
-SELECT cron.unschedule('vacuum-movimientos') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'vacuum-movimientos'
-);
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'vacuum-movimientos';
 
 SELECT cron.schedule(
   'vacuum-movimientos',
@@ -38,9 +32,7 @@ SELECT cron.schedule(
 );
 
 -- 4. VACUUM ANALYZE pharmacy_sales — Sunday 3 AM UTC
-SELECT cron.unschedule('vacuum-pharmacy-sales') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'vacuum-pharmacy-sales'
-);
+SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'vacuum-pharmacy-sales';
 
 SELECT cron.schedule(
   'vacuum-pharmacy-sales',

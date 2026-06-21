@@ -94,7 +94,7 @@ BEGIN
          WHERE lm2.medicamento_id = (v_item->>'medicamento_id')::uuid
            AND lm2.existencia >= COALESCE((v_item->>'quantity')::int, 1)
            AND lm2.fecha_caducidad >= CURRENT_DATE
-         ORDER BY lm2.fecha_entrada ASC, lm2.fecha_caducidad ASC LIMIT 1)
+         ORDER BY lm2.fecha_entrada ASC, lm2.fecha_caducidad ASC, lm2.id ASC LIMIT 1)
       )
       FROM jsonb_array_elements(p_payload->'items') v_item
     )
@@ -129,7 +129,7 @@ BEGIN
     SELECT id INTO v_oldest_lote
       FROM public.lotes_medicamento
      WHERE medicamento_id = v_med.id AND existencia >= v_qty AND fecha_caducidad >= CURRENT_DATE
-     ORDER BY fecha_entrada ASC, fecha_caducidad ASC LIMIT 1;
+     ORDER BY fecha_entrada ASC, fecha_caducidad ASC, id ASC LIMIT 1;
 
     IF v_pick_lote IS NULL THEN
       v_pick_lote := v_oldest_lote;
@@ -194,7 +194,7 @@ BEGIN
       SELECT id INTO v_pick_lote
         FROM public.lotes_medicamento
        WHERE medicamento_id = v_med.id AND existencia >= v_qty AND fecha_caducidad >= CURRENT_DATE
-       ORDER BY fecha_entrada ASC, fecha_caducidad ASC LIMIT 1;
+       ORDER BY fecha_entrada ASC, fecha_caducidad ASC, id ASC LIMIT 1;
     END IF;
 
     UPDATE public.lotes_medicamento SET existencia = existencia - v_qty WHERE id = v_pick_lote;

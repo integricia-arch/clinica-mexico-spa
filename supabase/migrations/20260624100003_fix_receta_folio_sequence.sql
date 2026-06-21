@@ -47,6 +47,9 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.next_receta_folio(uuid) FROM public, authenticated;
+GRANT EXECUTE ON FUNCTION public.next_receta_folio(uuid) TO service_role;
+
 -- 4. Trigger function (reemplaza la versión MAX()+1 existente en producción)
 CREATE OR REPLACE FUNCTION public.assign_receta_folio()
   RETURNS trigger
