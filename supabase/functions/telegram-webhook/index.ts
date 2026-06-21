@@ -1094,15 +1094,13 @@ async function confirmarCancelacionCita(chatId: string, conv: any, citaId: strin
   const { error } = await supabase.from("appointments").update({ status: "cancelada" }).eq("id", citaId);
   if (error) return enviarTelegram(chatId, "No pude cancelar. Por favor llama a recepción.");
 
-  // Eliminar evento de Google Calendar del doctor en background
-  (async () => {
-    try {
-      if (citaPreCancel?.google_event_id && citaPreCancel?.doctor_id) {
-        const cal = await getDoctorCalendar(citaPreCancel.doctor_id);
-        if (cal) await deleteCalendarEvent(cal, citaPreCancel.google_event_id);
-      }
-    } catch { /* no crítico */ }
-  })();
+  // Eliminar evento de Google Calendar del doctor (await — IIFE fire-and-forget muere con el runtime)
+  try {
+    if (citaPreCancel?.google_event_id && citaPreCancel?.doctor_id) {
+      const cal = await getDoctorCalendar(citaPreCancel.doctor_id);
+      if (cal) await deleteCalendarEvent(cal, citaPreCancel.google_event_id);
+    }
+  } catch { /* no crítico */ }
 
   await registrarAudit(conv, "cita_cancelada_bot", { cita_id: citaId });
 
@@ -1267,24 +1265,22 @@ async function confirmarReagendar(chatId: string, conv: any, arg: string) {
 
   await registrarAudit(conv, "cita_reagendada_bot", { cita_id: citaId, nuevo_slot: slot.fecha_inicio });
 
-  // Actualizar evento de Google Calendar del doctor en background
-  (async () => {
-    try {
-      const { data: citaGcal } = await supabase
-        .from("appointments").select("google_event_id, doctor_id").eq("id", citaId).maybeSingle();
-      if (citaGcal?.google_event_id && citaGcal?.doctor_id) {
-        const cal = await getDoctorCalendar(citaGcal.doctor_id);
-        if (cal) {
-          await updateCalendarEvent(cal, citaGcal.google_event_id, {
-            summary: `Cita: ${(cita.servicios as any)?.nombre ?? "Consulta"} (reagendada)`,
-            description: `Cita reagendada vía Bot Telegram`,
-            startIso: inicio.toISOString(),
-            endIso: fin.toISOString(),
-          });
-        }
+  // Actualizar evento de Google Calendar del doctor (await — IIFE fire-and-forget muere con el runtime)
+  try {
+    const { data: citaGcal } = await supabase
+      .from("appointments").select("google_event_id, doctor_id").eq("id", citaId).maybeSingle();
+    if (citaGcal?.google_event_id && citaGcal?.doctor_id) {
+      const cal = await getDoctorCalendar(citaGcal.doctor_id);
+      if (cal) {
+        await updateCalendarEvent(cal, citaGcal.google_event_id, {
+          summary: `Cita: ${(cita.servicios as any)?.nombre ?? "Consulta"} (reagendada)`,
+          description: `Cita reagendada vía Bot Telegram`,
+          startIso: inicio.toISOString(),
+          endIso: fin.toISOString(),
+        });
       }
-    } catch { /* no crítico */ }
-  })();
+    }
+  } catch { /* no crítico */ }
 
   const fechaStr = inicio.toLocaleString("es-MX", {
     timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short",
@@ -1714,11 +1710,12 @@ async function crearCitaDesdeSesion(conv: any) {
     if (rows.length) await supabase.from("recordatorios_cita").insert(rows);
   } catch (e) { console.error("recordatorios:", e); }
 
-  // Crear evento en Google Calendar del doctor (background, no bloquea confirmación)
-  (async () => {
-    try {
-      const cal = await getDoctorCalendar(sesion.doctor_id);
-      if (!cal) return;
+  // Crear evento en Google Calendar del doctor.
+  // Awaited (no IIFE) — el IIFE fire-and-forget muere cuando el runtime Deno termina,
+  // porque no está registrado en EdgeRuntime.waitUntil. Await dentro del scope de waitUntil garantiza que corre hasta el final.
+  try {
+    const cal = await getDoctorCalendar(sesion.doctor_id);
+    if (cal) {
       const { data: svcNombre } = await supabase.from("servicios").select("nombre").eq("id", sesion.servicio_id).single();
       const eventId = await createCalendarEvent(cal, {
         summary: `Cita: ${svcNombre?.nombre ?? "Consulta"} — ${b.nombre} ${b.apellidos}`,
@@ -1729,8 +1726,8 @@ async function crearCitaDesdeSesion(conv: any) {
       if (eventId) {
         await supabase.from("appointments").update({ google_event_id: eventId }).eq("id", cita.id);
       }
-    } catch { /* Google Calendar no crítico */ }
-  })();
+    }
+  } catch { /* Google Calendar no crítico */ }
 
   return { ok: true, appointment_id: cita.id };
 }
