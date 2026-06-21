@@ -92,7 +92,7 @@ BEGIN
         NULLIF(v_item->>'lote_id', '')::uuid,
         (SELECT id FROM public.lotes_medicamento lm2
          WHERE lm2.medicamento_id = (v_item->>'medicamento_id')::uuid
-           AND lm2.existencia > 0
+           AND lm2.existencia >= COALESCE((v_item->>'quantity')::int, 1)
            AND lm2.fecha_caducidad >= CURRENT_DATE
          ORDER BY lm2.fecha_entrada ASC, lm2.fecha_caducidad ASC LIMIT 1)
       )
