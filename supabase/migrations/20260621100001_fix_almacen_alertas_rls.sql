@@ -4,13 +4,17 @@
 -- Columns en clinic_memberships: user_id, clinic_id, status, role.
 -- Columns en almacen_alertas: clinic_id, etc.
 
--- DROP políticas rotas (idempotent)
+-- DROP todas las versiones posibles (idempotent)
 DROP POLICY IF EXISTS "almacen_alertas_clinic_member_select" ON public.almacen_alertas;
 DROP POLICY IF EXISTS "almacen_alertas_clinic_member_insert" ON public.almacen_alertas;
 DROP POLICY IF EXISTS "almacen_alertas_clinic_member_update" ON public.almacen_alertas;
 DROP POLICY IF EXISTS "almacen_alertas_clinic_member_delete" ON public.almacen_alertas;
+DROP POLICY IF EXISTS "almacen_alertas_select" ON public.almacen_alertas;
+DROP POLICY IF EXISTS "almacen_alertas_insert" ON public.almacen_alertas;
+DROP POLICY IF EXISTS "almacen_alertas_update" ON public.almacen_alertas;
+DROP POLICY IF EXISTS "almacen_alertas_delete" ON public.almacen_alertas;
 
--- CREAR políticas correctas (DROP primero arriba, luego CREATE)
+-- CREAR políticas correctas
 CREATE POLICY "almacen_alertas_select" ON public.almacen_alertas
   FOR SELECT TO authenticated
   USING (
