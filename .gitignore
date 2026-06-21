@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 integrika_sync.config.ps1
+client_secret*.json
 
 # Logs
 logs
