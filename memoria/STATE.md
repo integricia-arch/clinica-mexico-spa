@@ -696,7 +696,14 @@ Todas las fases completadas. Sin pendientes.
 - [x] `wizardConfirm` / `confirmarReagendar`: ofrecen siguiente slot disponible en colisión concurrente
 - [x] Migration `20260621000001`: `appointments_no_double_booking` EXCLUDE USING gist (btree_gist)
 - [x] Verificado en prod: menú único (10:58), servicios reales (11:00), horarios (11:01) ✅
+- [x] GCal IIFE → await: `createCalendarEvent`, `deleteCalendarEvent`, `updateCalendarEvent` ahora await dentro de `waitUntil` scope — commit `a112673`
+- [x] Google Calendar API habilitada en GCP proyecto 545467181522
+- [x] `google_event_id` verificado en DB + evento en calendario `joseshugy@gmail.com` ✅
 - **Pendiente externo:** `VITE_GOOGLE_CLIENT_ID` en `.env` local y GitHub Actions secrets (botón "Conectar" GCal en AdminUsuarios)
+- **Mejoras técnicas para próxima sesión:**
+  - GCal catch vacío → `console.error` + campo `gcal_last_error` en appointments
+  - Health check GCal al conectar en `google-oauth-callback`
+  - RPC cleanup citas de prueba (`cancelar_citas_prueba`)
 
 ## Pendiente / Próximo
 
