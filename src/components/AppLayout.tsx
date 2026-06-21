@@ -47,6 +47,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
   // ── Admin ──
   { section: "Admin", to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin", "doctor"] },
+  { to: "/ajustes", icon: ClipboardList, label: "Catálogo y ajustes", roles: ["admin"] },
   // patient-only
   { to: "/mis-recetas", icon: Pill, label: "Mis recetas", roles: ["patient"] },
 ];
