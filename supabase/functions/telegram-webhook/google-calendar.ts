@@ -124,11 +124,14 @@ export async function createCalendarEvent(
         }),
       },
     );
-    if (!resp.ok) return null;
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => resp.status.toString());
+      throw new Error(`GCal createEvent ${resp.status}: ${body.slice(0, 300)}`);
+    }
     const data = await resp.json() as { id?: string };
     return data.id ?? null;
-  } catch {
-    return null;
+  } catch (e) {
+    throw e; // rethrow so crearCitaDesdeSesion outer catch logs to gcal_last_error
   }
 }
 

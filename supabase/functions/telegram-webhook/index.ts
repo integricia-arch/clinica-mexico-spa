@@ -1903,7 +1903,7 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7 }: any
     .from("appointments").select("doctor_id, fecha_inicio, fecha_fin, status")
     .in("doctor_id", docIds).gte("fecha_inicio", ahora.toISOString()).lte("fecha_inicio", finRango.toISOString());
 
-  const ocupadas = (existentes ?? []).filter((a: any) => !["cancelada", "cancelado", "no_show", "no_asistio"].includes(String(a.status).toLowerCase()));
+  const ocupadas = (existentes ?? []).filter((a: any) => !["cancelada", "liberada"].includes(String(a.status).toLowerCase()));
 
   // Pre-cargar Google Calendar busy slots de cada doctor (fire concurrentemente)
   const gcalBusy: Record<string, BusySlot[]> = {};
