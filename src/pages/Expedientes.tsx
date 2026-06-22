@@ -73,6 +73,10 @@ export default function Expedientes() {
   const [currentExpPatientId, setCurrentExpPatientId] = useState<string>("");
   const [myDoctorId, setMyDoctorId] = useState<string | null>(null);
   const [sharedPermissions, setSharedPermissions] = useState<Record<string, "view" | "edit">>({});
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<Expediente | null>(null);
+  const [editForm, setEditForm] = useState({ doctor_id: "", tipo: "primera_vez" });
+  const [keepPrevAccess, setKeepPrevAccess] = useState(false);
 
   useEffect(() => {
     loadExpedientes();
@@ -182,6 +186,54 @@ export default function Expedientes() {
 
   function canReassign(exp: Expediente): boolean {
     return hasRole("admin") || (!!myDoctorId && myDoctorId === exp.doctor_id);
+  }
+
+  function openEditModal(exp: Expediente) {
+    setEditTarget(exp);
+    setEditForm({ doctor_id: exp.doctor_id, tipo: exp.tipo });
+    setKeepPrevAccess(false);
+    setEditModal(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!editTarget || !activeClinicId) return;
+    setSaving(true);
+    try {
+      const prevDoctorId = editTarget.doctor_id;
+      const doctorChanged = editForm.doctor_id !== prevDoctorId;
+
+      await supabase
+        .from("expedientes")
+        .update({ doctor_id: editForm.doctor_id, tipo: editForm.tipo })
+        .eq("id", editTarget.id);
+
+      // If doctor reassigned and "keep access" checked, grant edit to previous owner
+      if (doctorChanged && keepPrevAccess && myDoctorId) {
+        await supabase
+          .from("expediente_permissions" as never)
+          .upsert({
+            expediente_id: editTarget.id,
+            doctor_id: prevDoctorId,
+            permission: "edit",
+            granted_by: myDoctorId,
+            clinic_id: activeClinicId,
+          }, { onConflict: "expediente_id,doctor_id" });
+      }
+
+      const updatedDoctor = doctors.find((d) => d.id === editForm.doctor_id) ?? null;
+      setExpedientes((prev) =>
+        prev.map((e) =>
+          e.id === editTarget.id
+            ? { ...e, doctor_id: editForm.doctor_id, tipo: editForm.tipo, doctors: updatedDoctor }
+            : e
+        )
+      );
+      setEditModal(false);
+      toast({ title: "Expediente actualizado" });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el expediente" });
+    }
+    setSaving(false);
   }
 
   function toggleExpand(expId: string, patientId: string) {
@@ -470,6 +522,55 @@ export default function Expedientes() {
             <Button variant="outline" onClick={() => setNewExpModal(false)}>Cancelar</Button>
             <Button onClick={handleCreateExpediente} disabled={saving}>
               {saving ? "Creando..." : "Crear expediente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editModal} onOpenChange={(v) => !v && setEditModal(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Editar expediente</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Tipo</label>
+              <Select value={editForm.tipo} onValueChange={(v) => setEditForm((f) => ({ ...f, tipo: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TIPO_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {editTarget && canReassign(editTarget) && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Médico responsable</label>
+                <Select value={editForm.doctor_id} onValueChange={(v) => setEditForm((f) => ({ ...f, doctor_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
+                  <SelectContent>
+                    {doctors.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>Dr(a). {d.nombre} {d.apellidos}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {editTarget && editForm.doctor_id !== editTarget.doctor_id && (
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={keepPrevAccess}
+                  onChange={(e) => setKeepPrevAccess(e.target.checked)}
+                  className="rounded"
+                />
+                Mantener acceso de edición al médico anterior
+              </label>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditModal(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={saving}>
+              {saving ? "Guardando..." : "Guardar cambios"}
             </Button>
           </DialogFooter>
         </DialogContent>
