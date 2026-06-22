@@ -792,6 +792,14 @@ Spec: `docs/superpowers/specs/2026-06-21-dashboard-datos-reales-design.md`
 
 ---
 
+## Completado (Jun 21, 2026 — verificación seguridad + auto-reorder)
+
+- [x] **Auditoría seguridad `memoria/`**: limpia — sin credenciales en git. Emails de notificación solo en contexto de ejemplo. Credenciales críticas solo en `.env` + `.claude/` (gitignoreados) ✅
+- [x] **`VITE_GOOGLE_CLIENT_ID`**: ya estaba en GH Actions desde Jun 21 16:12 — pendiente era falso ✅
+- [x] **`auto-reorder` v3 post-fix**: `200 OK` via `net.http_post → net._http_response` · `ocs_creadas:0, errores:[]` — función operativa ✅
+
+---
+
 ## Pendiente / Próximo
 
 ### ✅ Bot + Horario + Google Calendar — PLAN COMPLETO (Jun 20, 2026)
