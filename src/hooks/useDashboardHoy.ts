@@ -140,6 +140,13 @@ export function useDashboardHoy(): DashboardHoyData {
   const load = useCallback(async () => {
     if (!activeClinicId) {
       setLoading(false);
+      setTotalCitasHoy(0);
+      setCitasHoy([]);
+      setCitasSinConfirmar(0);
+      setIngresosHoy(0);
+      setTotalPacientes(0);
+      setAlertasPendientes(0);
+      setActividadReciente([]);
       return;
     }
 
@@ -191,6 +198,10 @@ export function useDashboardHoy(): DashboardHoyData {
             .eq("status", "pending"),
         ]);
 
+      const queryError =
+        citasRes.error ?? ventasRes.error ?? pacientesRes.error ?? auditRes.error ?? alertasRes.error;
+      if (queryError) throw new Error(queryError.message);
+
       const citasRaw = citasRes.data ?? [];
       const mappedCitas: CitaHoy[] = citasRaw.map((c) => {
         const p = c.patients as { nombre: string; apellido_paterno: string | null } | null;
@@ -214,7 +225,7 @@ export function useDashboardHoy(): DashboardHoyData {
       ).length;
 
       const ingresos = (ventasRes.data ?? []).reduce(
-        (sum, v) => sum + Number(v.total),
+        (sum, v) => sum + Number(v.total ?? 0),
         0
       );
 

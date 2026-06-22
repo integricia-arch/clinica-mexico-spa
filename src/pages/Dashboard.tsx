@@ -66,7 +66,7 @@ export default function Dashboard() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <AlertCircle className="h-8 w-8 text-destructive" />
-        <p className="text-sm text-muted-foreground">{data.error}</p>
+        <p className="text-sm text-muted-foreground">No se pudo cargar el panel. Por favor intenta de nuevo.</p>
         <button
           onClick={data.refresh}
           className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
