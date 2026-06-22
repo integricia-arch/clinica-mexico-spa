@@ -46,6 +46,31 @@ Prod project ref: **kyfkvdyxpvpiacyymldc**.
 - Supabase service role key and Telegram bot token are **env-only**. Never commit.
 - If a Supabase access token is exposed during debugging, **revoke and rotate it**.
 
+## Vault secrets — regla de seguridad (learned 2026-06-21)
+
+**NUNCA** hacer `SELECT decrypted_secret FROM vault.decrypted_secrets` y mostrar el resultado en output/logs.
+
+Usar el secret **inline** en la query que lo necesita — el valor se usa pero nunca sale del motor:
+
+```sql
+-- CORRECTO: secret nunca visible en output
+SELECT net.http_post(
+  url := 'https://...supabase.co/functions/v1/mi-funcion',
+  headers := jsonb_build_object(
+    'Authorization', 'Bearer ' || (
+      SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'mi_secret'
+    )
+  ),
+  body := '{}'::jsonb
+);
+
+-- MAL: expone el secret en plaintext
+SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'mi_secret';
+-- → luego usarlo manualmente en otra query
+```
+
+Si un secret ya apareció en output de sesión: evaluar si rotar (depende del blast radius del secret).
+
 ---
 
 ## Lovable Security Fix Protocol
