@@ -202,7 +202,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
       motivo_consulta: motivo.trim() || null,
       origen:          "web" as const,
       creada_por_bot:  false,
-      status:          "confirmada",
+      status:          "confirmada" as const,
       created_by:      user?.id ?? null,
       recurrencia_tipo: recurrente ? recurrenciaTipo : null,
     };

@@ -44,28 +44,28 @@ export function useFinancialDashboardData() {
         supabase
           .from("turnos")
           .select("id, caja_id, estado, monto_apertura, abierto_at, pharmacy_shift_id, cajas(nombre)")
-          .eq("clinic_id", activeClinic)
+          .eq("clinic_id", activeClinic.id)
           .eq("estado", "abierto"),
         supabase
           .from("actas_merma")
           .select("id", { count: "exact", head: true })
-          .eq("clinic_id", activeClinic)
+          .eq("clinic_id", activeClinic.id)
           .eq("estatus", "pendiente_firma"),
         supabase
           .from("ordenes_compra")
           .select("id", { count: "exact", head: true })
-          .eq("clinic_id", activeClinic)
+          .eq("clinic_id", activeClinic.id)
           .eq("estatus", "pendiente_aprobacion"),
         supabase
           .from("facturas_proveedor")
           .select("id", { count: "exact", head: true })
-          .eq("clinic_id", activeClinic)
+          .eq("clinic_id", activeClinic.id)
           .lte("fecha_vencimiento", today)
           .gt("saldo_pendiente_centavos", 0),
         supabase
           .from("almacen_alertas")
           .select("id", { count: "exact", head: true })
-          .eq("clinic_id", activeClinic)
+          .eq("clinic_id", activeClinic.id)
           .eq("status", "pending"),
       ]);
 

@@ -48,7 +48,7 @@ export async function syncConsultationNote(
     } else {
       const { data: created, error: createErr } = await supabase
         .from("expedientes")
-        .insert({ patient_id: patientId, doctor_id, clinic_id, activo: true, tipo: "general" })
+        .insert({ patient_id: patientId, doctor_id, clinic_id, activo: true, tipo: "primera_vez" })
         .select("id")
         .single();
       if (createErr || !created) {

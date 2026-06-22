@@ -38,7 +38,7 @@ export default function FollowupForm({ stepId, stepStatus, existingData, journey
       await syncFollowup({
         journeyInstanceId,
         patientId,
-        clinicId: activeClinic ?? null,
+        clinicId: activeClinic?.id ?? null,
         channel: tipo,
         followupDate: fecha,
         notes: notas,
