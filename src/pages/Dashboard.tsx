@@ -8,15 +8,15 @@ import { useDashboardHoy } from "@/hooks/useDashboardHoy";
 // ─── Status color map ─────────────────────────────────────────────────────────
 
 const estadoColor: Record<string, string> = {
-  "Confirmada": "bg-success/10 text-success",
-  "Confirmada por paciente": "bg-success/10 text-success",
-  "Confirmada por médico": "bg-success/10 text-success",
-  "Pendiente de formulario": "bg-warning/10 text-warning",
-  "Recordatorio enviado": "bg-info/10 text-info",
-  "Solicitada": "bg-muted text-muted-foreground",
-  "Cancelada": "bg-destructive/10 text-destructive",
-  "Tentativa": "bg-muted text-muted-foreground",
-  "Liberada": "bg-muted text-muted-foreground",
+  "Confirmada":              "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+  "Confirmada por paciente": "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+  "Confirmada por médico":   "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+  "Pendiente de formulario": "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+  "Recordatorio enviado":    "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-600/20",
+  "Solicitada":              "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-500/20",
+  "Cancelada":               "bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20",
+  "Tentativa":               "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-500/20",
+  "Liberada":                "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-500/20",
 };
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -81,15 +81,18 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-display text-2xl font-bold text-foreground">Panel principal</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Resumen de operaciones — {fechaCapital}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.10em] text-muted-foreground/60">
+          {fechaCapital}
         </p>
+        <h1 className="font-display text-xl font-semibold tracking-tight text-foreground">
+          Panel principal
+        </h1>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
+          index={0}
           icon={CalendarDays}
           title="Citas hoy"
           value={String(data.totalCitasHoy)}
@@ -97,6 +100,7 @@ export default function Dashboard() {
           changeType={data.citasSinConfirmar > 0 ? "negative" : "positive"}
         />
         <StatCard
+          index={1}
           icon={Users}
           title="Pacientes activos"
           value={data.totalPacientes.toLocaleString("es-MX")}
@@ -104,6 +108,7 @@ export default function Dashboard() {
           changeType="neutral"
         />
         <StatCard
+          index={2}
           icon={Receipt}
           title="Ingresos del día"
           value={formatIngresosHoy(data.ingresosHoy)}
@@ -111,6 +116,7 @@ export default function Dashboard() {
           changeType={data.ingresosHoy > 0 ? "positive" : "neutral"}
         />
         <StatCard
+          index={3}
           icon={AlertCircle}
           title="Alertas de stock"
           value={String(data.alertasPendientes)}
@@ -121,9 +127,9 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Agenda del día */}
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card shadow-card">
+        <div className="lg:col-span-2 rounded-xl bg-card shadow-[0_1px_2px_hsl(222_47%_7%/0.05),0_4px_16px_hsl(222_47%_7%/0.04),inset_0_0.5px_0_hsl(0_0%_100%/0.85),inset_0_0_0_1px_hsl(228_20%_91%)]">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h2 className="text-display font-semibold text-card-foreground">Agenda de hoy</h2>
+            <h2 className="font-display font-semibold text-card-foreground">Agenda de hoy</h2>
             <span className="text-xs font-medium text-muted-foreground">
               {data.totalCitasHoy} {data.totalCitasHoy === 1 ? "cita programada" : "citas programadas"}
             </span>
@@ -137,9 +143,9 @@ export default function Dashboard() {
               {data.citasHoy.map((cita) => (
                 <div
                   key={cita.id}
-                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-indigo-50/40 transition-colors duration-100"
                 >
-                  <span className="w-12 shrink-0 text-sm font-semibold text-foreground">
+                  <span className="w-12 shrink-0 text-xs font-semibold text-indigo-500/60 [font-variant-numeric:tabular-nums]">
                     {cita.hora}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -151,8 +157,8 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      estadoColor[cita.estado] ?? "bg-muted text-muted-foreground"
+                    className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium [font-variant-numeric:tabular-nums] ${
+                      estadoColor[cita.estado] ?? "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-500/20"
                     }`}
                   >
                     {cita.estado}
@@ -164,9 +170,9 @@ export default function Dashboard() {
         </div>
 
         {/* Actividad reciente */}
-        <div className="rounded-xl border border-border bg-card shadow-card">
+        <div className="rounded-xl bg-card shadow-[0_1px_2px_hsl(222_47%_7%/0.05),0_4px_16px_hsl(222_47%_7%/0.04),inset_0_0.5px_0_hsl(0_0%_100%/0.85),inset_0_0_0_1px_hsl(228_20%_91%)]">
           <div className="border-b border-border px-5 py-4">
-            <h2 className="text-display font-semibold text-card-foreground">Actividad reciente</h2>
+            <h2 className="font-display font-semibold text-card-foreground">Actividad reciente</h2>
           </div>
           {data.actividadReciente.length === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-muted-foreground">
@@ -177,7 +183,7 @@ export default function Dashboard() {
               {data.actividadReciente.map((item) => (
                 <div key={item.id} className="px-5 py-3.5">
                   <p className="text-sm text-card-foreground leading-snug">{item.texto}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{item.tiempo}</p>
+                  <p className="mt-1 text-xs text-muted-foreground [font-variant-numeric:tabular-nums]">{item.tiempo}</p>
                 </div>
               ))}
             </div>
@@ -187,8 +193,8 @@ export default function Dashboard() {
 
       {/* Banner alertas pendientes */}
       {data.citasSinConfirmar > 0 && (
-        <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+        <div className="rounded-xl ring-1 ring-inset ring-amber-400/25 bg-amber-50/60 p-4 flex items-start gap-3">
+          <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-foreground">Recordatorios pendientes</p>
             <p className="text-xs text-muted-foreground mt-0.5">
