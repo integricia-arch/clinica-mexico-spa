@@ -551,7 +551,7 @@ async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
     // which caused the agent to call mostrar_menu_categorias unintentionally.
     await guardarMensajeUsuario(conv.id, text, rawMsg);
     await limpiarSesion(conv.id);
-    const bienvenida = `¡Hola! 👋 Soy el asistente de ${CLINIC_NAME}. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo.\n\n¿En qué te puedo ayudar hoy?`;
+    const bienvenida = `¡Hola! 👋 Soy el asistente virtual con IA de ${CLINIC_NAME}. Te ayudo a agendar tu cita, consultar horarios y precios, o conectarte con una persona del equipo. Mis respuestas son generadas por inteligencia artificial y no sustituyen la evaluación de un profesional de salud.\n\n¿En qué te puedo ayudar hoy?`;
     await guardarMensajeAsistente(conv.id, bienvenida);
     await enviarMenuPrincipal(chatId, bienvenida);
     return;

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Tables } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
 import { useFieldErrors } from "@/hooks/useFieldErrors";
@@ -53,6 +54,7 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
   const { toast } = useToast();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
+  const [consentimiento, setConsentimiento] = useState(false);
   const isEdit = !!patient;
   const { markErrors, clearError, errorClass, resetErrors } = useFieldErrors();
 
@@ -96,6 +98,10 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
       toast({ variant: "destructive", title: "Campos requeridos", description: "Completa los campos marcados en rojo" });
       return;
     }
+    if (!isEdit && !consentimiento) {
+      toast({ variant: "destructive", title: "Consentimiento requerido", description: "El paciente debe aceptar el Aviso de Privacidad para registrar sus datos de salud." });
+      return;
+    }
 
     setLoading(true);
     const payload = {
@@ -132,9 +138,15 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
         toast({ title: "Paciente actualizado" });
         onSaved(data);
       } else {
+        const insertPayload = {
+          ...payload,
+          consentimiento_privacidad_at: new Date().toISOString(),
+          consentimiento_privacidad_version: "1.0",
+        };
         const { data, error } = await supabase
           .from("patients")
-          .insert(payload)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .insert(insertPayload as any)
           .select()
           .single();
         if (error) throw error;
@@ -268,9 +280,27 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
           </Section>
         </div>
 
+        {!isEdit && (
+          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3 mx-0">
+            <Checkbox
+              id="consentimiento-privacidad"
+              checked={consentimiento}
+              onCheckedChange={(v) => setConsentimiento(!!v)}
+              className="mt-0.5"
+            />
+            <label htmlFor="consentimiento-privacidad" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+              El paciente ha leído y acepta el{" "}
+              <a href="/aviso-privacidad" target="_blank" rel="noopener noreferrer" className="underline text-foreground">
+                Aviso de Privacidad
+              </a>
+              {" "}y autoriza el tratamiento de sus datos de salud conforme a los fines declarados.
+            </label>
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button onClick={handleSubmit} disabled={loading || (!isEdit && !consentimiento)}>
             {loading ? "Guardando..." : isEdit ? "Guardar cambios" : "Registrar paciente"}
           </Button>
         </DialogFooter>

@@ -49,6 +49,8 @@ import BI from "@/pages/BI";
 import AyudaInterna from "@/pages/AyudaInterna";
 import SinAcceso from "./pages/SinAcceso";
 import NotFound from "./pages/NotFound";
+import AvisoPrivacidad from "@/pages/AvisoPrivacidad";
+import TerminosServicio from "@/pages/TerminosServicio";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +68,8 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/pitch" element={<Pitch />} />
               <Route path="/verificar-receta/:id" element={<VerificarReceta />} />
+              <Route path="/aviso-privacidad" element={<AvisoPrivacidad />} />
+              <Route path="/terminos" element={<TerminosServicio />} />
               <Route
                 path="/*"
                 element={
