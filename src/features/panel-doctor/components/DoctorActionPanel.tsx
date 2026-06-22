@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useNavigate } from "react-router-dom";
 import {
   Stethoscope, FlaskConical, FileText, Pill, CheckCircle2,
@@ -29,6 +30,7 @@ export default function DoctorActionPanel({ item, doctorId, snapshot }: Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const patientId = item.patient?.id ?? null;
+  const { activeClinicId } = useActiveClinic();
   const journeyId = item.journey_instance_id;
   const [expedienteId, setExpedienteId] = useState<string | null>(snapshot.expediente?.id ?? null);
   const [openingConsulta, setOpeningConsulta] = useState(false);
@@ -180,6 +182,7 @@ export default function DoctorActionPanel({ item, doctorId, snapshot }: Props) {
         onClose={() => setStudyOpen(false)}
         patientId={patientId}
         doctorId={doctorId}
+        clinicId={activeClinicId ?? ""}
         appointmentId={item.appointment_id}
         journeyInstanceId={journeyId}
         expedienteId={expId}
@@ -198,6 +201,7 @@ export default function DoctorActionPanel({ item, doctorId, snapshot }: Props) {
         open={!!resultStudy}
         onClose={() => setResultStudy(null)}
         study={resultStudy}
+        clinicId={activeClinicId ?? ""}
         journeyInstanceId={journeyId}
         onSaved={() => snapshot.reload()}
       />

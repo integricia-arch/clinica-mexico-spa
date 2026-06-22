@@ -50,7 +50,7 @@ export interface PatientSnapshot {
   reload: () => Promise<void>;
 }
 
-export function usePatientClinicalSnapshot(patientId: string | null, doctorId: string | null): PatientSnapshot {
+export function usePatientClinicalSnapshot(patientId: string | null, doctorId: string | null, clinicId: string | null): PatientSnapshot {
   const [patient, setPatient] = useState<PatientRow | null>(null);
   const [expediente, setExpediente] = useState<ExpedienteRow | null>(null);
   const [notas, setNotas] = useState<NotaRow[]>([]);
@@ -89,7 +89,7 @@ export function usePatientClinicalSnapshot(patientId: string | null, doctorId: s
           .eq("patient_id", patientId)
           .order("created_at", { ascending: false })
           .limit(10),
-        listStudiesByPatient(patientId),
+        clinicId ? listStudiesByPatient(patientId, clinicId) : Promise.resolve([]),
       ]);
       setPatient(p.data as PatientRow ?? null);
       const exp = (e.data as ExpedienteRow) ?? null;
@@ -113,7 +113,7 @@ export function usePatientClinicalSnapshot(patientId: string | null, doctorId: s
     } finally {
       setLoading(false);
     }
-  }, [patientId, doctorId]);
+  }, [patientId, doctorId, clinicId]);
 
   useEffect(() => {
     load();

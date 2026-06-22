@@ -8,11 +8,13 @@ import PatientClinicalContext from "@/features/panel-doctor/components/PatientCl
 import { DoctorConfirmationPanel } from "@/features/panel-doctor/components/DoctorConfirmationPanel";
 import { useDoctorQueue, type DoctorQueueItem } from "@/features/panel-doctor/hooks/useDoctorQueue";
 import { usePatientClinicalSnapshot } from "@/features/panel-doctor/hooks/usePatientClinicalSnapshot";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 
 export default function PanelDoctor() {
   const { user, roles } = useAuth();
   const [params, setParams] = useSearchParams();
   const isAdmin = roles.includes("admin");
+  const { activeClinicId } = useActiveClinic();
   const [doctors, setDoctors] = useState<any[]>([]);
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [doctorInfo, setDoctorInfo] = useState<any | null>(null);
@@ -45,7 +47,7 @@ export default function PanelDoctor() {
     () => items.find((i) => i.appointment_id === selectedId) ?? items[0] ?? null,
     [items, selectedId],
   );
-  const snapshot = usePatientClinicalSnapshot(selected?.patient?.id ?? null, doctorId);
+  const snapshot = usePatientClinicalSnapshot(selected?.patient?.id ?? null, doctorId, activeClinicId);
 
   if (noDoctorProfile) {
     return (

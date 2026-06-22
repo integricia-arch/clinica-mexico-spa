@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Tipos locales (la tabla puede no estar aún regenerada en types.ts)
+// Tipos locales (la tabla no está aún en types.ts generados)
 export interface PatientStudy {
   id: string;
   patient_id: string;
   doctor_id: string;
+  clinic_id: string;
   appointment_id: string | null;
   journey_instance_id: string | null;
   expediente_id: string | null;
@@ -38,10 +39,62 @@ export interface PatientStudy {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tbl = (name: string) => supabase.from(name as any);
 
-export async function listStudiesByPatient(patientId: string): Promise<PatientStudy[]> {
+const BUCKET = "estudios-resultados";
+
+// ─── Pure helpers ─────────────────────────────────────────────────────────────
+
+/** Returns true if the url is a Supabase Storage path (sb: prefix), false for direct URLs */
+export function isStoragePath(url: string): boolean {
+  return url.startsWith("sb:");
+}
+
+// ─── Storage helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Uploads a file to Supabase Storage under the clinic/patient/study path.
+ * Returns the archivo_url value to store in patient_studies: "sb:{path}"
+ */
+export async function uploadStudyFile(
+  clinicId: string,
+  patientId: string,
+  studyId: string,
+  file: File,
+): Promise<string> {
+  const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+  const path = `${clinicId}/${patientId}/${studyId}/${safeName}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (error) throw error;
+  return `sb:${path}`;
+}
+
+/**
+ * Resolves archivo_url to an accessible URL.
+ * - sb:{path} → signed URL valid for 1 hour
+ * - any other string → returned as-is (local server URL, manual URL)
+ */
+export async function getStudyFileUrl(archivoUrl: string): Promise<string> {
+  if (!isStoragePath(archivoUrl)) return archivoUrl;
+  const path = archivoUrl.slice(3);
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+// ─── CRUD ─────────────────────────────────────────────────────────────────────
+
+export async function listStudiesByPatient(
+  patientId: string,
+  clinicId: string,
+): Promise<PatientStudy[]> {
   const { data, error } = await tbl("patient_studies")
     .select("*")
     .eq("patient_id", patientId)
+    .eq("clinic_id", clinicId)
     .order("solicitado_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as PatientStudy[];
@@ -59,6 +112,7 @@ export async function listStudiesByJourney(journeyId: string): Promise<PatientSt
 export async function requestStudy(input: {
   patient_id: string;
   doctor_id: string;
+  clinic_id: string;
   appointment_id?: string | null;
   journey_instance_id?: string | null;
   expediente_id?: string | null;

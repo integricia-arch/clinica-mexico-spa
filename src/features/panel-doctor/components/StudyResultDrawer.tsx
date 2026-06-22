@@ -17,11 +17,12 @@ interface Props {
   open: boolean;
   onClose: () => void;
   study: PatientStudy | null;
+  clinicId?: string;
   journeyInstanceId?: string | null;
   onSaved?: () => void;
 }
 
-export default function StudyResultDrawer({ open, onClose, study, journeyInstanceId, onSaved }: Props) {
+export default function StudyResultDrawer({ open, onClose, study, clinicId: _clinicId, journeyInstanceId, onSaved }: Props) {
   const { toast } = useToast();
   const [resumen, setResumen] = useState(study?.resultado_resumen ?? "");
   const [archivoUrl, setArchivoUrl] = useState(study?.archivo_url ?? "");

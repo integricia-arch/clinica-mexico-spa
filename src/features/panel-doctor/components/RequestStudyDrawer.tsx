@@ -16,6 +16,7 @@ interface Props {
   onClose: () => void;
   patientId: string;
   doctorId: string;
+  clinicId: string;
   appointmentId?: string | null;
   journeyInstanceId?: string | null;
   expedienteId?: string | null;
@@ -23,7 +24,7 @@ interface Props {
 }
 
 export default function RequestStudyDrawer({
-  open, onClose, patientId, doctorId, appointmentId, journeyInstanceId, expedienteId, onCreated,
+  open, onClose, patientId, doctorId, clinicId, appointmentId, journeyInstanceId, expedienteId, onCreated,
 }: Props) {
   const { toast } = useToast();
   const [tipo, setTipo] = useState<"lab" | "imagen" | "otro">("lab");
@@ -49,6 +50,7 @@ export default function RequestStudyDrawer({
       const study = await requestStudy({
         patient_id: patientId,
         doctor_id: doctorId,
+        clinic_id: clinicId,
         appointment_id: appointmentId ?? null,
         journey_instance_id: journeyInstanceId ?? null,
         expediente_id: expedienteId ?? null,
