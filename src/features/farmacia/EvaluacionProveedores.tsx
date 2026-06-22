@@ -166,7 +166,7 @@ export default function EvaluacionProveedores() {
       const devsTyped = (devs ?? []) as DevRow[];
       const factsTyped = (facts ?? []) as FactRow[];
 
-      const kpis: ProvKPI[] = ((provs ?? []) as { id: string; nombre: string }[]).map((prov) => {
+      const kpis: ProvKPI[] = ((provs ?? []) as { id: string; nombre: string; rfc: string | null; estatus_efos: string | null; ultima_verificacion_efos: string | null }[]).map((prov) => {
         const provOcs = ocsTyped.filter((o) => o.proveedor_id === prov.id);
         const provRecs = recsTyped.filter((r) => r.proveedor_id === prov.id);
         const provDevIds = devsTyped.filter((d) => d.proveedor_id === prov.id).map((d) => d.id);

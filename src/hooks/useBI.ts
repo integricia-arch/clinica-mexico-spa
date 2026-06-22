@@ -277,7 +277,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
       const citasMesAnterior = citasPrevRes.count ?? 0;
       const citasConfirmadas = citas.filter(c => CONFIRMED.has(c.status)).length;
       const citasCanceladas = citas.filter(c => c.status === "cancelada").length;
-      const citasNoShow = citas.filter(c => c.status === "no_show").length;
+      const citasNoShow = citas.filter(c => (c.status as string) === "no_show").length;
       const tasaCancelacion = citasMes > 0 ? Math.round((citasCanceladas / citasMes) * 100) : 0;
       const tasaNoShow = citasMes > 0 ? Math.round((citasNoShow / citasMes) * 100) : 0;
 

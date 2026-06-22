@@ -41,8 +41,8 @@ interface NameRow {
 
 interface JourneyRow {
   id: string;
-  appointment_id: string;
-  snapshot_json: Record<string, unknown> | null;
+  appointment_id: string | null;
+  snapshot_json: import("@/integrations/supabase/types").Json | null;
 }
 
 interface ConsentRow {

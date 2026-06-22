@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { restSelect } from "@/lib/restClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -339,8 +340,8 @@ export default function DetalleCita() {
       _accion: newStatus === "cancelada" ? "cancelar" : "actualizar",
       _tabla: "appointments",
       _registro_id: id!,
-      _datos_anteriores: { status: oldStatus } as unknown as Record<string, unknown>,
-      _datos_nuevos: { status: newStatus } as unknown as Record<string, unknown>,
+      _datos_anteriores: { status: oldStatus } as unknown as Json,
+      _datos_nuevos: { status: newStatus } as unknown as Json,
     });
 
     setAppointment({ ...appointment, status: newStatus });

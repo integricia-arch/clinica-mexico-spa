@@ -889,7 +889,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
 
     const { data: newVersion, error } = await supabase
       .from("journey_template_versions")
-      .insert({ template_id: templateId, version_number: nextNumber, status: "draft", config_json: active.config_json })
+      .insert({ template_id: templateId, version_number: nextNumber, status: "draft", config_json: active.config_json as unknown as import("@/integrations/supabase/types").Json })
       .select()
       .single();
     if (error || !newVersion) { toast.error(error?.message ?? "Error"); return; }
@@ -897,7 +897,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
     // clone steps
     const { data: srcSteps } = await supabase.from("journey_step_definitions").select("*").eq("template_version_id", active.id);
     if (srcSteps && srcSteps.length > 0) {
-      const rows = srcSteps.map((s: Record<string, unknown>) => ({
+      const rows = srcSteps.map((s: any) => ({
         template_version_id: newVersion.id,
         step_key: s.step_key,
         step_name: s.step_name,
@@ -1073,7 +1073,7 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
     if (base?.active_version_id) {
       const { data: srcSteps } = await supabase.from("journey_step_definitions").select("*").eq("template_version_id", base.active_version_id);
       if (srcSteps && srcSteps.length > 0) {
-        const rows = srcSteps.map((s: Record<string, unknown>) => ({
+        const rows = srcSteps.map((s: any) => ({
           template_version_id: ver.id,
           step_key: s.step_key,
           step_name: s.step_name,

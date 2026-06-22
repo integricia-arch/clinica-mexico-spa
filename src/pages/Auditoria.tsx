@@ -160,7 +160,7 @@ function FarmaciaLogCard({ r }: { r: AuditRow }) {
           </div>
           {/* Quick summary from datos_nuevos */}
           {r.datos_nuevos?.folio_corte && (
-            <p className="text-xs">Folio: <span className="font-medium">{r.datos_nuevos.folio_corte}</span></p>
+            <p className="text-xs">Folio: <span className="font-medium">{String(r.datos_nuevos.folio_corte)}</span></p>
           )}
           {r.datos_nuevos?.monto != null && (
             <p className="text-xs">Monto: <span className="font-medium">${Number(r.datos_nuevos.monto).toFixed(2)}</span>
@@ -258,7 +258,7 @@ export default function Auditoria() {
   const loadErrors = async () => {
     setErrLoading(true);
     const { data } = await supabase
-      .from("pos_error_logs" as unknown as "appointments")
+      .from("pos_error_logs")
       .select("id, created_at, funcion, error_msg, error_detail, payload")
       .order("created_at", { ascending: false })
       .limit(50);
@@ -270,7 +270,7 @@ export default function Auditoria() {
     if (!activeClinic?.id) return;
     setFarmLoading(true);
     const { data } = await supabase
-      .from("audit_logs" as unknown as "appointments")
+      .from("audit_logs")
       .select("id, created_at, user_id, accion, tabla, registro_id, datos_nuevos, datos_anteriores, clinic_id")
       .eq("clinic_id", activeClinic.id)
       .in("tabla", ["pharmacy_cash_shifts", "pharmacy_sales", "fondos_movimientos", "turnos", "cortes"])

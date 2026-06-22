@@ -18,15 +18,15 @@ type Appointment = {
   fecha_inicio: string | null;
   status: string | null;
   origen: string | null;
-  motivo: string | null;
+  motivo_consulta: string | null;
 };
 
 type Prescription = {
   id: string;
-  numero_receta: string | null;
+  prescription_number: string | null;
   created_at: string | null;
   status: string | null;
-  diagnostico: string | null;
+  diagnosis: string | null;
 };
 
 type PharmacySale = {
@@ -90,7 +90,7 @@ function PacienteHistorialDrawer({
     setLoadingAppts(true);
     supabase
       .from("appointments")
-      .select("id,fecha_inicio,status,origen,motivo")
+      .select("id,fecha_inicio,status,origen,motivo_consulta")
       .eq("patient_id", patient.id)
       .order("fecha_inicio", { ascending: false })
       .limit(20)
@@ -102,7 +102,7 @@ function PacienteHistorialDrawer({
     setLoadingRxs(true);
     supabase
       .from("prescriptions")
-      .select("id,numero_receta,created_at,status,diagnostico")
+      .select("id,prescription_number,created_at,status,diagnosis")
       .eq("patient_id", patient.id)
       .order("created_at", { ascending: false })
       .limit(20)
@@ -158,8 +158,8 @@ function PacienteHistorialDrawer({
                       {a.status ?? "—"}
                     </span>
                   </div>
-                  {a.motivo && (
-                    <p className="mt-1 text-xs text-muted-foreground truncate">{a.motivo}</p>
+                  {a.motivo_consulta && (
+                    <p className="mt-1 text-xs text-muted-foreground truncate">{a.motivo_consulta}</p>
                   )}
                 </div>
               ))
@@ -175,7 +175,7 @@ function PacienteHistorialDrawer({
               rxs.map((r) => (
                 <div key={r.id} className="rounded-lg border border-border p-3 text-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{r.numero_receta ?? r.id.slice(0, 8)}</span>
+                    <span className="font-medium">{r.prescription_number ?? r.id.slice(0, 8)}</span>
                     <span className={`text-xs font-medium ${rxStatusColor(r.status)}`}>
                       {r.status ?? "—"}
                     </span>
@@ -186,8 +186,8 @@ function PacienteHistorialDrawer({
                         ? format(new Date(r.created_at), "dd/MM/yyyy HH:mm", { locale: es })
                         : "—"}
                     </span>
-                    {r.diagnostico && (
-                      <span className="text-xs text-muted-foreground truncate max-w-[60%]">{r.diagnostico}</span>
+                    {r.diagnosis && (
+                      <span className="text-xs text-muted-foreground truncate max-w-[60%]">{r.diagnosis}</span>
                     )}
                   </div>
                 </div>

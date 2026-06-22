@@ -45,7 +45,7 @@ export function useBitacoraTemperatura() {
       setLoading(true);
       setError(null);
       try {
-        const db = supabase.from("bitacora_temperatura" as never) as ReturnType<typeof supabase.from>;
+        const db = supabase.from("bitacora_temperatura");
         let q = db.select("*").eq("clinic_id", activeClinicId).order("created_at", { ascending: false }).limit(limit);
         if (zona) q = q.eq("zona", zona);
         const { data, error: err } = await q;
@@ -67,7 +67,7 @@ export function useBitacoraTemperatura() {
       setLoading(true);
       setError(null);
       try {
-        const db = supabase.from("bitacora_temperatura" as never) as ReturnType<typeof supabase.from>;
+        const db = supabase.from("bitacora_temperatura");
         const { data, error: err } = await db
           .insert({
             clinic_id:           activeClinicId,
@@ -102,7 +102,7 @@ export function useBitacoraTemperatura() {
       };
       await Promise.all(
         zonas.map(async (zona) => {
-          const db = supabase.from("bitacora_temperatura" as never) as ReturnType<typeof supabase.from>;
+          const db = supabase.from("bitacora_temperatura");
           const { data } = await db
             .select("*")
             .eq("clinic_id", activeClinicId)

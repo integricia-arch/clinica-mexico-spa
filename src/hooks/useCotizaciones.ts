@@ -76,7 +76,7 @@ export function useCotizaciones() {
       setLoading(true);
       setError(null);
       try {
-        const db = supabase.from("cotizaciones" as never) as ReturnType<typeof supabase.from>;
+        const db = supabase.from("cotizaciones");
         let q = db
           .select("*, proveedor:proveedores(nombre, rfc), items:cotizaciones_items(*)")
           .eq("clinic_id", activeClinicId)
@@ -102,7 +102,7 @@ export function useCotizaciones() {
       setError(null);
       try {
         const { subtotal, iva, total } = calcTotales(input.items);
-        const db = supabase.from("cotizaciones" as never) as ReturnType<typeof supabase.from>;
+        const db = supabase.from("cotizaciones");
         const { data: cot, error: errCot } = await db
           .insert({
             clinic_id:           activeClinicId,
@@ -125,7 +125,7 @@ export function useCotizaciones() {
         const cotizacion = cot as Cotizacion;
 
         if (input.items.length > 0) {
-          const dbItems = supabase.from("cotizaciones_items" as never) as ReturnType<typeof supabase.from>;
+          const dbItems = supabase.from("cotizaciones_items");
           const { error: errItems } = await dbItems.insert(
             input.items.map((it, idx) => {
               const desc = 1 - (it.descuento_pct ?? 0) / 100;
@@ -162,7 +162,7 @@ export function useCotizaciones() {
       if (!activeClinicId) throw new Error("Sin clínica activa");
       setLoading(true);
       try {
-        const db = supabase.from("cotizaciones" as never) as ReturnType<typeof supabase.from>;
+        const db = supabase.from("cotizaciones");
         // Deselect all in same solicitud
         if (solicitudCompraId) {
           await db

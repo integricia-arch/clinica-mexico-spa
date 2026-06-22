@@ -376,7 +376,7 @@ export default function DashboardCompras() {
             {stats.recMes.slice(0, 6).map((r) => (
               <div key={r.id} className="flex items-center justify-between gap-2 text-sm">
                 <div className="min-w-0">
-                  <span className="font-mono text-xs font-semibold">{r.folio}</span>
+                  <span className="font-mono text-xs font-semibold">{r.folio_recepcion}</span>
                   <span className="text-muted-foreground text-xs ml-2">
                     {format(parseISO(r.fecha_recepcion), "dd MMM", { locale: es })}
                   </span>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { useProveedores } from "@/hooks/useProveedores";
-import { useOrdenesCompra, type OrdenCompra, type OrdenCompraItemInput } from "@/hooks/useOrdenesCompra";
+import { useOrdenesCompra, type OrdenCompra, type OrdenCompraItem, type OrdenCompraItemInput } from "@/hooks/useOrdenesCompra";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export default function OrdenesCompra() {
 
   const [medicamentos, setMedicamentos] = useState<MedicamentoOption[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [expandedItems, setExpandedItems] = useState<Record<string, OrdenCompraItemInput[]>>({});
+  const [expandedItems, setExpandedItems] = useState<Record<string, OrdenCompraItem[]>>({});
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);

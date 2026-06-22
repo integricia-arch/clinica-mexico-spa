@@ -100,8 +100,8 @@ export default function ConfiguracionPagos() {
     };
 
     const { error } = existingId
-      ? await supabase.from("payment_gateway_config" as unknown as "appointments").update(payload).eq("id", existingId)
-      : await supabase.from("payment_gateway_config" as unknown as "appointments").insert(payload);
+      ? await supabase.from("payment_gateway_config" as any).update(payload).eq("id", existingId)
+      : await supabase.from("payment_gateway_config" as any).insert(payload);
 
     setSaving(false);
     if (error) { toast.error("Error al guardar: " + error.message); return; }

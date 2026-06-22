@@ -171,7 +171,7 @@ function BloqueoDialog({ open, doctores, clinicId, onCreated, onCancel }: Bloque
       tipo:       form.tipo,
       todo_el_dia: form.todo_el_dia,
     };
-    const { error } = await (supabase.from("doctor_bloqueos" as never) as ReturnType<typeof supabase.from>)
+    const { error } = await (supabase.from("doctor_bloqueos"))
       .insert(payload);
     setSaving(false);
     if (error) { toast.error(friendlyError(error)); return; }
@@ -285,7 +285,7 @@ export default function Agenda() {
         .lte("fecha_inicio", fin.toISOString())
         .order("fecha_inicio"),
       supabase.from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos"),
-      (supabase.from("doctor_bloqueos" as never) as ReturnType<typeof supabase.from>)
+      (supabase.from("doctor_bloqueos"))
         .select("id,doctor_id,fecha_inicio,fecha_fin,motivo,tipo,todo_el_dia")
         .gte("fecha_fin",    ini.toISOString())
         .lte("fecha_inicio", fin.toISOString())

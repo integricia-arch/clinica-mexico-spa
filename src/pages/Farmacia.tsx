@@ -1021,7 +1021,7 @@ export default function Farmacia() {
             {editMed && (
               <div className="rounded-lg border border-border bg-muted/30 p-4">
                 <MedicamentoProveedoresPanel
-                  medicamentoId={editMed}
+                  medicamentoId={editMed.id}
                   medicamentoNombre={medForm.nombre}
                 />
               </div>

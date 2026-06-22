@@ -105,7 +105,7 @@ export default function ThreeWayMatchPanel({
       }
 
       type OcItem = { medicamento_id: string; cantidad_pedida: number; precio_unitario_centavos: number; subtotal_centavos: number; medicamentos?: { nombre_generico: string } | null };
-      type RecItem = { medicamento_id: string; cantidad_recibida: number; precio_unitario_centavos: number };
+      type RecItem = { medicamento_id: string; cantidad_recibida: number; precio_unitario_centavos: number; medicamentos?: { nombre_generico: string } | null };
 
       const oci = (ocItems ?? []) as OcItem[];
       const reci = recItems as RecItem[];

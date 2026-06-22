@@ -124,7 +124,7 @@ export default function RecepcionDashboard() {
     });
     setCitas((listRes.data ?? []) as CitaRow[]);
     // identidades_canal vuelve como array si la FK es ambigua; normalizamos
-    let convsNorm = (convRes.data ?? []).map((c: ConvRow & { identidades_canal: ConvRow["identidades_canal"] | ConvRow["identidades_canal"][] }) => {
+    let convsNorm = ((convRes.data ?? []) as any[]).map((c: any) => {
       const ic = Array.isArray(c.identidades_canal) ? c.identidades_canal[0] : c.identidades_canal;
       return { ...c, identidades_canal: ic ?? { display_name: null, patient_id: null, canal_id: "" }, patients: null };
     }) as ConvRow[];

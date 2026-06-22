@@ -15,7 +15,7 @@ import { es } from "date-fns/locale";
 const fmt = (c: number) => (c / 100).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
 interface Proveedor { id: string; nombre: string; rfc: string | null }
-interface SolicitudOption { id: string; folio: string; descripcion: string | null }
+interface SolicitudOption { id: string; folio: string; motivo: string | null }
 
 function ItemsForm({
   items,
@@ -187,7 +187,7 @@ function NuevaCotizacionForm({
             <SelectContent>
               <SelectItem value="">Sin solicitud</SelectItem>
               {solicitudes.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.folio} — {s.descripcion ?? "Sin descripción"}</SelectItem>
+                <SelectItem key={s.id} value={s.id}>{s.folio} — {s.motivo ?? "Sin descripción"}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -246,7 +246,7 @@ function ComparativaTable({ cotizaciones, onSeleccionar }: { cotizaciones: Cotiz
               <tr key={c.id} className={`border-b last:border-0 ${c.seleccionada ? "bg-green-50" : isBest ? "bg-blue-50" : ""}`}>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-1">
-                    {isBest && <Star className="h-3.5 w-3.5 text-blue-500 shrink-0" title="Menor precio" />}
+                    {isBest && <Star className="h-3.5 w-3.5 text-blue-500 shrink-0" aria-label="Menor precio" />}
                     <span className="text-sm">{c.proveedor?.nombre ?? "—"}</span>
                     {c.seleccionada && <Badge className="bg-green-600 text-white text-xs ml-1">Seleccionada</Badge>}
                   </div>
@@ -303,12 +303,12 @@ export default function CotizacionesPanel() {
 
   useEffect(() => {
     if (!activeClinicId) return;
-    const db = supabase.from("proveedores" as never) as ReturnType<typeof supabase.from>;
+    const db = supabase.from("proveedores");
     db.select("id, nombre, rfc").eq("clinic_id", activeClinicId).eq("activo", true).order("nombre")
       .then(({ data }) => setProveedores((data || []) as Proveedor[]));
 
-    const dbSc = supabase.from("solicitudes_compra" as never) as ReturnType<typeof supabase.from>;
-    dbSc.select("id, folio, descripcion").eq("clinic_id", activeClinicId).order("created_at", { ascending: false }).limit(50)
+    const dbSc = supabase.from("solicitudes_compra");
+    dbSc.select("id, folio, motivo").eq("clinic_id", activeClinicId).order("created_at", { ascending: false }).limit(50)
       .then(({ data }) => setSolicitudes((data || []) as SolicitudOption[]));
   }, [activeClinicId]);
 
@@ -376,7 +376,7 @@ export default function CotizacionesPanel() {
         return (
           <div key={scKey} className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground border-b pb-1">
-              {sc ? `SC ${sc.folio} — ${sc.descripcion ?? ""}` : "Sin solicitud de compra"}
+              {sc ? `SC ${sc.folio} — ${sc.motivo ?? ""}` : "Sin solicitud de compra"}
               <span className="ml-2 text-xs">({cots.length} cotización{cots.length !== 1 ? "es" : ""})</span>
             </h3>
             <ComparativaTable cotizaciones={cots} onSeleccionar={handleSeleccionar} />

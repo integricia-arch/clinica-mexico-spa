@@ -195,7 +195,7 @@ export default function ReporteRotacionABC() {
           <Button size="sm" variant="outline" onClick={load} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} /> Actualizar
           </Button>
-          <Button size="sm" onClick={() => exportCSV(items, periodoDesde, periodoHasta, activeClinic?.nombre ?? "Clínica")}>
+          <Button size="sm" onClick={() => exportCSV(items, periodoDesde, periodoHasta, activeClinic?.name ?? "Clínica")}>
             <Download className="h-4 w-4 mr-1" /> Exportar CSV
           </Button>
         </div>

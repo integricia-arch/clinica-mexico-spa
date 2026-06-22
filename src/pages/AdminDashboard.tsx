@@ -226,8 +226,8 @@ export default function AdminDashboard() {
         onReload={reload}
         onNewAppointment={() => navigate("/nueva-cita")}
         onShowBlocked={() => setFilters((f) => ({ ...f, stageKey: "bloqueado" }))}
-        doctors={data.doctorsList}
-        rooms={data.roomsList}
+        doctors={data.doctorsList as { id: string; nombre: string; apellidos: string }[]}
+        rooms={data.roomsList as { id: string; nombre: string }[]}
       />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">

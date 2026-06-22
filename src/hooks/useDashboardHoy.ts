@@ -162,7 +162,7 @@ export function useDashboardHoy(): DashboardHoyData {
           supabase
             .from("appointments")
             .select(
-              "id, fecha_inicio, status, motivo_consulta, patients(nombre, apellido_paterno), doctors(nombre, apellidos)"
+              "id, fecha_inicio, status, motivo_consulta, patients(nombre, apellidos), doctors(nombre, apellidos)"
             )
             .eq("clinic_id", activeClinicId)
             .gte("fecha_inicio", todayStart)
@@ -204,13 +204,13 @@ export function useDashboardHoy(): DashboardHoyData {
 
       const citasRaw = citasRes.data ?? [];
       const mappedCitas: CitaHoy[] = citasRaw.map((c) => {
-        const p = c.patients as { nombre: string; apellido_paterno: string | null } | null;
+        const p = c.patients as { nombre: string; apellidos: string | null } | null;
         const d = c.doctors as { nombre: string; apellidos: string } | null;
         return {
           id: c.id,
           hora: formatHora(c.fecha_inicio),
           paciente: p
-            ? formatNombrePaciente(p.nombre, p.apellido_paterno)
+            ? formatNombrePaciente(p.nombre, p.apellidos)
             : "Paciente",
           medico: d ? formatNombreDoctor(d.nombre, d.apellidos) : "Médico",
           tipo: (c.motivo_consulta as string | null)?.slice(0, 30) ?? "Consulta general",

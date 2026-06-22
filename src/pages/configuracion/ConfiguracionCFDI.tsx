@@ -85,8 +85,7 @@ export default function ConfiguracionCFDI() {
     const load = async () => {
       setLoading(true);
       const { data } = await supabase
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .from("cfdi_config" as any)
+        .from("cfdi_config")
         .select("id, rfc, razon_social, regimen_fiscal, domicilio_fiscal_cp, serie_defecto, pac_proveedor, pac_ambiente, pac_usuario, csd_cer_nombre, csd_key_nombre, csd_cer_path, csd_key_path, iva_default, zona_fronteriza")
         .eq("clinic_id", activeClinicId)
         .maybeSingle();

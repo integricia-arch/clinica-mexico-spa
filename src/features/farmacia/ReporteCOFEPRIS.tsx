@@ -224,7 +224,7 @@ export default function ReporteCOFEPRIS() {
           <Button size="sm" variant="outline" onClick={() => window.print()}>
             <Printer className="h-4 w-4 mr-1" /> Imprimir
           </Button>
-          <Button size="sm" onClick={() => exportCSV(lotes, movimientos, activeClinic?.nombre ?? "Clínica")}>
+          <Button size="sm" onClick={() => exportCSV(lotes, movimientos, activeClinic?.name ?? "Clínica")}>
             <Download className="h-4 w-4 mr-1" /> Exportar CSV
           </Button>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedTable } from "@/lib/untypedTable";
 import { restSelect, restInsert } from "@/lib/restClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -126,8 +127,7 @@ export default function Expedientes() {
           return;
         }
         // Fetch shared expediente IDs first
-        const { data: shared } = await supabase
-          .from("expediente_permissions" as never)
+        const { data: shared } = await untypedTable("expediente_permissions")
           .select("expediente_id")
           .eq("doctor_id", myDoctorId);
         const sharedIds = (shared ?? []).map((r: { expediente_id: string }) => r.expediente_id);
@@ -174,8 +174,7 @@ export default function Expedientes() {
 
   async function loadSharedPermissions(expIds: string[]) {
     if (!myDoctorId || expIds.length === 0) { setSharedPermissions({}); return; }
-    const { data } = await supabase
-      .from("expediente_permissions" as never)
+    const { data } = await untypedTable("expediente_permissions")
       .select("expediente_id, permission")
       .eq("doctor_id", myDoctorId)
       .in("expediente_id", expIds);
@@ -220,14 +219,13 @@ export default function Expedientes() {
 
       await supabase
         .from("expedientes")
-        .update({ doctor_id: editForm.doctor_id, tipo: editForm.tipo })
+        .update({ doctor_id: editForm.doctor_id, tipo: editForm.tipo as "primera_vez" | "seguimiento" | "urgencia" | "cirugia" | "cronico" })
         .eq("id", editTarget.id);
 
       // If doctor reassigned and "keep access" checked, grant edit to previous owner
       const granterId = myDoctorId;
       if (doctorChanged && keepPrevAccess && granterId) {
-        await supabase
-          .from("expediente_permissions" as never)
+        await untypedTable("expediente_permissions")
           .upsert({
             expediente_id: editTarget.id,
             doctor_id: prevDoctorId,
@@ -254,8 +252,7 @@ export default function Expedientes() {
   }
 
   async function loadExpPermissions(expId: string) {
-    const { data } = await supabase
-      .from("expediente_permissions" as never)
+    const { data } = await untypedTable("expediente_permissions")
       .select("id, expediente_id, doctor_id, permission, doctors:doctor_id(nombre, apellidos)")
       .eq("expediente_id", expId);
     setExpPermissions((data ?? []) as unknown as ExpPermRow[]);
@@ -265,8 +262,7 @@ export default function Expedientes() {
     if (!permTarget || !newPermDoctorId || !activeClinicId || !myDoctorId) return;
     setPermSaving(true);
     try {
-      await supabase
-        .from("expediente_permissions" as never)
+      await untypedTable("expediente_permissions")
         .insert({
           expediente_id: permTarget.id,
           doctor_id: newPermDoctorId,
@@ -287,8 +283,7 @@ export default function Expedientes() {
   async function handleRemovePerm(permId: string) {
     if (!permTarget) return;
     try {
-      await supabase
-        .from("expediente_permissions" as never)
+      await untypedTable("expediente_permissions")
         .delete()
         .eq("id", permId);
       setExpPermissions((prev) => prev.filter((p) => p.id !== permId));
@@ -299,8 +294,7 @@ export default function Expedientes() {
 
   async function handleChangePermLevel(permId: string, level: "view" | "edit") {
     try {
-      await supabase
-        .from("expediente_permissions" as never)
+      await untypedTable("expediente_permissions")
         .update({ permission: level })
         .eq("id", permId);
       setExpPermissions((prev) =>
