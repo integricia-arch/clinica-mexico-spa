@@ -68,7 +68,7 @@ export default function StatCard({
       {change && (
         <p className={`mt-1.5 flex items-center gap-1.5 text-xs font-medium ${changeColor}`}>
           {changeType !== "neutral" && dotColor && (
-            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} aria-hidden="true" />
           )}
           {change}
         </p>

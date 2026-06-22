@@ -157,7 +157,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium [font-variant-numeric:tabular-nums] ${
+                    className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium [font-variant-numeric:tabular-nums] ${
                       estadoColor[cita.estado] ?? "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-500/20"
                     }`}
                   >

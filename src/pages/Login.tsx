@@ -160,10 +160,10 @@ export default function Login() {
           {/* FORGOT PASSWORD */}
           {view === "forgot" && (
             <>
-              <button onClick={() => setView("login")} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-                <ArrowLeft className="h-3.5 w-3.5" /> Volver
+              <button onClick={() => setView("login")} className="flex items-center gap-1 min-h-[44px] py-2 text-sm text-muted-foreground hover:text-foreground mb-2">
+                <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Volver
               </button>
-              <h2 className="text-display text-lg font-semibold text-card-foreground mb-2">Recuperar contraseña</h2>
+              <h2 className="font-display text-lg font-semibold text-card-foreground mb-2">Recuperar contraseña</h2>
               <p className="text-sm text-muted-foreground mb-5">
                 Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
               </p>
