@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, Plus, FileText, ChevronDown, ChevronUp, Pencil, Stethoscope } from "lucide-react";
+import { Search, Plus, FileText, ChevronDown, ChevronUp, Pencil, Stethoscope, FlaskConical, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import NotaConsultaModal from "@/components/NotaConsultaModal";
 import PrescriptionEditorModal from "@/features/recetas/components/PrescriptionEditorModal";
 import { FileCheck2 } from "lucide-react";
+import { listStudiesByPatient, getStudyFileUrl, isStoragePath, type PatientStudy } from "@/features/panel-doctor/services/studiesService";
+import StudyResultDrawer from "@/features/panel-doctor/components/StudyResultDrawer";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 
 interface PersonaMini { id: string; nombre: string; apellidos: string; }
 interface DoctorMini extends PersonaMini { especialidad?: string; }
@@ -46,6 +49,7 @@ export default function Expedientes() {
   const { hasRole } = useAuth();
   const { toast } = useToast();
   const canWrite = hasRole("admin") || hasRole("doctor");
+  const { activeClinicId } = useActiveClinic();
 
   const [expedientes, setExpedientes] = useState<Expediente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +67,10 @@ export default function Expedientes() {
   const [doctors, setDoctors] = useState<DoctorMini[]>([]);
   const [newExpForm, setNewExpForm] = useState({ patient_id: "", doctor_id: "", tipo: "primera_vez" });
   const [saving, setSaving] = useState(false);
+  const [estudios, setEstudios] = useState<Record<string, PatientStudy[]>>({});
+  const [studyResultOpen, setStudyResultOpen] = useState(false);
+  const [studySelected, setStudySelected] = useState<PatientStudy | null>(null);
+  const [currentExpPatientId, setCurrentExpPatientId] = useState<string>("");
 
   useEffect(() => {
     loadExpedientes();
@@ -97,10 +105,21 @@ export default function Expedientes() {
     }
   }
 
-  function toggleExpand(expId: string) {
+  async function loadEstudios(expId: string, patientId: string) {
+    if (!activeClinicId) return;
+    try {
+      const data = await listStudiesByPatient(patientId, activeClinicId);
+      setEstudios((e) => ({ ...e, [expId]: data }));
+    } catch {
+      setEstudios((e) => ({ ...e, [expId]: [] }));
+    }
+  }
+
+  function toggleExpand(expId: string, patientId: string) {
     if (expanded === expId) { setExpanded(null); return; }
     setExpanded(expId);
     loadNotas(expId);
+    loadEstudios(expId, patientId);
   }
 
   async function openNewExpModal() {
@@ -197,7 +216,7 @@ export default function Expedientes() {
           {filtered.map((exp) => (
             <div key={exp.id} className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
               <div className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => toggleExpand(exp.id)}>
+                onClick={() => toggleExpand(exp.id, exp.patient_id)}>
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
                   {exp.patients?.nombre?.[0]}{exp.patients?.apellidos?.[0]}
                 </div>
@@ -222,6 +241,17 @@ export default function Expedientes() {
                 <p className="hidden lg:block text-xs text-muted-foreground whitespace-nowrap">
                   {format(new Date(exp.updated_at), "dd/MM/yyyy", { locale: es })}
                 </p>
+                {(() => {
+                  const pending = (estudios[exp.id] ?? []).filter(
+                    (s) => s.status === "solicitado" || s.status === "recibido"
+                  ).length;
+                  return pending > 0 ? (
+                    <span className="flex items-center gap-1 rounded-full bg-warning/20 px-2 py-0.5 text-xs font-medium text-warning">
+                      <FlaskConical className="h-3 w-3" />
+                      {pending}
+                    </span>
+                  ) : null;
+                })()}
                 {expanded === exp.id
                   ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
                   : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
@@ -298,6 +328,36 @@ export default function Expedientes() {
                       ))}
                     </div>
                   )}
+
+                  {/* Estudios / Laboratorio */}
+                  <div className="border-t border-border pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <FlaskConical className="h-4 w-4 text-muted-foreground" />
+                        Estudios / Laboratorio
+                      </p>
+                    </div>
+                    {!estudios[exp.id] ? (
+                      <p className="text-xs text-muted-foreground">Cargando...</p>
+                    ) : estudios[exp.id].length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Sin estudios solicitados</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {estudios[exp.id].map((study) => (
+                          <StudyRow
+                            key={study.id}
+                            study={study}
+                            canRegister={hasRole("admin") || hasRole("receptionist")}
+                            onRegister={() => {
+                              setStudySelected(study);
+                              setCurrentExpPatientId(exp.patient_id);
+                              setStudyResultOpen(true);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -366,6 +426,18 @@ export default function Expedientes() {
           diagnosis={rxContext.diagnosis}
         />
       )}
+
+      <StudyResultDrawer
+        open={studyResultOpen}
+        onClose={() => setStudyResultOpen(false)}
+        study={studySelected}
+        clinicId={activeClinicId ?? ""}
+        onSaved={() => {
+          if (expanded && currentExpPatientId) {
+            loadEstudios(expanded, currentExpPatientId);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -375,6 +447,100 @@ function SoapField({ label, color, text }: { label: string; color: string; text:
     <div className="rounded bg-muted/50 p-2">
       <span className={`font-bold ${color}`}>{label}: </span>
       <span className="text-foreground">{text}</span>
+    </div>
+  );
+}
+
+const STUDY_STATUS_COLORS: Record<string, string> = {
+  solicitado: "bg-warning/10 text-warning",
+  recibido: "bg-blue-500/10 text-blue-600",
+  revisado: "bg-success/10 text-success",
+  reutilizado: "bg-muted text-muted-foreground",
+  descartado: "bg-muted text-muted-foreground",
+};
+
+const STUDY_STATUS_LABELS: Record<string, string> = {
+  solicitado: "Pendiente",
+  recibido: "Resultado recibido",
+  revisado: "Revisado",
+  reutilizado: "Reutilizado",
+  descartado: "Descartado",
+};
+
+const STUDY_TIPO_LABELS: Record<string, string> = {
+  lab: "Lab",
+  imagen: "Imagen",
+  otro: "Otro",
+};
+
+function StudyRow({
+  study,
+  canRegister,
+  onRegister,
+}: {
+  study: PatientStudy;
+  canRegister: boolean;
+  onRegister: () => void;
+}) {
+  const handleOpenFile = async () => {
+    if (!study.archivo_url) return;
+    try {
+      const url = await getStudyFileUrl(study.archivo_url);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      /* silently ignore — UI shows no error for read-only view */
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-3 flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-medium text-card-foreground truncate">{study.nombre}</p>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase">
+            {STUDY_TIPO_LABELS[study.tipo] ?? study.tipo}
+          </span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STUDY_STATUS_COLORS[study.status] ?? "bg-muted text-muted-foreground"}`}
+          >
+            {STUDY_STATUS_LABELS[study.status] ?? study.status}
+          </span>
+        </div>
+        {study.motivo && (
+          <p className="text-xs text-muted-foreground truncate">{study.motivo}</p>
+        )}
+        <p className="text-[10px] text-muted-foreground">
+          Solicitado: {format(new Date(study.solicitado_at), "dd/MM/yyyy HH:mm", { locale: es })}
+          {study.prioridad !== "rutina" && (
+            <span className="ml-2 font-semibold text-destructive uppercase">{study.prioridad}</span>
+          )}
+        </p>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {study.archivo_url && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            title={isStoragePath(study.archivo_url) ? "Ver archivo (nube)" : "Ver archivo"}
+            onClick={handleOpenFile}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {canRegister && study.status === "solicitado" && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            onClick={onRegister}
+          >
+            Registrar resultado
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
