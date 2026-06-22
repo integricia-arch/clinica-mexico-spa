@@ -306,6 +306,10 @@ export default function Login() {
           <a href="/terminos" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
             Términos de Servicio
           </a>
+          {" · "}
+          <a href="/solicitud-arco" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
+            Derechos ARCO
+          </a>
         </p>
       </div>
     </div>

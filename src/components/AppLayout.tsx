@@ -291,6 +291,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <a href="/terminos" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">
                   Términos
                 </a>
+                <a href="/solicitud-arco" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">
+                  ARCO
+                </a>
               </div>
             )}
 

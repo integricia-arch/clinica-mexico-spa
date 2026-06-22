@@ -433,6 +433,68 @@ export type Database = {
           },
         ]
       }
+      arco_requests: {
+        Row: {
+          clinic_name: string | null
+          created_at: string
+          deadline_at: string
+          descripcion: string
+          email: string
+          folio: string
+          id: string
+          nombre: string
+          notas_internas: string | null
+          patient_id: string | null
+          resolved_at: string | null
+          respuesta: string | null
+          status: string
+          telefono: string | null
+          tipo: string
+        }
+        Insert: {
+          clinic_name?: string | null
+          created_at?: string
+          deadline_at?: string
+          descripcion: string
+          email: string
+          folio?: string
+          id?: string
+          nombre: string
+          notas_internas?: string | null
+          patient_id?: string | null
+          resolved_at?: string | null
+          respuesta?: string | null
+          status?: string
+          telefono?: string | null
+          tipo: string
+        }
+        Update: {
+          clinic_name?: string | null
+          created_at?: string
+          deadline_at?: string
+          descripcion?: string
+          email?: string
+          folio?: string
+          id?: string
+          nombre?: string
+          notas_internas?: string | null
+          patient_id?: string | null
+          resolved_at?: string | null
+          respuesta?: string | null
+          status?: string
+          telefono?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arco_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atribucion_campania: {
         Row: {
           ad_id: string | null
@@ -6722,6 +6784,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      privacy_notice_versions: {
+        Row: {
+          content_hash: string
+          id: string
+          published_at: string
+          summary: string
+          version: string
+        }
+        Insert: {
+          content_hash: string
+          id?: string
+          published_at?: string
+          summary?: string
+          version: string
+        }
+        Update: {
+          content_hash?: string
+          id?: string
+          published_at?: string
+          summary?: string
+          version?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

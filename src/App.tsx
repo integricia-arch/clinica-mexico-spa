@@ -51,6 +51,8 @@ import SinAcceso from "./pages/SinAcceso";
 import NotFound from "./pages/NotFound";
 import AvisoPrivacidad from "@/pages/AvisoPrivacidad";
 import TerminosServicio from "@/pages/TerminosServicio";
+import SolicitudARCO from "@/pages/SolicitudARCO";
+import ARCOAdmin from "@/pages/ARCOAdmin";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +72,7 @@ const App = () => (
               <Route path="/verificar-receta/:id" element={<VerificarReceta />} />
               <Route path="/aviso-privacidad" element={<AvisoPrivacidad />} />
               <Route path="/terminos" element={<TerminosServicio />} />
+              <Route path="/solicitud-arco" element={<SolicitudARCO />} />
               <Route
                 path="/*"
                 element={
@@ -111,6 +114,7 @@ const App = () => (
                         <Route path="/caja" element={<ProtectedRoute allowedRoles={["admin","manager","cajero","receptionist"]}><TurnoGuard cajaFilter="general"><Caja /></TurnoGuard></ProtectedRoute>} />
                         <Route path="/admin/usuarios" element={<ProtectedRoute allowedRoles={["admin"]}><AdminUsuarios /></ProtectedRoute>} />
                         <Route path="/admin/diagnostico-multiclinica" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDiagnosticoMulticlinica /></ProtectedRoute>} />
+                        <Route path="/admin/arco" element={<ProtectedRoute allowedRoles={["admin"]}><ARCOAdmin /></ProtectedRoute>} />
                         <Route path="/inteligencia" element={<ProtectedRoute allowedRoles={["admin","manager"]}><BI /></ProtectedRoute>} />
                         <Route path="/ayuda-interna" element={<ProtectedRoute allowedRoles={["admin","manager","receptionist"]}><AyudaInterna /></ProtectedRoute>} />
 

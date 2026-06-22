@@ -123,19 +123,26 @@ export default function AvisoPrivacidad() {
         <h2 className="text-lg font-semibold mt-6 mb-2">VI. Derechos ARCO y oposición</h2>
         <p>
           Usted tiene derecho de <strong>Acceso, Rectificación, Cancelación u Oposición</strong> (derechos ARCO) al
-          tratamiento de sus datos personales, así como el derecho de oponerse a decisiones automatizadas. Para
-          ejercerlos:
+          tratamiento de sus datos personales (LFPDPPP Arts. 21-34), así como el derecho de oponerse a decisiones
+          automatizadas. Para ejercerlos:
         </p>
         <ul>
           <li>
-            Envíe solicitud a{" "}
-            <a href="mailto:privacidad@integrika.mx" className="underline">
-              privacidad@integrika.mx
+            Use el{" "}
+            <a href="/solicitud-arco" className="underline font-medium text-primary">
+              formulario de solicitud ARCO
             </a>{" "}
-            con su nombre completo, descripción de la solicitud y copia de identificación oficial.
+            — registro inmediato con folio y confirmación de plazo legal.
           </li>
-          <li>Responderemos en un plazo máximo de <strong>20 días hábiles</strong>.</li>
-          <li>Si la solicitud procede, la implementaremos en un plazo máximo de <strong>15 días hábiles</strong>.</li>
+          <li>
+            O envíe solicitud a{" "}
+            <a href="mailto:integric.ia@gmail.com" className="underline">
+              integric.ia@gmail.com
+            </a>{" "}
+            con nombre completo, descripción de la solicitud y copia de identificación oficial.
+          </li>
+          <li>Responderemos en un plazo máximo de <strong>20 días hábiles</strong> (Art. 24 LFPDPPP).</li>
+          <li>Si la solicitud procede, la implementaremos en un plazo máximo de <strong>15 días hábiles</strong> adicionales (Art. 25 LFPDPPP).</li>
         </ul>
 
         <h2 className="text-lg font-semibold mt-6 mb-2">VII. Medidas de seguridad</h2>
@@ -168,8 +175,20 @@ export default function AvisoPrivacidad() {
 
         <p className="mt-8 text-xs text-muted-foreground">
           ⚠️ Versión borrador — pendiente de revisión y aprobación final por especialista en LFPDPPP. No usar como
-          aviso definitivo hasta validación legal. Versión 1.0 · Jun 2025.
+          aviso definitivo hasta validación legal.
         </p>
+
+        {/* Identificador de versión inmutable — prueba legal de qué texto aceptó el paciente */}
+        <div className="mt-6 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">Identificación de versión (registro legal)</p>
+          <p>Versión: <code className="font-mono">1.0</code></p>
+          <p>Publicado: <code className="font-mono">2026-06-22</code></p>
+          <p>Hash de referencia: <code className="font-mono break-all">sha256:placeholder-v1.0-pendiente-texto-final-abogado</code></p>
+          <p className="text-[10px]">
+            El hash se actualizará al texto final aprobado por abogado. Los consentimientos registrados
+            antes del cambio quedan vinculados a la versión aceptada en el momento del registro.
+          </p>
+        </div>
       </div>
     </div>
   );
