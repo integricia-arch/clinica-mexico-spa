@@ -310,6 +310,27 @@ export default function Expedientes() {
     }
   }
 
+  async function handleDelete(exp: Expediente) {
+    const name = `${exp.patients?.nombre ?? ""} ${exp.patients?.apellidos ?? ""}`.trim();
+    if (!window.confirm(
+      `¿Eliminar expediente de ${name}?\n\n` +
+      `El expediente se ocultará del sistema. ` +
+      `NOM-004-SSA3-2012 requiere retención de 5 años — no se borra de la base de datos.`
+    )) return;
+    try {
+      const { error } = await supabase
+        .from("expedientes")
+        .update({ activo: false } as never)
+        .eq("id", exp.id);
+      if (error) throw error;
+      setExpedientes((prev) => prev.filter((e) => e.id !== exp.id));
+      if (expanded === exp.id) setExpanded(null);
+      toast({ title: "Expediente eliminado", description: `${name} — ocultado del sistema` });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el expediente" });
+    }
+  }
+
   function toggleExpand(expId: string, patientId: string) {
     if (expanded === expId) { setExpanded(null); return; }
     setExpanded(expId);
@@ -436,6 +457,49 @@ export default function Expedientes() {
                 <p className="hidden lg:block text-xs text-muted-foreground whitespace-nowrap">
                   {format(new Date(exp.updated_at), "dd/MM/yyyy", { locale: es })}
                 </p>
+                {/* Action buttons — stopPropagation prevents accordion toggle */}
+                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {canManagePerms(exp) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Gestionar acceso"
+                      onClick={() => {
+                        setPermTarget(exp);
+                        setExpPermissions([]);
+                        setNewPermDoctorId("");
+                        setNewPermLevel("view");
+                        setPermModal(true);
+                        loadExpPermissions(exp.id);
+                      }}
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {canEditExp(exp) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Editar expediente"
+                      onClick={() => openEditModal(exp)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {canDeleteExp(exp) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      title="Eliminar expediente"
+                      onClick={() => handleDelete(exp)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
                 {(() => {
                   const pending = (estudios[exp.id] ?? []).filter(
                     (s) => s.status === "solicitado" || s.status === "recibido"
