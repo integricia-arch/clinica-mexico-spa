@@ -101,14 +101,14 @@ export default function Dashboard() {
           title="Pacientes activos"
           value={data.totalPacientes.toLocaleString("es-MX")}
           change="Total registrados activos"
-          changeType="positive"
+          changeType="neutral"
         />
         <StatCard
           icon={Receipt}
           title="Ingresos del día"
           value={formatIngresosHoy(data.ingresosHoy)}
           change="Ventas farmacia completadas hoy"
-          changeType="positive"
+          changeType={data.ingresosHoy > 0 ? "positive" : "neutral"}
         />
         <StatCard
           icon={AlertCircle}
