@@ -326,7 +326,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <ManualButton />
             <button className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-400 ring-2 ring-white animate-pulse" />
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-400 ring-2 ring-white animate-pulse motion-reduce:animate-none" />
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

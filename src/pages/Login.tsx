@@ -151,7 +151,7 @@ export default function Login() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_8px_32px_hsl(239_84%_62%/0.35),0_2px_8px_hsl(239_84%_62%/0.20)]">
             <Heart className="h-7 w-7 text-white" />
           </div>
-          <h1 className="mt-4 text-display text-2xl font-bold text-foreground">ClínicaMX</h1>
+          <h1 className="mt-4 font-display text-2xl font-bold text-foreground">ClínicaMX</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sistema de Operaciones Clínicas</p>
         </div>
 
@@ -177,7 +177,6 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
@@ -232,8 +231,7 @@ export default function Login() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
+                      />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -256,8 +254,7 @@ export default function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
-                      className="focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
+                      />
                     {view === "signup" && <PasswordStrengthMeter password={password} />}
                   </div>
                   {TURNSTILE_SITE_KEY && (

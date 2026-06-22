@@ -95,16 +95,6 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
   }
-
-  /* Apple two-ring focus — overrides ShadcnUI default teal ring */
-  input:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible {
-    outline: none;
-    box-shadow:
-      0 0 0 2px hsl(228 20% 98%),
-      0 0 0 4px hsl(239 84% 62% / 0.35);
-  }
 }
 
 @layer utilities {
@@ -120,6 +110,16 @@
   .gradient-primary {
     background: var(--gradient-primary);
   }
+}
+
+/* Apple two-ring focus — unlayered to override Tailwind utilities */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(228 20% 98%),
+    0 0 0 4px hsl(239 84% 62% / 0.35);
 }
 
 /* ── Keyframes ───────────────────────────────────────────────────────────── */
