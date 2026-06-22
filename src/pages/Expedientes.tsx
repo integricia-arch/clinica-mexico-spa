@@ -40,6 +40,14 @@ interface Expediente {
   doctors?: DoctorMini | null;
 }
 
+interface ExpPermRow {
+  id: string;
+  expediente_id: string;
+  doctor_id: string;
+  permission: "view" | "edit";
+  doctors?: { nombre: string; apellidos: string } | null;
+}
+
 const TIPO_LABELS: Record<string, string> = {
   primera_vez: "Primera vez", seguimiento: "Seguimiento",
   urgencia: "Urgencia", cirugia: "Cirugía", cronico: "Crónico",
@@ -77,6 +85,13 @@ export default function Expedientes() {
   const [editTarget, setEditTarget] = useState<Expediente | null>(null);
   const [editForm, setEditForm] = useState({ doctor_id: "", tipo: "primera_vez" });
   const [keepPrevAccess, setKeepPrevAccess] = useState(false);
+
+  const [permModal, setPermModal] = useState(false);
+  const [permTarget, setPermTarget] = useState<Expediente | null>(null);
+  const [expPermissions, setExpPermissions] = useState<ExpPermRow[]>([]);
+  const [newPermDoctorId, setNewPermDoctorId] = useState("");
+  const [newPermLevel, setNewPermLevel] = useState<"view" | "edit">("view");
+  const [permSaving, setPermSaving] = useState(false);
 
   useEffect(() => {
     loadExpedientes();
@@ -235,6 +250,64 @@ export default function Expedientes() {
       toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el expediente" });
     }
     setSaving(false);
+  }
+
+  async function loadExpPermissions(expId: string) {
+    const { data } = await supabase
+      .from("expediente_permissions" as never)
+      .select("id, expediente_id, doctor_id, permission, doctors:doctor_id(nombre, apellidos)")
+      .eq("expediente_id", expId);
+    setExpPermissions((data ?? []) as unknown as ExpPermRow[]);
+  }
+
+  async function handleAddPerm() {
+    if (!permTarget || !newPermDoctorId || !activeClinicId || !myDoctorId) return;
+    setPermSaving(true);
+    try {
+      await supabase
+        .from("expediente_permissions" as never)
+        .insert({
+          expediente_id: permTarget.id,
+          doctor_id: newPermDoctorId,
+          permission: newPermLevel,
+          granted_by: myDoctorId,
+          clinic_id: activeClinicId,
+        });
+      setNewPermDoctorId("");
+      await loadExpPermissions(permTarget.id);
+      // Refresh sharedPermissions in case current user was just granted access
+      await loadSharedPermissions(expedientes.map((e) => e.id));
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo añadir el permiso" });
+    }
+    setPermSaving(false);
+  }
+
+  async function handleRemovePerm(permId: string) {
+    if (!permTarget) return;
+    try {
+      await supabase
+        .from("expediente_permissions" as never)
+        .delete()
+        .eq("id", permId);
+      setExpPermissions((prev) => prev.filter((p) => p.id !== permId));
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo quitar el permiso" });
+    }
+  }
+
+  async function handleChangePermLevel(permId: string, level: "view" | "edit") {
+    try {
+      await supabase
+        .from("expediente_permissions" as never)
+        .update({ permission: level })
+        .eq("id", permId);
+      setExpPermissions((prev) =>
+        prev.map((p) => p.id === permId ? { ...p, permission: level } : p)
+      );
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el permiso" });
+    }
   }
 
   function toggleExpand(expId: string, patientId: string) {
@@ -574,6 +647,88 @@ export default function Expedientes() {
             <Button variant="outline" onClick={() => setEditModal(false)} disabled={saving}>Cancelar</Button>
             <Button onClick={handleSaveEdit} disabled={saving}>
               {saving ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={permModal} onOpenChange={(v) => { if (!v) { setPermModal(false); setPermTarget(null); setExpPermissions([]); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gestionar acceso — {permTarget?.patients?.apellidos}, {permTarget?.patients?.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Current grants */}
+            {expPermissions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin permisos adicionales asignados</p>
+            ) : (
+              <div className="space-y-2">
+                {expPermissions.map((perm) => (
+                  <div key={perm.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+                    <p className="text-sm font-medium">
+                      Dr(a). {perm.doctors?.nombre} {perm.doctors?.apellidos}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={perm.permission}
+                        onValueChange={(v) => handleChangePermLevel(perm.id, v as "view" | "edit")}
+                      >
+                        <SelectTrigger className="h-7 w-24 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="view">Solo ver</SelectItem>
+                          <SelectItem value="edit">Editar</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => handleRemovePerm(perm.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new grant */}
+            <div className="border-t border-border pt-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Añadir médico</p>
+              <div className="flex gap-2">
+                <Select value={newPermDoctorId} onValueChange={setNewPermDoctorId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Seleccionar médico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {doctors
+                      .filter((d) => d.id !== permTarget?.doctor_id && !expPermissions.some((p) => p.doctor_id === d.id))
+                      .map((d) => (
+                        <SelectItem key={d.id} value={d.id}>Dr(a). {d.nombre} {d.apellidos}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <Select value={newPermLevel} onValueChange={(v) => setNewPermLevel(v as "view" | "edit")}>
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="view">Solo ver</SelectItem>
+                    <SelectItem value="edit">Editar</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="w-full"
+                disabled={!newPermDoctorId || permSaving}
+                onClick={handleAddPerm}
+              >
+                {permSaving ? "Añadiendo..." : "Añadir acceso"}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPermModal(false); setPermTarget(null); setExpPermissions([]); }}>
+              Cerrar
             </Button>
           </DialogFooter>
         </DialogContent>
