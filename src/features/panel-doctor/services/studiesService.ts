@@ -100,10 +100,11 @@ export async function listStudiesByPatient(
   return (data ?? []) as unknown as PatientStudy[];
 }
 
-export async function listStudiesByJourney(journeyId: string): Promise<PatientStudy[]> {
+export async function listStudiesByJourney(journeyId: string, clinicId: string): Promise<PatientStudy[]> {
   const { data, error } = await tbl("patient_studies")
     .select("*")
     .eq("journey_instance_id", journeyId)
+    .eq("clinic_id", clinicId)
     .order("solicitado_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as PatientStudy[];

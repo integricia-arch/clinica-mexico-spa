@@ -1,0 +1,127 @@
+<h2>Flujo guiado por rol — Cajero</h2>
+<p class="subtitle">Cada paso desbloquea el siguiente. Sin turno abierto = sin operación.</p>
+
+<div style="margin-top:16px;">
+
+  <!-- Timeline de pasos -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:24px;flex-wrap:wrap;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#6366f1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">1</div>
+      <div style="font-size:10px;color:#1e293b;font-weight:600;text-align:center;">Ingresar<br/>fondo</div>
+    </div>
+    <div style="height:2px;width:48px;background:#e2e8f0;margin-bottom:16px;"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#e2e8f0;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">2</div>
+      <div style="font-size:10px;color:#94a3b8;font-weight:600;text-align:center;">Abrir<br/>turno</div>
+    </div>
+    <div style="height:2px;width:48px;background:#e2e8f0;margin-bottom:16px;"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#e2e8f0;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">3</div>
+      <div style="font-size:10px;color:#94a3b8;font-weight:600;text-align:center;">Operar<br/>caja</div>
+    </div>
+  </div>
+
+  <!-- 3 pantallas en fila -->
+  <div style="display:flex;gap:16px;flex-wrap:wrap;">
+
+    <!-- Paso 1: Ingresar fondo -->
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:6px;text-align:center;">PASO 1 — Fondo de apertura</div>
+      <div style="border:2px solid #6366f1;border-radius:8px;overflow:hidden;box-shadow:0 0 0 3px rgba(99,102,241,.1);">
+        <div style="height:32px;background:#1e293b;display:flex;align-items:center;padding:0 10px;">
+          <div style="color:#f1f5f9;font-size:11px;font-weight:600;">IntegriClinica</div>
+          <div style="flex:1;"></div>
+          <div style="color:#94a3b8;font-size:10px;">Ana López</div>
+        </div>
+        <div style="background:#f8fafc;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+          <div style="font-size:13px;font-weight:700;color:#1e293b;">Bienvenida, Ana</div>
+          <div style="font-size:11px;color:#64748b;text-align:center;">Para iniciar tu turno,<br/>ingresa el efectivo en caja:</div>
+          <div style="background:#fff;border:2px solid #6366f1;border-radius:6px;padding:8px 12px;font-size:18px;font-weight:700;color:#1e293b;width:80%;text-align:center;">$500.00</div>
+          <div style="font-size:10px;color:#64748b;">Billetes y monedas contados</div>
+          <div style="background:#6366f1;color:#fff;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;width:80%;text-align:center;cursor:pointer;">Continuar →</div>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:#64748b;text-align:center;">Sin este paso no hay turno</div>
+    </div>
+
+    <!-- Paso 2: Confirmar y abrir turno -->
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:11px;font-weight:700;color:#0891b2;margin-bottom:6px;text-align:center;">PASO 2 — Confirmar turno</div>
+      <div style="border:2px solid #0891b2;border-radius:8px;overflow:hidden;">
+        <div style="height:32px;background:#1e293b;display:flex;align-items:center;padding:0 10px;">
+          <div style="color:#f1f5f9;font-size:11px;font-weight:600;">IntegriClinica</div>
+          <div style="flex:1;"></div>
+          <div style="color:#94a3b8;font-size:10px;">Ana López</div>
+        </div>
+        <div style="background:#f8fafc;padding:12px;display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:12px;font-weight:700;color:#1e293b;text-align:center;">Resumen de apertura</div>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px;font-size:11px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#64748b;">Caja</span><span style="font-weight:600;">Farmacia Principal</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#64748b;">Fecha</span><span>10 Jun 2026</span></div>
+            <div style="display:flex;justify-content:space-between;padding-top:6px;border-top:1px solid #f1f5f9;"><span style="color:#64748b;">Fondo</span><span style="color:#16a34a;font-weight:700;">$500.00</span></div>
+          </div>
+          <div style="background:#0891b2;color:#fff;border-radius:6px;padding:8px;font-size:12px;font-weight:600;text-align:center;cursor:pointer;">Abrir turno y comenzar →</div>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:#64748b;text-align:center;">Confirma y entra directo a operar</div>
+    </div>
+
+    <!-- Paso 3: Caja full screen -->
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:11px;font-weight:700;color:#16a34a;margin-bottom:6px;text-align:center;">PASO 3 — Caja (pantalla completa)</div>
+      <div style="border:2px solid #16a34a;border-radius:8px;overflow:hidden;">
+        <div style="height:32px;background:#1e293b;display:flex;align-items:center;padding:0 10px;gap:8px;">
+          <div style="background:#6366f1;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;">☰</div>
+          <div style="color:#f1f5f9;font-size:11px;font-weight:600;flex:1;text-align:center;">Caja · Turno #0041</div>
+          <div style="background:#22c55e;color:#fff;border-radius:10px;padding:1px 8px;font-size:9px;">Abierto</div>
+        </div>
+        <div style="display:flex;height:140px;background:#f8fafc;">
+          <div style="flex:2;padding:8px;display:flex;flex-direction:column;gap:5px;">
+            <div style="background:#e0e7ff;border-radius:4px;height:40px;display:flex;align-items:center;justify-content:center;color:#4338ca;font-size:10px;font-weight:600;">Buscar paciente / servicio</div>
+            <div style="display:flex;gap:4px;flex:1;">
+              <div style="flex:1;background:#f1f5f9;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#64748b;">Consulta</div>
+              <div style="flex:1;background:#f1f5f9;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#64748b;">Laboratorio</div>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <div style="flex:1;background:#f1f5f9;border-radius:3px;height:24px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#64748b;">Farmacia</div>
+              <div style="flex:1;background:#f1f5f9;border-radius:3px;height:24px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#64748b;">Otro</div>
+            </div>
+          </div>
+          <div style="width:80px;background:#fff;border-left:1px solid #e2e8f0;padding:6px;display:flex;flex-direction:column;gap:4px;">
+            <div style="font-size:9px;font-weight:600;color:#1e293b;">Cobros hoy</div>
+            <div style="font-size:11px;font-weight:700;color:#16a34a;">$2,340</div>
+            <div style="font-size:9px;color:#64748b;">12 tickets</div>
+            <div style="flex:1;"></div>
+            <div style="background:#ef4444;color:#fff;border-radius:3px;padding:3px;text-align:center;font-size:9px;">Cerrar<br/>turno</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:#64748b;text-align:center;">Solo ve esto. Menú solo si necesita cambiarse.</div>
+    </div>
+
+  </div>
+
+  <!-- Reglas de navegación por rol -->
+  <div style="margin-top:20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+    <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:10px;">Lógica de rutas y prerequisitos</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:#14532d;">
+      <div style="background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:8px;">
+        <div style="font-weight:700;margin-bottom:4px;color:#065f46;">Cajero / Cajera</div>
+        <div style="color:#374151;">Login → <code>/caja/turno</code><br/>Sin turno → wizard fondo+apertura<br/>Con turno → <code>/caja</code> full screen</div>
+      </div>
+      <div style="background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:8px;">
+        <div style="font-weight:700;margin-bottom:4px;color:#065f46;">Farmacéutico</div>
+        <div style="color:#374151;">Login → <code>/farmacia/turno</code><br/>Sin turno → wizard fondo+apertura<br/>Con turno → <code>/farmacia</code> full screen</div>
+      </div>
+      <div style="background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:8px;">
+        <div style="font-weight:700;margin-bottom:4px;color:#065f46;">Admin / Manager</div>
+        <div style="color:#374151;">Login → <code>/dashboard</code><br/>Sidebar siempre visible<br/>Acceso a todo sin restricción</div>
+      </div>
+      <div style="background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:8px;">
+        <div style="font-weight:700;margin-bottom:4px;color:#065f46;">Guard logic</div>
+        <div style="color:#374151;font-family:monospace;font-size:10px;">if (route == operativa)<br/>&nbsp;&nbsp;if (!turno) → wizard<br/>&nbsp;&nbsp;else → fullscreen<br/>else → normal + sidebar</div>
+      </div>
+    </div>
+  </div>
+
+</div>

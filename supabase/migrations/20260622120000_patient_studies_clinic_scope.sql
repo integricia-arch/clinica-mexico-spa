@@ -40,6 +40,9 @@ WITH CHECK (
   )
 );
 
+-- Note: "Clinic staff manage patient_studies" (FOR ALL) already covers SELECT for staff.
+-- This policy adds SELECT for the patient themselves (patient_id = their own user).
+-- In Supabase's permissive mode these OR together — intentional dual-grant for self-read.
 CREATE POLICY "Patient view own studies"
 ON public.patient_studies FOR SELECT TO authenticated
 USING (

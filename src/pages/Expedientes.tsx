@@ -110,8 +110,9 @@ export default function Expedientes() {
     try {
       const data = await listStudiesByPatient(patientId, activeClinicId);
       setEstudios((e) => ({ ...e, [expId]: data }));
-    } catch {
-      setEstudios((e) => ({ ...e, [expId]: [] }));
+    } catch (e) {
+      console.error("[loadEstudios] Failed to load studies:", e);
+      setEstudios((e2) => ({ ...e2, [expId]: [] }));
     }
   }
 

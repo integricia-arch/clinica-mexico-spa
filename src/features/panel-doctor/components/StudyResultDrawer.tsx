@@ -48,6 +48,8 @@ export default function StudyResultDrawer({
     try {
       const url = await uploadStudyFile(clinicId, study.patient_id, study.id, file);
       setArchivoUrl(url);
+      // Note: file is now in Storage but not saved to DB until "Registrar resultado" is clicked.
+      // If the drawer is closed without saving, the Storage object becomes orphaned (MVP-known gap).
       toast({ title: "Archivo subido a nube", description: "Guardado en Supabase Storage" });
     } catch (e: unknown) {
       toast({

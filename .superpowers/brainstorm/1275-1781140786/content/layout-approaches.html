@@ -1,0 +1,100 @@
+<h2>Enfoque del menú lateral en vistas operativas</h2>
+<p class="subtitle">¿Cómo debe comportarse el sidebar cuando entras a Farmacia, Caja, etc.?</p>
+
+<div class="cards">
+
+  <!-- Opción A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;height:140px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;font-size:11px;">
+        <!-- Sin sidebar -->
+        <div style="flex:1;background:#f8fafc;display:flex;flex-direction:column;">
+          <div style="height:36px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;padding:0 12px;gap:8px;">
+            <div style="background:#6366f1;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;">☰ Menú</div>
+            <div style="flex:1;text-align:center;font-weight:600;font-size:11px;color:#1e293b;">Farmacia · POS</div>
+          </div>
+          <div style="flex:1;padding:10px;display:flex;gap:8px;">
+            <div style="flex:1;background:#e0e7ff;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#4338ca;font-size:10px;">Catálogo</div>
+            <div style="flex:1;background:#f0fdf4;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#16a34a;font-size:10px;">Carrito</div>
+            <div style="width:70px;background:#fef3c7;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d97706;font-size:10px;">Cobro</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:#64748b;text-align:center;">Sidebar oculto → pantalla completa</div>
+    </div>
+    <div class="card-body">
+      <h3>A — Auto-ocultar en rutas operativas</h3>
+      <p>Al entrar a <strong>/farmacia</strong> o <strong>/caja</strong>, el sidebar se oculta automáticamente. El header muestra siempre un botón <em>☰ Menú</em> que lo abre como overlay temporal. Al salir de esas rutas, el sidebar vuelve a aparecer normalmente.</p>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Sin acción del usuario</li><li>Máximo espacio POS</li><li>Consistente</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Puede sorprender la primera vez</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opción B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;height:140px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;font-size:11px;">
+        <!-- Con sidebar colapsado -->
+        <div style="width:40px;background:#1e293b;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:8px;">
+          <div style="width:24px;height:24px;background:#6366f1;border-radius:4px;"></div>
+          <div style="width:20px;height:3px;background:#475569;border-radius:2px;margin-top:4px;"></div>
+          <div style="width:20px;height:3px;background:#475569;border-radius:2px;"></div>
+          <div style="width:20px;height:3px;background:#475569;border-radius:2px;"></div>
+        </div>
+        <div style="flex:1;background:#f8fafc;display:flex;flex-direction:column;">
+          <div style="height:36px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;padding:0 12px;">
+            <div style="flex:1;font-weight:600;font-size:11px;color:#1e293b;">Farmacia · POS</div>
+            <div style="background:#f1f5f9;border-radius:4px;padding:2px 8px;font-size:10px;color:#64748b;">⊞ Expandir</div>
+          </div>
+          <div style="flex:1;padding:10px;display:flex;gap:8px;">
+            <div style="flex:1;background:#e0e7ff;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#4338ca;font-size:10px;">Catálogo</div>
+            <div style="flex:1;background:#f0fdf4;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#16a34a;font-size:10px;">Carrito</div>
+            <div style="width:70px;background:#fef3c7;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d97706;font-size:10px;">Cobro</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:#64748b;text-align:center;">Sidebar colapsa a íconos (16px)</div>
+    </div>
+    <div class="card-body">
+      <h3>B — Sidebar colapsado (solo íconos)</h3>
+      <p>El sidebar <strong>no desaparece</strong> — colapsa a una tira de 40px con solo íconos. El usuario puede expandirlo con un clic. Estado recordado por ruta en localStorage.</p>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Navegación siempre visible</li><li>Ya existe <code>isCollapsed</code></li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Pierde ~40px de espacio</li><li>Menos dramático</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opción C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;height:140px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;font-size:11px;position:relative;">
+        <!-- Sin sidebar, con FAB -->
+        <div style="flex:1;background:#f8fafc;display:flex;flex-direction:column;">
+          <div style="height:36px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;padding:0 12px;">
+            <div style="flex:1;font-weight:600;font-size:11px;color:#1e293b;">Farmacia · POS</div>
+          </div>
+          <div style="flex:1;padding:10px;display:flex;gap:8px;">
+            <div style="flex:1;background:#e0e7ff;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#4338ca;font-size:10px;">Catálogo</div>
+            <div style="flex:1;background:#f0fdf4;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#16a34a;font-size:10px;">Carrito</div>
+            <div style="width:70px;background:#fef3c7;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#d97706;font-size:10px;">Cobro</div>
+          </div>
+        </div>
+        <!-- FAB -->
+        <div style="position:absolute;bottom:10px;left:10px;width:32px;height:32px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;">☰</div>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:#64748b;text-align:center;">Botón flotante esquina inferior</div>
+    </div>
+    <div class="card-body">
+      <h3>C — Botón flotante (FAB)</h3>
+      <p>Pantalla completamente libre, con un <strong>botón circular flotante</strong> en la esquina inferior izquierda. Al pulsarlo se abre el sidebar como overlay. Minimalista pero puede chocar con contenido del POS.</p>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>100% pantalla libre</li><li>Familiar (móvil)</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Puede tapar contenido</li><li>Inconsistente con el estilo actual</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
