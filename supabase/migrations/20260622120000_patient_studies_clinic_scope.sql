@@ -63,7 +63,7 @@ FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 DROP TRIGGER IF EXISTS trg_patient_studies_audit ON public.patient_studies;
 CREATE TRIGGER trg_patient_studies_audit
 AFTER INSERT OR UPDATE OR DELETE ON public.patient_studies
-FOR EACH ROW EXECUTE FUNCTION public.audit_trigger();
+FOR EACH ROW EXECUTE FUNCTION public.fn_audit_log();
 
 -- 2. Add clinic_id column (M2 addition, IF NOT EXISTS)
 ALTER TABLE public.patient_studies

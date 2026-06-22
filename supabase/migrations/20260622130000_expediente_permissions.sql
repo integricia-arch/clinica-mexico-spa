@@ -40,4 +40,4 @@ CREATE INDEX idx_exp_permissions_doctor
 
 CREATE TRIGGER trg_exp_permissions_audit
 AFTER INSERT OR UPDATE OR DELETE ON public.expediente_permissions
-FOR EACH ROW EXECUTE FUNCTION public.audit_trigger();
+FOR EACH ROW EXECUTE FUNCTION public.fn_audit_log();
