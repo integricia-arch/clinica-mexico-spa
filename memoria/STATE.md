@@ -9,6 +9,63 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - **Deploy**: Cloudflare Workers (`https://clinica-mexico-spa.integric-ia.workers.dev`)
 - **Dominio**: `https://integrika.mx`
 
+## Completado (Jun 21-24, 2026 — auditoría DB — PLAN COMPLETO ✅)
+
+Plan: `docs/superpowers/plans/2026-06-21-db-audit-corrections.md`
+Ledger: `.superpowers/sdd/progress.md`
+22 commits en main, rama lista para `supabase db push --linked`
+
+### Fase 0 — RLS crítico
+- [x] Task 0.1: Fix RLS `almacen_alertas` — `clinic_members`→`clinic_memberships`. `1e675dd`
+- [x] Task 0.2: RLS en `profiles` + REVOKE UPDATE/SELECT `supervisor_pin_hash`. `366d40a`, `28c542f`, `0e0feb1`
+
+### Fase 1 — Seguridad
+- [x] Task 1.1: OAuth tokens `doctor_calendars` → Supabase Vault (RPCs SECURITY DEFINER, multi-clinic key). `126ec0c`
+- [x] Task 1.2: Audit 9 edge functions con `verify_jwt=false` → `docs/edge-functions-auth.md`. `ad676f5`
+
+### Fase 2 — Integridad de datos
+- [x] Task 2.1: FK `clinic_id` ON DELETE RESTRICT en 11 tablas financieras. `bc2b0a4`
+- [x] Task 2.2: CASCADE→RESTRICT en expedientes/appointments/consentimientos→patients (NOM-004). `02f56ff`
+- [x] Task 2.3: Sync flags duplicados medicamentos (OR semántico + CHECK constraint). Drop columns en `scripts/` pendiente frontend refactor. `7686170`
+- [x] Task 2.4: DROP DEFAULT UUID hardcodeado de 4 tablas farmacia. `103a072`
+- [x] Task 2.5: UNIQUE INDEX CONCURRENTLY `movimientos(clinic_id, folio)`. `b45f7e1`
+
+### Fase 3 — Higiene
+- [x] Task 3.1: 36 archivos `_tmp_` movidos de `migrations/` → `scripts/diagnostics/`. `3fa9ca5`
+
+### Fase 4 — Concurrencia
+- [x] Task 4.1: Tabla contadores atómica `recetas_folio_contadores` reemplaza MAX()+1. `d32a42b`
+- [x] Task 4.2: Pre-lock `lotes_medicamento ORDER BY id` en `pharmacy_register_sale` (+ FEFO tie-breaker `id ASC`). `b0b547d`, `c46406a`, `0e0feb1`
+- [x] Task 4.3: Eliminar fallback UUID clinic_id → RAISE EXCEPTION. `78420e3`
+
+### Fase 5 — Performance
+- [x] Task 5.1: 9 índices faltantes CONCURRENTLY (FKs, `has_role` compound, GIN trgm FAQ). `009870e`
+- [x] Task 5.2: Drop 4 índices duplicados CONCURRENTLY. `a12d43d`
+
+### Fase 6 — Ops
+- [x] Task 6.1: pg_cron jobs (cleanup bot hourly, VACUUM weekly). `6e1ded1`, `0e0feb1`
+- [x] Task 6.2: Trigger `updated_at` en `profiles`. `f2f1908`
+
+### Revisión final (HIGH findings corregidos)
+- [x] REVOKE ALL en `next_receta_folio()` → solo `service_role`. `0e0feb1`
+- [x] `google-calendar.ts`: empty string Vault guard + rotación `refresh_token`. `70c6768`
+
+### `supabase db push --linked` — APLICADO ✅ (2026-06-21)
+15 migrations audit aplicadas. Fixes aplicados en proceso:
+- `CREATE POLICY IF NOT EXISTS` → DROP+CREATE
+- `ADD CONSTRAINT IF NOT EXISTS` → DO blocks
+- `CONCURRENTLY` removido (incompatible Supabase CLI)
+- `20260602` corto movido a scripts/ (formato incompatible CLI)
+
+### Pendiente manual (NO aplicar sin verificación previa)
+- [x] **`supabase/scripts/migrate_doctor_tokens_to_vault.sql`** — APLICADO 2026-06-21 (1 fila migrada a Vault)
+- [x] **`supabase/scripts/drop_plaintext_oauth_tokens_MANUAL.sql`** — APLICADO 2026-06-21 (`access_token`/`refresh_token` eliminados)
+- [x] **Frontend refactor** — APLICADO 2026-06-21. `requiere_receta`/`controlado` → `requires_prescription`/`is_controlled` en 5 archivos. `types.ts` regenerado.
+- [x] **`supabase/scripts/drop_legacy_flags_MANUAL_after_frontend_refactor.sql`** — APLICADO 2026-06-21. Columnas `requiere_receta`, `controlado`, `domicilio_ciudad` eliminadas de producción.
+- [x] **`cfdi-parse` auth** — APLICADO 2026-06-21. JWT validado via `supabase.auth.getUser()`. Deployed.
+
+---
+
 ## Completado (Jun 2026)
 
 ### Farmacia POS
@@ -684,6 +741,18 @@ Todas las fases completadas. Sin pendientes.
 - [x] Plan `docs/superpowers/plans/2026-06-18-bot-mejoras-horario-google-calendar.md` — 17 tasks detallados con código real
 - [x] **Task 1 EJECUTADO**: Migration `20260626000000_horario_clinica_seed.sql` aplicada — clinic_settings section='horario' con días [1,2,3,4,5], apertura 09:00, cierre 18:00
 
+## Completado (Jun 21, 2026 — sesión bot bugs 2)
+
+### Bot Telegram — 3 bugs fixes + selección de día ✅ (commits `750b0ee`, `512e87c`, `6e33c9e`)
+
+- [x] **Bug: "Cancelar" → "No tienes citas"** — `.not("status","in","(cancelada,cancelado,no_show)")` usaba valores inválidos del enum `appointment_status` → PostgreSQL error de cast silencioso → `data: null` → "No tienes citas". Fix: `(cancelada,liberada)`. Aplica a 3 lugares: `verMiCita`, `iniciarCancelacionCita`, `iniciarReagendarCita`.
+- [x] **Bug: GCal link 8:30 AM → 2:30 PM en calendar** — `buildGCalLink` usaba `d.getHours()` (UTC en runtime Deno = 14) en vez de hora CDMX (8). Fix: `toLocaleString("sv-SE", { timeZone: "America/Mexico_City" })`.
+- [x] **Bug: evento doctor en GCal a hora incorrecta** — `inicio.toISOString()` tiene sufijo Z → GCal API ignora `timeZone` field → evento a las 14:30 UTC. Fix: helper `toMexicoLocalISO()` convierte a local sin Z → GCal usa `timeZone: "America/Mexico_City"`.
+- [x] **GCal errores silenciosos** — `createCalendarEvent` retornaba `null` sin throw → outer catch no se activaba → `gcal_last_error = null`. Fix: throw en `!resp.ok` para que el error llegue al campo `gcal_last_error`.
+- [x] **Enum inválido en `listarHorariosDisponibles`** — filtro JS usaba mismos valores inválidos. Fix: `["cancelada","liberada"]`.
+- [x] **Selección de día (Opción B)** — `enviarHorariosDeServicio` ahora muestra días disponibles (L-V, 14 días, 2 por fila). Tap en día → slots de ese día. `mostrarSlotsDia` función nueva. Callback `dia:` nuevo. `max_horarios=200` para tener todos los slots en sesión. `flow_step: "await_day_pick"` con re-display al escribir texto.
+- [x] Push a GitHub origin/main — 3 commits sincronizados
+
 ## Completado (Jun 20, 2026 — sesión bot bugs)
 
 ### Bot Telegram — bugs menú doble + servicios vacíos + doble-booking ✅ (commit `e64ce37`)
@@ -704,6 +773,24 @@ Todas las fases completadas. Sin pendientes.
   - GCal catch vacío → `console.error` + campo `gcal_last_error` en appointments
   - Health check GCal al conectar en `google-oauth-callback`
   - RPC cleanup citas de prueba (`cancelar_citas_prueba`)
+
+## Completado (Jun 21, 2026 — sesión M1 Dashboard datos reales)
+
+### M1: Dashboard con datos reales ✅ (commits `81baa7a..866c8b1`)
+
+Plan: `docs/superpowers/plans/2026-06-21-dashboard-datos-reales.md`
+Spec: `docs/superpowers/specs/2026-06-21-dashboard-datos-reales-design.md`
+
+- [x] **Task 1**: `src/hooks/useDashboardHoy.ts` creado — 5 queries paralelas (appointments hoy, pharmacy_sales, patients, audit_logs, almacen_alertas). Helpers puros exportados: `formatHora`, `formatNombrePaciente`, `formatNombreDoctor`, `mapStatusToLabel`, `mapAuditToTexto`, `tiempoRelativo`. `CONFIRMED_STATUSES` + `RESOLVED_STATUSES` para `citasSinConfirmar`. Fecha con `startOfDay()` UTC-safe.
+- [x] **Task 2**: `src/pages/Dashboard.tsx` reescrito — DashboardSkeleton mientras carga, error state con mensaje genérico + refresh, fecha real en español, 4 StatCards con datos reales, agenda con empty state, actividad reciente con empty state, banner condicional `citasSinConfirmar > 0`. `ingresosHoy` dividido /100 en UI. Supabase errors chequeados por query individual.
+- [x] 27 tests pasando · `tsc --noEmit` 0 errores · 6 commits · revisión final aprobada
+
+**Deuda técnica menor anotada:**
+- `formatHora` usa slice bytes (asume UTC stored) — si timestamps tienen offset no-UTC, hora incorrecta
+- `startOfDay(new Date())` usa timezone browser, no timezone clínica — requiere `date-fns-tz` para fix preciso
+- `tiempoRelativo` tests frágiles en CI en boundary cases (milisegundos)
+
+---
 
 ## Pendiente / Próximo
 
