@@ -208,14 +208,15 @@ export default function Expedientes() {
         .eq("id", editTarget.id);
 
       // If doctor reassigned and "keep access" checked, grant edit to previous owner
-      if (doctorChanged && keepPrevAccess && myDoctorId) {
+      const granterId = myDoctorId;
+      if (doctorChanged && keepPrevAccess && granterId) {
         await supabase
           .from("expediente_permissions" as never)
           .upsert({
             expediente_id: editTarget.id,
             doctor_id: prevDoctorId,
             permission: "edit",
-            granted_by: myDoctorId,
+            granted_by: granterId,
             clinic_id: activeClinicId,
           }, { onConflict: "expediente_id,doctor_id" });
       }
