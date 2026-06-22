@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Heart, LogIn, ArrowLeft } from "lucide-react";
+import { LogIn, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 
@@ -149,7 +149,9 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_8px_32px_hsl(239_84%_62%/0.35),0_2px_8px_hsl(239_84%_62%/0.20)]">
-            <Heart className="h-7 w-7 text-white" />
+            <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden="true">
+              <polyline points="2,12 6,12 8,6 10,18 13,9 15,15 17,12 22,12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
           <h1 className="mt-4 font-display text-2xl font-bold text-foreground">ClínicaMX</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sistema de Operaciones Clínicas</p>

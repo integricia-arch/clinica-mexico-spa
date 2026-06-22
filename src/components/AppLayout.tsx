@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,
-  Pill, Settings, Menu, X, Heart, Bell, ChevronDown, LogOut,
+  Pill, Settings, Menu, X, Bell, ChevronDown, LogOut,
   Headset, MessageCircle, BellRing, ClipboardList, Stethoscope,
   CreditCard, Lock, UserRound, ChevronLeft, ChevronRight,
   Send,
@@ -182,7 +182,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Logo */}
           <div className={`flex h-16 items-center border-b border-sidebar-border shrink-0 ${isCollapsed ? "justify-center px-3" : "gap-2.5 px-5"}`}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_4px_16px_hsl(239_84%_62%/0.30)]">
-              <Heart className="h-5 w-5 text-white" />
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+                <polyline points="2,12 6,12 8,6 10,18 13,9 15,15 17,12 22,12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
