@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
+import { startOfDay, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 
@@ -74,6 +74,8 @@ const CONFIRMED_STATUSES = new Set([
   "recordatorio_enviado",
 ]);
 
+const RESOLVED_STATUSES = new Set(["cancelada", "liberada"]);
+
 const ACCION_LABEL: Record<string, string> = {
   crear: "Creación",
   actualizar: "Actualización",
@@ -145,11 +147,8 @@ export function useDashboardHoy(): DashboardHoyData {
     setError(null);
 
     try {
-      const todayStart = format(new Date(), "yyyy-MM-dd") + "T00:00:00.000Z";
-      const tomorrowStart = format(
-        new Date(Date.now() + 86_400_000),
-        "yyyy-MM-dd"
-      ) + "T00:00:00.000Z";
+      const todayStart = startOfDay(new Date()).toISOString();
+      const tomorrowStart = startOfDay(addDays(new Date(), 1)).toISOString();
 
       const [citasRes, ventasRes, pacientesRes, auditRes, alertasRes] =
         await Promise.all([
@@ -209,7 +208,9 @@ export function useDashboardHoy(): DashboardHoyData {
       });
 
       const sinConfirmar = citasRaw.filter(
-        (c) => !CONFIRMED_STATUSES.has(c.status as string)
+        (c) =>
+          !CONFIRMED_STATUSES.has(c.status as string) &&
+          !RESOLVED_STATUSES.has(c.status as string)
       ).length;
 
       const ingresos = (ventasRes.data ?? []).reduce(
