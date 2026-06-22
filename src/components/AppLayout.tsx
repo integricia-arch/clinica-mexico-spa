@@ -167,7 +167,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <aside
           className={`
             fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar
-            transition-all duration-300 ease-in-out
+            transition-all duration-[280ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]
             ${sidebarWidth}
             xl:translate-x-0
             ${sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
@@ -175,13 +175,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           {/* Logo */}
           <div className={`flex h-16 items-center border-b border-sidebar-border shrink-0 ${isCollapsed ? "justify-center px-3" : "gap-2.5 px-5"}`}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary">
-              <Heart className="h-5 w-5 text-primary-foreground" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_4px_16px_hsl(239_84%_62%/0.30)]">
+              <Heart className="h-5 w-5 text-white" />
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <span className="text-display font-bold text-sm text-sidebar-accent-foreground">ClínicaMX</span>
-                <span className="block text-[11px] text-sidebar-foreground/60">Operaciones Clínicas</span>
+                <span className="font-display font-semibold text-sm tracking-tight text-white/90">ClínicaMX</span>
+                <span className="block text-[10px] tracking-wide text-white/40">Operaciones Clínicas</span>
               </div>
             )}
             {/* Mobile close button */}
@@ -210,9 +210,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 return (
                   <div key={item.to}>
                     {showSection && !isCollapsed && (
-                      <p className="px-3 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                        {item.section}
-                      </p>
+                      <div className="flex items-center gap-2 px-3 pt-5 pb-1">
+                        <div className="h-px flex-1 bg-white/[0.06]" />
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">
+                          {item.section}
+                        </span>
+                        <div className="h-px flex-1 bg-white/[0.06]" />
+                      </div>
                     )}
                     {showSection && isCollapsed && (
                       <div className="mx-2 my-3 border-t border-sidebar-border/40" />
@@ -222,14 +226,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       onClick={closeSidebar}
                       title={isCollapsed ? item.label : undefined}
                       className={`
-                        flex items-center gap-3 rounded-lg text-sm font-medium transition-colors
+                        relative flex items-center gap-3 rounded-lg text-sm font-medium overflow-hidden
                         ${isCollapsed ? "justify-center px-0 py-2.5 mx-1" : "px-3 py-2.5"}
                         ${isActive
-                          ? "bg-sidebar-accent text-sidebar-primary"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                          ? "bg-indigo-500/15 text-indigo-300 shadow-[inset_0_0.5px_0_rgba(255,255,255,0.08),inset_0_-0.5px_0_rgba(0,0,0,0.10)] backdrop-blur-[8px]"
+                          : "text-white/50 hover:bg-white/[0.05] hover:text-white/80 transition-[background-color,color] duration-150 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]"
                         }
                       `}
                     >
+                      {isActive && !isCollapsed && (
+                        <span className="absolute left-0 h-4 w-[3px] rounded-r-full bg-indigo-400" />
+                      )}
                       <item.icon className="h-[18px] w-[18px] shrink-0" />
                       {!isCollapsed && (
                         <>
@@ -266,20 +273,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             {/* User info */}
             <div className={`p-3 ${isCollapsed ? "flex justify-center" : "flex items-center gap-3"}`}>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-primary text-sm font-semibold">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300 ring-1 ring-inset ring-indigo-500/30 text-sm font-semibold">
                 {initials}
               </div>
               {!isCollapsed && (
                 <>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-sidebar-accent-foreground">
+                    <p className="truncate text-sm font-medium text-white/70">
                       {user?.email?.split("@")[0] || "Usuario"}
                     </p>
-                    <p className="truncate text-xs text-sidebar-foreground/60">{roleLabel}</p>
+                    <p className="truncate text-xs text-white/35">{roleLabel}</p>
                   </div>
                   <button
                     onClick={handleSignOut}
-                    className="text-sidebar-foreground/50 hover:text-sidebar-accent-foreground"
+                    className="text-white/25 hover:text-red-400/70 transition-colors duration-150"
                     title="Cerrar sesión"
                   >
                     <LogOut className="h-4 w-4" />
@@ -293,7 +300,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${contentMargin}`}>
-        <header className="flex h-14 items-center justify-between border-b border-border bg-card/80 backdrop-blur-sm px-4 shrink-0">
+        <header className="flex h-14 items-center justify-between border-b border-[hsl(228_20%_91%)] bg-[hsl(228_25%_99.5%/0.82)] backdrop-blur-[16px] backdrop-saturate-[1.6] shadow-[0_1px_0_hsl(228_20%_91%)] px-4 shrink-0">
           <div className="flex items-center gap-2">
             {/* Mobile/tablet hamburger */}
             {!isFocusRoute && (
@@ -319,12 +326,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <ManualButton />
             <button className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-400 ring-2 ring-white animate-pulse" />
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted transition-colors cursor-pointer outline-none">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 ring-1 ring-inset ring-indigo-200 text-xs font-semibold">
                     {initials}
                   </div>
                   <div className="hidden sm:block text-left">
