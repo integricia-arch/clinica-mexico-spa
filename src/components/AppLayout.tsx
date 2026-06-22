@@ -138,7 +138,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const contentMargin = isFocusRoute ? "" : isCollapsed ? "xl:ml-16" : "xl:ml-64";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+      >
+        Saltar al contenido principal
+      </a>
       {clinicError && (
         <div className="fixed top-0 inset-x-0 z-50 bg-destructive/90 text-destructive-foreground text-xs text-center py-2 px-4">
           Error cargando datos de clínica: {clinicError} — recarga la página o contacta soporte.
@@ -167,7 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <aside
           className={`
             fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar
-            transition-all duration-[280ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]
+            transition-[transform,width] duration-[280ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]
             ${sidebarWidth}
             xl:translate-x-0
             ${sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
@@ -187,7 +193,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Mobile close button */}
             <button
               onClick={closeSidebar}
-              className={`ml-auto text-sidebar-foreground hover:text-sidebar-accent-foreground xl:hidden ${isCollapsed ? "hidden" : ""}`}
+              aria-label="Cerrar menú"
+              className={`ml-auto p-1 text-sidebar-foreground hover:text-sidebar-accent-foreground xl:hidden ${isCollapsed ? "hidden" : ""}`}
             >
               <X className="h-5 w-5" />
             </button>
@@ -225,11 +232,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       to={item.to}
                       onClick={closeSidebar}
                       title={isCollapsed ? item.label : undefined}
+                      aria-label={isCollapsed ? item.label : undefined}
                       className={`
                         relative flex items-center gap-3 rounded-lg text-sm font-medium overflow-hidden
                         ${isCollapsed ? "justify-center px-0 py-2.5 mx-1" : "px-3 py-2.5"}
                         ${isActive
-                          ? "bg-indigo-500/15 text-indigo-300 shadow-[inset_0_0.5px_0_rgba(255,255,255,0.08),inset_0_-0.5px_0_rgba(0,0,0,0.10)] backdrop-blur-[8px]"
+                          ? "bg-indigo-500/15 text-indigo-300 shadow-[inset_0_0.5px_0_rgba(255,255,255,0.08),inset_0_-0.5px_0_rgba(0,0,0,0.10)]"
                           : "text-white/50 hover:bg-white/[0.05] hover:text-white/80 transition-[background-color,color] duration-150 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]"
                         }
                       `}
@@ -264,8 +272,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="hidden xl:flex justify-end px-3 py-2">
               <button
                 onClick={toggle}
-                className="flex items-center justify-center h-7 w-7 rounded-md text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60 transition-colors"
+                className="flex items-center justify-center h-8 w-8 p-1 rounded-md text-sidebar-foreground/50 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60 transition-colors"
                 title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+                aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
               >
                 {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </button>
@@ -288,6 +297,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     onClick={handleSignOut}
                     className="text-white/25 hover:text-red-400/70 transition-colors duration-150"
                     title="Cerrar sesión"
+                    aria-label="Cerrar sesión"
                   >
                     <LogOut className="h-4 w-4" />
                   </button>
@@ -299,14 +309,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main */}
-      <div className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${contentMargin}`}>
+      <div className={`flex flex-1 flex-col overflow-hidden transition-[margin-left] duration-300 ${contentMargin}`}>
         <header className="flex h-14 items-center justify-between border-b border-[hsl(228_20%_91%)] bg-[hsl(228_25%_99.5%/0.82)] backdrop-blur-[16px] backdrop-saturate-[1.6] shadow-[0_1px_0_hsl(228_20%_91%)] px-4 shrink-0">
           <div className="flex items-center gap-2">
             {/* Mobile/tablet hamburger */}
             {!isFocusRoute && (
               <button
                 onClick={openDrawer}
-                className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors xl:hidden"
+                aria-label="Abrir menú"
+                className="flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors xl:hidden"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -315,7 +326,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {isFocusRoute && (
               <button
                 onClick={openDrawer}
-                className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                aria-label="Abrir menú"
+                className="flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -324,9 +336,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-2">
             <ManualButton />
-            <button className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <button
+              aria-label="Notificaciones"
+              className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
               <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-400 ring-2 ring-white animate-pulse motion-reduce:animate-none" />
+              <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-400 ring-2 ring-white animate-pulse motion-reduce:animate-none" />
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -373,7 +388,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 xl:p-6">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-4 xl:p-6">{children}</main>
       </div>
       <HelpChatWidget />
     </div>
