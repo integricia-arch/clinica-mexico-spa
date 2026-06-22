@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, Plus, FileText, ChevronDown, ChevronUp, Pencil, Stethoscope, FlaskConical, ExternalLink } from "lucide-react";
+import { Search, Plus, FileText, ChevronDown, ChevronUp, Pencil, Stethoscope, FlaskConical, ExternalLink, Users, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import NotaConsultaModal from "@/components/NotaConsultaModal";
@@ -46,7 +46,7 @@ const TIPO_LABELS: Record<string, string> = {
 };
 
 export default function Expedientes() {
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   const { toast } = useToast();
   const canWrite = hasRole("admin") || hasRole("doctor");
   const { activeClinicId } = useActiveClinic();
@@ -71,23 +71,59 @@ export default function Expedientes() {
   const [studyResultOpen, setStudyResultOpen] = useState(false);
   const [studySelected, setStudySelected] = useState<PatientStudy | null>(null);
   const [currentExpPatientId, setCurrentExpPatientId] = useState<string>("");
+  const [myDoctorId, setMyDoctorId] = useState<string | null>(null);
+  const [sharedPermissions, setSharedPermissions] = useState<Record<string, "view" | "edit">>({});
 
   useEffect(() => {
     loadExpedientes();
     supabase.from("doctors").select("id, nombre, apellidos").eq("activo", true).order("apellidos")
       .then(({ data }) => setDoctors(data ?? []));
-  }, []);
+  }, [myDoctorId]); // re-run when doctor profile resolves
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from("doctors")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setMyDoctorId(data?.id ?? null));
+  }, [user?.id]);
 
   async function loadExpedientes() {
     setLoading(true);
     try {
-      const data = await restSelect(
-        "expedientes",
-        "select=*,patients(nombre,apellidos,tipo_sangre,alergias),doctors(nombre,apellidos,especialidad)&activo=eq.true&order=updated_at.desc"
-      );
-      setExpedientes(data ?? []);
+      const isAdmin = hasRole("admin");
+      const isReceptionist = hasRole("receptionist");
+
+      let filterQuery = "select=*,patients(nombre,apellidos,tipo_sangre,alergias),doctors(nombre,apellidos,especialidad)&activo=eq.true&order=updated_at.desc";
+
+      if (!isAdmin && !isReceptionist) {
+        // Doctor-only: show own expedientes + shared ones
+        if (!myDoctorId) {
+          // Doctor role but no linked doctor profile — show nothing
+          setExpedientes([]);
+          setLoading(false);
+          return;
+        }
+        // Fetch shared expediente IDs first
+        const { data: shared } = await supabase
+          .from("expediente_permissions" as never)
+          .select("expediente_id")
+          .eq("doctor_id", myDoctorId);
+        const sharedIds = (shared ?? []).map((r: { expediente_id: string }) => r.expediente_id);
+        const ownFilter = `doctor_id.eq.${myDoctorId}`;
+        const sharedFilter = sharedIds.length > 0 ? `,id.in.(${sharedIds.join(",")})` : "";
+        filterQuery += `&or=(${ownFilter}${sharedFilter})`;
+      }
+
+      const data = await restSelect("expedientes", filterQuery);
+      const expList = (data ?? []) as Expediente[];
+      setExpedientes(expList);
+      // Load shared permissions for the current doctor
+      await loadSharedPermissions(expList.map((e) => e.id));
     } catch (e: unknown) {
-      toast({ variant: "destructive", title: "Error", description: e instanceof Error ? e.message : "Error inesperado" });
+      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los expedientes" });
     }
     setLoading(false);
   }
@@ -114,6 +150,38 @@ export default function Expedientes() {
       console.error("[loadEstudios] Failed to load studies:", e);
       setEstudios((e2) => ({ ...e2, [expId]: [] }));
     }
+  }
+
+  async function loadSharedPermissions(expIds: string[]) {
+    if (!myDoctorId || expIds.length === 0) { setSharedPermissions({}); return; }
+    const { data } = await supabase
+      .from("expediente_permissions" as never)
+      .select("expediente_id, permission")
+      .eq("doctor_id", myDoctorId)
+      .in("expediente_id", expIds);
+    const map: Record<string, "view" | "edit"> = {};
+    (data ?? []).forEach((r: { expediente_id: string; permission: string }) => {
+      map[r.expediente_id] = r.permission as "view" | "edit";
+    });
+    setSharedPermissions(map);
+  }
+
+  function canEditExp(exp: Expediente): boolean {
+    if (hasRole("admin")) return true;
+    if (myDoctorId && myDoctorId === exp.doctor_id) return true;
+    return sharedPermissions[exp.id] === "edit";
+  }
+
+  function canManagePerms(exp: Expediente): boolean {
+    return hasRole("admin") || (!!myDoctorId && myDoctorId === exp.doctor_id);
+  }
+
+  function canDeleteExp(exp: Expediente): boolean {
+    return hasRole("admin") || (!!myDoctorId && myDoctorId === exp.doctor_id);
+  }
+
+  function canReassign(exp: Expediente): boolean {
+    return hasRole("admin") || (!!myDoctorId && myDoctorId === exp.doctor_id);
   }
 
   function toggleExpand(expId: string, patientId: string) {
