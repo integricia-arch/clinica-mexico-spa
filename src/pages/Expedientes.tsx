@@ -142,6 +142,7 @@ export default function Expedientes() {
       // Load shared permissions for the current doctor
       await loadSharedPermissions(expList.map((e) => e.id));
     } catch (e: unknown) {
+      console.error("[loadExpedientes]", e);
       toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los expedientes" });
     }
     setLoading(false);
