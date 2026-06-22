@@ -531,17 +531,19 @@ export default function Expedientes() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Editar expediente</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Tipo</label>
-              <Select value={editForm.tipo} onValueChange={(v) => setEditForm((f) => ({ ...f, tipo: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(TIPO_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {editTarget && canEditExp(editTarget) && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Tipo</label>
+                <Select value={editForm.tipo} onValueChange={(v) => setEditForm((f) => ({ ...f, tipo: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(TIPO_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {editTarget && canReassign(editTarget) && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Médico responsable</label>
