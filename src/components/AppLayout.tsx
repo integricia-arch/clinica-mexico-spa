@@ -282,6 +282,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
 
+            {/* Legal links */}
+            {!isCollapsed && (
+              <div className="px-3 pb-2 flex gap-3 text-[10px] text-white/25">
+                <a href="/aviso-privacidad" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">
+                  Privacidad
+                </a>
+                <a href="/terminos" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">
+                  Términos
+                </a>
+              </div>
+            )}
+
             {/* User info */}
             <div className={`p-3 ${isCollapsed ? "flex justify-center" : "flex items-center gap-3"}`}>
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300 ring-1 ring-inset ring-indigo-500/30 text-sm font-semibold">

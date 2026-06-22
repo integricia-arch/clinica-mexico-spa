@@ -3,7 +3,7 @@
 > ⚠️ Documento de análisis interno. NO es asesoría legal. Cada punto marcado como
 > "requiere abogado" debe ser revisado por un profesional antes de implementar.
 >
-> Última revisión: 2026-06-22
+> Última revisión: 2026-06-22 · Ley aplicable: LFPDPPP nueva (DOF 20-mar-2025, vigente 21-mar-2025)
 
 ---
 
@@ -26,6 +26,22 @@ el análisis de qué aplica realmente y con qué urgencia.
 
 ---
 
+## ⚠️ ALERTA — Nueva LFPDPPP (DOF 20-mar-2025, vigente desde 21-mar-2025)
+
+Cambios críticos respecto a la ley 2010 que afectan DIRECTAMENTE a este producto:
+
+| Cambio | Impacto en integrika |
+|--------|---------------------|
+| **INAI disuelto** → Secretaría de Anticorrupción y Buen Gobierno (SAyBG) | Actualizar todos los docs; ya no citar INAI |
+| **Aviso debe especificar CUÁLES datos** se tratan (no solo categorías) | ✅ Hecho en `AvisoPrivacidad.tsx` v1.0 |
+| **Finalidades necesarias vs voluntarias**: distinción obligatoria | ✅ Hecho en `AvisoPrivacidad.tsx` v1.0 |
+| **Decisiones automatizadas/IA**: sección obligatoria + derecho de oposición | ✅ Hecho en `AvisoPrivacidad.tsx` v1.0 |
+| **Nuevo consentimiento** para cada nueva finalidad (sin excepción "análoga") | Implica: si añadimos ML/análisis, pedir nuevo consentimiento |
+| Consentimiento debe ser **libre, específico e informado** | Checkbox actual cumple — verificar con abogado |
+| Sensitive data: categoría ahora **abierta** (no cerrada) | Seguir declarando todos los datos de salud como sensibles |
+
+---
+
 ## 🔴 CRÍTICO — Punto 3: LFPDPPP (privacidad de datos de salud)
 
 **Marco original:** App Privacy (Apple/Google) + CCPA
@@ -42,10 +58,10 @@ Su tratamiento requiere:
 
 ### Riesgo si no se hace
 
-- Sanciones del INAI (Instituto Nacional de Transparencia, Acceso a la
-  Información y Protección de Datos Personales)
+- Sanciones de la **Secretaría de Anticorrupción y Buen Gobierno (SAyBG)** — regulador actual (INAI disuelto 2025)
 - Multas de 100 a 320,000 días de salario mínimo (Art. 64 LFPDPPP)
 - En caso de datos sensibles: se duplican (Art. 65)
+- Nueva instancia: **juzgados federales especializados** en protección de datos (amparo indirecto) → litigios más ágiles y costosos
 - Reputacional: clínicas pueden terminar contratos si se enteran de incumplimiento
 
 ### Qué falta actualmente
@@ -168,8 +184,14 @@ no es una plataforma de contenido público ni de medios.
 
 ## Referencias oficiales (México)
 
-- LFPDPPP: https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf
-- INAI (regulador): https://home.inai.org.mx
-- Guía INAI para Aviso de Privacidad: https://micrositios.inai.org.mx/avisodeprivacidad/
+- LFPDPPP 2025 (nueva): DOF 20-mar-2025 — reemplaza ley 2010
+- SAyBG (regulador actual): https://www.gob.mx/anticorrupcion  ← **ya no es INAI**
 - LFPC (Art. 32 publicidad engañosa): https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPC.pdf
 - Arbitraje comercial MX: https://www.diputados.gob.mx/LeyesBiblio/pdf/CCo.pdf (Arts. 1415+)
+- NOM-004-SSA3: expediente clínico (retención mínima 5 años adultos, 25 menores)
+- Expediente electrónico obligatorio: DOF enero 2026 (reforma Ley General de Salud)
+
+### Ejemplos de avisos de privacidad revisados
+- Doctoralia Terapia MX: buena estructura, sin plazo específico de retención, sin sección IA explícita
+- Laboratorio del Chopo: excelente detalle ARCO (20 días respuesta, 15 implementación), última actualización feb 2026
+- SASS (software sector salud): requiere acceso directo, no disponible online

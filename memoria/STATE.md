@@ -1109,9 +1109,82 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 - `public.profiles.supervisor_pin_hash` sin RLS (hash de PIN expuesto a cualquiera con anon key) → RLS habilitado, solo admin
 - `.gitignore` excluía `memoria/` completo sin justificación → removida, 22 archivos subidos a git (sin secretos reales, verificado)
 
-### Pendiente inmediato
-- **Commit + push del bloque completo de manuales/chat/Docusaurus/fixes — todavía NO se ha hecho** (todo validado: tsc, build, build:all, lint — solo falta el commit)
-- Dev server local corriendo en background (`localhost:8080`) — apagar si ya no se prueba
+### ~~Pendiente inmediato~~ — RESUELTO (verificado Jun 22)
+- ~~Commit + push manuales/chat/Docusaurus~~ — YA COMMITIDO en `c836bfc` (55 archivos, ManualButton.tsx, copy-manual-build.cjs, portal Docusaurus, chat ayuda). Nota era falso positivo.
+
+## Completado (Jun 22, 2026 — schema drift 25 archivos)
+
+### Schema drift post-limpieza types.ts — 0 errores TypeScript ✅ (commits `13031da`, `765d246`)
+
+Causa raíz: `types.ts` estaba corrompido (Supabase CLI inyectaba stdout). Al repararlo, el anti-patrón `as never) as ReturnType<typeof supabase.from>` rompió porque TypeScript lo resolvía a la primera vista en el archivo (`v_presupuesto_ejecucion`), haciendo que TODAS las columnas fallaran.
+
+- [x] **4 errores simples** (commit `13031da`): `status: "confirmada" as const`, `activeClinic?.id`, `tipo: "primera_vez"`, `.eq("clinic_id", activeClinic.id)` (4 archivos)
+- [x] **21 archivos restantes** (commit `765d246`):
+  - `useAuditLog.ts`, `useBitacoraTemperatura.ts`, `useCotizaciones.ts`, `usePresupuesto.ts`: eliminado cast roto, tablas en types.ts — acceso directo
+  - `Agenda.tsx`: cast roto en `doctor_bloqueos`
+  - `CotizacionesPanel.tsx`: cast roto + `title=` → `aria-label=` (Lucide v3 eliminó prop) + `descripcion` → `motivo` en `solicitudes_compra`
+  - `PacientesLista.tsx`: `motivo` → `motivo_consulta`, `numero_receta` → `prescription_number`, `diagnostico` → `diagnosis`; tipos locales `Appointment`/`Prescription` actualizados; JSX sincronizado
+  - `useDashboardHoy.ts`: `apellido_paterno` → `apellidos` (x3 usos)
+  - `ReporteCOFEPRIS.tsx`, `ReporteRotacionABC.tsx`: `activeClinic?.nombre` → `activeClinic?.name` (ClinicLite usa `name`)
+  - `useBI.ts`: `c.status === "no_show"` → `(c.status as string) === "no_show"` (no en enum)
+  - `ConfiguracionPagos.tsx`: `"payment_gateway_config" as unknown as "appointments"` → `as any` (tabla sí está en types.ts)
+  - `Expedientes.tsx`: `tipo` cast correcto; 7 usos `as never` → `untypedTable("expediente_permissions")` (tabla no en types.ts); importado `untypedTable`
+  - `Auditoria.tsx`: casts incorrectos `pos_error_logs`/`audit_logs` eliminados (tablas en types.ts); `datos_nuevos.folio_corte` → `String(...)` para ReactNode
+  - `DetalleCita.tsx`: importado `Json` desde types.ts; `as unknown as Record<string,unknown>` → `as unknown as Json` en RPC args
+  - `CaminoPaciente.tsx`: callbacks `.map()` `Record<string,unknown>` → `any`; `config_json` cast a `Json`
+  - `EvaluacionProveedores.tsx`: cast enriquecido con campos reales de `proveedores` (rfc, estatus_efos, etc.)
+  - `AdminDashboard.tsx`: casts ad-hoc `doctorsList`/`roomsList` para tipos inferidos por Supabase
+  - `DashboardCompras.tsx`: `r.folio` → `r.folio_recepcion`
+  - `OrdenesCompra.tsx`: estado `expandedItems` tipado como `OrdenCompraItem[]` (no `ItemInput[]`); import corregido
+  - `ThreeWayMatchPanel.tsx`: `RecItem` + campo `medicamentos` opcional
+  - `useDoctorQueue.ts`: `JourneyRow.appointment_id` → `string | null`; `snapshot_json` → `Json | null`
+  - `RecepcionDashboard.tsx`: cast `(convRes.data ?? []) as any[]` para evitar mismatch tipo inferido
+  - `Farmacia.tsx`: `medicamentoId={editMed}` → `medicamentoId={editMed.id}`
+  - `ConfiguracionCFDI.tsx`: eliminado `as any` innecesario (tabla en types.ts)
+- [x] `tsc -p tsconfig.app.json --noEmit` = **0 errores**
+- [x] CI Quality checks ✅ · Deploy Cloudflare Workers ✅ · commit `765d246`
+
+## Completado (Jun 22, 2026 — /aprende + blindaje legal LFPDPPP)
+
+### /aprende — 7 lecciones capturadas ✅
+- Lecciones escritas en `~/.claude/projects/C--Users-pablo-clinica-mexico-spa/memory/`:
+  - `lesson_supabase-as-never-return-type-rompe.md` — anti-patrón `as never + ReturnType` rompe al reparar types.ts
+  - `lesson_supabase-from-as-unknown-string-inutil.md` — cast en argumento no bypasea tipo; solo `untypedTable()` funciona
+  - `lesson_cliniclite-name-no-nombre.md` — ClinicLite usa `.name`, no `.nombre`
+  - `lesson_ordencompra-item-vs-input-confusion.md` — estado DB usa `OrdenCompraItem`, no `OrdenCompraItemInput`
+  - `lesson_lucide-v3-title-prop-eliminada.md` — usar `aria-label`, no `title`
+  - `lesson_state-md-nota-commit-pendiente-falso-positivo.md` — verificar con `git log` antes de re-commitear
+- Project-doc: sección "Schema Drift — Mapeo de columnas reales" añadida a `CLAUDE.md` + `AGENTS.md` creado
+- MEMORY.md actualizado con las 6 lecciones nuevas
+
+### Blindaje legal básico LFPDPPP ✅ (commit `ad72e3a`)
+
+Análisis: el checklist de EE.UU. (FTC/CCPA/DMCA) fue adaptado al marco mexicano real.
+- **Crítico**: LFPDPPP — datos de salud son "datos sensibles", requieren consentimiento explícito + Aviso de Privacidad formal
+- **Medio**: ToS con cláusula de arbitraje (Código de Comercio MX) — pendiente abogado
+- **Bajo**: Claims IA bajo LFPC Art. 32; DMCA/LFDA (riesgo bajo para este tipo de contenido)
+
+Documentos creados:
+- `docs/legal-blindaje.md` — análisis LFPDPPP vs marco EE.UU., prioridades por urgencia
+- `docs/legal-plan-implementacion.md` — plan de trabajo técnico + legal, cronograma 6 semanas
+
+Técnico implementado (sin abogado):
+- `src/pages/AvisoPrivacidad.tsx` — página `/aviso-privacidad` pública (placeholder con banners "pendiente revisión legal")
+- `src/pages/TerminosServicio.tsx` — página `/terminos` pública (placeholder)
+- `src/App.tsx` — rutas `/aviso-privacidad` y `/terminos` agregadas (públicas, sin ProtectedRoute)
+- `src/components/PacienteModal.tsx` — checkbox consentimiento obligatorio en nuevo registro; deshabilita botón hasta marcar; guarda `consentimiento_privacidad_at` + `consentimiento_privacidad_version: "1.0"` en insert
+- `supabase/migrations/20260622100001_patients_consentimiento_privacidad.sql` — columnas `consentimiento_privacidad_at` y `consentimiento_privacidad_version` en `patients`
+- `supabase/functions/telegram-webhook/index.ts` — saludo actualizado: "asistente virtual con IA" + disclaimer "no sustituye criterio médico"
+- `AGENTS.md` — creado con mapeo columnas DB reales + anti-patrón Supabase prohibido
+- `CLAUDE.md` — sección "Schema Drift — Mapeo de columnas reales" + regla anti-patrón `as never`
+
+Pendiente (requiere abogado):
+- Texto real del Aviso de Privacidad LFPDPPP → reemplazar placeholder en `AvisoPrivacidad.tsx`
+- Términos de Servicio con cláusula de arbitraje → `TerminosServicio.tsx`
+- Addendum contratos con clínicas sobre responsabilidad de datos de salud
+- Aplicar migración en prod: `supabase db push --linked`
+
+---
 
 ## Reglas críticas
 - SQL con `$function$` → SIEMPRE escribir `_tmp_*.sql` y usar `--file`

@@ -297,8 +297,15 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          Sistema orientado a cumplimiento regulatorio mexicano.
-          <br />No constituye certificación oficial.
+          Sistema orientado a cumplimiento regulatorio mexicano. No constituye certificación oficial.
+          <br />
+          <a href="/aviso-privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
+            Aviso de Privacidad
+          </a>
+          {" · "}
+          <a href="/terminos" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
+            Términos de Servicio
+          </a>
         </p>
       </div>
     </div>
