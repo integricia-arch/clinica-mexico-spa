@@ -2684,6 +2684,65 @@ export type Database = {
           },
         ]
       }
+      expediente_permissions: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          doctor_id: string
+          expediente_id: string
+          granted_by: string | null
+          id: string
+          permission: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          doctor_id: string
+          expediente_id: string
+          granted_by?: string | null
+          id?: string
+          permission: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          doctor_id?: string
+          expediente_id?: string
+          granted_by?: string | null
+          id?: string
+          permission?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expediente_permissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expediente_permissions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expediente_permissions_expediente_id_fkey"
+            columns: ["expediente_id"]
+            isOneToOne: false
+            referencedRelation: "expedientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expediente_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expedientes: {
         Row: {
           activo: boolean
@@ -5556,6 +5615,123 @@ export type Database = {
           },
         ]
       }
+      patient_studies: {
+        Row: {
+          appointment_id: string | null
+          archivo_url: string | null
+          area_laboratorio: string | null
+          clinic_id: string
+          consultation_note_id: string | null
+          created_at: string
+          doctor_id: string
+          expediente_id: string | null
+          id: string
+          indicaciones_paciente: string | null
+          interpretacion_medica: string | null
+          journey_instance_id: string | null
+          justificacion_repeticion: string | null
+          laboratorio_origen: string | null
+          motivo: string | null
+          nombre: string
+          observaciones: string | null
+          patient_id: string
+          prioridad: string
+          recibido_at: string | null
+          recibido_por: string | null
+          replaces_study_id: string | null
+          requiere_ayuno: boolean
+          resultado_resumen: string | null
+          revisado_at: string | null
+          revisado_por: string | null
+          solicitado_at: string
+          solicitado_por: string | null
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          archivo_url?: string | null
+          area_laboratorio?: string | null
+          clinic_id: string
+          consultation_note_id?: string | null
+          created_at?: string
+          doctor_id: string
+          expediente_id?: string | null
+          id?: string
+          indicaciones_paciente?: string | null
+          interpretacion_medica?: string | null
+          journey_instance_id?: string | null
+          justificacion_repeticion?: string | null
+          laboratorio_origen?: string | null
+          motivo?: string | null
+          nombre: string
+          observaciones?: string | null
+          patient_id: string
+          prioridad?: string
+          recibido_at?: string | null
+          recibido_por?: string | null
+          replaces_study_id?: string | null
+          requiere_ayuno?: boolean
+          resultado_resumen?: string | null
+          revisado_at?: string | null
+          revisado_por?: string | null
+          solicitado_at?: string
+          solicitado_por?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          archivo_url?: string | null
+          area_laboratorio?: string | null
+          clinic_id?: string
+          consultation_note_id?: string | null
+          created_at?: string
+          doctor_id?: string
+          expediente_id?: string | null
+          id?: string
+          indicaciones_paciente?: string | null
+          interpretacion_medica?: string | null
+          journey_instance_id?: string | null
+          justificacion_repeticion?: string | null
+          laboratorio_origen?: string | null
+          motivo?: string | null
+          nombre?: string
+          observaciones?: string | null
+          patient_id?: string
+          prioridad?: string
+          recibido_at?: string | null
+          recibido_por?: string | null
+          replaces_study_id?: string | null
+          requiere_ayuno?: boolean
+          resultado_resumen?: string | null
+          revisado_at?: string | null
+          revisado_por?: string | null
+          solicitado_at?: string
+          solicitado_por?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_studies_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_studies_replaces_study_id_fkey"
+            columns: ["replaces_study_id"]
+            isOneToOne: false
+            referencedRelation: "patient_studies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           activo: boolean
@@ -5564,6 +5740,8 @@ export type Database = {
           clinic_id: string | null
           codigo_postal: string | null
           colonia: string | null
+          consentimiento_privacidad_at: string | null
+          consentimiento_privacidad_version: string | null
           contacto_emergencia_nombre: string | null
           contacto_emergencia_telefono: string | null
           created_at: string
@@ -5590,6 +5768,8 @@ export type Database = {
           clinic_id?: string | null
           codigo_postal?: string | null
           colonia?: string | null
+          consentimiento_privacidad_at?: string | null
+          consentimiento_privacidad_version?: string | null
           contacto_emergencia_nombre?: string | null
           contacto_emergencia_telefono?: string | null
           created_at?: string
@@ -5616,6 +5796,8 @@ export type Database = {
           clinic_id?: string | null
           codigo_postal?: string | null
           colonia?: string | null
+          consentimiento_privacidad_at?: string | null
+          consentimiento_privacidad_version?: string | null
           contacto_emergencia_nombre?: string | null
           contacto_emergencia_telefono?: string | null
           created_at?: string

@@ -145,8 +145,7 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
         };
         const { data, error } = await supabase
           .from("patients")
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .insert(insertPayload as any)
+          .insert(insertPayload)
           .select()
           .single();
         if (error) throw error;
