@@ -1178,11 +1178,76 @@ Técnico implementado (sin abogado):
 - `AGENTS.md` — creado con mapeo columnas DB reales + anti-patrón Supabase prohibido
 - `CLAUDE.md` — sección "Schema Drift — Mapeo de columnas reales" + regla anti-patrón `as never`
 
-Pendiente (requiere abogado):
-- Texto real del Aviso de Privacidad LFPDPPP → reemplazar placeholder en `AvisoPrivacidad.tsx`
-- Términos de Servicio con cláusula de arbitraje → `TerminosServicio.tsx`
-- Addendum contratos con clínicas sobre responsabilidad de datos de salud
-- Aplicar migración en prod: `supabase db push --linked`
+### Revisión avisos privacidad competidores + skill legal-mx ✅ (commit `f413dca`)
+
+Investigación: Doctoralia Terapia MX, Laboratorio del Chopo, nueva LFPDPPP 2025.
+Hallazgo crítico: **INAI disuelto 21-mar-2025 → SAyBG** (Secretaría de Anticorrupción y Buen Gobierno).
+Nueva ley exige: especificar cuáles datos, finalidades necesarias vs voluntarias, sección IA/decisiones automatizadas.
+
+- `~/.claude/skills/legal-mx/SKILL.md` — skill creado: LFPDPPP 2025, aviso privacidad, ToS, datos salud, IA
+- `src/pages/AvisoPrivacidad.tsx` — actualizado LFPDPPP 2025: SAyBG, sección decisiones automatizadas/IA, finalidades necesarias vs voluntarias, Anthropic como encargado, plazos ARCO exactos
+- `src/pages/Login.tsx` — links "Aviso de Privacidad · Términos de Servicio" en pie de página
+- `src/components/AppLayout.tsx` — links "Privacidad · Términos" en footer del sidebar
+- `docs/legal-blindaje.md` — tabla alerta cambios LFPDPPP 2025, SAyBG como autoridad actual
+
+### Migración consentimiento + types.ts ✅ (commit `3b25c2e`)
+
+- Renombrado `20260622100001` → `20260622100002` (conflicto con `doctor_calendars_vault`)
+- `20260622100002_patients_consentimiento_privacidad.sql` aplicado en prod vía `--include-all`
+- `types.ts` regenerado: `consentimiento_privacidad_at` y `consentimiento_privacidad_version` tipados
+- `PacienteModal.tsx`: `as any` eliminado — insert tipado limpio
+- `tsc --noEmit` = 0 errores
+
+### Investigación artículos legales exactos + análisis casos INAI ✅
+
+Fuentes consultadas: casos reales INAI 2020-2024, LFPDPPP DOF 20-mar-2025, LGS reforma 2026, NOM-004/NOM-024.
+
+`docs/legal-articulos.md` creado — referencia interna con:
+- Art. 3 fracción VI: datos sensibles de salud (lista abierta)
+- Arts. 15-16: aviso de privacidad (elementos exactos obligatorios)
+- Art. 9: consentimiento expreso + escrito para datos sensibles
+- Arts. 21-34: derechos ARCO (20 días hábiles respuesta, 15 días implementación)
+- Arts. 58-65: sanciones (hasta 640,000 UMAs para datos sensibles ≈ $69.5M MXN)
+- NOM-004: retención 5 años adultos, 25 años menores
+- LGS Arts. 71 Bis/Ter/Quater: expediente electrónico obligatorio 2026
+
+**Patrones de pérdida en casos reales INAI:**
+1. Hospital negó expediente → multa $4.6M pesos por no responder solicitud ARCO
+2. Clínica reveló análisis clínicos sin consentimiento → sin aviso de privacidad
+3. Médico compartió diagnóstico mental → no pudo probar que paciente vio el aviso
+- Defensa "uso personal sin fines comerciales" → nunca funciona
+- Defensa "no soy sujeto regulado" → nunca funciona
+- Sector salud = 35% de todas las multas INAI (2° lugar tras financiero)
+
+### Proceso ARCO + snapshot aviso ✅ (commit `4f273ef`)
+
+Basado en casos reales: hospital perdió $4.6M por no responder solicitud. No responder = infracción automática.
+
+**BD (migración `20260622150000`):**
+- `privacy_notice_versions` — versión + hash inmutable; prueba legal de qué texto aceptó cada paciente
+- `arco_requests` — folio, deadline 28 días (~20 hábiles), status workflow, RLS anon INSERT
+
+**Edge function `arco-request`:** valida → inserta → notifica admin Telegram (telegram_admin_chat_id)
+
+**Frontend:**
+- `/solicitud-arco` — formulario público, éxito con folio + plazo legal visible
+- `/admin/arco` — KPIs urgencia, alerta roja si hay solicitudes vencidas, modal gestión
+- `AvisoPrivacidad.tsx` — link al formulario + bloque versión/hash visible para titulares
+- Login footer + sidebar: link "Derechos ARCO"
+
+**Pendiente (requiere abogado/acción externa):**
+- Texto real del Aviso de Privacidad LFPDPPP → actualizar hash en `privacy_notice_versions` y aviso
+- Términos de Servicio con cláusula de arbitraje (Código de Comercio Arts. 1415-1463)
+- Addendum B2B con clínicas — deslinde responsabilidad datos de salud
+- DPA (Data Processing Agreement) con Supabase Inc.
+- Designar oficial de protección de datos (LFPDPPP Art. 29)
+- Política retención/eliminación 5 años NOM-004
+
+**Estado técnico LFPDPPP — completo sin abogado:**
+✅ Aviso publicado (borrador) · ✅ Links visibles · ✅ Consentimiento + timestamp en BD
+✅ Sección IA/decisiones automatizadas · ✅ SAyBG (no INAI) · ✅ Finalidades necesarias/voluntarias
+✅ Anthropic declarado · ✅ Log auditoría · ✅ RLS · ✅ HTTPS + Vault · ✅ Proceso ARCO operativo
+✅ Snapshot versión aviso en BD · ✅ Alerta vencimiento ARCO en admin
 
 ---
 
