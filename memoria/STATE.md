@@ -1112,6 +1112,24 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 ### ~~Pendiente inmediato~~ — RESUELTO (verificado Jun 22)
 - ~~Commit + push manuales/chat/Docusaurus~~ — YA COMMITIDO en `c836bfc` (55 archivos, ManualButton.tsx, copy-manual-build.cjs, portal Docusaurus, chat ayuda). Nota era falso positivo.
 
+## Completado (Jun 22, 2026 — /pitch fix + rediseño Pro Max)
+
+### /pitch — arreglada + actualizada + Huashu Design ✅
+
+- [x] Root cause blank page: Lottie import (`eval` interno) bloqueado por CSP Cloudflare — eliminado
+- [x] `src/pages/Pitch.tsx` reescrito completo (863 → nueva versión sin Lottie):
+  - Marca corregida: IntegriKa (era "ClínicaMX")
+  - 9+ módulos reales: CFDI 4.0, Almacén 3-Way Match, BI, Google Calendar, Multi-clínica, Stripe
+  - Dashboard mockup CSS puro (sin Lottie)
+  - Tabla competitiva vs Huli / Mi-Consultorio / Medesk con checkmarks
+  - ROI calculado: +$13,601 MXN/mes neto vs plan Profesional
+  - Pricing 4 tiers: Básico $999 / Esencial $2,499 / Profesional $5,999 / Empresarial
+  - FAQ con acordeón, scroll progress bar, animated counters
+- [x] Huashu Design prototype: https://claude.ai/design/p/2637bc2e-e557-47fe-ba6d-4cd2b7f77ec1?file=pitch.dc.html
+  - Diseño Pro Max: hero dark #0B1829 + bot Telegram animado (conversación real en loop)
+  - Tipografía: Syne (display) + Plus Jakarta Sans (body) + DM Mono (datos)
+- [x] Build `npm run build:all` limpio (3.38s) · deploy `a84c7cac` a integrika.mx/pitch ✅
+
 ## Completado (Jun 22, 2026 — schema drift 25 archivos)
 
 ### Schema drift post-limpieza types.ts — 0 errores TypeScript ✅ (commits `13031da`, `765d246`)
