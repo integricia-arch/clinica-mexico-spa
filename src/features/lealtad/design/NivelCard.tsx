@@ -2,13 +2,15 @@
 import { motion, useSpring, useTransform, useMotionValue, useReducedMotion } from 'motion/react'
 import { useEffect } from 'react'
 import Barcode from 'react-barcode'
+import { spring } from './motion'
 import { NIVEL_COLORS, NIVEL_ICON } from './tokens'
-import { NIVEL_LABEL, valorCanjeMxn } from '../types'
-import type { LoyaltyMember, LoyaltyConfig } from '../types'
+import { NIVEL_LABEL } from '../types'
 
 interface Props {
-  member: LoyaltyMember
-  config: LoyaltyConfig
+  nivel: 'bronce' | 'plata' | 'oro' | 'diamante'
+  puntos: number
+  nombre: string
+  codigoBarras?: string
   showBarcode?: boolean
   compact?: boolean
 }
@@ -16,18 +18,17 @@ interface Props {
 /** Número animado con spring physics — Emil Kowalski */
 function AnimatedNumber({ value, prefix = '' }: { value: number; prefix?: string }) {
   const motionVal = useMotionValue(0)
-  const springVal = useSpring(motionVal, { stiffness: 200, damping: 20, mass: 0.8 })
-  const display = useTransform(springVal, v => `${prefix}${v.toFixed(2)}`)
+  const springVal = useSpring(motionVal, spring.smooth)
+  const display = useTransform(springVal, v => `${prefix}${v.toFixed(0)}`)
 
   useEffect(() => { motionVal.set(value) }, [value, motionVal])
 
   return <motion.span>{display}</motion.span>
 }
 
-export function NivelCard({ member, config, showBarcode = false, compact = false }: Props) {
-  const colors = NIVEL_COLORS[member.nivel]
-  const saldo = valorCanjeMxn(member.puntos_disponibles, config.valor_punto_mxn)
-  const isDiamante = member.nivel === 'diamante'
+export function NivelCard({ nivel, puntos, nombre, codigoBarras, showBarcode = false, compact = false }: Props) {
+  const colors = NIVEL_COLORS[nivel]
+  const isDiamante = nivel === 'diamante'
   const prefersReduced = useReducedMotion()
 
   return (
@@ -42,13 +43,13 @@ export function NivelCard({ member, config, showBarcode = false, compact = false
       whileHover={{ scale: 1.015, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
     >
       {/* Shimmer Diamante — Emil Kowalski ambient effect */}
-      {isDiamante && (
+      {isDiamante && !prefersReduced && (
         <motion.div
           className="absolute inset-0 pointer-events-none"
           style={{
             background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%)',
           }}
-          animate={prefersReduced ? {} : { x: ['-100%', '200%'] }}
+          animate={{ x: ['-100%', '200%'] }}
           transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 3, ease: 'easeInOut' }}
         />
       )}
@@ -65,35 +66,35 @@ export function NivelCard({ member, config, showBarcode = false, compact = false
       <div className="relative flex items-start justify-between mb-4">
         <div>
           <p className="text-xs font-medium opacity-70 tracking-wide uppercase">
-            {config.nombre_programa}
+            Programa de Lealtad
           </p>
-          <p className="text-lg font-semibold mt-0.5 leading-tight">{member.nombre}</p>
+          <p className="text-lg font-semibold mt-0.5 leading-tight">{nombre}</p>
         </div>
         <motion.div
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${colors.bg} ${colors.text} border ${colors.border}`}
           whileHover={{ scale: 1.08 }}
           transition={{ type: 'spring', stiffness: 500, damping: 20 }}
         >
-          <span>{NIVEL_ICON[member.nivel]}</span>
-          <span>{NIVEL_LABEL[member.nivel].replace(/^[^\s]+\s/, '')}</span>
+          <span>{NIVEL_ICON[nivel]}</span>
+          <span>{NIVEL_LABEL[nivel].replace(/^[^\s]+\s/, '')}</span>
         </motion.div>
       </div>
 
-      {/* Saldo con count-up animado */}
+      {/* Puntos con count-up animado */}
       {!compact && (
         <div className="relative mb-4">
-          <p className="text-xs opacity-60 mb-0.5 tracking-wide">Saldo eS$</p>
+          <p className="text-xs opacity-60 mb-0.5 tracking-wide">Puntos disponibles</p>
           <p className="text-4xl font-bold tracking-tight font-mono">
-            <AnimatedNumber value={saldo} prefix="$" />
+            <AnimatedNumber value={puntos} />
           </p>
           <p className="text-xs opacity-50 mt-0.5">
-            {member.puntos_disponibles.toLocaleString('es-MX')} puntos
+            {puntos.toLocaleString('es-MX')} pts
           </p>
         </div>
       )}
 
       {/* Código de barras */}
-      {showBarcode && (
+      {showBarcode && codigoBarras && (
         <motion.div
           className="relative bg-white rounded-xl p-3 flex justify-center"
           initial={{ opacity: 0, y: 8 }}
@@ -101,7 +102,7 @@ export function NivelCard({ member, config, showBarcode = false, compact = false
           transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 28 }}
         >
           <Barcode
-            value={member.codigo_barras}
+            value={codigoBarras}
             width={1.4}
             height={52}
             fontSize={11}
