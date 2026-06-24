@@ -1,3 +1,9 @@
+/* Geist — Vercel variable font */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
+
+/* Loyalty design system tokens */
+@import './styles/loyalty-tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -79,6 +85,10 @@
 
     --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
     --font-body:    'Inter', system-ui, sans-serif;
+
+    /* Geist — loyalty module font stack */
+    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
   }
 
   * {
