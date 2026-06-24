@@ -173,9 +173,9 @@ DECLARE
   v_saldo_nuevo  integer;
   v_updated      integer;
 BEGIN
-  SELECT * INTO v_cfg FROM loyalty_config WHERE clinic_id = p_clinic_id;
+  SELECT * INTO v_cfg FROM loyalty_config WHERE clinic_id = p_clinic_id AND programa_activo = true;
   IF NOT FOUND THEN
-    RETURN json_build_object('ok', false, 'error', 'config_no_encontrada');
+    RETURN json_build_object('ok', false, 'error', 'programa_inactivo_o_sin_config');
   END IF;
 
   SELECT * INTO v_member FROM loyalty_members
@@ -225,8 +225,10 @@ $$;
 
 -- ─── loyalty_expire_points ───────────────────────────────────────────────────
 -- Vencimiento de puntos por inactividad
--- Gate R1: BATCH UPDATE (not a PL/pgSQL FOR loop) to scale beyond 10K members
+-- Gate R1: BATCH UPDATE via CTE (not a PL/pgSQL FOR loop) to scale beyond 10K members
 -- Gate R1: REVOKE PUBLIC, GRANT service_role only
+-- Note: Members without an active loyalty_config are silently skipped (COALESCE 999999 days).
+-- This is intentional: if the program is inactive, no points should expire.
 CREATE OR REPLACE FUNCTION loyalty_expire_points()
 RETURNS void
 LANGUAGE plpgsql
@@ -234,58 +236,47 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Step 1: batch UPDATE all members whose last relevant movement is older than
-  -- expiracion_dias_inactividad days. Single UPDATE statement — no row-by-row loop.
-  UPDATE loyalty_members lm
-     SET puntos_disponibles = 0
-   WHERE lm.activo = true
-     AND lm.puntos_disponibles > 0
-     AND (
-       SELECT MAX(mv.created_at)
-         FROM loyalty_movimientos mv
-        WHERE mv.member_id = lm.id
-          AND mv.tipo IN ('acumulacion','canje','bonus')
-     ) < now() - (
-       SELECT lc.expiracion_dias_inactividad
-         FROM loyalty_config lc
-        WHERE lc.clinic_id = lm.clinic_id
-          AND lc.programa_activo = true
-     ) * INTERVAL '1 day';
-
-  -- Step 2: INSERT vencimiento movements for all rows zeroed above.
-  -- Identify affected members: activo=true, puntos_disponibles=0,
-  -- no vencimiento record today, but DO have prior acumulacion/canje/bonus movements.
-  -- The negated puntos is derived from the last saldo_post before today's zeroing.
+  -- Use a CTE to capture the actual puntos_disponibles BEFORE zeroing,
+  -- then UPDATE and INSERT in one atomic operation.
+  -- pre_values captures the exact balance to expire (avoids proxy via saldo_post
+  -- which can be inaccurate when manual 'ajuste' entries exist).
+  WITH pre_values AS (
+    SELECT id, clinic_id, puntos_disponibles AS puntos_antes
+      FROM loyalty_members lm
+     WHERE lm.activo = true
+       AND lm.puntos_disponibles > 0
+       AND NOT EXISTS (
+         SELECT 1 FROM loyalty_movimientos mv
+          WHERE mv.member_id = lm.id
+            AND mv.tipo = 'vencimiento'
+            AND mv.created_at >= date_trunc('day', now())
+       )
+       AND COALESCE(
+         (SELECT MAX(mv2.created_at) FROM loyalty_movimientos mv2
+           WHERE mv2.member_id = lm.id
+             AND mv2.tipo IN ('acumulacion','canje','bonus')),
+         lm.created_at
+       ) < now() - COALESCE(
+         (SELECT lc.expiracion_dias_inactividad::integer
+            FROM loyalty_config lc
+           WHERE lc.clinic_id = lm.clinic_id
+             AND lc.programa_activo = true),
+         999999
+       ) * INTERVAL '1 day'
+  ),
+  expired AS (
+    UPDATE loyalty_members lm
+       SET puntos_disponibles = 0
+      FROM pre_values pv
+     WHERE lm.id = pv.id
+    RETURNING lm.id, lm.clinic_id
+  )
   INSERT INTO loyalty_movimientos (clinic_id, member_id, tipo, puntos, saldo_post, descripcion)
-  SELECT lm.clinic_id,
-         lm.id,
-         'vencimiento',
-         -COALESCE((
-           SELECT mv2.saldo_post
-             FROM loyalty_movimientos mv2
-            WHERE mv2.member_id = lm.id
-              AND mv2.tipo != 'vencimiento'
-            ORDER BY mv2.created_at DESC
-            LIMIT 1
-         ), 0),
-         0,
-         'Vencimiento por inactividad'
-    FROM loyalty_members lm
-   WHERE lm.activo = true
-     AND lm.puntos_disponibles = 0
-     -- Only insert vencimiento if there is no vencimiento record from today
-     AND NOT EXISTS (
-       SELECT 1 FROM loyalty_movimientos mv3
-        WHERE mv3.member_id = lm.id
-          AND mv3.tipo = 'vencimiento'
-          AND mv3.created_at >= date_trunc('day', now())
-     )
-     -- Only for members that actually had points (avoid inserting for zero-balance members)
-     AND EXISTS (
-       SELECT 1 FROM loyalty_movimientos mv4
-        WHERE mv4.member_id = lm.id
-          AND mv4.tipo IN ('acumulacion','canje','bonus')
-     );
+  SELECT e.clinic_id, e.id, 'vencimiento', -pv.puntos_antes, 0,
+         'Vencimiento automático por inactividad'
+    FROM expired e
+    JOIN pre_values pv ON pv.id = e.id
+   WHERE pv.puntos_antes > 0;
 END;
 $$;
 
