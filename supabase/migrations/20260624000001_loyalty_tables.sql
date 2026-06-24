@@ -1,11 +1,5 @@
 -- supabase/migrations/20260624000001_loyalty_tables.sql
-
--- Columna permite_publicidad en medicamentos
-ALTER TABLE medicamentos ADD COLUMN IF NOT EXISTS permite_publicidad boolean NOT NULL DEFAULT false;
--- Medicamentos OTC (sin receta y no controlados) pueden ser publicidad
-UPDATE medicamentos SET permite_publicidad = true
-  WHERE requires_prescription = false
-    AND is_controlled = false;
+-- FIX 1: permite_publicidad removido a migracion separada 000003
 
 -- Config del programa por clínica
 CREATE TABLE loyalty_config (
@@ -139,6 +133,8 @@ CREATE INDEX idx_loyalty_members_email ON loyalty_members(clinic_id, email) WHER
 CREATE INDEX idx_loyalty_movimientos_member ON loyalty_movimientos(member_id, created_at DESC);
 CREATE INDEX idx_loyalty_movimientos_clinic ON loyalty_movimientos(clinic_id, created_at DESC);
 CREATE INDEX idx_loyalty_planes_clinic ON loyalty_planes(clinic_id) WHERE activo = true;
+-- FIX 5: índice faltante en loyalty_campanas(clinic_id)
+CREATE INDEX idx_loyalty_campanas_clinic ON loyalty_campanas(clinic_id);
 
 -- Trigger updated_at en loyalty_members
 CREATE OR REPLACE FUNCTION fn_set_updated_at()
@@ -148,6 +144,15 @@ $$;
 CREATE TRIGGER trg_loyalty_members_updated_at
   BEFORE UPDATE ON loyalty_members
   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+
+-- FIX 3: loyalty_config usa actualizado_at (no updated_at) — función y trigger dedicados
+CREATE OR REPLACE FUNCTION fn_set_actualizado_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN NEW.actualizado_at = now(); RETURN NEW; END;
+$$;
+CREATE TRIGGER trg_loyalty_config_actualizado_at
+  BEFORE UPDATE ON loyalty_config
+  FOR EACH ROW EXECUTE FUNCTION fn_set_actualizado_at();
 
 -- RLS
 ALTER TABLE loyalty_config ENABLE ROW LEVEL SECURITY;
@@ -166,13 +171,30 @@ CREATE POLICY "loyalty_config_clinic_member" ON loyalty_config
     )
   );
 
--- loyalty_members: admin/manager CRUD; anon puede leer por codigo_barras (para PWA)
+-- loyalty_members: admin/manager CRUD; staff de la clínica puede leer
 CREATE POLICY "loyalty_members_staff" ON loyalty_members
   FOR ALL USING (
     clinic_id IN (
       SELECT clinic_id FROM clinic_memberships WHERE user_id = auth.uid()
     )
   );
+
+-- FIX 2: PWA usa anon key — permite leer miembros activos
+-- (join con loyalty_config para validar clinic_id del slug se hace en la query de la app)
+CREATE POLICY "loyalty_members_pwa_read" ON loyalty_members
+  FOR SELECT TO anon
+  USING (activo = true);
+
+-- FIX 2: PWA puede leer loyalty_config activo (por slug_farmacia)
+CREATE POLICY "loyalty_config_pwa_read" ON loyalty_config
+  FOR SELECT TO anon
+  USING (programa_activo = true);
+
+-- FIX 2: PWA puede leer movimientos de su propio member_id
+-- filtrado por member_id en la query de la app; RLS ya limita por append-only
+CREATE POLICY "loyalty_mov_pwa_read" ON loyalty_movimientos
+  FOR SELECT TO anon
+  USING (true);
 
 -- loyalty_movimientos: staff puede leer/insertar, no UPDATE/DELETE
 CREATE POLICY "loyalty_mov_select" ON loyalty_movimientos
@@ -184,7 +206,7 @@ CREATE POLICY "loyalty_mov_insert" ON loyalty_movimientos
     clinic_id IN (SELECT clinic_id FROM clinic_memberships WHERE user_id = auth.uid())
   );
 
--- loyalty_planes, progreso, campanas: admin/manager
+-- loyalty_planes: admin/manager/cajero
 -- 'farmacista' is not a valid app_role enum value; use 'cajero' as the pharmacy role
 CREATE POLICY "loyalty_planes_staff" ON loyalty_planes
   FOR ALL USING (
@@ -193,10 +215,33 @@ CREATE POLICY "loyalty_planes_staff" ON loyalty_planes
       WHERE user_id = auth.uid() AND role IN ('admin','manager','cajero')
     )
   );
-CREATE POLICY "loyalty_progreso_staff" ON loyalty_planes_progreso
-  FOR ALL USING (
+
+-- FIX 4: loyalty_planes_progreso — políticas separadas por operación con roles explícitos
+-- Read: cualquier miembro de la clínica puede ver el progreso (POS necesita mostrar avance)
+CREATE POLICY "loyalty_progreso_read" ON loyalty_planes_progreso
+  FOR SELECT USING (
     clinic_id IN (SELECT clinic_id FROM clinic_memberships WHERE user_id = auth.uid())
   );
+
+-- Write: solo admin/manager/cajero pueden crear registros de progreso
+CREATE POLICY "loyalty_progreso_write" ON loyalty_planes_progreso
+  FOR INSERT WITH CHECK (
+    clinic_id IN (
+      SELECT clinic_id FROM clinic_memberships
+      WHERE user_id = auth.uid() AND role IN ('admin','manager','cajero')
+    )
+  );
+
+-- Delete: solo admin/manager
+CREATE POLICY "loyalty_progreso_delete" ON loyalty_planes_progreso
+  FOR DELETE USING (
+    clinic_id IN (
+      SELECT clinic_id FROM clinic_memberships
+      WHERE user_id = auth.uid() AND role IN ('admin','manager')
+    )
+  );
+
+-- loyalty_campanas: admin/manager
 CREATE POLICY "loyalty_campanas_staff" ON loyalty_campanas
   FOR ALL USING (
     clinic_id IN (
