@@ -575,6 +575,9 @@ export default function PuntoDeVenta({
     }, String(saleId));
 
     // Registrar puntos de fidelización si hay miembro seleccionado
+    // FIX 1 [VERIFIED]: saleId is a UUID returned from pharmacy_register_sale RPC.
+    // String(saleId) coerces it to a UUID string, which PostgreSQL accepts for
+    // the loyalty_register_sale(p_sale_id uuid, ...) parameter type. This is safe.
     if (loyaltyMemberId && saleId) {
       const loyaltySaleResult = await loyaltyHook.registerSale(String(saleId), loyaltyMemberId);
       if (!loyaltySaleResult.ok) {

@@ -21,6 +21,8 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [email, setEmail] = useState('')
+  const [consentPrivacidad, setConsentPrivacidad] = useState(false)
+  const [consentHistorial, setConsentHistorial] = useState(false)
   const [consentMarketing, setConsentMarketing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +31,8 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
     setNombre('')
     setTelefono('')
     setEmail('')
+    setConsentPrivacidad(false)
+    setConsentHistorial(false)
     setConsentMarketing(false)
     setError(null)
   }
@@ -44,14 +48,18 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
       setError('Ingresa teléfono o email')
       return
     }
+    if (!consentPrivacidad || !consentHistorial) {
+      setError('Debes aceptar los consentimientos obligatorios')
+      return
+    }
     setSubmitting(true)
     setError(null)
     const result = await register({
       nombre: nombre.trim(),
       telefono: telefono.trim(),
       email: email.trim(),
-      consent_privacidad: true,
-      consent_historial_compras: true,
+      consent_privacidad: consentPrivacidad,
+      consent_historial_compras: consentHistorial,
       consent_marketing: consentMarketing,
       consent_marketing_canales: consentMarketing ? ['email'] : [],
     })
@@ -107,19 +115,29 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
 
           {/* Consentimientos LFPDPPP — 3 separados como requiere la ley */}
           <div className="rounded border p-3 space-y-3 bg-muted/30 text-sm">
-            {/* 1: Aviso de Privacidad — Art. 8 LFPDPPP — obligatorio */}
+            {/* 1: Aviso de Privacidad — Art. 8 LFPDPPP — obligatorio, ACTIVO */}
             <div className="flex items-start gap-2">
-              <Checkbox id="laf-c1" checked disabled className="mt-0.5 shrink-0" />
-              <label htmlFor="laf-c1" className="text-muted-foreground leading-snug cursor-default">
+              <Checkbox
+                id="laf-c1"
+                checked={consentPrivacidad}
+                onCheckedChange={(v) => setConsentPrivacidad(!!v)}
+                className="mt-0.5 shrink-0"
+              />
+              <label htmlFor="laf-c1" className="leading-snug cursor-pointer">
                 <strong>Aviso de Privacidad (obligatorio):</strong> Acepto el tratamiento
                 de mis datos personales para administrar mi Monedero de Fidelización, conforme
                 al aviso de privacidad disponible en esta clínica. (Art. 8 LFPDPPP)
               </label>
             </div>
-            {/* 2: Historial de compras con medicamentos — Art. 9 LFPDPPP — datos sensibles — obligatorio */}
+            {/* 2: Historial de compras con medicamentos — Art. 9 LFPDPPP — datos sensibles — obligatorio, ACTIVO */}
             <div className="flex items-start gap-2">
-              <Checkbox id="laf-c2" checked disabled className="mt-0.5 shrink-0" />
-              <label htmlFor="laf-c2" className="text-muted-foreground leading-snug cursor-default">
+              <Checkbox
+                id="laf-c2"
+                checked={consentHistorial}
+                onCheckedChange={(v) => setConsentHistorial(!!v)}
+                className="mt-0.5 shrink-0"
+              />
+              <label htmlFor="laf-c2" className="leading-snug cursor-pointer">
                 <strong>Historial de compras — datos sensibles (obligatorio):</strong> Acepto
                 que mis compras, incluyendo medicamentos adquiridos, sean registradas para
                 calcular puntos. Este historial puede incluir información sobre mi salud y se
@@ -160,7 +178,10 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
             <Button variant="outline" onClick={handleClose} disabled={submitting}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || !consentPrivacidad || !consentHistorial}
+            >
               {submitting ? 'Registrando...' : 'Afiliar cliente'}
             </Button>
           </div>
