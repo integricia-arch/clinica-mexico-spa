@@ -1,3 +1,4 @@
+Initialising login role...
 export type Json =
   | string
   | number
@@ -4424,6 +4425,437 @@ export type Database = {
           },
         ]
       }
+      loyalty_campanas: {
+        Row: {
+          aperturas: number | null
+          canal_email: boolean
+          canal_inapp: boolean
+          canal_telegram: boolean
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          descripcion: string | null
+          destinatarios: number | null
+          enviado_at: string | null
+          estado: string
+          id: string
+          imagen_url: string | null
+          programado_at: string | null
+          segmento: string
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          aperturas?: number | null
+          canal_email?: boolean
+          canal_inapp?: boolean
+          canal_telegram?: boolean
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          destinatarios?: number | null
+          enviado_at?: string | null
+          estado?: string
+          id?: string
+          imagen_url?: string | null
+          programado_at?: string | null
+          segmento?: string
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          aperturas?: number | null
+          canal_email?: boolean
+          canal_inapp?: boolean
+          canal_telegram?: boolean
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          destinatarios?: number | null
+          enviado_at?: string | null
+          estado?: string
+          id?: string
+          imagen_url?: string | null
+          programado_at?: string | null
+          segmento?: string
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_campanas_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_config: {
+        Row: {
+          actualizado_at: string
+          clinic_id: string
+          color_primario: string
+          expiracion_dias_inactividad: number
+          logo_url: string | null
+          multiplicador_diamante: number
+          multiplicador_oro: number
+          multiplicador_plata: number
+          nivel_diamante_umbral: number
+          nivel_oro_umbral: number
+          nivel_plata_umbral: number
+          nombre_programa: string
+          pesos_por_punto: number
+          programa_activo: boolean
+          puntos_minimos_canje: number
+          slug_farmacia: string
+          valor_punto_mxn: number
+        }
+        Insert: {
+          actualizado_at?: string
+          clinic_id: string
+          color_primario?: string
+          expiracion_dias_inactividad?: number
+          logo_url?: string | null
+          multiplicador_diamante?: number
+          multiplicador_oro?: number
+          multiplicador_plata?: number
+          nivel_diamante_umbral?: number
+          nivel_oro_umbral?: number
+          nivel_plata_umbral?: number
+          nombre_programa?: string
+          pesos_por_punto?: number
+          programa_activo?: boolean
+          puntos_minimos_canje?: number
+          slug_farmacia: string
+          valor_punto_mxn?: number
+        }
+        Update: {
+          actualizado_at?: string
+          clinic_id?: string
+          color_primario?: string
+          expiracion_dias_inactividad?: number
+          logo_url?: string | null
+          multiplicador_diamante?: number
+          multiplicador_oro?: number
+          multiplicador_plata?: number
+          nivel_diamante_umbral?: number
+          nivel_oro_umbral?: number
+          nivel_plata_umbral?: number
+          nombre_programa?: string
+          pesos_por_punto?: number
+          programa_activo?: boolean
+          puntos_minimos_canje?: number
+          slug_farmacia?: string
+          valor_punto_mxn?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_members: {
+        Row: {
+          activo: boolean
+          clinic_id: string
+          codigo_barras: string
+          consent_historial_at: string | null
+          consent_historial_compras: boolean
+          consent_marketing: boolean
+          consent_marketing_at: string | null
+          consent_marketing_canales: string[] | null
+          consent_privacidad: boolean
+          consent_privacidad_at: string | null
+          consent_version: string | null
+          created_at: string
+          email: string | null
+          fecha_nacimiento: string | null
+          id: string
+          nivel: string
+          nombre: string
+          patient_id: string | null
+          puntos_acumulados_historico: number
+          puntos_disponibles: number
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          clinic_id: string
+          codigo_barras: string
+          consent_historial_at?: string | null
+          consent_historial_compras?: boolean
+          consent_marketing?: boolean
+          consent_marketing_at?: string | null
+          consent_marketing_canales?: string[] | null
+          consent_privacidad?: boolean
+          consent_privacidad_at?: string | null
+          consent_version?: string | null
+          created_at?: string
+          email?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          nivel?: string
+          nombre: string
+          patient_id?: string | null
+          puntos_acumulados_historico?: number
+          puntos_disponibles?: number
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          clinic_id?: string
+          codigo_barras?: string
+          consent_historial_at?: string | null
+          consent_historial_compras?: boolean
+          consent_marketing?: boolean
+          consent_marketing_at?: string | null
+          consent_marketing_canales?: string[] | null
+          consent_privacidad?: boolean
+          consent_privacidad_at?: string | null
+          consent_version?: string | null
+          created_at?: string
+          email?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          nivel?: string
+          nombre?: string
+          patient_id?: string | null
+          puntos_acumulados_historico?: number
+          puntos_disponibles?: number
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_members_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_members_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_movimientos: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          descripcion: string | null
+          id: string
+          member_id: string
+          pharmacy_sale_id: string | null
+          plan_id: string | null
+          puntos: number
+          saldo_post: number
+          tipo: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          id?: string
+          member_id: string
+          pharmacy_sale_id?: string | null
+          plan_id?: string | null
+          puntos: number
+          saldo_post: number
+          tipo: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          id?: string
+          member_id?: string
+          pharmacy_sale_id?: string | null
+          plan_id?: string | null
+          puntos?: number
+          saldo_post?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_movimientos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_movimientos_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_movimientos_pharmacy_sale_id_fkey"
+            columns: ["pharmacy_sale_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_movimientos_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_planes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_planes: {
+        Row: {
+          activo: boolean
+          categoria_medicamento: string | null
+          clinic_id: string
+          created_at: string
+          descripcion: string | null
+          id: string
+          medicamento_id: string | null
+          meta_cantidad: number | null
+          nombre: string
+          recompensa_medicamento_id: string | null
+          recompensa_tipo: string
+          recompensa_valor: number | null
+          tipo: string
+          vigencia_fin: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          activo?: boolean
+          categoria_medicamento?: string | null
+          clinic_id: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          medicamento_id?: string | null
+          meta_cantidad?: number | null
+          nombre: string
+          recompensa_medicamento_id?: string | null
+          recompensa_tipo: string
+          recompensa_valor?: number | null
+          tipo: string
+          vigencia_fin?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          activo?: boolean
+          categoria_medicamento?: string | null
+          clinic_id?: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          medicamento_id?: string | null
+          meta_cantidad?: number | null
+          nombre?: string
+          recompensa_medicamento_id?: string | null
+          recompensa_tipo?: string
+          recompensa_valor?: number | null
+          tipo?: string
+          vigencia_fin?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_planes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_planes_medicamento_id_fkey"
+            columns: ["medicamento_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_planes_recompensa_medicamento_id_fkey"
+            columns: ["recompensa_medicamento_id"]
+            isOneToOne: false
+            referencedRelation: "medicamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_planes_progreso: {
+        Row: {
+          avance_actual: number
+          clinic_id: string
+          completado_at: string | null
+          created_at: string
+          id: string
+          member_id: string
+          plan_id: string
+          recompensa_entregada: boolean
+          recompensa_entregada_at: string | null
+        }
+        Insert: {
+          avance_actual?: number
+          clinic_id: string
+          completado_at?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+          plan_id: string
+          recompensa_entregada?: boolean
+          recompensa_entregada_at?: string | null
+        }
+        Update: {
+          avance_actual?: number
+          clinic_id?: string
+          completado_at?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+          plan_id?: string
+          recompensa_entregada?: boolean
+          recompensa_entregada_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_planes_progreso_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_planes_progreso_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_planes_progreso_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_planes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_consultas: {
         Row: {
           clinic_id: string | null
@@ -4649,6 +5081,7 @@ export type Database = {
           is_controlled: boolean
           laboratorio: string | null
           nombre: string
+          permite_publicidad: boolean
           precio_unitario: number
           presentacion: string | null
           principio_activo: string | null
@@ -4690,6 +5123,7 @@ export type Database = {
           is_controlled?: boolean
           laboratorio?: string | null
           nombre: string
+          permite_publicidad?: boolean
           precio_unitario?: number
           presentacion?: string | null
           principio_activo?: string | null
@@ -4731,6 +5165,7 @@ export type Database = {
           is_controlled?: boolean
           laboratorio?: string | null
           nombre?: string
+          permite_publicidad?: boolean
           precio_unitario?: number
           presentacion?: string | null
           principio_activo?: string | null
@@ -7887,6 +8322,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      loyalty_expire_points: { Args: never; Returns: undefined }
+      loyalty_generate_barcode: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
+      loyalty_recalculate_level: {
+        Args: { p_member_id: string }
+        Returns: string
+      }
+      loyalty_redeem: {
+        Args: { p_clinic_id: string; p_member_id: string; p_puntos: number }
+        Returns: Json
+      }
+      loyalty_register_sale: {
+        Args: { p_clinic_id: string; p_member_id: string; p_sale_id: string }
+        Returns: Json
+      }
       multiclinic_diagnostics: { Args: never; Returns: Json }
       next_receta_folio: { Args: { p_clinic_id: string }; Returns: number }
       pharmacy_close_shift:
@@ -8303,3 +8755,5 @@ export const Constants = {
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.107.0 (currently installed v)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
