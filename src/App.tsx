@@ -53,6 +53,7 @@ import AvisoPrivacidad from "@/pages/AvisoPrivacidad";
 import TerminosServicio from "@/pages/TerminosServicio";
 import SolicitudARCO from "@/pages/SolicitudARCO";
 import ARCOAdmin from "@/pages/ARCOAdmin";
+import Lealtad from "@/pages/Lealtad";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +118,7 @@ const App = () => (
                         <Route path="/admin/arco" element={<ProtectedRoute allowedRoles={["admin"]}><ARCOAdmin /></ProtectedRoute>} />
                         <Route path="/inteligencia" element={<ProtectedRoute allowedRoles={["admin","manager"]}><BI /></ProtectedRoute>} />
                         <Route path="/ayuda-interna" element={<ProtectedRoute allowedRoles={["admin","manager","receptionist"]}><AyudaInterna /></ProtectedRoute>} />
+                        <Route path="/lealtad" element={<ProtectedRoute allowedRoles={["admin","manager"]}><Lealtad /></ProtectedRoute>} />
 
                         <Route path="*" element={<NotFound />} />
                       </Routes>

@@ -5,7 +5,7 @@ import {
   Pill, Settings, Menu, X, Bell, ChevronDown, LogOut,
   Headset, MessageCircle, BellRing, ClipboardList, Stethoscope,
   CreditCard, Lock, UserRound, ChevronLeft, ChevronRight,
-  Send,
+  Send, Gift,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -43,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/recordatorios", icon: BellRing, label: "Recordatorios", roles: ["admin", "receptionist", "doctor"] },
   // ── Operaciones ──
   { section: "Operaciones", to: "/farmacia", icon: CreditCard, label: "Caja", roles: ["admin", "nurse", "receptionist", "cajero"] },
+  { to: "/lealtad", icon: Gift, label: "Lealtad", roles: ["admin", "manager"] },
   { to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"] },
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
   // ── Admin ──
