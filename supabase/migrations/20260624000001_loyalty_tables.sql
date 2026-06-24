@@ -2,7 +2,7 @@
 -- FIX 1: permite_publicidad removido a migracion separada 000003
 
 -- Config del programa por clínica
-CREATE TABLE loyalty_config (
+CREATE TABLE IF NOT EXISTS loyalty_config (
   clinic_id                    uuid PRIMARY KEY REFERENCES clinics(id) ON DELETE CASCADE,
   nombre_programa              text NOT NULL DEFAULT 'Monedero Farmacia',
   slug_farmacia                text NOT NULL UNIQUE,
@@ -23,7 +23,7 @@ CREATE TABLE loyalty_config (
 );
 
 -- Miembros del programa
-CREATE TABLE loyalty_members (
+CREATE TABLE IF NOT EXISTS loyalty_members (
   id                          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id                   uuid NOT NULL REFERENCES clinics(id) ON DELETE RESTRICT,
   patient_id                  uuid REFERENCES patients(id) ON DELETE SET NULL,
@@ -53,7 +53,7 @@ CREATE TABLE loyalty_members (
 
 -- Planes de lealtad (3x1, puntos dobles, etc.)
 -- NOTE: Created before loyalty_movimientos so the FK reference in loyalty_movimientos works
-CREATE TABLE loyalty_planes (
+CREATE TABLE IF NOT EXISTS loyalty_planes (
   id                        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id                 uuid NOT NULL REFERENCES clinics(id) ON DELETE RESTRICT,
   nombre                    text NOT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE loyalty_planes (
 );
 
 -- Movimientos de puntos (append-only)
-CREATE TABLE loyalty_movimientos (
+CREATE TABLE IF NOT EXISTS loyalty_movimientos (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id        uuid NOT NULL REFERENCES clinics(id) ON DELETE RESTRICT,
   member_id        uuid NOT NULL REFERENCES loyalty_members(id) ON DELETE CASCADE,
@@ -90,7 +90,7 @@ CREATE TABLE loyalty_movimientos (
 );
 
 -- Progreso de miembros en planes
-CREATE TABLE loyalty_planes_progreso (
+CREATE TABLE IF NOT EXISTS loyalty_planes_progreso (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id               uuid NOT NULL REFERENCES clinics(id) ON DELETE RESTRICT,
   member_id               uuid NOT NULL REFERENCES loyalty_members(id) ON DELETE CASCADE,
@@ -104,7 +104,7 @@ CREATE TABLE loyalty_planes_progreso (
 );
 
 -- Campañas y boletines
-CREATE TABLE loyalty_campanas (
+CREATE TABLE IF NOT EXISTS loyalty_campanas (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id      uuid NOT NULL REFERENCES clinics(id) ON DELETE RESTRICT,
   titulo         text NOT NULL,
