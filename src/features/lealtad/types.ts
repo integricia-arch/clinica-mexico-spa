@@ -41,7 +41,7 @@ export interface LoyaltyMember {
   consent_historial_at: string | null
   consent_marketing: boolean
   consent_marketing_at: string | null
-  consent_marketing_canales: string[]
+  consent_marketing_canales: string[] | null
   consent_version: string | null
   activo: boolean
   created_at: string

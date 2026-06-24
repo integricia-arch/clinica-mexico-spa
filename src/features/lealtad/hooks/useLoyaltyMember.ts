@@ -3,15 +3,33 @@ import { supabase } from '@/integrations/supabase/client'
 import type {
   LoyaltyMember,
   LoyaltyMovimiento,
+  LoyaltyNivel,
   NuevoMiembroInput,
   RegisterSaleResult,
   RedeemResult,
 } from '../types'
 
-// Sanitize query to prevent Supabase filter injection
+// FIX 3: Runtime narrowing guard for nivel field
+const VALID_NIVELES = ['bronce', 'plata', 'oro', 'diamante'] as const
+function isValidNivel(n: string): n is LoyaltyNivel {
+  return (VALID_NIVELES as readonly string[]).includes(n)
+}
+function normalizeMember(raw: Record<string, unknown>): LoyaltyMember {
+  if (raw && typeof raw.nivel === 'string' && !isValidNivel(raw.nivel)) {
+    return { ...raw, nivel: 'bronce' } as LoyaltyMember
+  }
+  return raw as LoyaltyMember
+}
+
+// FIX 4: Whitelist sanitization — only allow alphanumeric, accented chars, spaces, @, ., -, +
 function sanitizeSearchQuery(query: string): string {
-  // Remove all characters that are special in PostgREST filter syntax
-  return query.trim().replace(/[%(),. '"\\]/g, '')
+  return query.trim().replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s@.\-+]/g, '')
+}
+
+// FIX 6: register() return type changed to { member: LoyaltyMember | null; error?: string }
+export interface RegisterResult {
+  member: LoyaltyMember | null
+  error?: string
 }
 
 export function useLoyaltyMember(clinicId: string | null) {
@@ -29,11 +47,11 @@ export function useLoyaltyMember(clinicId: string | null) {
       .limit(5)
 
     if (error) return []
-    return (data as LoyaltyMember[]) ?? []
+    return ((data ?? []) as Record<string, unknown>[]).map(normalizeMember)
   }
 
-  async function register(input: NuevoMiembroInput): Promise<LoyaltyMember | null> {
-    if (!clinicId) return null
+  async function register(input: NuevoMiembroInput): Promise<RegisterResult> {
+    if (!clinicId) return { member: null, error: 'sin_clinica' }
 
     const now = new Date().toISOString()
 
@@ -42,7 +60,7 @@ export function useLoyaltyMember(clinicId: string | null) {
       { p_clinic_id: clinicId }
     )
 
-    if (barcodeErr || !barcode) return null
+    if (barcodeErr || !barcode) return { member: null, error: barcodeErr?.message ?? 'barcode_error' }
 
     const { data, error } = await supabase
       .from('loyalty_members')
@@ -65,8 +83,8 @@ export function useLoyaltyMember(clinicId: string | null) {
       .select('*')
       .single()
 
-    if (error) return null
-    return data as LoyaltyMember
+    if (error) return { member: null, error: error.message }
+    return { member: normalizeMember(data as Record<string, unknown>) }
   }
 
   async function registerSale(
