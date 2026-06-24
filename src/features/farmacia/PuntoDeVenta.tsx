@@ -33,6 +33,8 @@ import { TicketInterno, type TicketData, type TicketPaymentLine } from "./Ticket
 import { PaymentCapture, emptyBreakdown, validatePayment, paymentsToRows, looksLikeFullCardNumber, type PaymentBreakdown } from "./PaymentCapture";
 import { OpenShiftCard, ShiftBadge, fetchCurrentShift, type Shift } from "./ShiftPanel";
 import StripePaymentModal from "@/features/pagos/StripePaymentModal";
+import { LoyaltyPanel } from "@/features/lealtad/LoyaltyPanel";
+import { useLoyaltyMember } from "@/features/lealtad/hooks/useLoyaltyMember";
 
 type Lote = {
   id: string;
@@ -186,6 +188,11 @@ export default function PuntoDeVenta({
   const [catalogSearch, setCatalogSearch] = useState("");
   const [stripeOpen, setStripeOpen] = useState(false);
   const [stripeTxnId, setStripeTxnId] = useState<string | null>(null);
+
+  // Fidelización
+  const [loyaltyMemberId, setLoyaltyMemberId] = useState<string | null>(null);
+  const [loyaltyDescuento, setLoyaltyDescuento] = useState(0);
+  const loyaltyHook = useLoyaltyMember(activeClinicId);
 
   async function refreshShift() {
     setShiftLoading(true);
@@ -566,6 +573,21 @@ export default function PuntoDeVenta({
     await logPosAudit(activeClinicId, "pos_sale_completed", {
       sale_id: saleId, total, payment_method: payment, requires_invoice: requiresInvoice,
     }, String(saleId));
+
+    // Registrar puntos de fidelización si hay miembro seleccionado
+    if (loyaltyMemberId && saleId) {
+      const loyaltySaleResult = await loyaltyHook.registerSale(String(saleId), loyaltyMemberId);
+      if (!loyaltySaleResult.ok) {
+        toast({
+          title: "Fidelización: error al registrar puntos",
+          description: loyaltySaleResult.error ?? "No se pudieron acumular los puntos de esta venta.",
+          variant: "destructive",
+          duration: 6000,
+        });
+      }
+      setLoyaltyMemberId(null);
+      setLoyaltyDescuento(0);
+    }
 
     if (perms.isManager && globalDiscount > 0 && user?.id) {
       await supabase.from("pharmacy_sales")
@@ -1003,6 +1025,15 @@ export default function PuntoDeVenta({
               <p className="text-[11px] text-destructive">Solo gerente puede autorizar descuento.</p>
             )}
           </div>
+
+          {activeClinicId && (
+            <LoyaltyPanel
+              clinicId={activeClinicId}
+              totalVenta={total}
+              onMemberSelected={m => setLoyaltyMemberId(m?.id ?? null)}
+              onRedeemApplied={(desc, _mid) => setLoyaltyDescuento(desc)}
+            />
+          )}
 
           <div className="space-y-2">
             <Label className="text-xs">Método de pago</Label>
