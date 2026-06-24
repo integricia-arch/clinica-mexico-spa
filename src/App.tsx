@@ -54,6 +54,7 @@ import TerminosServicio from "@/pages/TerminosServicio";
 import SolicitudARCO from "@/pages/SolicitudARCO";
 import ARCOAdmin from "@/pages/ARCOAdmin";
 import Lealtad from "@/pages/Lealtad";
+import { LoyaltyApp } from "@/pwa/LoyaltyApp";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="/aviso-privacidad" element={<AvisoPrivacidad />} />
               <Route path="/terminos" element={<TerminosServicio />} />
               <Route path="/solicitud-arco" element={<SolicitudARCO />} />
+              <Route path="/loyalty/:slug/*" element={<LoyaltyApp />} />
               <Route
                 path="/*"
                 element={
