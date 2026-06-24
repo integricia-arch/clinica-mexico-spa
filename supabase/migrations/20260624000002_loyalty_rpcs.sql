@@ -1,4 +1,4 @@
--- supabase/migrations/20260624000002_loyalty_rpcs.sql
+﻿-- supabase/migrations/20260624000002_loyalty_rpcs.sql
 -- Loyalty RPCs: register_sale, redeem, expire (batch), level calc, barcode gen
 -- Gate R1 compliance: SECURITY DEFINER + SET search_path = public on ALL functions
 
@@ -173,6 +173,11 @@ DECLARE
   v_saldo_nuevo  integer;
   v_updated      integer;
 BEGIN
+  -- FIX 2 [MEDIUM-SEC]: reject zero/negative point values before any DB access
+  IF p_puntos <= 0 THEN
+    RETURN json_build_object('ok', false, 'error', 'puntos_invalidos');
+  END IF;
+
   SELECT * INTO v_cfg FROM loyalty_config WHERE clinic_id = p_clinic_id AND programa_activo = true;
   IF NOT FOUND THEN
     RETURN json_build_object('ok', false, 'error', 'programa_inactivo_o_sin_config');
@@ -240,29 +245,36 @@ BEGIN
   -- then UPDATE and INSERT in one atomic operation.
   -- pre_values captures the exact balance to expire (avoids proxy via saldo_post
   -- which can be inaccurate when manual 'ajuste' entries exist).
+  --
+  -- FIX 4 [HIGH-PERF]: Replaced 3 correlated subqueries per member row with LEFT JOINs.
+  -- This avoids O(n) independent index lookups for MAX(created_at) and expiracion_dias_inactividad.
+  -- Note: Members with no active loyalty_config (COALESCE to 999999 days) are intentionally skipped.
   WITH pre_values AS (
-    SELECT id, clinic_id, puntos_disponibles AS puntos_antes
-      FROM loyalty_members lm
-     WHERE lm.activo = true
-       AND lm.puntos_disponibles > 0
-       AND NOT EXISTS (
-         SELECT 1 FROM loyalty_movimientos mv
-          WHERE mv.member_id = lm.id
-            AND mv.tipo = 'vencimiento'
-            AND mv.created_at >= date_trunc('day', now())
-       )
-       AND COALESCE(
-         (SELECT MAX(mv2.created_at) FROM loyalty_movimientos mv2
-           WHERE mv2.member_id = lm.id
-             AND mv2.tipo IN ('acumulacion','canje','bonus')),
-         lm.created_at
-       ) < now() - COALESCE(
-         (SELECT lc.expiracion_dias_inactividad::integer
-            FROM loyalty_config lc
-           WHERE lc.clinic_id = lm.clinic_id
-             AND lc.programa_activo = true),
-         999999
-       ) * INTERVAL '1 day'
+    SELECT
+      lm.id,
+      lm.clinic_id,
+      lm.puntos_disponibles AS puntos_antes,
+      COALESCE(MAX(mv2.created_at), lm.created_at) AS last_activity,
+      COALESCE(lc.expiracion_dias_inactividad, 999999) AS dias_expiracion
+    FROM loyalty_members lm
+    LEFT JOIN loyalty_movimientos mv2
+      ON mv2.member_id = lm.id
+     AND mv2.tipo IN ('acumulacion', 'canje', 'bonus')
+    LEFT JOIN loyalty_config lc
+      ON lc.clinic_id = lm.clinic_id
+     AND lc.programa_activo = true
+    WHERE lm.activo = true
+      AND lm.puntos_disponibles > 0
+      AND NOT EXISTS (
+        SELECT 1 FROM loyalty_movimientos mv_check
+         WHERE mv_check.member_id = lm.id
+           AND mv_check.tipo = 'vencimiento'
+           AND mv_check.created_at >= date_trunc('day', now())
+      )
+    GROUP BY lm.id, lm.clinic_id, lm.puntos_disponibles, lm.created_at,
+             lc.expiracion_dias_inactividad
+    HAVING COALESCE(MAX(mv2.created_at), lm.created_at)
+         < now() - COALESCE(lc.expiracion_dias_inactividad, 999999) * INTERVAL '1 day'
   ),
   expired AS (
     UPDATE loyalty_members lm
@@ -298,9 +310,12 @@ SELECT cron.schedule(
 -- ─── Permisos ─────────────────────────────────────────────────────────────────
 -- Only authenticated users may call customer-facing RPCs
 GRANT EXECUTE ON FUNCTION loyalty_generate_barcode(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION loyalty_recalculate_level(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION loyalty_register_sale(uuid,uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION loyalty_redeem(uuid,uuid,integer) TO authenticated;
+
+-- FIX 1 [HIGH-SEC]: recalculate_level is called only from register_sale (SECURITY DEFINER);
+-- no external caller needs it -- REVOKE from PUBLIC entirely.
+REVOKE EXECUTE ON FUNCTION loyalty_recalculate_level(uuid) FROM PUBLIC;
 
 -- expire_points runs only via pg_cron (service_role); PUBLIC must not call it
 REVOKE EXECUTE ON FUNCTION loyalty_expire_points() FROM PUBLIC;
