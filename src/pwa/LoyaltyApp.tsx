@@ -8,6 +8,8 @@ import { Inicio } from './pages/Inicio'
 import { Monedero } from './pages/Monedero'
 import { Promos } from './pages/Promos'
 import { Cuenta } from './pages/Cuenta'
+import { PrivacidadPage } from './pages/PrivacidadPage'
+import { ArcoPage } from './pages/ArcoPage'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
@@ -221,6 +223,8 @@ export function LoyaltyApp() {
                 />
               }
             />
+            <Route path="/aviso-privacidad" element={<PrivacidadPage />} />
+            <Route path="/solicitud-arco" element={<ArcoPage />} />
             <Route path="*" element={<Navigate to={base} replace />} />
           </Routes>
         </motion.div>
