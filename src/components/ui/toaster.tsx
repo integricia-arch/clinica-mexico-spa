@@ -1,9 +1,17 @@
 import { useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/ui/toast";
+import {
+  Toast,
+  ToastAction,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "@/components/ui/toast";
 
-function CopyButton({ text }: { text: string }) {
+function CopyAction({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const copy = useCallback(() => {
     void navigator.clipboard.writeText(text);
@@ -11,13 +19,10 @@ function CopyButton({ text }: { text: string }) {
     setTimeout(() => setCopied(false), 1500);
   }, [text]);
   return (
-    <button
-      onClick={copy}
-      className="shrink-0 rounded p-1 opacity-60 hover:opacity-100 transition-opacity"
-      title="Copiar error"
-    >
-      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-    </button>
+    <ToastAction altText="Copiar error" onClick={copy}>
+      {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+      {copied ? "Copiado" : "Copiar"}
+    </ToastAction>
   );
 }
 
@@ -27,7 +32,7 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
-        const isDestructive = props.variant === "destructive";
+        const isDestructive = (props as { variant?: string }).variant === "destructive";
         const copyText = [title, description]
           .filter(Boolean)
           .map(String)
@@ -41,8 +46,7 @@ export function Toaster() {
                 <ToastDescription className="select-text">{description}</ToastDescription>
               )}
             </div>
-            {action}
-            {isDestructive && copyText && <CopyButton text={copyText} />}
+            {action ?? (isDestructive && copyText ? <CopyAction text={copyText} /> : null)}
             <ToastClose />
           </Toast>
         );

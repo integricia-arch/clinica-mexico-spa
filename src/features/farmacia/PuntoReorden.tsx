@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useOrdenesCompra } from "@/hooks/useOrdenesCompra";
 import { useProveedores } from "@/hooks/useProveedores";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ShoppingCart, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
 
 interface Medicamento {

@@ -10,7 +10,7 @@ import { useDevolucionesProveedor, type DevolucionItemInput, type DevMotivo } fr
 import { useRecepcionesMercancia } from "@/hooks/useRecepcionesMercancia";
 import { useProveedores } from "@/hooks/useProveedores";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {

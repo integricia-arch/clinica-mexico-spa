@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLibroControlControlados, ETIQUETAS_CONTROL, LibroControl, LibroMovimiento } from "@/hooks/useLibroControlControlados";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { BookOpen, Plus, ChevronDown, ChevronUp, LogIn, LogOut, Shield, AlertTriangle, Check } from "lucide-react";
 
 interface Medicamento {

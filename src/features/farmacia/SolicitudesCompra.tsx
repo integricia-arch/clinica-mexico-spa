@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useSolicitudesCompra, SolicitudCompra, SCItem } from "@/hooks/useSolicitudesCompra";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Plus, ChevronDown, ChevronUp, ClipboardList, Check, X, Send, ShoppingCart, Trash2 } from "lucide-react";
 
 interface Medicamento { id: string; nombre: string; unidad: string; }
