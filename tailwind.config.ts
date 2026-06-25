@@ -14,6 +14,9 @@ export default {
       fontFamily: {
         display: ["'Plus Jakarta Sans'", "system-ui", "sans-serif"],
         body: ["'Inter'", "system-ui", "sans-serif"],
+        // Geist — loyalty module (uses CSS var for flexibility)
+        sans: ["var(--font-sans)", "ui-sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
