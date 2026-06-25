@@ -48,10 +48,10 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
     if (!telefono.trim() && !email.trim()) {
       setError('Ingresa teléfono o email')
       return
+    }
     if (telefono.trim() && telefono.replace(/\D/g, '').length !== 10) {
       setError('El teléfono debe tener exactamente 10 dígitos')
       return
-    }
     }
     if (!consentPrivacidad || !consentHistorial) {
       setError('Debes aceptar los consentimientos obligatorios')
