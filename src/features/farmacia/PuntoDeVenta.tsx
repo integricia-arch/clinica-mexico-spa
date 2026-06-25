@@ -208,12 +208,12 @@ export default function PuntoDeVenta({
     setStripeOpen(false);
     const stripeBreakdown: PaymentBreakdown = {
       ...breakdown,
-      tarjeta: total,
+      tarjeta: totalConLealtad,
       efectivo: 0,
       monto_recibido: 0,
       transferencia: 0,
       card: {
-        amount: total,
+        amount: totalConLealtad,
         card_last4: "0000",
         card_type: "credito",
         card_brand: "Visa",
@@ -430,6 +430,7 @@ export default function PuntoDeVenta({
   const itemsDiscount = cart.reduce((s, c) => s + c.discount * c.quantity, 0);
   const globalDiscount = perms.canPosDiscount ? Number(discount) || 0 : 0;
   const total = Math.max(0, subtotal - itemsDiscount - globalDiscount);
+  const totalConLealtad = Math.max(0, total - loyaltyDescuento);
   // IVA proporcional: precios incluyen IVA; aplicar ratio del descuento global
   const discountRatio = subtotal > 0 ? total / subtotal : 1;
   const totalIva = cart.reduce((s, c) => {
@@ -453,14 +454,14 @@ export default function PuntoDeVenta({
   // Sincroniza montos por defecto según método y total.
   useEffect(() => {
     setBreakdown((bd) => {
-      if (payment === "efectivo") return { ...bd, efectivo: total, monto_recibido: total, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
-      if (payment === "tarjeta") return { ...bd, efectivo: 0, tarjeta: total, transferencia: 0, card: { ...bd.card, amount: total }, transfer: { ...bd.transfer, amount: 0 } };
-      if (payment === "transferencia") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: total, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: total } };
+      if (payment === "efectivo") return { ...bd, efectivo: totalConLealtad, monto_recibido: totalConLealtad, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
+      if (payment === "tarjeta") return { ...bd, efectivo: 0, tarjeta: totalConLealtad, transferencia: 0, card: { ...bd.card, amount: totalConLealtad }, transfer: { ...bd.transfer, amount: 0 } };
+      if (payment === "transferencia") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: totalConLealtad, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: totalConLealtad } };
       if (payment === "pendiente") return { ...bd, efectivo: 0, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
       // mixto: iniciar en 0/0 para que usuario capture el split explícitamente
       return { ...bd, efectivo: 0, monto_recibido: 0, tarjeta: 0, transferencia: 0, card: { ...bd.card, amount: 0 }, transfer: { ...bd.transfer, amount: 0 } };
     });
-  }, [payment, total]);
+  }, [payment, totalConLealtad]);
 
 
   async function submitSale(bdOverride?: PaymentBreakdown, stripeTxnIdOverride?: string | null) {
@@ -482,7 +483,7 @@ export default function PuntoDeVenta({
       return;
     }
 
-    const v = validatePayment(payment, total, bd);
+    const v = validatePayment(payment, totalConLealtad, bd);
     if (!v.ok) {
       await logPosAudit(activeClinicId, "diferencia_pago_total", { method: payment, error: v.error, total });
       toast({ title: "Pago inválido", description: v.error, variant: "destructive" });
@@ -501,6 +502,7 @@ export default function PuntoDeVenta({
       requires_invoice: requiresInvoice,
       notes: notes || null,
       discount: globalDiscount,
+      loyalty_discount: loyaltyDescuento,   // ← NUEVO
       items: cart.map((c) => ({
         medicamento_id: c.med.id,
         lote_id: c.lote.id,
@@ -622,7 +624,10 @@ export default function PuntoDeVenta({
       metodoPago: PAYMENT_LABEL[payment],
       payments: ticketPayments,
       items: cart.map((c) => ({ nombre: c.med.nombre, cantidad: c.quantity, precio: c.unit_price })),
-      subtotal, descuento: itemsDiscount + globalDiscount, total, totalIva, baseGravable, exento,
+      subtotal, descuento: itemsDiscount + globalDiscount,
+      descuentoLealtad: loyaltyDescuento > 0 ? loyaltyDescuento : undefined,  // ← NUEVO
+      total: totalConLealtad,   // ← era `total`
+      totalIva, baseGravable, exento,
     });
     setTicketOpen(true);
 
@@ -635,6 +640,8 @@ export default function PuntoDeVenta({
     setBreakdown(emptyBreakdown(0));
     setPatientId(""); setPatientSearch(""); setCustomerName("Público general");
     setClienteTipo("publico");
+    setLoyaltyDescuento(0);
+    setLoyaltyMemberId(null);
     const { data: l } = await supabase
       .from("lotes_medicamento").select("*").gt("existencia", 0).order("created_at");
     setLotes((l as Lote[]) ?? []);
@@ -1021,8 +1028,13 @@ export default function PuntoDeVenta({
                 className="h-9 w-24 text-right text-xs"
               />
             </div>
+            {loyaltyDescuento > 0 && (
+              <div className="flex justify-between text-sm text-teal-700 dark:text-teal-400">
+                <span>Desc. lealtad</span><span>-{formatMXN(loyaltyDescuento)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-semibold text-base">
-              <span>Total</span><span>{formatMXN(total)}</span>
+              <span>Total</span><span>{formatMXN(totalConLealtad)}</span>
             </div>
             {!perms.canPosDiscount && Number(discount) > 0 && (
               <p className="text-[11px] text-destructive">Solo gerente puede autorizar descuento.</p>
@@ -1032,8 +1044,11 @@ export default function PuntoDeVenta({
           {activeClinicId && (
             <LoyaltyPanel
               clinicId={activeClinicId}
-              totalVenta={total}
-              onMemberSelected={m => setLoyaltyMemberId(m?.id ?? null)}
+              totalVenta={totalConLealtad}
+              onMemberSelected={m => {
+                setLoyaltyMemberId(m?.id ?? null)
+                if (!m) setLoyaltyDescuento(0)
+              }}
               onRedeemApplied={(desc, _mid) => setLoyaltyDescuento(desc)}
             />
           )}
@@ -1050,7 +1065,7 @@ export default function PuntoDeVenta({
                 ))}
               </SelectContent>
             </Select>
-            <PaymentCapture method={payment} total={total} value={breakdown} onChange={setBreakdown} />
+            <PaymentCapture method={payment} total={totalConLealtad} value={breakdown} onChange={setBreakdown} />
             <label className="flex items-center gap-2 text-xs">
               <input type="checkbox" checked={requiresInvoice} onChange={(e) => setRequiresInvoice(e.target.checked)} />
               Requiere factura (CFDI futuro)
@@ -1073,7 +1088,7 @@ export default function PuntoDeVenta({
               onClick={handleCobrar}
             >
               <Receipt className="h-5 w-5 mr-2" />
-              {submitting ? "Registrando…" : `Cobrar ${formatMXN(total)}`}
+              {submitting ? "Registrando…" : `Cobrar ${formatMXN(totalConLealtad)}`}
             </Button>
             {payment === "tarjeta" && activeClinicId && (
               <Button
@@ -1105,7 +1120,7 @@ export default function PuntoDeVenta({
           onOpenChange={setStripeOpen}
           onSuccess={handleStripeSuccess}
           clinicId={activeClinicId}
-          amountCents={Math.round(total * 100)}
+          amountCents={Math.round(totalConLealtad * 100)}
           description={`Venta farmacia — ${cart.length} art.`}
         />
       )}

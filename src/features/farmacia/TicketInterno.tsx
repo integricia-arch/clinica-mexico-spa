@@ -39,6 +39,7 @@ export type TicketData = {
   items: { nombre: string; cantidad: number; precio: number }[];
   subtotal: number;
   descuento: number;
+  descuentoLealtad?: number;   // ← NUEVO
   total: number;
   totalIva?: number;
   baseGravable?: number;
@@ -99,7 +100,12 @@ export function TicketInterno({
                 <div className="flex justify-between"><span>Descuento</span><span>-{formatMXN(data.descuento)}</span></div>
               </>
             )}
-            <div className="flex justify-between font-semibold text-sm">
+            {data.descuentoLealtad != null && data.descuentoLealtad > 0 && (
+              <div className="flex justify-between text-teal-700 dark:text-teal-400">
+                <span>Descuento lealtad</span><span>-{formatMXN(data.descuentoLealtad)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold border-t border-dashed pt-1">
               <span>Total</span><span>{formatMXN(data.total)}</span>
             </div>
             {/* Desglose IVA */}
