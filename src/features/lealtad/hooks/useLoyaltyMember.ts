@@ -93,7 +93,18 @@ export function useLoyaltyMember(clinicId: string | null) {
       .select('*')
       .single()
 
-    if (error) return { member: null, error: error.message }
+    if (error) {
+      const msg = error.message.toLowerCase()
+      if (msg.includes('23505') || msg.includes('unique') || msg.includes('duplicate')) {
+        if (msg.includes('telefono')) return { member: null, error: 'duplicado_telefono' }
+        if (msg.includes('email')) return { member: null, error: 'duplicado_email' }
+        return { member: null, error: 'duplicado' }
+      }
+      if (msg.includes('row-level security') || msg.includes('rls') || msg.includes('policy')) {
+        return { member: null, error: 'rls_denied' }
+      }
+      return { member: null, error: error.message }
+    }
     return { member: normalizeMember(data as Record<string, unknown>) }
   }
 

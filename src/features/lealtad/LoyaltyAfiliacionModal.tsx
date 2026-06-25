@@ -70,11 +70,15 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
     })
     setSubmitting(false)
     if (!result.member) {
-      setError(
-        result.error === 'sin_clinica'
-          ? 'Error de configuración de clínica.'
-          : 'Error al registrar. Verifica que el teléfono/email no esté duplicado.'
-      )
+      const errMap: Record<string, string> = {
+        sin_clinica:       'Error de configuración de clínica. Contacta al soporte.',
+        duplicado_telefono:'Ya existe un cliente registrado con ese teléfono.',
+        duplicado_email:   'Ya existe un cliente registrado con ese email.',
+        duplicado:         'El teléfono o email ya están registrados para otro cliente.',
+        barcode_error:     'Error generando código de cliente. Intenta de nuevo.',
+        rls_denied:        'Sin permisos para registrar en esta clínica. Verifica tu sesión.',
+      }
+      setError(errMap[result.error ?? ''] ?? `Error: ${result.error}`)
       return
     }
     // Fire-and-forget welcome email — never block registration
