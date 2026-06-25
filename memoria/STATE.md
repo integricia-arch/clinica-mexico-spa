@@ -9,6 +9,41 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - **Deploy**: Cloudflare Workers (`https://clinica-mexico-spa.integric-ia.workers.dev`)
 - **Dominio**: `https://integrika.mx`
 
+## Completado (Jun 24, 2026 — Farmacia Fidelización Etapa 1 — PLAN COMPLETO ✅)
+
+Branch: `feat/loyalty-module-etapa1` | 35 commits | HEAD `47d582b` | **pendiente merge a main**
+Plan: `docs/superpowers/plans/2026-06-24-farmacia-fidelizacion-etapa1.md`
+Spec: `docs/superpowers/specs/2026-06-24-farmacia-fidelizacion-design.md`
+Build: ✅ 5.96s | Tests: 57/57 | tsc: 0 errores | Review final: APPROVED
+
+### Entregables
+- [x] 6 migraciones SQL (000001–000006): tablas + RLS + RPCs SECURITY DEFINER + índices + UPDATE consent RLS
+- [x] Design system: Geist + motion.ts spring presets (Emil Kowalski) + NivelCard shimmer Diamante
+- [x] Hooks: `useLoyaltyMember` (search, register, registerSale, redeem) + `useLoyaltyConfig`
+- [x] LoyaltyPanel POS: búsqueda/afiliación/canje en checkout
+- [x] ModalAfiliacion: 3 consentimientos LFPDPPP activos (Art. 8 y Art. 9) — no pre-chequeados
+- [x] Admin: LoyaltyConfig (kill switch + umbrales) + LoyaltyMiembros (sortable + drawer historial)
+- [x] PWA `src/pwa/`: Phone OTP Supabase, Monedero virtual, barcode, lazy-loaded
+- [x] Vercel: `vercel.json` + `DEPLOY.md` + `loyalty-manifest.json` → `loyalty.integrika.mx`
+- [x] Edge Function `loyalty-welcome` (Resend welcome email, JWT protegido)
+- [x] Teléfono normalizado a E.164 (+52XXXXXXXXXX) en registro y RLS
+- [x] UPDATE RLS policy para revocación consent marketing (LFPDPPP derecho ARCO)
+
+### Deuda Etapa 2
+- [ ] `loyaltyDescuento` no descuenta del total POS todavía
+- [ ] Links ARCO en PWA (dominio `loyalty.integrika.mx` separado)
+- [ ] SMS provider Twilio en Supabase dashboard (prerequisito OTP producción)
+- [ ] `register_sale` idempotency guard por `pharmacy_sale_id`
+- [ ] PWA icon: `public/icons/loyalty-192.png` es placeholder teal
+
+### Pendiente antes de producción
+- [ ] `supabase db push --linked` — migraciones 000001–000006 (aplicar en orden)
+- [ ] Configurar Twilio en Supabase Auth dashboard
+- [ ] Merge `feat/loyalty-module-etapa1` → `main`
+- [ ] Deploy Vercel `loyalty.integrika.mx`
+
+---
+
 ## Completado (Jun 21-24, 2026 — auditoría DB — PLAN COMPLETO ✅)
 
 Plan: `docs/superpowers/plans/2026-06-21-db-audit-corrections.md`
