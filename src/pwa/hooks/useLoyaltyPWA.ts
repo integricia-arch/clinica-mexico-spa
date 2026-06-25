@@ -82,6 +82,8 @@ export function useLoyaltyPWA(slug: string) {
     const phone = '+52' + rawPhone.replace(/\D/g, '')
     const { error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' })
     if (error) return { error: error.message }
+    // Tag as loyalty client so future RLS policies can distinguish from staff
+    await supabase.auth.updateUser({ data: { app: 'loyalty' } })
     await loadMemberByPhone(phone)
     return {}
   }
