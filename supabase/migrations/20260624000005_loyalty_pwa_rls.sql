@@ -2,6 +2,7 @@
 -- Members can only read their own data
 
 DROP POLICY IF EXISTS "loyalty_members_pwa_read" ON loyalty_members;
+DROP POLICY IF EXISTS "loyalty_members_pwa_auth_read" ON loyalty_members;
 CREATE POLICY "loyalty_members_pwa_auth_read" ON loyalty_members
   FOR SELECT TO authenticated
   USING (
@@ -9,6 +10,7 @@ CREATE POLICY "loyalty_members_pwa_auth_read" ON loyalty_members
   );
 
 DROP POLICY IF EXISTS "loyalty_mov_pwa_read" ON loyalty_movimientos;
+DROP POLICY IF EXISTS "loyalty_mov_pwa_auth_read" ON loyalty_movimientos;
 CREATE POLICY "loyalty_mov_pwa_auth_read" ON loyalty_movimientos
   FOR SELECT TO authenticated
   USING (
