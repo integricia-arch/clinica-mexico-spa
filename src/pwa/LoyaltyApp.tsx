@@ -1,7 +1,11 @@
 // src/pwa/LoyaltyApp.tsx
 import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
+<<<<<<< HEAD
 import { useState } from 'react'
+=======
+import { useEffect, useState } from 'react'
+>>>>>>> worktree-agent-afd9f312c701590c1
 import { useLoyaltyPWA } from './hooks/useLoyaltyPWA'
 import { BottomNav } from './components/BottomNav'
 import { Inicio } from './pages/Inicio'
@@ -12,11 +16,17 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 interface LoginScreenProps {
+<<<<<<< HEAD
   onLogin: (q: string) => Promise<boolean>
+=======
+  onRequestOtp: (phone: string) => Promise<{ error?: string }>
+  onVerifyOtp: (phone: string, token: string) => Promise<{ error?: string }>
+>>>>>>> worktree-agent-afd9f312c701590c1
   programName: string
   color: string
 }
 
+<<<<<<< HEAD
 function LoginScreen({ onLogin, programName, color }: LoginScreenProps) {
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +38,36 @@ function LoginScreen({ onLogin, programName, color }: LoginScreenProps) {
     const ok = await onLogin(query)
     if (!ok) setError('No encontramos tu cuenta. Verifica tu teléfono o email.')
     setLoading(false)
+=======
+function LoginScreen({ onRequestOtp, onVerifyOtp, programName, color }: LoginScreenProps) {
+  const [step, setStep] = useState<'phone' | 'otp'>('phone')
+  const [phone, setPhone] = useState('')
+  const [otp, setOtp] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handlePhoneSubmit() {
+    setLoading(true)
+    setError(null)
+    const result = await onRequestOtp(phone)
+    setLoading(false)
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+    setStep('otp')
+  }
+
+  async function handleOtpSubmit() {
+    setLoading(true)
+    setError(null)
+    const result = await onVerifyOtp(phone, otp)
+    setLoading(false)
+    if (result.error) {
+      setError(result.error)
+    }
+    // On success, useLoyaltyPWA's onAuthStateChange will update member state automatically
+>>>>>>> worktree-agent-afd9f312c701590c1
   }
 
   return (
@@ -48,6 +88,7 @@ function LoginScreen({ onLogin, programName, color }: LoginScreenProps) {
           💳
         </motion.div>
         <h1 className="text-2xl font-bold">{programName}</h1>
+<<<<<<< HEAD
         <p className="text-muted-foreground text-sm mt-1">Ingresa con tu teléfono o email</p>
       </div>
       <div className="w-full max-w-xs space-y-3">
@@ -74,6 +115,82 @@ function LoginScreen({ onLogin, programName, color }: LoginScreenProps) {
         >
           {loading ? 'Buscando...' : 'Ver mi Monedero'}
         </Button>
+=======
+        {step === 'phone' ? (
+          <p className="text-muted-foreground text-sm mt-1">Ingresa tu número de teléfono</p>
+        ) : (
+          <p className="text-muted-foreground text-sm mt-1">Ingresa el código que enviamos por SMS</p>
+        )}
+      </div>
+
+      <div className="w-full max-w-xs space-y-3">
+        {step === 'phone' ? (
+          <>
+            <Input
+              placeholder="Teléfono (10 dígitos)"
+              type="tel"
+              inputMode="numeric"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') void handlePhoneSubmit() }}
+            />
+            {error && (
+              <motion.p
+                className="text-sm text-destructive"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {error}
+              </motion.p>
+            )}
+            <Button
+              className="w-full"
+              onClick={() => void handlePhoneSubmit()}
+              disabled={loading || phone.replace(/\D/g, '').length !== 10}
+            >
+              {loading ? 'Enviando código...' : 'Enviar código SMS'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground text-center">
+              Código enviado a {phone}
+            </p>
+            <Input
+              placeholder="Código de 6 dígitos"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={otp}
+              onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={e => { if (e.key === 'Enter') void handleOtpSubmit() }}
+              autoFocus
+            />
+            {error && (
+              <motion.p
+                className="text-sm text-destructive"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                {error}
+              </motion.p>
+            )}
+            <Button
+              className="w-full"
+              onClick={() => void handleOtpSubmit()}
+              disabled={loading || otp.length !== 6}
+            >
+              {loading ? 'Verificando...' : 'Confirmar código'}
+            </Button>
+            <button
+              className="w-full text-sm text-muted-foreground underline"
+              onClick={() => { setStep('phone'); setOtp(''); setError(null) }}
+            >
+              Cambiar número
+            </button>
+          </>
+        )}
+>>>>>>> worktree-agent-afd9f312c701590c1
       </div>
     </motion.div>
   )
@@ -82,7 +199,19 @@ function LoginScreen({ onLogin, programName, color }: LoginScreenProps) {
 export function LoyaltyApp() {
   const { slug = '' } = useParams<{ slug: string }>()
   const location = useLocation()
+<<<<<<< HEAD
   const { config, member, movimientos, loading, loginByContact, logout, updateMarketingConsent } = useLoyaltyPWA(slug)
+=======
+  const { config, member, movimientos, loading, requestOtp, verifyOtp, logout, updateMarketingConsent } = useLoyaltyPWA(slug)
+
+  useEffect(() => {
+    const link = document.createElement('link')
+    link.rel = 'manifest'
+    link.href = '/loyalty-manifest.json'
+    document.head.appendChild(link)
+    return () => { document.head.removeChild(link) }
+  }, [])
+>>>>>>> worktree-agent-afd9f312c701590c1
 
   if (loading) {
     return (
@@ -112,7 +241,12 @@ export function LoyaltyApp() {
   if (!member) {
     return (
       <LoginScreen
+<<<<<<< HEAD
         onLogin={loginByContact}
+=======
+        onRequestOtp={requestOtp}
+        onVerifyOtp={verifyOtp}
+>>>>>>> worktree-agent-afd9f312c701590c1
         programName={config.nombre_programa}
         color={config.color_primario}
       />
