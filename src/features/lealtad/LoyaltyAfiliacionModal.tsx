@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useLoyaltyMember } from './hooks/useLoyaltyMember'
+import { supabase } from '@/integrations/supabase/client'
 import type { LoyaltyMember } from './types'
 
 interface Props {
@@ -71,6 +72,12 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
           : 'Error al registrar. Verifica que el teléfono/email no esté duplicado.'
       )
       return
+    }
+    // Fire-and-forget welcome email — never block registration
+    if (result.member.email) {
+      supabase.functions.invoke('loyalty-welcome', {
+        body: { member_id: result.member.id, clinic_id: clinicId }
+      }).catch(() => {})
     }
     resetForm()
     onRegistered(result.member)
