@@ -118,3 +118,10 @@ export const NIVEL_LABEL: Record<LoyaltyNivel, string> = {
   oro:    '🥇 Oro',
   diamante: '💎 Diamante',
 }
+
+export const NIVEL_COLOR: Record<LoyaltyNivel, string> = {
+  bronce:   'bg-amber-100 text-amber-800',
+  plata:    'bg-slate-100 text-slate-700',
+  oro:      'bg-yellow-100 text-yellow-800',
+  diamante: 'bg-indigo-100 text-indigo-800',
+}
