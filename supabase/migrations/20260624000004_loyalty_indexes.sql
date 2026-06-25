@@ -1,4 +1,4 @@
-﻿-- supabase/migrations/20260624000004_loyalty_indexes.sql
+-- supabase/migrations/20260624000004_loyalty_indexes.sql
 -- FIX 3 [HIGH-PERF]: Composite index on loyalty_movimientos to support
 -- loyalty_recalculate_level query: WHERE member_id = ? AND tipo = 'acumulacion' AND created_at >= ?
 -- The existing idx_loyalty_movimientos_member (member_id, created_at DESC) lacks the tipo column,

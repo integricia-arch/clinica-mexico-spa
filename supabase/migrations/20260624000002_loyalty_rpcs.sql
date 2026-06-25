@@ -1,4 +1,4 @@
-﻿-- supabase/migrations/20260624000002_loyalty_rpcs.sql
+-- supabase/migrations/20260624000002_loyalty_rpcs.sql
 -- Loyalty RPCs: register_sale, redeem, expire (batch), level calc, barcode gen
 -- Gate R1 compliance: SECURITY DEFINER + SET search_path = public on ALL functions
 

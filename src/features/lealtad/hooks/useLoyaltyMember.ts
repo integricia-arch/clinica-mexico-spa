@@ -9,6 +9,14 @@ import type {
   RedeemResult,
 } from '../types'
 
+// Phone normalization to E.164 with +52 prefix (Mexican numbers)
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 10) return '+52' + digits
+  if (digits.length === 12 && digits.startsWith('52')) return '+' + digits
+  return '+52' + digits.slice(-10) // fallback: take last 10 digits
+}
+
 // FIX 3: Runtime narrowing guard for nivel field
 const VALID_NIVELES = ['bronce', 'plata', 'oro', 'diamante'] as const
 function isValidNivel(n: string): n is LoyaltyNivel {
@@ -62,12 +70,14 @@ export function useLoyaltyMember(clinicId: string | null) {
 
     if (barcodeErr || !barcode) return { member: null, error: barcodeErr?.message ?? 'barcode_error' }
 
+
+    const normalizedPhone = input.telefono ? normalizePhone(input.telefono) : null
     const { data, error } = await supabase
       .from('loyalty_members')
       .insert({
         clinic_id: clinicId,
         nombre: input.nombre,
-        telefono: input.telefono || null,
+        telefono: normalizedPhone,
         email: input.email || null,
         fecha_nacimiento: input.fecha_nacimiento ?? null,
         codigo_barras: barcode as string,
