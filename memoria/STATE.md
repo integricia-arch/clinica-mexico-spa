@@ -11,7 +11,7 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 
 ## Completado (Jun 24, 2026 — Farmacia Fidelización Etapa 1 — PLAN COMPLETO ✅)
 
-Branch: `feat/loyalty-module-etapa1` | 35 commits | HEAD `47d582b` | **pendiente merge a main**
+Branch: `feat/loyalty-module-etapa1` → mergeada a `main` `2b4ad85` ✅
 Plan: `docs/superpowers/plans/2026-06-24-farmacia-fidelizacion-etapa1.md`
 Spec: `docs/superpowers/specs/2026-06-24-farmacia-fidelizacion-design.md`
 Build: ✅ 5.96s | Tests: 57/57 | tsc: 0 errores | Review final: APPROVED
@@ -37,7 +37,7 @@ Build: ✅ 5.96s | Tests: 57/57 | tsc: 0 errores | Review final: APPROVED
 - [ ] PWA icon: `public/icons/loyalty-192.png` es placeholder teal
 
 ### Pendiente antes de producción
-- [ ] `supabase db push --linked` — migraciones 000001–000006 (aplicar en orden)
+- [x] `supabase db push --linked` — migraciones 000004–000006 aplicadas ✅
 - [ ] Configurar Twilio en Supabase Auth dashboard
 - [ ] Merge `feat/loyalty-module-etapa1` → `main`
 - [ ] Deploy Vercel `loyalty.integrika.mx`
