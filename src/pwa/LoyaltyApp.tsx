@@ -185,7 +185,9 @@ export function LoyaltyApp() {
     )
   }
 
-  if (!member) {
+  // Páginas legales accesibles sin autenticación (LFPDPPP)
+  const publicPaths = ['/aviso-privacidad', '/solicitud-arco']
+  if (!member && !publicPaths.some(p => location.pathname.endsWith(p))) {
     return (
       <LoginScreen
         onRequestOtp={requestOtp}
