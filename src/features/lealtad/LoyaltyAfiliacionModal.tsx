@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }: Props) {
-  const { register } = useLoyaltyMember(clinicId)
+  const { register, findByPhoneOrEmail } = useLoyaltyMember(clinicId)
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [email, setEmail] = useState('')
@@ -27,6 +27,7 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
   const [consentMarketing, setConsentMarketing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [existingMember, setExistingMember] = useState<LoyaltyMember | null>(null)
 
   function resetForm() {
     setNombre('')
@@ -36,11 +37,18 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
     setConsentHistorial(false)
     setConsentMarketing(false)
     setError(null)
+    setExistingMember(null)
   }
 
   function handleClose() {
     resetForm()
     onClose()
+  }
+
+  function handleUseExisting() {
+    if (!existingMember) return
+    resetForm()
+    onRegistered(existingMember)
   }
 
   async function handleSubmit() {
@@ -59,6 +67,8 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
     }
     setSubmitting(true)
     setError(null)
+    setExistingMember(null)
+
     const result = await register({
       nombre: nombre.trim(),
       telefono: telefono.trim(),
@@ -69,7 +79,22 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
       consent_marketing_canales: consentMarketing ? ['email'] : [],
     })
     setSubmitting(false)
+
     if (!result.member) {
+      const isDuplicate = result.error === 'duplicado_telefono'
+        || result.error === 'duplicado_email'
+        || result.error === 'duplicado'
+
+      if (isDuplicate) {
+        // Find and offer the existing member record
+        const found = await findByPhoneOrEmail(telefono.trim(), email.trim())
+        if (found) {
+          setExistingMember(found)
+          setError(null)
+          return
+        }
+      }
+
       const errMap: Record<string, string> = {
         sin_clinica:       'Error de configuración de clínica. Contacta al soporte.',
         duplicado_telefono:'Ya existe un cliente registrado con ese teléfono.',
@@ -81,6 +106,7 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
       setError(errMap[result.error ?? ''] ?? `Error: ${result.error}`)
       return
     }
+
     // Fire-and-forget welcome email — never block registration
     if (result.member.email) {
       supabase.functions.invoke('loyalty-welcome', {
@@ -175,6 +201,36 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
             </div>
           </div>
 
+          {/* Existing member found — offer to use it */}
+          <AnimatePresence>
+            {existingMember && (
+              <motion.div
+                key="laf-existing"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-3 text-sm space-y-2"
+              >
+                <p className="font-medium text-amber-800 dark:text-amber-300">
+                  Cliente ya registrado con ese teléfono/email:
+                </p>
+                <p className="text-amber-700 dark:text-amber-400">
+                  <strong>{existingMember.nombre}</strong>
+                  {existingMember.telefono && <> · {existingMember.telefono}</>}
+                  {existingMember.email && <> · {existingMember.email}</>}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-400 text-amber-800 dark:text-amber-300"
+                  onClick={handleUseExisting}
+                >
+                  Usar este cliente
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <AnimatePresence>
             {error && (
               <motion.p
@@ -193,12 +249,14 @@ export function LoyaltyAfiliacionModal({ clinicId, open, onClose, onRegistered }
             <Button variant="outline" onClick={handleClose} disabled={submitting}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting || !consentPrivacidad || !consentHistorial}
-            >
-              {submitting ? 'Registrando...' : 'Afiliar cliente'}
-            </Button>
+            {!existingMember && (
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting || !consentPrivacidad || !consentHistorial}
+              >
+                {submitting ? 'Registrando...' : 'Afiliar cliente'}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

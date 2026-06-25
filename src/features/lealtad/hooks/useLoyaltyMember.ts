@@ -58,6 +58,25 @@ export function useLoyaltyMember(clinicId: string | null) {
     return ((data ?? []) as Record<string, unknown>[]).map(normalizeMember)
   }
 
+  async function findByPhoneOrEmail(telefono: string, email: string): Promise<LoyaltyMember | null> {
+    if (!clinicId) return null
+    const normalizedPhone = telefono ? normalizePhone(telefono) : null
+    const conditions: string[] = []
+    if (normalizedPhone) conditions.push(`telefono.eq.${normalizedPhone}`)
+    if (email) conditions.push(`email.eq.${email}`)
+    if (conditions.length === 0) return null
+
+    const { data } = await supabase
+      .from('loyalty_members')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .or(conditions.join(','))
+      .limit(1)
+      .single()
+
+    return data ? normalizeMember(data as Record<string, unknown>) : null
+  }
+
   async function register(input: NuevoMiembroInput): Promise<RegisterResult> {
     if (!clinicId) return { member: null, error: 'sin_clinica' }
 
@@ -152,5 +171,5 @@ export function useLoyaltyMember(clinicId: string | null) {
     return (data as LoyaltyMovimiento[]) ?? []
   }
 
-  return { search, register, registerSale, redeem, getMovimientos }
+  return { search, findByPhoneOrEmail, register, registerSale, redeem, getMovimientos }
 }
