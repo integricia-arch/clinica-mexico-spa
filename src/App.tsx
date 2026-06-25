@@ -1,3 +1,4 @@
+import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -53,6 +54,11 @@ import AvisoPrivacidad from "@/pages/AvisoPrivacidad";
 import TerminosServicio from "@/pages/TerminosServicio";
 import SolicitudARCO from "@/pages/SolicitudARCO";
 import ARCOAdmin from "@/pages/ARCOAdmin";
+import Lealtad from "@/pages/Lealtad";
+
+const LoyaltyApp = React.lazy(() =>
+  import('@/pwa/LoyaltyApp').then(m => ({ default: m.LoyaltyApp }))
+)
 
 const queryClient = new QueryClient();
 
@@ -73,6 +79,11 @@ const App = () => (
               <Route path="/aviso-privacidad" element={<AvisoPrivacidad />} />
               <Route path="/terminos" element={<TerminosServicio />} />
               <Route path="/solicitud-arco" element={<SolicitudARCO />} />
+              <Route path="/loyalty/:slug/*" element={
+                <React.Suspense fallback={<div className="min-h-screen grid place-items-center"><span className="animate-pulse text-sm text-muted-foreground">Cargando...</span></div>}>
+                  <LoyaltyApp />
+                </React.Suspense>
+              } />
               <Route
                 path="/*"
                 element={
@@ -117,6 +128,7 @@ const App = () => (
                         <Route path="/admin/arco" element={<ProtectedRoute allowedRoles={["admin"]}><ARCOAdmin /></ProtectedRoute>} />
                         <Route path="/inteligencia" element={<ProtectedRoute allowedRoles={["admin","manager"]}><BI /></ProtectedRoute>} />
                         <Route path="/ayuda-interna" element={<ProtectedRoute allowedRoles={["admin","manager","receptionist"]}><AyudaInterna /></ProtectedRoute>} />
+                        <Route path="/lealtad" element={<ProtectedRoute allowedRoles={["admin","manager"]}><Lealtad /></ProtectedRoute>} />
 
                         <Route path="*" element={<NotFound />} />
                       </Routes>
