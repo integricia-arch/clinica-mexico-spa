@@ -1,5 +1,6 @@
 // src/pwa/pages/Cuenta.tsx
 import type { LoyaltyConfig, LoyaltyMember } from '@/features/lealtad/types'
+import { Link } from 'react-router-dom'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { motion } from 'motion/react'
@@ -52,9 +53,9 @@ export function Cuenta({ config, member, onUpdateMarketing, onLogout }: Props) {
 
       <div className="border rounded-xl p-4 space-y-2">
         <h2 className="font-medium">Legales</h2>
-        <a href="/aviso-privacidad" className="block text-sm text-primary">Aviso de Privacidad (LFPDPPP)</a>
-        <a href="/terminos" className="block text-sm text-primary">Términos del Programa</a>
-        <a href="/solicitud-arco" className="block text-sm text-primary">Solicitar derechos ARCO</a>
+        <Link to="../aviso-privacidad" className="block text-sm text-primary">Aviso de Privacidad (LFPDPPP)</Link>
+        <Link to="../terminos" className="block text-sm text-primary">Términos del Programa</Link>
+        <Link to="../solicitud-arco" className="block text-sm text-primary">Solicitar derechos ARCO</Link>
       </div>
 
       <Button variant="outline" className="w-full" onClick={onLogout}>
