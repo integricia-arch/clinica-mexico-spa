@@ -54,7 +54,7 @@ export function Cuenta({ config, member, onUpdateMarketing, onLogout }: Props) {
       <div className="border rounded-xl p-4 space-y-2">
         <h2 className="font-medium">Legales</h2>
         <Link to="../aviso-privacidad" className="block text-sm text-primary">Aviso de Privacidad (LFPDPPP)</Link>
-        <Link to="../terminos" className="block text-sm text-primary">Términos del Programa</Link>
+        <a href="/terminos" className="block text-sm text-primary">Términos del Programa</a>
         <Link to="../solicitud-arco" className="block text-sm text-primary">Solicitar derechos ARCO</Link>
       </div>
 
