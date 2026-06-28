@@ -43,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/recordatorios", icon: BellRing, label: "Recordatorios", roles: ["admin", "receptionist", "doctor"] },
   // ── Operaciones ──
   { section: "Operaciones", to: "/farmacia", icon: CreditCard, label: "Caja", roles: ["admin", "nurse", "receptionist", "cajero"] },
+  { to: "/enfermeria", icon: Stethoscope, label: "Enfermería", roles: ["admin", "manager", "nurse"] },
   { to: "/lealtad", icon: Gift, label: "Lealtad", roles: ["admin", "manager"] },
   { to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"] },
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
