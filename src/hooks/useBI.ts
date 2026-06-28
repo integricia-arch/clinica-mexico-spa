@@ -60,6 +60,12 @@ export interface Top10Producto {
   unidades: number;
 }
 
+export interface HeatmapCell {
+  hora: number;
+  dia: number;
+  count: number;
+}
+
 export interface BIResumen {
   citasMes: number;
   citasMesAnterior: number;
@@ -76,6 +82,7 @@ export interface BIResumen {
   lotesPorVencer30d: number;
   cxpPendiente: number;
   cxpVencido: number;
+  tasaRetencion: number;
 }
 
 export interface BIData {
@@ -89,6 +96,7 @@ export interface BIData {
   top10Farmacia: Top10Producto[];
   stockAlertas: StockAlerta[];
   lotesPorVencer: LotePorVencer[];
+  heatmap: HeatmapCell[];
   refresh: () => void;
 }
 
@@ -168,6 +176,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
   const [top10Farmacia, setTop10Farmacia] = useState<Top10Producto[]>([]);
   const [stockAlertas, setStockAlertas] = useState<StockAlerta[]>([]);
   const [lotesPorVencer, setLotesPorVencer] = useState<LotePorVencer[]>([]);
+  const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
 
   const load = useCallback(async () => {
     if (!activeClinicId) return;
@@ -196,7 +205,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
       ] = await Promise.all([
         supabase
           .from("appointments")
-          .select("id,fecha_inicio,status,origen,doctor_id")
+          .select("id,fecha_inicio,status,origen,doctor_id,patient_id")
           .eq("clinic_id", activeClinicId)
           .gte("fecha_inicio", desde.toISOString())
           .lte("fecha_inicio", hasta.toISOString()),
@@ -380,6 +389,39 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
         .sort((a, b) => b.total - a.total)
         .slice(0, 10);
 
+      // ─── Heatmap hora × día ────────────────────────────────────────────
+      const heatmapMap = new Map<string, number>();
+      citas.forEach(c => {
+        const d = new Date(c.fecha_inicio);
+        const hora = d.getHours();
+        const dia = d.getDay();
+        const key = `${hora}-${dia}`;
+        heatmapMap.set(key, (heatmapMap.get(key) ?? 0) + 1);
+      });
+      const computedHeatmap: HeatmapCell[] = Array.from(heatmapMap.entries()).map(([key, count]) => {
+        const [hora, dia] = key.split("-").map(Number);
+        return { hora, dia, count };
+      });
+
+      // ─── Tasa retención (pacientes que regresan en ≤90d) ───────────────
+      const patientCitas = new Map<string, string[]>();
+      citas.forEach(c => {
+        if (!c.patient_id) return;
+        const prev = patientCitas.get(c.patient_id) ?? [];
+        patientCitas.set(c.patient_id, [...prev, c.fecha_inicio]);
+      });
+      let retenidos = 0;
+      const totalConCitas = patientCitas.size;
+      patientCitas.forEach(fechas => {
+        if (fechas.length < 2) return;
+        const sorted = [...fechas].sort();
+        for (let i = 1; i < sorted.length; i++) {
+          const gap = (new Date(sorted[i]).getTime() - new Date(sorted[i - 1]).getTime()) / 86_400_000;
+          if (gap <= 90) { retenidos++; break; }
+        }
+      });
+      const tasaRetencion = totalConCitas > 0 ? Math.round((retenidos / totalConCitas) * 100) : 0;
+
       // ─── Commit state ──────────────────────────────────────────────────
       setResumen({
         citasMes,
@@ -397,6 +439,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
         lotesPorVencer30d,
         cxpPendiente,
         cxpVencido,
+        tasaRetencion,
       });
       setCitasTimeline(buildCitasTimeline(citas, desde, hasta));
       setCitasPorOrigen(
@@ -411,6 +454,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
       setTop10Farmacia(computedTop10);
       setStockAlertas(computedStockAlertas);
       setLotesPorVencer(computedLotesPorVencer);
+      setHeatmap(computedHeatmap);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -433,6 +477,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
     top10Farmacia,
     stockAlertas,
     lotesPorVencer,
+    heatmap,
     refresh: load,
   };
 }
