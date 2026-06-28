@@ -1304,6 +1304,58 @@ Basado en casos reales: hospital perdió $4.6M por no responder solicitud. No re
 
 ---
 
+## Completado (Jun 28, 2026 — fixes farmacia + módulo enfermería UI)
+
+### Fixes críticos pharmacy_register_sale ✅
+
+Rama `feat/loyalty-etapa2` mergeada a `main` y desplegada tras resolver 3 bugs:
+- [x] **`v_item` ambigüedad PL/pgSQL** — alias `_elem` en bloque PERFORM (`20260628000002`)
+- [x] **`movimientos_inventario.created_by`** — INSERT usaba columna `user_id` (no existe); fix: `created_by` (`20260628000003`)
+- [x] **loyalty_members RLS** — policy `pwa_auth_read` usaba `auth.users` directamente → `permission denied`; fix: claims JWT `auth.jwt()->'app_metadata'`
+- [x] Merge `feat/loyalty-etapa2` → `main` (tests 63/63) · push · deploy Workers `a6a40119`
+- Usuario confirmó: "ya quedo el cobro y la afiliación" ✅
+
+### Módulo Enfermería UI ✅ (commits `c463343..5e24c36`)
+
+Plan: `docs/superpowers/plans/2026-06-28-enfermeria-insumos-entrega-turno.md`
+Spec: `docs/superpowers/specs/2026-06-28-enfermeria-insumos-entrega-turno-design.md`
+Deploy Workers: `30a3a2d0` · `integrika.mx/enfermeria` operativo ✅
+
+- [x] **Task 1** — `src/features/enfermeria/entregaTurnoHelpers.ts` — interfaces `PacienteRow`/`PendienteRow` + 4 helpers puros; `src/test/enfermeria/entrega-turno.test.ts` — 5/5 tests TDD (RED→GREEN). Commit `c463343`
+- [x] **Task 2** — `src/features/enfermeria/EntregaTurno.tsx` — componente React completo: Dialog (crear), tabla 30 registros, Sheet (detalle + cerrar turno). Filas dinámicas pacientes/pendientes. `list_nurses()` RPC + `rooms` selector. Commit `db1ab60`
+- [x] **Task 3** — `src/pages/Enfermeria.tsx` (2 tabs) + ruta `/enfermeria` + nav item Stethoscope. Commit `23df897`
+- [x] **Post-review fixes** — guard `getUser()` auth error, `clinic_id` filter en `fetchEntregas`, rooms error handling, `turno as string` cast removido. Commit `5e24c36`
+- tsc 0 errores · vitest 68/68 · build limpio · revisión final APPROVED
+
+### Notas técnicas
+
+- `wrangler.jsonc` estaba en git (`15a1e75`) — `wrangler deploy` usa Workers assets (no Pages)
+- Proyecto Pages `clinica-mexico-spa` creado hoy (era nuevo) — dominio oficial sigue siendo Workers
+- `integrika.mx` = Custom domain en Cloudflare apuntando al Worker `clinica-mexico-spa`
+
+---
+
+## ⏸ PENDIENTE 1 — punto de pausa (Jun 28, 2026)
+
+> Se regresa aquí después de skills/revisiones de seguridad al proyecto.
+
+### Externos / Legales (requieren acción fuera del código)
+- [ ] **Twilio** — configurar en Supabase Auth dashboard (prerequisito OTP SMS producción)
+- [ ] **Aviso de Privacidad** — texto real con abogado (hoy es placeholder LFPDPPP)
+- [ ] **Términos de Servicio** — cláusula de arbitraje (Código de Comercio Arts. 1415-1463)
+- [ ] **DPA con Supabase Inc.** — Data Processing Agreement
+- [ ] **Oficial protección de datos** — designar (LFPDPPP Art. 29)
+
+### Features pendientes (código — para siguiente sesión)
+- [ ] **BI fase 2** — top 10 productos farmacia por ingresos, heatmap citas por hora/día, tasa retención pacientes (% regresan < 90d)
+- [ ] **Vista paciente enriquecida** — historial completo (citas, recetas, pagos, caminos) en PacientesLista
+- [ ] **DischargeForm mejorado** — diagnóstico final, documentos entregados en alta
+- [ ] **Bot GCal** — `VITE_GOOGLE_CLIENT_ID` pendiente en `.env` local (botón "Conectar" en AdminUsuarios)
+- [ ] **notify-cxp/notify-new-user** → `notification_rules` (patrón ya existe, migración pendiente — LOW priority)
+- [ ] **Wizard apertura turno** — muestra "Caja: {nombre cajero}" en vez del nombre real de la caja (bug pre-existente, no urgente)
+
+---
+
 ## Reglas críticas
 - SQL con `$function$` → SIEMPRE escribir `_tmp_*.sql` y usar `--file`
 - Secrets: env-only, nunca en código
