@@ -392,6 +392,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
       // ─── Heatmap hora × día ────────────────────────────────────────────
       const heatmapMap = new Map<string, number>();
       citas.forEach(c => {
+        if (!c.fecha_inicio) return;
         const d = new Date(c.fecha_inicio);
         const hora = d.getHours();
         const dia = d.getDay();

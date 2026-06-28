@@ -356,7 +356,7 @@ function TabAgenda({ citasTimeline, citasPorDoctor, resumen, heatmap, loading }:
         <KpiCard title="Confirmadas" value={resumen.citasConfirmadas} icon={<Activity className="h-4 w-4 text-green-600" />} iconBg="bg-green-100" />
         <KpiCard title="Tasa cancelación" value={`${resumen.tasaCancelacion}%`} icon={<TrendingDown className="h-4 w-4 text-amber-600" />} iconBg="bg-amber-100" lowIsBetter />
         <KpiCard title="Tasa no-show" value={`${resumen.tasaNoShow}%`} icon={<TrendingDown className="h-4 w-4 text-red-600" />} iconBg="bg-red-100" lowIsBetter />
-        <KpiCard title="Retención ≤90d" value={`${resumen.tasaRetencion}%`} icon={<Users className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-100" />
+        <KpiCard title="Pac. frecuentes" value={`${resumen.tasaRetencion}%`} icon={<Users className="h-4 w-4 text-violet-600" />} iconBg="bg-violet-100" suffix="≥2 citas/período" />
       </div>
 
       <Card>
