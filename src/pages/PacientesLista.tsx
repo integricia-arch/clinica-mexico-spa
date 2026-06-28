@@ -37,6 +37,13 @@ type PharmacySale = {
   payment_method: string | null;
 };
 
+type JourneyInstance = {
+  id: string;
+  created_at: string | null;
+  status: string | null;
+  journey_templates: { name: string } | null;
+};
+
 function apptStatusColor(status: string | null): string {
   if (!status) return "text-muted-foreground";
   if (["confirmada", "confirmada_medico", "confirmada_paciente"].includes(status)) return "text-green-600";
@@ -48,6 +55,14 @@ function apptStatusColor(status: string | null): string {
 function rxStatusColor(status: string | null): string {
   if (!status) return "text-muted-foreground";
   if (["issued", "active"].includes(status)) return "text-green-600";
+  if (status === "cancelled") return "text-red-600";
+  return "text-muted-foreground";
+}
+
+function journeyStatusColor(status: string | null): string {
+  if (!status) return "text-muted-foreground";
+  if (status === "completed") return "text-green-600";
+  if (status === "in_progress") return "text-blue-600";
   if (status === "cancelled") return "text-red-600";
   return "text-muted-foreground";
 }
@@ -80,9 +95,11 @@ function PacienteHistorialDrawer({
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [rxs, setRxs] = useState<Prescription[]>([]);
   const [sales, setSales] = useState<PharmacySale[]>([]);
+  const [journeys, setJourneys] = useState<JourneyInstance[]>([]);
   const [loadingAppts, setLoadingAppts] = useState(false);
   const [loadingRxs, setLoadingRxs] = useState(false);
   const [loadingSales, setLoadingSales] = useState(false);
+  const [loadingJourneys, setLoadingJourneys] = useState(false);
 
   useEffect(() => {
     if (!open || !patient) return;
@@ -122,6 +139,18 @@ function PacienteHistorialDrawer({
         setSales((data as PharmacySale[]) ?? []);
         setLoadingSales(false);
       });
+
+    setLoadingJourneys(true);
+    supabase
+      .from("journey_instances")
+      .select("id,created_at,status,journey_templates(name)")
+      .eq("patient_id", patient.id)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        setJourneys((data as unknown as JourneyInstance[]) ?? []);
+        setLoadingJourneys(false);
+      });
   }, [open, patient]);
 
   return (
@@ -138,6 +167,7 @@ function PacienteHistorialDrawer({
             <TabsTrigger value="citas" className="flex-1">Citas</TabsTrigger>
             <TabsTrigger value="recetas" className="flex-1">Recetas</TabsTrigger>
             <TabsTrigger value="pagos" className="flex-1">Pagos</TabsTrigger>
+            <TabsTrigger value="caminos" className="flex-1">Caminos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="citas" className="mt-4 space-y-2">
@@ -221,6 +251,31 @@ function PacienteHistorialDrawer({
                       <span className="text-xs text-muted-foreground">{s.payment_method}</span>
                     )}
                   </div>
+                </div>
+              ))
+            )}
+          </TabsContent>
+          <TabsContent value="caminos" className="mt-4 space-y-2">
+            {loadingJourneys ? (
+              <Spinner />
+            ) : journeys.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
+            ) : (
+              journeys.map((j) => (
+                <div key={j.id} className="rounded-lg border border-border p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium truncate">
+                      {j.journey_templates?.name ?? "Camino"}
+                    </span>
+                    <span className={`text-xs font-medium ${journeyStatusColor(j.status)}`}>
+                      {j.status ?? "—"}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {j.created_at
+                      ? format(new Date(j.created_at), "dd/MM/yyyy HH:mm", { locale: es })
+                      : "—"}
+                  </span>
                 </div>
               ))
             )}
