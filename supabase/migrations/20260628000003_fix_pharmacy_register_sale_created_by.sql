@@ -1,6 +1,5 @@
--- Fix: "column reference v_item is ambiguous" en pharmacy_register_sale.
--- El PERFORM block usaba v_item como alias de jsonb_array_elements, mismo nombre
--- que la variable PL/pgSQL declarada. Renombrado a _elem para eliminar ambigüedad.
+-- Fix: movimientos_inventario usa created_by, no user_id.
+-- El INSERT en pharmacy_register_sale referenciaba la columna incorrecta.
 
 BEGIN;
 
@@ -81,7 +80,6 @@ BEGIN
   END IF;
 
   -- Pre-lock lotes en orden determinístico para evitar deadlock.
-  -- Alias renombrado a _elem para evitar ambigüedad con variable v_item.
   PERFORM id FROM public.lotes_medicamento
     WHERE id IN (
       SELECT COALESCE(
@@ -97,7 +95,6 @@ BEGIN
   ORDER BY id
   FOR UPDATE;
 
-  -- Validación de items y stock
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_payload->'items') LOOP
     SELECT * INTO v_med FROM public.medicamentos WHERE id = (v_item->>'medicamento_id')::uuid;
     IF v_med IS NULL THEN RAISE EXCEPTION 'Medicamento no encontrado'; END IF;
