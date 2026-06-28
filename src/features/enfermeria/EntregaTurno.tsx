@@ -86,16 +86,18 @@ export default function EntregaTurno() {
   const [pendientes, setPendientes] = useState<PendienteRow[]>([])
 
   const fetchEntregas = useCallback(async () => {
+    if (!activeClinicId) return
     setLoading(true)
     const { data, error } = await supabase
       .from("entregas_turno")
       .select("id, sala, turno, fecha, enfermera_entrega, enfermera_recibe, resumen, pacientes_json, pendientes_json, created_at, closed_at")
+      .eq("clinic_id", activeClinicId)
       .order("created_at", { ascending: false })
       .limit(30)
     setLoading(false)
     if (error) { toast.error("Error cargando entregas de turno"); return }
     setEntregas((data ?? []) as EntregaDB[])
-  }, [])
+  }, [activeClinicId])
 
   useEffect(() => {
     void fetchEntregas()
@@ -104,7 +106,10 @@ export default function EntregaTurno() {
       .select("id, nombre")
       .eq("activo", true)
       .order("nombre")
-      .then(({ data }) => setRooms((data ?? []) as RoomOption[]))
+      .then(({ data, error: roomsErr }) => {
+        if (roomsErr) { toast.warning("No se pudo cargar las salas"); return }
+        setRooms((data ?? []) as RoomOption[])
+      })
     void supabase
       .rpc("list_nurses")
       .then(({ data, error: rpcErr }) => {
@@ -134,11 +139,16 @@ export default function EntregaTurno() {
     if (!sala.trim()) { toast.error("La sala es requerida"); return }
     if (!activeClinicId) { toast.error("No hay clínica activa seleccionada"); return }
     setSubmitting(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) {
+      setSubmitting(false)
+      toast.error("Sesión no válida, vuelve a iniciar sesión")
+      return
+    }
     const { error } = await supabase.from("entregas_turno").insert({
       clinic_id: activeClinicId,
       sala: sala.trim(),
-      turno: turno as string,
+      turno,
       fecha,
       enfermera_entrega: user?.id ?? null,
       enfermera_recibe: enfermeraRecibe || null,
