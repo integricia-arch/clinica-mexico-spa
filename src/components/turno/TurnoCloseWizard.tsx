@@ -345,7 +345,7 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
                 folio: result.folio,
                 cajaNombre: turno.caja_nombre,
                 clinicName: activeClinic?.name,
-                cajeroName: user?.email ?? undefined,
+                cajeroName: user?.user_metadata?.full_name ?? user?.email ?? undefined,
                 fechaCierre: new Date().toISOString(),
                 openingAmount: result.opening_amount,
                 cashTotal: result.cash_total,
