@@ -873,11 +873,11 @@ Commit final: `66bf606` · Deploy Workers: `e58cf44d`
 - Pendiente: commitear `NuevaCitaDialog.tsx` + `telegram-webhook/index.ts` + `notify-nurse-assignment/` + `VincularTelegram.tsx` + `App.tsx` + `AppLayout.tsx` + `types.ts` + 2 migraciones nuevas (confirmar con usuario antes de commitear)
 - Ver investigación completa de perfil enfermería: `memoria/proyectos/investigacion-enfermeria-operativa.md`
 
-### BI — mejoras fase 2 (no crítico)
-- Top 10 productos farmacia por ingresos (requiere join pharmacy_sale_items con filtro de fecha)
-- Heatmap citas por hora del día / día de semana
-- KPI bot IA: costo mensual por canal (`bot_usage_costs` usa `organization_id`, no `clinic_id`)
-- Tasa retención pacientes (% que regresan en < 90 días)
+### BI — mejoras fase 2 ✅ COMPLETO (Jun 28, 2026)
+- [x] Top 10 productos farmacia por ingresos — `pharmacy_sale_items` join, ya implementado
+- [x] Heatmap citas por hora del día / día de semana — `CitasHeatmap` en tab Agenda, ya implementado
+- [x] Tasa retención → "Pac. frecuentes ≥2 citas/período" (ver /aprende 2026-06-28)
+- [x] KPI bot IA: costo mensual por canal — `bot_usage_costs` filtrado por `organization_id=activeClinicId`, tabla breakdown en TabFinanzas
 
 ### Otras opciones
 - **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
@@ -1352,7 +1352,7 @@ Deploy Workers: `30a3a2d0` · `integrika.mx/enfermeria` operativo ✅
 - [ ] **DischargeForm mejorado** — diagnóstico final, documentos entregados en alta
 - [ ] **Bot GCal** — `VITE_GOOGLE_CLIENT_ID` pendiente en `.env` local (botón "Conectar" en AdminUsuarios)
 - [ ] **notify-cxp/notify-new-user** → `notification_rules` (patrón ya existe, migración pendiente — LOW priority)
-- [ ] **Wizard apertura turno** — muestra "Caja: {nombre cajero}" en vez del nombre real de la caja (bug pre-existente, no urgente)
+- [x] **Wizard apertura turno** — fix: acta arqueo ahora usa `full_name ?? email` para cajero (97a5a8b, 2026-06-28)
 
 ---
 

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { useBI, Periodo, DiaCount, DiaVenta, OrigenCount, DoctorCount, Top10Producto, HeatmapCell } from "@/hooks/useBI";
+import { useBI, Periodo, DiaCount, DiaVenta, OrigenCount, DoctorCount, Top10Producto, HeatmapCell, BotCanalCosto } from "@/hooks/useBI";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -637,8 +637,9 @@ function TabInventario({ stockAlertas, lotesPorVencer, loading }: {
 
 // ─── Tab: Finanzas ────────────────────────────────────────────────────────────
 
-function TabFinanzas({ resumen, loading }: {
+function TabFinanzas({ resumen, botCanalCostos, loading }: {
   resumen: ReturnType<typeof useBI>["resumen"];
+  botCanalCostos: BotCanalCosto[];
   loading: boolean;
 }) {
   if (loading) return <ChartSkeleton />;
@@ -696,6 +697,51 @@ function TabFinanzas({ resumen, loading }: {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Activity className="h-4 w-4 text-violet-600" />
+            Costo Bot IA en período
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-2xl font-bold">
+              {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 }).format(resumen.botCostoMes)}
+            </span>
+            {resumen.botCostoMesAnterior > 0 && (
+              <span className="text-xs text-muted-foreground">
+                vs {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 }).format(resumen.botCostoMesAnterior)} período ant.
+              </span>
+            )}
+          </div>
+          {botCanalCostos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin uso registrado en el período</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Canal</th>
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Tokens</th>
+                  <th className="pb-2 font-medium text-muted-foreground text-right">Costo MXN</th>
+                </tr>
+              </thead>
+              <tbody>
+                {botCanalCostos.map(r => (
+                  <tr key={r.canal} className="border-b border-border/40 last:border-0">
+                    <td className="py-2 pr-4 capitalize">{r.canal}</td>
+                    <td className="py-2 pr-4 text-right font-mono text-xs">{r.tokens.toLocaleString("es-MX")}</td>
+                    <td className="py-2 text-right font-medium">
+                      {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2 }).format(r.costo_mxn)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -822,6 +868,7 @@ export default function BI() {
         <TabsContent value="finanzas" className="mt-4">
           <TabFinanzas
             resumen={bi.resumen}
+            botCanalCostos={bi.botCanalCostos}
             loading={bi.loading}
           />
         </TabsContent>

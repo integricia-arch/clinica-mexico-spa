@@ -53,6 +53,12 @@ export interface CxpFactura {
   vencida: boolean;
 }
 
+export interface BotCanalCosto {
+  canal: string;
+  costo_mxn: number;
+  tokens: number;
+}
+
 export interface Top10Producto {
   medicamento_id: string;
   nombre: string;
@@ -83,6 +89,8 @@ export interface BIResumen {
   cxpPendiente: number;
   cxpVencido: number;
   tasaRetencion: number;
+  botCostoMes: number;
+  botCostoMesAnterior: number;
 }
 
 export interface BIData {
@@ -97,6 +105,7 @@ export interface BIData {
   stockAlertas: StockAlerta[];
   lotesPorVencer: LotePorVencer[];
   heatmap: HeatmapCell[];
+  botCanalCostos: BotCanalCosto[];
   refresh: () => void;
 }
 
@@ -177,6 +186,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
   const [stockAlertas, setStockAlertas] = useState<StockAlerta[]>([]);
   const [lotesPorVencer, setLotesPorVencer] = useState<LotePorVencer[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([]);
+  const [botCanalCostos, setBotCanalCostos] = useState<BotCanalCosto[]>([]);
 
   const load = useCallback(async () => {
     if (!activeClinicId) return;
@@ -202,6 +212,8 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
         lotesRes,
         cxpRes,
         itemsRes,
+        botCostRes,
+        botCostPrevRes,
       ] = await Promise.all([
         supabase
           .from("appointments")
@@ -272,6 +284,20 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
           .eq("clinic_id", activeClinicId)
           .gte("created_at", desde.toISOString())
           .lte("created_at", hasta.toISOString()),
+
+        supabase
+          .from("bot_usage_costs")
+          .select("channel,provider_cost_mxn,input_tokens,output_tokens")
+          .eq("organization_id", activeClinicId)
+          .gte("created_at", desde.toISOString())
+          .lte("created_at", hasta.toISOString()),
+
+        supabase
+          .from("bot_usage_costs")
+          .select("provider_cost_mxn")
+          .eq("organization_id", activeClinicId)
+          .gte("created_at", prevDesde.toISOString())
+          .lte("created_at", prevHasta.toISOString()),
       ]);
 
       const citas = citasRes.data ?? [];
@@ -423,6 +449,30 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
       });
       const tasaRetencion = totalConCitas > 0 ? Math.round((retenidos / totalConCitas) * 100) : 0;
 
+      // ─── Bot costs ─────────────────────────────────────────────────────
+      const botRows = (botCostRes.data ?? []) as Array<{
+        channel: string;
+        provider_cost_mxn: number | null;
+        input_tokens: number | null;
+        output_tokens: number | null;
+      }>;
+      const botCostoMes = botRows.reduce((s, r) => s + Number(r.provider_cost_mxn ?? 0), 0);
+      const botCostoMesAnterior = (botCostPrevRes.data ?? []).reduce(
+        (s: number, r: { provider_cost_mxn: number | null }) => s + Number(r.provider_cost_mxn ?? 0),
+        0,
+      );
+      const botCanalMap = new Map<string, { costo_mxn: number; tokens: number }>();
+      botRows.forEach(r => {
+        const prev = botCanalMap.get(r.channel) ?? { costo_mxn: 0, tokens: 0 };
+        botCanalMap.set(r.channel, {
+          costo_mxn: prev.costo_mxn + Number(r.provider_cost_mxn ?? 0),
+          tokens: prev.tokens + (r.input_tokens ?? 0) + (r.output_tokens ?? 0),
+        });
+      });
+      const computedBotCanal: BotCanalCosto[] = [...botCanalMap.entries()]
+        .map(([canal, v]) => ({ canal, ...v }))
+        .sort((a, b) => b.costo_mxn - a.costo_mxn);
+
       // ─── Commit state ──────────────────────────────────────────────────
       setResumen({
         citasMes,
@@ -441,6 +491,8 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
         cxpPendiente,
         cxpVencido,
         tasaRetencion,
+        botCostoMes,
+        botCostoMesAnterior,
       });
       setCitasTimeline(buildCitasTimeline(citas, desde, hasta));
       setCitasPorOrigen(
@@ -456,6 +508,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
       setStockAlertas(computedStockAlertas);
       setLotesPorVencer(computedLotesPorVencer);
       setHeatmap(computedHeatmap);
+      setBotCanalCostos(computedBotCanal);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -479,6 +532,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
     stockAlertas,
     lotesPorVencer,
     heatmap,
+    botCanalCostos,
     refresh: load,
   };
 }
