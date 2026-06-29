@@ -59,7 +59,27 @@ export default function DashboardCompras() {
   const { items: facturas, loading: loadFac } = useFacturasProveedor(activeClinicId);
   const { items: recepciones, loading: loadRec } = useRecepcionesMercancia(activeClinicId);
   const { items: proveedores } = useProveedores(activeClinicId);
-  const { stats: ciclo, loading: loadCiclo } = useCicloCompras(activeClinicId);
+  const { rows: cicloRows, stats: ciclo, loading: loadCiclo } = useCicloCompras(activeClinicId);
+
+  const exportarCSV = () => {
+    const cols = [
+      "folio_solicitud","estatus_solicitud","fecha_solicitud","solicitante_nombre",
+      "folio_cotizacion","folio_orden","estatus_orden","aprobada_at",
+      "folio_recepcion","estatus_recepcion","fecha_recepcion",
+      "folio_factura","estatus_factura","factura_total_centavos","match_status","match_diferencia_centavos","match_revisado_at",
+      "fecha_pago","pago_monto_centavos","metodo_pago",
+    ] as const;
+    const header = cols.join(",");
+    const escape = (v: unknown) => v == null ? "" : `"${String(v).replace(/"/g, '""')}"`;
+    const body = cicloRows.map((r) => cols.map((c) => escape(r[c])).join(",")).join("\n");
+    const blob = new Blob([`${header}\n${body}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `auditoria-ciclo-compras-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const loading = loadOC || loadFac || loadRec || loadCiclo;
 
@@ -162,9 +182,19 @@ export default function DashboardCompras() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">Dashboard de Compras</h3>
-        <p className="text-sm text-muted-foreground capitalize">{mesLabel}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-lg font-semibold">Dashboard de Compras</h3>
+          <p className="text-sm text-muted-foreground capitalize">{mesLabel}</p>
+        </div>
+        <button
+          onClick={exportarCSV}
+          disabled={cicloRows.length === 0}
+          className="shrink-0 text-xs px-3 py-1.5 rounded-lg border bg-background hover:bg-muted disabled:opacity-40 flex items-center gap-1.5"
+        >
+          <ArrowUpRight className="h-3.5 w-3.5" />
+          Exportar auditoría CSV
+        </button>
       </div>
 
       {/* KPI row */}
