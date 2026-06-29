@@ -159,6 +159,18 @@ export function useLoyaltyMember(clinicId: string | null) {
     return data as RedeemResult
   }
 
+  async function getAll(cId: string): Promise<LoyaltyMember[]> {
+    const { data, error } = await supabase
+      .from('loyalty_members')
+      .select('*')
+      .eq('clinic_id', cId)
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    if (error) return []
+    return ((data ?? []) as Record<string, unknown>[]).map(normalizeMember)
+  }
+
   async function getMovimientos(memberId: string): Promise<LoyaltyMovimiento[]> {
     const { data, error } = await supabase
       .from('loyalty_movimientos')
@@ -171,5 +183,5 @@ export function useLoyaltyMember(clinicId: string | null) {
     return (data as LoyaltyMovimiento[]) ?? []
   }
 
-  return { search, findByPhoneOrEmail, register, registerSale, redeem, getMovimientos }
+  return { search, findByPhoneOrEmail, register, registerSale, redeem, getMovimientos, getAll }
 }

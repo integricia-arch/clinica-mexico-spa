@@ -151,7 +151,7 @@ function MemberDrawer({ member, open, onClose, valorPuntoMxn }: MemberDrawerProp
 export function LoyaltyMiembros() {
   const { activeClinicId } = useActiveClinic()
   const { config } = useLoyaltyConfig(activeClinicId)
-  const { getAll, search: searchMembers } = useLoyaltyMember()
+  const { getAll, search: searchMembers } = useLoyaltyMember(activeClinicId)
   const [members, setMembers] = useState<LoyaltyMember[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
