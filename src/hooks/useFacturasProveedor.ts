@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { friendlyError } from "@/lib/errors";
 import { untypedTable } from "@/lib/untypedTable";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface FacturaProveedor {
   id: string;
@@ -277,5 +278,15 @@ export function useFacturasProveedor(clinicId: string | null) {
   const vencidas = items.filter((f) => (f.estatus === "pendiente" || f.estatus === "parcial") && new Date(f.fecha_vencimiento) < new Date());
   const provisionales = items.filter((f) => f.es_provisional);
 
-  return { items, loading, error, create, registrarPago, getPagos, confirmarProvisional, pendientes, vencidas, provisionales, refresh: load };
+  // COSO: aprobar factura con diferencia 4-way match — solo admin/manager vía RPC
+  const aprobarDiferencia = useCallback(async (facturaId: string, notas?: string): Promise<void> => {
+    const { error: rErr } = await supabase.rpc(
+      "aprobar_diferencia_factura" as never,
+      { p_factura_id: facturaId, p_notas: notas ?? null } as never
+    );
+    if (rErr) throw new Error(friendlyError(rErr as never, "No se pudo aprobar la diferencia."));
+    await load();
+  }, [load]);
+
+  return { items, loading, error, create, registrarPago, getPagos, confirmarProvisional, aprobarDiferencia, pendientes, vencidas, provisionales, refresh: load };
 }

@@ -237,10 +237,12 @@ export function useRecepcionesMercancia(clinicId: string | null) {
   }, [clinicId, items, load]);
 
   const verificar = useCallback(async (id: string) => {
-    const { error: uErr } = await untypedTable("recepciones_mercancia")
-      .update({ estatus: "verificada" })
-      .eq("id", id);
-    if (uErr) throw new Error(friendlyError(uErr, "No se pudo verificar la recepción."));
+    // COSO: solo admin/manager — enforced en RPC SECURITY DEFINER
+    const { error: uErr } = await supabase.rpc(
+      "confirmar_recepcion_mercancia" as never,
+      { p_recepcion_id: id } as never
+    );
+    if (uErr) throw new Error(friendlyError(uErr as never, "No se pudo verificar la recepción."));
     await load();
   }, [load]);
 
