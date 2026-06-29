@@ -4,10 +4,11 @@ import { useOrdenesCompra } from "@/hooks/useOrdenesCompra";
 import { useFacturasProveedor } from "@/hooks/useFacturasProveedor";
 import { useRecepcionesMercancia } from "@/hooks/useRecepcionesMercancia";
 import { useProveedores } from "@/hooks/useProveedores";
+import { useCicloCompras } from "@/hooks/useCicloCompras";
 import { Badge } from "@/components/ui/badge";
 import {
   ShoppingCart, AlertTriangle, TrendingUp, Clock, CheckCircle2, XCircle,
-  ArrowUpRight, Package, Building2,
+  ArrowUpRight, Package, Building2, GitBranch, Timer, FileWarning,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isAfter, isBefore, parseISO, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -58,8 +59,9 @@ export default function DashboardCompras() {
   const { items: facturas, loading: loadFac } = useFacturasProveedor(activeClinicId);
   const { items: recepciones, loading: loadRec } = useRecepcionesMercancia(activeClinicId);
   const { items: proveedores } = useProveedores(activeClinicId);
+  const { stats: ciclo, loading: loadCiclo } = useCicloCompras(activeClinicId);
 
-  const loading = loadOC || loadFac || loadRec;
+  const loading = loadOC || loadFac || loadRec || loadCiclo;
 
   const now = new Date();
   const mesStart = startOfMonth(now);
@@ -365,6 +367,52 @@ export default function DashboardCompras() {
           </div>
         </div>
       )}
+
+      {/* Trazabilidad ciclo compras — Fase 4 KPIs */}
+      <div className="rounded-xl border bg-card p-4 space-y-3">
+        <h4 className="text-sm font-semibold flex items-center gap-1.5">
+          <GitBranch className="h-4 w-4 text-muted-foreground" /> Trazabilidad ciclo de compras
+        </h4>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="space-y-0.5">
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><Timer className="h-3 w-3" /> Lead time SC→OC</p>
+            <p className="text-xl font-bold">{ciclo.leadTimeScOcDias != null ? `${ciclo.leadTimeScOcDias}d` : "—"}</p>
+            <p className="text-[10px] text-muted-foreground">promedio días</p>
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><Timer className="h-3 w-3" /> Lead time OC→GR</p>
+            <p className="text-xl font-bold">{ciclo.leadTimeOcGrDias != null ? `${ciclo.leadTimeOcGrDias}d` : "—"}</p>
+            <p className="text-[10px] text-muted-foreground">promedio días</p>
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className={`h-3 w-3 ${ciclo.scSinConvertir.length > 0 ? "text-yellow-500" : ""}`} /> SCs sin OC
+            </p>
+            <p className={`text-xl font-bold ${ciclo.scSinConvertir.length > 0 ? "text-yellow-600" : ""}`}>
+              {ciclo.scSinConvertir.length}
+            </p>
+            <p className="text-[10px] text-muted-foreground">aprobadas sin convertir</p>
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <FileWarning className={`h-3 w-3 ${ciclo.diferenciasParaAprobar.length > 0 ? "text-orange-500" : ""}`} /> Diferencias 4-way
+            </p>
+            <p className={`text-xl font-bold ${ciclo.diferenciasParaAprobar.length > 0 ? "text-orange-600" : ""}`}>
+              {ciclo.diferenciasParaAprobar.length}
+            </p>
+            <p className="text-[10px] text-muted-foreground">pendientes de aprobación</p>
+          </div>
+        </div>
+        {ciclo.ciclosTotales > 0 && (
+          <div className="pt-2 border-t flex justify-between text-xs text-muted-foreground">
+            <span>Ciclos completos (con pago)</span>
+            <span className="font-semibold text-foreground">
+              {ciclo.ciclosCompletos} / {ciclo.ciclosTotales}
+              {" "}({Math.round((ciclo.ciclosCompletos / ciclo.ciclosTotales) * 100)}%)
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Recepciones mes */}
       {stats.recMes.length > 0 && (
