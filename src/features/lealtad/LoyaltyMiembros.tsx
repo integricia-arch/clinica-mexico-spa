@@ -174,7 +174,9 @@ export function LoyaltyMiembros() {
     } finally {
       setLoading(false)
     }
-  }, [activeClinicId, getAll, searchMembers])
+  // ponytail: getAll/searchMembers omitted from deps — they close over clinicId which is already listed
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeClinicId])
 
   useEffect(() => {
     loadMembers('')
