@@ -29,18 +29,17 @@ Build: ✅ 5.96s | Tests: 57/57 | tsc: 0 errores | Review final: APPROVED
 - [x] Teléfono normalizado a E.164 (+52XXXXXXXXXX) en registro y RLS
 - [x] UPDATE RLS policy para revocación consent marketing (LFPDPPP derecho ARCO)
 
-### Deuda Etapa 2
-- [ ] `loyaltyDescuento` no descuenta del total POS todavía
-- [ ] Links ARCO en PWA (dominio `loyalty.integrika.mx` separado)
-- [ ] SMS provider Twilio en Supabase dashboard (prerequisito OTP producción)
-- [ ] `register_sale` idempotency guard por `pharmacy_sale_id`
-- [ ] PWA icon: `public/icons/loyalty-192.png` es placeholder teal
+### Deuda Etapa 2 — COMPLETA ✅ (Jun 28, 2026 — feat/loyalty-etapa2)
+- [x] `loyaltyDescuento` descuenta del total POS — `totalConLealtad`, ticket, RPC (`7da2391`)
+- [x] Links ARCO en PWA — `/privacidad` y `/arco` en LoyaltyApp (`3c17dde`)
+- [x] `register_sale` idempotency guard por `pharmacy_sale_id` (`6f43ed1`)
+- [x] PWA icon: `public/icons/loyalty-192.png` + 512px generados con sharp (`ee80431`)
 
 ### Pendiente antes de producción
 - [x] `supabase db push --linked` — migraciones 000004–000006 aplicadas ✅
-- [ ] Configurar Twilio en Supabase Auth dashboard
-- [ ] Merge `feat/loyalty-module-etapa1` → `main`
-- [ ] Deploy Vercel `loyalty.integrika.mx`
+- [ ] Configurar Twilio en Supabase Auth dashboard (externo)
+- [x] Merge `feat/loyalty-module-etapa1` → `main` ✅
+- [ ] Deploy Vercel `loyalty.integrika.mx` — pendiente token Vercel
 
 ---
 
@@ -880,8 +879,8 @@ Commit final: `66bf606` · Deploy Workers: `e58cf44d`
 - [x] KPI bot IA: costo mensual por canal — `bot_usage_costs` filtrado por `organization_id=activeClinicId`, tabla breakdown en TabFinanzas
 
 ### Otras opciones
-- **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
-- **DischargeForm mejorado**: resumen de alta más completo (diagnóstico final, documentos entregados)
+- [x] **Vista paciente enriquecida** — drawer con stats header (citas, recetas, gasto farmacia, última visita), doctor en citas, tab Notas clínicas (vía expedientes→notas_consulta). Deploy `7c05ac70` Jun 28.
+- [x] **DischargeForm mejorado** — ya estaba completo (diagnóstico final, documentos, restricciones, próxima cita). Verificado Jun 28.
 
 ---
 
@@ -944,8 +943,8 @@ Preguntas: ¿qué ClaveProdServ/SAT usa farmacia? ¿cómo mapear cuando descripc
 
 ### Otras opciones
 - **Agenda mejorada**: citas recurrentes, confirmación Telegram/SMS, bloqueos por doctor, vista semanal
-- **Vista paciente enriquecida**: historial completo (citas, recetas, pagos, caminos completados) en PacientesLista
-- **DischargeForm mejorado**: resumen de alta más completo (diagnóstico final, documentos entregados)
+- [x] **Vista paciente enriquecida** — completado Jun 28
+- [x] **DischargeForm mejorado** — ya estaba completo, verificado Jun 28
 
 ## Completado (Jun 15, 2026 — sesión 15)
 
@@ -1332,6 +1331,31 @@ Deploy Workers: `30a3a2d0` · `integrika.mx/enfermeria` operativo ✅
 - `wrangler.jsonc` estaba en git (`15a1e75`) — `wrangler deploy` usa Workers assets (no Pages)
 - Proyecto Pages `clinica-mexico-spa` creado hoy (era nuevo) — dominio oficial sigue siendo Workers
 - `integrika.mx` = Custom domain en Cloudflare apuntando al Worker `clinica-mexico-spa`
+
+## Completado (Jun 28, 2026 — Expediente Electrónico NOM-004 + Vista Paciente Enriquecida)
+
+### Vista paciente enriquecida ✅ (deploy `7c05ac70`)
+- [x] `PacienteHistorialDrawer` en `PacientesLista.tsx`: stats header (total citas, recetas, gasto farmacia completada, última visita)
+- [x] Doctor name en tab Citas (PostgREST embedded `doctors(nombre,apellidos)`)
+- [x] Tab "Notas" — notas clínicas SOAP vía `expedientes→notas_consulta` (2-step query)
+- [x] 5 queries en Promise.all único (antes eran 4 separadas); link "Expediente completo" → `/expediente/:patientId`
+
+### Expediente Electrónico NOM-004-SSA3-2012 ✅ (deploy `7c05ac70`)
+- [x] Tabla `antecedentes_clinicos` en Supabase con RLS (`has_role` admin/doctor/nurse):
+  - Heredofamiliares (8 condiciones + notas)
+  - No patológicos (tabaquismo, alcoholismo, drogas, actividad física, escolaridad, ocupación, estado civil)
+  - Patológicos (enfermedades, cirugías, hospitalizaciones, fracturas, transfusiones, inmunizaciones)
+  - Gineco-obstétricos (menarca, IVSA, FUM/FUP, G/P/C/A, método AC, papanicolaou, mastografía)
+  - UNIQUE(patient_id), trigger `updated_at`
+- [x] `src/pages/ExpedienteElectronico.tsx` — página `/expediente/:patientId`:
+  - 7 secciones NOM-004: Identificación, Heredofamiliares, No patológicos, Patológicos, Gineco-obstétricos, Notas SOAP, Prescripciones
+  - Form editable antecedentes con upsert automático (botón "Guardar antecedentes")
+  - Sección Gineco-Obstétricos solo visible si `sexo = 'F'` o null
+  - Botón "Imprimir" (`window.print()`) con `@media print` + pie de página firmas/sello
+  - Layout dual: UI editable en pantalla / vista compacta al imprimir
+  - Toolbar sticky con botones Regresar / Guardar / Imprimir
+- [x] Ruta `/expediente/:patientId` en `App.tsx` (roles: admin, doctor, nurse)
+- [x] `types.ts` regenerado desde Supabase prod
 
 ---
 

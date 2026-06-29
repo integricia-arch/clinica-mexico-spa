@@ -1,94 +1,64 @@
-# Task 1 — Loyalty Module DB Migrations: Fix Report
+# Task 1 Report: Pure helpers + tests for enfermería nursing module
 
-**Branch:** `feat/loyalty-module-etapa1`  
-**Date:** 2026-06-24  
-**Status:** DONE — All 5 fixes applied
+## Status: DONE
 
----
+## TDD Evidence
 
-## Original Migration
-
-`supabase/migrations/20260624000001_loyalty_tables.sql` — created 6 tables for the loyalty fidelización module:
-
-| Table | Purpose |
-|-------|---------|
-| `loyalty_config` | Per-clinic program configuration (name, slug, thresholds, multipliers) |
-| `loyalty_members` | Loyalty program members with consent tracking (LFPDPPP) |
-| `loyalty_planes` | Loyalty plans (frequent buyer, bonus points, direct discount) |
-| `loyalty_movimientos` | Append-only points ledger |
-| `loyalty_planes_progreso` | Member progress tracking per plan |
-| `loyalty_campanas` | Marketing campaigns and newsletters |
-
-Original migration also included indexes, `fn_set_updated_at` trigger, RLS on all 6 tables, and staff policies.
-
----
-
-## Fixes Applied
-
-### FIX 1 [HIGH]: Separated `permite_publicidad` into `000003` migration
-
-**Problem:** `ALTER TABLE medicamentos ADD COLUMN IF NOT EXISTS permite_publicidad` belonged in a dedicated migration, not mixed into the loyalty tables creation file.
-
-**Action:**
-- Removed the `ALTER TABLE medicamentos` + `UPDATE medicamentos` block from `000001`
-- Created `supabase/migrations/20260624000003_medicamentos_permite_publicidad.sql` with the column addition and OTC backfill
-- Legal rationale preserved: COFEPRIS Art. 307 LGS — controlled/prescription drugs cannot be advertised
-
-### FIX 2 [HIGH]: Added anon RLS policies for PWA (loyalty.integrika.mx)
-
-**Problem:** The PWA at `loyalty.integrika.mx` uses `@supabase/supabase-js` with the Supabase anon key. Without anon SELECT policies, all PWA queries to `loyalty_members`, `loyalty_config`, and `loyalty_movimientos` would return empty sets (RLS blocks anon by default).
-
-**Policies added:**
-- `loyalty_members_pwa_read` — anon can SELECT members WHERE `activo = true`
-- `loyalty_config_pwa_read` — anon can SELECT config WHERE `programa_activo = true`  
-- `loyalty_mov_pwa_read` — anon can SELECT movements (filtered by `member_id` in app query)
-
-Note: anon only gets SELECT. INSERT/UPDATE/DELETE still require `authenticated` role.
-
-### FIX 3 [MEDIUM]: Added `updated_at` trigger to `loyalty_config`
-
-**Problem:** `loyalty_config` has an `actualizado_at` column but no trigger to auto-update it on `UPDATE`. The existing `fn_set_updated_at()` sets `NEW.updated_at`, which does NOT match `loyalty_config`'s column name.
-
-**Action:** Created `fn_set_actualizado_at()` that sets `NEW.actualizado_at = now()`, and trigger `trg_loyalty_config_actualizado_at` on `loyalty_config`.
-
-### FIX 4 [MEDIUM]: Restricted `loyalty_planes_progreso` RLS to specific roles
-
-**Problem:** Original `loyalty_progreso_staff` policy used `FOR ALL`, giving any clinic member full write access to progress records. This allowed any staff role (including read-only roles) to insert/modify/delete plan progress.
-
-**Replacement (3 separate policies):**
-- `loyalty_progreso_read` — any clinic member can SELECT (POS needs to display plan progress)
-- `loyalty_progreso_write` — only `admin`, `manager`, `cajero` can INSERT
-- `loyalty_progreso_delete` — only `admin`, `manager` can DELETE
-
-Note: No UPDATE policy — progress records should be immutable once set (completions are recorded via new rows or the `completado_at`/`recompensa_entregada` flags on the existing row via the write policy).
-
-### FIX 5 [LOW]: Added missing index on `loyalty_campanas(clinic_id)`
-
-**Problem:** All queries to `loyalty_campanas` filter by `clinic_id` (the primary access pattern for multi-tenant queries and RLS evaluation), but no index existed.
-
-**Action:** Added `CREATE INDEX idx_loyalty_campanas_clinic ON loyalty_campanas(clinic_id);`
-
----
-
-## Files Modified
-
-| File | Change |
-|------|--------|
-| `supabase/migrations/20260624000001_loyalty_tables.sql` | FIX 1 (remove permite_publicidad), FIX 2 (anon policies), FIX 3 (actualizado_at trigger), FIX 4 (progreso role-split), FIX 5 (campanas index) |
-| `supabase/migrations/20260624000003_medicamentos_permite_publicidad.sql` | NEW — separated permite_publicidad migration |
-
----
-
-## Deployment
-
-Run:
+### RED Phase (test created, module doesn't exist)
 ```bash
-supabase db push --linked --include-all
+$ npx vitest run src/test/enfermeria/entrega-turno.test.ts
+
+FAIL  src/test/enfermeria/entrega-turno.test.ts
+Error: Failed to resolve import "@/features/enfermeria/entregaTurnoHelpers" from "src/test/enfermeria/entrega-turno.test.ts". Does the file exist?
 ```
 
-Then verify:
+### GREEN Phase (implementation created, tests pass)
 ```bash
-supabase db query --linked "SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'loyalty%' ORDER BY table_name;"
+$ npx vitest run src/test/enfermeria/entrega-turno.test.ts
+
+Test Files  1 passed (1)
+     Tests  5 passed (5)
+Start at  09:10:25
+Duration  939ms
 ```
 
-Expected tables: `loyalty_campanas`, `loyalty_config`, `loyalty_members`, `loyalty_movimientos`, `loyalty_planes`, `loyalty_planes_progreso`
+## TypeScript Verification
+```bash
+$ npx tsc --noEmit
+(no output = 0 errors)
+```
+
+## Files Created
+
+1. **`src/test/enfermeria/entrega-turno.test.ts`** — 71 lines
+   - 5 tests: defaultPacienteRow, defaultPendienteRow, filterValidPacientes (2 cases), filterValidPendientes
+   - Tests verify immutability, default values, and trimming behavior
+
+2. **`src/features/enfermeria/entregaTurnoHelpers.ts`** — 22 lines
+   - TypeScript interfaces: PacienteRow, PendienteRow
+   - 4 pure helper functions: defaultPacienteRow(), defaultPendienteRow(), filterValidPacientes(), filterValidPendientes()
+   - No mutations, no side effects, no external dependencies
+
+## Implementation Details
+
+- Interfaces use literal union types for estado ("estable" | "pendiente" | "urgente") and prioridad ("alta" | "media" | "baja")
+- Helpers use `.trim()` to handle whitespace-only strings as empty
+- Filter functions return new arrays (immutable), never modify input
+- All code is pure TypeScript, suitable for reuse in Task 2 (React components) and Task 3 (Supabase queries)
+
+## Commit
+
+**Short SHA:** c463343
+**Message:** `feat: enfermería — helpers puros PacienteRow/PendienteRow con tests`
+**Full SHA:** c46334313dee3dd31626926cb846399ff4ee9f41
+
+## Test Summary
+
+5/5 tests passing:
+- defaultPacienteRow returns correct defaults
+- defaultPendienteRow returns correct defaults
+- filterValidPacientes removes blank nombres and keeps valid rows
+- filterValidPacientes returns empty array when all nombres blank
+- filterValidPendientes removes blank descripcions
+
+All type checking passes. Code ready for Task 2 (React components).

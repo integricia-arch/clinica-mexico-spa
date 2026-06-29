@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Phone, Mail, Pencil } from "lucide-react";
+import { Search, Plus, Phone, Mail, Pencil, CalendarDays, FileText, ShoppingCart, ClipboardList, ExternalLink } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -19,6 +20,15 @@ type Appointment = {
   status: string | null;
   origen: string | null;
   motivo_consulta: string | null;
+  doctors: { nombre: string; apellidos: string } | null;
+};
+
+type NotaConsulta = {
+  id: string;
+  fecha_consulta: string;
+  subjetivo: string | null;
+  diagnostico_principal: string | null;
+  plan: string | null;
 };
 
 type Prescription = {
@@ -92,193 +102,237 @@ function PacienteHistorialDrawer({
   open: boolean;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [rxs, setRxs] = useState<Prescription[]>([]);
   const [sales, setSales] = useState<PharmacySale[]>([]);
   const [journeys, setJourneys] = useState<JourneyInstance[]>([]);
-  const [loadingAppts, setLoadingAppts] = useState(false);
-  const [loadingRxs, setLoadingRxs] = useState(false);
-  const [loadingSales, setLoadingSales] = useState(false);
-  const [loadingJourneys, setLoadingJourneys] = useState(false);
+  const [notas, setNotas] = useState<NotaConsulta[]>([]);
+  const [loadingAll, setLoadingAll] = useState(false);
 
   useEffect(() => {
     if (!open || !patient) return;
+    setLoadingAll(true);
 
-    setLoadingAppts(true);
-    supabase
-      .from("appointments")
-      .select("id,fecha_inicio,status,origen,motivo_consulta")
-      .eq("patient_id", patient.id)
-      .order("fecha_inicio", { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        setAppts((data as Appointment[]) ?? []);
-        setLoadingAppts(false);
-      });
+    Promise.all([
+      supabase
+        .from("appointments")
+        .select("id,fecha_inicio,status,origen,motivo_consulta,doctors(nombre,apellidos)")
+        .eq("patient_id", patient.id)
+        .order("fecha_inicio", { ascending: false })
+        .limit(30),
+      supabase
+        .from("prescriptions")
+        .select("id,prescription_number,created_at,status,diagnosis")
+        .eq("patient_id", patient.id)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("pharmacy_sales")
+        .select("id,created_at,total,status,payment_method")
+        .eq("patient_id", patient.id)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("journey_instances")
+        .select("id,created_at,status,journey_templates(name)")
+        .eq("patient_id", patient.id)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("expedientes")
+        .select("id")
+        .eq("patient_id", patient.id),
+    ]).then(async ([apptRes, rxRes, saleRes, journeyRes, expRes]) => {
+      setAppts((apptRes.data as unknown as Appointment[]) ?? []);
+      setRxs((rxRes.data as Prescription[]) ?? []);
+      setSales((saleRes.data as PharmacySale[]) ?? []);
+      setJourneys((journeyRes.data as unknown as JourneyInstance[]) ?? []);
 
-    setLoadingRxs(true);
-    supabase
-      .from("prescriptions")
-      .select("id,prescription_number,created_at,status,diagnosis")
-      .eq("patient_id", patient.id)
-      .order("created_at", { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        setRxs((data as Prescription[]) ?? []);
-        setLoadingRxs(false);
-      });
-
-    setLoadingSales(true);
-    supabase
-      .from("pharmacy_sales")
-      .select("id,created_at,total,status,payment_method")
-      .eq("patient_id", patient.id)
-      .order("created_at", { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        setSales((data as PharmacySale[]) ?? []);
-        setLoadingSales(false);
-      });
-
-    setLoadingJourneys(true);
-    supabase
-      .from("journey_instances")
-      .select("id,created_at,status,journey_templates(name)")
-      .eq("patient_id", patient.id)
-      .order("created_at", { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        setJourneys((data as unknown as JourneyInstance[]) ?? []);
-        setLoadingJourneys(false);
-      });
+      const expIds = (expRes.data ?? []).map((e: { id: string }) => e.id);
+      if (expIds.length > 0) {
+        const { data: notasData } = await supabase
+          .from("notas_consulta")
+          .select("id,fecha_consulta,subjetivo,diagnostico_principal,plan")
+          .in("expediente_id", expIds)
+          .order("fecha_consulta", { ascending: false })
+          .limit(20);
+        setNotas((notasData as NotaConsulta[]) ?? []);
+      } else {
+        setNotas([]);
+      }
+      setLoadingAll(false);
+    });
   }, [open, patient]);
+
+  // Computed stats
+  const ultimaVisita = appts[0]?.fecha_inicio ?? null;
+  const gastoFarmacia = sales
+    .filter(s => s.status === "completed")
+    .reduce((sum, s) => sum + (s.total ?? 0), 0);
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>
-            {patient ? `${patient.nombre} ${patient.apellidos}` : "Historial"}
-          </SheetTitle>
+          <div className="flex items-center justify-between gap-2">
+            <SheetTitle className="truncate">
+              {patient ? `${patient.nombre} ${patient.apellidos}` : "Historial"}
+            </SheetTitle>
+            {patient && (
+              <button
+                onClick={() => { onClose(); navigate(`/expediente/${patient.id}`); }}
+                className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Expediente completo
+              </button>
+            )}
+          </div>
         </SheetHeader>
 
+        {/* Stats row */}
+        {!loadingAll && (
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-lg bg-muted/50 p-2 text-center">
+              <p className="text-lg font-bold">{appts.length}</p>
+              <p className="text-[10px] text-muted-foreground">Citas</p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-2 text-center">
+              <p className="text-lg font-bold">{rxs.length}</p>
+              <p className="text-[10px] text-muted-foreground">Recetas</p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-2 text-center">
+              <p className="text-lg font-bold">${gastoFarmacia.toFixed(0)}</p>
+              <p className="text-[10px] text-muted-foreground">Farmacia</p>
+            </div>
+            {ultimaVisita && (
+              <div className="col-span-3 flex items-center gap-1.5 text-xs text-muted-foreground px-1">
+                <CalendarDays className="h-3 w-3" />
+                Última visita: {format(new Date(ultimaVisita), "dd 'de' MMMM yyyy", { locale: es })}
+              </div>
+            )}
+          </div>
+        )}
+
         <Tabs defaultValue="citas" className="mt-4">
-          <TabsList className="w-full">
-            <TabsTrigger value="citas" className="flex-1">Citas</TabsTrigger>
-            <TabsTrigger value="recetas" className="flex-1">Recetas</TabsTrigger>
-            <TabsTrigger value="pagos" className="flex-1">Pagos</TabsTrigger>
-            <TabsTrigger value="caminos" className="flex-1">Caminos</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-5">
+            <TabsTrigger value="citas" className="text-xs px-1">
+              <CalendarDays className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Citas</span>
+            </TabsTrigger>
+            <TabsTrigger value="notas" className="text-xs px-1">
+              <ClipboardList className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Notas</span>
+            </TabsTrigger>
+            <TabsTrigger value="recetas" className="text-xs px-1">
+              <FileText className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Recetas</span>
+            </TabsTrigger>
+            <TabsTrigger value="pagos" className="text-xs px-1">
+              <ShoppingCart className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Pagos</span>
+            </TabsTrigger>
+            <TabsTrigger value="caminos" className="text-xs px-1">
+              <span className="text-xs">Caminos</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="citas" className="mt-4 space-y-2">
-            {loadingAppts ? (
-              <Spinner />
-            ) : appts.length === 0 ? (
+            {loadingAll ? <Spinner /> : appts.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
-            ) : (
-              appts.map((a) => (
-                <div key={a.id} className="rounded-lg border border-border p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">
-                      {a.fecha_inicio
-                        ? format(new Date(a.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es })
-                        : "—"}
-                    </span>
-                    <span className={`text-xs font-medium ${apptStatusColor(a.status)}`}>
-                      {a.status ?? "—"}
-                    </span>
-                  </div>
-                  {a.motivo_consulta && (
-                    <p className="mt-1 text-xs text-muted-foreground truncate">{a.motivo_consulta}</p>
-                  )}
+            ) : appts.map((a) => (
+              <div key={a.id} className="rounded-lg border border-border p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">
+                    {a.fecha_inicio ? format(new Date(a.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es }) : "—"}
+                  </span>
+                  <span className={`text-xs font-medium ${apptStatusColor(a.status)}`}>{a.status ?? "—"}</span>
                 </div>
-              ))
-            )}
+                {a.doctors && (
+                  <p className="mt-0.5 text-xs text-blue-600">Dr. {a.doctors.nombre} {a.doctors.apellidos}</p>
+                )}
+                {a.motivo_consulta && (
+                  <p className="mt-0.5 text-xs text-muted-foreground truncate">{a.motivo_consulta}</p>
+                )}
+              </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="notas" className="mt-4 space-y-2">
+            {loadingAll ? <Spinner /> : notas.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">Sin notas clínicas</p>
+            ) : notas.map((n) => (
+              <div key={n.id} className="rounded-lg border border-border p-3 text-sm space-y-1">
+                <p className="text-xs text-muted-foreground font-medium">
+                  {format(new Date(n.fecha_consulta), "dd/MM/yyyy", { locale: es })}
+                </p>
+                {n.diagnostico_principal && (
+                  <p className="font-medium text-sm">{n.diagnostico_principal}</p>
+                )}
+                {n.subjetivo && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">{n.subjetivo}</p>
+                )}
+                {n.plan && (
+                  <p className="text-xs text-blue-600 line-clamp-1">Plan: {n.plan}</p>
+                )}
+              </div>
+            ))}
           </TabsContent>
 
           <TabsContent value="recetas" className="mt-4 space-y-2">
-            {loadingRxs ? (
-              <Spinner />
-            ) : rxs.length === 0 ? (
+            {loadingAll ? <Spinner /> : rxs.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
-            ) : (
-              rxs.map((r) => (
-                <div key={r.id} className="rounded-lg border border-border p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{r.prescription_number ?? r.id.slice(0, 8)}</span>
-                    <span className={`text-xs font-medium ${rxStatusColor(r.status)}`}>
-                      {r.status ?? "—"}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {r.created_at
-                        ? format(new Date(r.created_at), "dd/MM/yyyy HH:mm", { locale: es })
-                        : "—"}
-                    </span>
-                    {r.diagnosis && (
-                      <span className="text-xs text-muted-foreground truncate max-w-[60%]">{r.diagnosis}</span>
-                    )}
-                  </div>
+            ) : rxs.map((r) => (
+              <div key={r.id} className="rounded-lg border border-border p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{r.prescription_number ?? r.id.slice(0, 8)}</span>
+                  <span className={`text-xs font-medium ${rxStatusColor(r.status)}`}>{r.status ?? "—"}</span>
                 </div>
-              ))
-            )}
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {r.created_at ? format(new Date(r.created_at), "dd/MM/yyyy HH:mm", { locale: es }) : "—"}
+                  </span>
+                  {r.diagnosis && (
+                    <span className="text-xs text-muted-foreground truncate max-w-[60%]">{r.diagnosis}</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </TabsContent>
 
           <TabsContent value="pagos" className="mt-4 space-y-2">
-            {loadingSales ? (
-              <Spinner />
-            ) : sales.length === 0 ? (
+            {loadingAll ? <Spinner /> : sales.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
-            ) : (
-              sales.map((s) => (
-                <div key={s.id} className="rounded-lg border border-border p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">
-                      ${s.total != null ? s.total.toFixed(2) : "—"}
-                    </span>
-                    <span className={`text-xs font-medium ${saleStatusColor(s.status)}`}>
-                      {s.status ?? "—"}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {s.created_at
-                        ? format(new Date(s.created_at), "dd/MM/yyyy HH:mm", { locale: es })
-                        : "—"}
-                    </span>
-                    {s.payment_method && (
-                      <span className="text-xs text-muted-foreground">{s.payment_method}</span>
-                    )}
-                  </div>
+            ) : sales.map((s) => (
+              <div key={s.id} className="rounded-lg border border-border p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">${s.total != null ? s.total.toFixed(2) : "—"}</span>
+                  <span className={`text-xs font-medium ${saleStatusColor(s.status)}`}>{s.status ?? "—"}</span>
                 </div>
-              ))
-            )}
-          </TabsContent>
-          <TabsContent value="caminos" className="mt-4 space-y-2">
-            {loadingJourneys ? (
-              <Spinner />
-            ) : journeys.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
-            ) : (
-              journeys.map((j) => (
-                <div key={j.id} className="rounded-lg border border-border p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium truncate">
-                      {j.journey_templates?.name ?? "Camino"}
-                    </span>
-                    <span className={`text-xs font-medium ${journeyStatusColor(j.status)}`}>
-                      {j.status ?? "—"}
-                    </span>
-                  </div>
+                <div className="mt-1 flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">
-                    {j.created_at
-                      ? format(new Date(j.created_at), "dd/MM/yyyy HH:mm", { locale: es })
-                      : "—"}
+                    {s.created_at ? format(new Date(s.created_at), "dd/MM/yyyy HH:mm", { locale: es }) : "—"}
                   </span>
+                  {s.payment_method && <span className="text-xs text-muted-foreground">{s.payment_method}</span>}
                 </div>
-              ))
-            )}
+              </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="caminos" className="mt-4 space-y-2">
+            {loadingAll ? <Spinner /> : journeys.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">Sin registros</p>
+            ) : journeys.map((j) => (
+              <div key={j.id} className="rounded-lg border border-border p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium truncate">{j.journey_templates?.name ?? "Camino"}</span>
+                  <span className={`text-xs font-medium ${journeyStatusColor(j.status)}`}>{j.status ?? "—"}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {j.created_at ? format(new Date(j.created_at), "dd/MM/yyyy HH:mm", { locale: es }) : "—"}
+                </span>
+              </div>
+            ))}
           </TabsContent>
         </Tabs>
       </SheetContent>

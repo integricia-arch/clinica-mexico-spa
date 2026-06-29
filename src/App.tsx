@@ -55,6 +55,7 @@ import AvisoPrivacidad from "@/pages/AvisoPrivacidad";
 import TerminosServicio from "@/pages/TerminosServicio";
 import SolicitudARCO from "@/pages/SolicitudARCO";
 import ARCOAdmin from "@/pages/ARCOAdmin";
+import ExpedienteElectronico from "@/pages/ExpedienteElectronico";
 import Lealtad from "@/pages/Lealtad";
 
 const LoyaltyApp = React.lazy(() =>
@@ -99,6 +100,7 @@ const App = () => (
                         <Route path="/recepcion" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><RecepcionDashboard /></ProtectedRoute>} />
                         <Route path="/facturacion" element={<ProtectedRoute allowedRoles={["admin","receptionist"]}><Facturacion /></ProtectedRoute>} />
                         <Route path="/expedientes" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><Expedientes /></ProtectedRoute>} />
+                        <Route path="/expediente/:patientId" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse"]}><ExpedienteElectronico /></ProtectedRoute>} />
                         <Route path="/farmacia" element={<ProtectedRoute allowedRoles={["admin","nurse","receptionist","cajero"]}><TurnoGuard cajaFilter="farmacia"><Farmacia /></TurnoGuard></ProtectedRoute>} />
                         <Route path="/enfermeria" element={<ProtectedRoute allowedRoles={["admin", "manager", "nurse"]}><Enfermeria /></ProtectedRoute>} />
                         <Route path="/perfil/vincular-telegram" element={<ProtectedRoute allowedRoles={["admin","doctor","nurse","receptionist","cajero","manager"]}><VincularTelegram /></ProtectedRoute>} />

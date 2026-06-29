@@ -296,7 +296,26 @@ Cuando hay migrations con timestamps anteriores al último registrado en la DB, 
 ```bash
 supabase db push --linked --include-all
 ```
-Sin `--include-all` el CLI rechaza migrations "fuera de orden".
+Sin `--include-all` el CLI rechaza migrations "fuera de orden". El trigger específico: timestamps de nuevas migrations intercalados entre timestamps ya registrados en el historial remoto. <!-- /aprende 2026-06-24 -->
+
+### Renombrar una policy requiere DROP de AMBOS nombres <!-- /aprende 2026-06-24 -->
+
+Al renombrar `"policy_old_name"` → `"policy_new_name"` en una migration, incluir DROP IF EXISTS de los dos nombres:
+
+```sql
+DROP POLICY IF EXISTS "policy_old_name" ON tabla;
+DROP POLICY IF EXISTS "policy_new_name" ON tabla;
+CREATE POLICY "policy_new_name" ON tabla ...;
+```
+
+Sin DROP del nuevo nombre, una migration re-aplicada falla con "already exists" aunque el nombre viejo ya no exista.
+
+### Migration parcialmente aplicada → repair + re-push <!-- /aprende 2026-06-24 -->
+
+Cuando `supabase db push` falla con `ERROR: policy "X" already exists`:
+1. `supabase migration repair --status reverted <version>` — limpia el historial
+2. Agregar `DROP POLICY IF EXISTS` al inicio de la migration (hacerla idempotente)
+3. `supabase db push --linked` — re-aplica limpio
 
 ---
 
@@ -330,3 +349,42 @@ Columnas frecuentemente asumidas con nombres incorrectos. Siempre verificar cont
 
 ### Cast anti-patrón prohibido
 `supabase.from("x" as never) as ReturnType<typeof supabase.from>` — NUNCA usar. Rompe cuando types.ts está correcto.
+
+---
+
+## Módulo Fidelización — Learnings (added by /aprende 2026-06-24)
+
+### Normalizar teléfono a E.164 en registro POS <!-- /aprende 2026-06-24 -->
+- loyalty_members.telefono debe almacenar `+52XXXXXXXXXX` (E.164), nunca 10 dígitos raw.
+- Supabase Auth almacena `auth.users.phone` siempre en E.164. Sin normalización, `telefono = auth.users.phone` nunca coincide y el wallet PWA devuelve vacío.
+- Normalizar en el punto de inserción (registro POS) antes de cualquier `INSERT INTO loyalty_members`.
+
+### LFPDPPP Art. 8 — consentimiento activo (opt-in) <!-- /aprende 2026-06-24 -->
+- Checkboxes de consentimiento LFPDPPP deben: iniciar desmarcados, ser interactivos (nunca `disabled`), Submit bloqueado hasta check activo.
+- Pre-checked + disabled = consentimiento inválido = violación legal en México.
+
+### RLS PWA: USING(true) es agujero de seguridad en multi-tenant <!-- /aprende 2026-06-24 -->
+- `FOR SELECT TO authenticated USING(true)` expone TODAS las filas a cualquier usuario con token.
+- Scopear siempre: `USING(telefono = (SELECT phone FROM auth.users WHERE id = auth.uid()))`.
+- Auditar todos los DML del cliente PWA al diseñar RLS — SELECT-only no cubre UPDATE (ARCO consent revocation).
+
+### RPCs SECURITY DEFINER <!-- /aprende 2026-06-24 -->
+- Todas las RPCs con `SECURITY DEFINER` deben incluir `SET search_path = public` para prevenir schema poisoning.
+- RPCs internas (ej. `loyalty_recalculate_level`) que solo se llaman desde otras RPCs: `REVOKE EXECUTE ON FUNCTION nombre FROM PUBLIC` para prevenir llamadas directas del cliente.
+
+### pg_cron: scheduling idempotente <!-- /aprende 2026-06-24 -->
+```sql
+SELECT cron.unschedule('nombre-job');  -- primero, aunque no exista
+SELECT cron.schedule('nombre-job', '0 2 * * *', $$ ... $$);
+```
+Sin `unschedule` previo, re-aplicar la migration crea jobs duplicados.
+
+---
+
+## Learnings (added by /aprende 2026-06-28)
+
+### BI: tasaRetencion mide frecuencia intra-período, NO retención cross-período <!-- /aprende 2026-06-28 -->
+- La métrica `tasaRetencion` en `useBI.ts` cuenta % de pacientes con ≥2 citas **dentro del período seleccionado** (no pacientes que regresan en un período siguiente).
+- Label "Retención ≤90d" era semánticamente incorrecto — implica cross-período.
+- Fix correcto: renombrar label a "Pac. frecuentes" con suffix "≥2 citas/período". La lógica de cálculo no requiere cambio.
+- Si se quiere retención real (cross-período), es una métrica diferente: pacientes con cita en período N que también tuvieron cita en período N-1.

@@ -28,3 +28,58 @@ Columnas frecuentemente asumidas con nombres incorrectos. Siempre verificar cont
 
 ### Cast anti-patrón prohibido
 `supabase.from("x" as never) as ReturnType<typeof supabase.from>` — NUNCA usar. Rompe cuando types.ts está correcto.
+
+---
+
+## Supabase CLI + Migrations — addenda (added by /aprende 2026-06-24)
+
+### Renombrar policy → DROP ambos nombres <!-- /aprende 2026-06-24 -->
+```sql
+DROP POLICY IF EXISTS "policy_old_name" ON tabla;
+DROP POLICY IF EXISTS "policy_new_name" ON tabla;
+CREATE POLICY "policy_new_name" ON tabla ...;
+```
+
+### Migration parcialmente aplicada → repair + re-push <!-- /aprende 2026-06-24 -->
+1. `supabase migration repair --status reverted <version>`
+2. Agregar `DROP ... IF EXISTS` (idempotencia)
+3. `supabase db push --linked`
+
+### --include-all: trigger específico <!-- /aprende 2026-06-24 -->
+Usar cuando timestamps de nuevas migrations están intercalados entre timestamps ya registrados en historial remoto.
+
+---
+
+## Módulo Fidelización — Learnings (added by /aprende 2026-06-24)
+
+### Normalizar teléfono a E.164 en registro POS <!-- /aprende 2026-06-24 -->
+- loyalty_members.telefono debe almacenar `+52XXXXXXXXXX` (E.164), nunca 10 dígitos raw.
+- Sin normalización, `telefono = auth.users.phone` nunca coincide y el wallet PWA devuelve vacío.
+
+### LFPDPPP Art. 8 — consentimiento activo (opt-in) <!-- /aprende 2026-06-24 -->
+- Checkboxes de consentimiento: iniciar desmarcados, interactivos, Submit bloqueado hasta check activo.
+- Pre-checked + disabled = consentimiento inválido.
+
+### RLS PWA: USING(true) es agujero en multi-tenant <!-- /aprende 2026-06-24 -->
+- Scopear siempre: `USING(telefono = (SELECT phone FROM auth.users WHERE id = auth.uid()))`.
+- Auditar todos los DML del cliente PWA — SELECT-only no cubre UPDATE.
+
+### RPCs SECURITY DEFINER <!-- /aprende 2026-06-24 -->
+- Incluir `SET search_path = public` en todas las RPCs SECURITY DEFINER.
+- RPCs internas: `REVOKE EXECUTE ON FUNCTION nombre FROM PUBLIC`.
+
+### pg_cron: scheduling idempotente <!-- /aprende 2026-06-24 -->
+```sql
+SELECT cron.unschedule('nombre-job');
+SELECT cron.schedule('nombre-job', '0 2 * * *', $$ ... $$);
+```
+
+---
+
+## Learnings (added by /aprende 2026-06-28)
+
+### BI: tasaRetencion mide frecuencia intra-período, NO retención cross-período <!-- /aprende 2026-06-28 -->
+- `tasaRetencion` = % pacientes con ≥2 citas dentro del período seleccionado.
+- Label "Retención ≤90d" era incorrecto — implica cross-período.
+- Fix: label "Pac. frecuentes" + suffix "≥2 citas/período". Sin cambio de lógica.
+- Retención real (cross-período) es métrica diferente: pacientes con cita en período N que también tuvieron cita en N-1.
