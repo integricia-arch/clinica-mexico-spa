@@ -5,6 +5,7 @@ import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { useProveedores } from "@/hooks/useProveedores";
 import { useOrdenesCompra, type OrdenCompra, type OrdenCompraItem, type OrdenCompraItemInput } from "@/hooks/useOrdenesCompra";
+import { useSolicitudesCompra } from "@/hooks/useSolicitudesCompra";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -48,8 +49,10 @@ export default function OrdenesCompra() {
   const { ctx, navigateTo, clearCtx } = useComprasNav();
   const isManager = hasRole("admin") || hasRole("manager");
   const { items: ordenes, loading, error, create, confirmar, aprobar, rechazar, cancelar, getItems, refresh } = useOrdenesCompra(activeClinicId);
+  const { marcarConvertida } = useSolicitudesCompra(activeClinicId);
   const [rechazarDialog, setRechazarDialog] = useState<string | null>(null);
   const [rechazarMotivo, setRechazarMotivo] = useState("");
+  const [pendingSolicitudId, setPendingSolicitudId] = useState<string | null>(null);
 
   const [medicamentos, setMedicamentos] = useState<MedicamentoOption[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -88,6 +91,38 @@ export default function OrdenesCompra() {
   const [lineItems, setLineItems] = useState<(OrdenCompraItemInput & { _key: number })[]>([
     { ...EMPTY_ITEM, _key: Date.now() },
   ]);
+
+  // Pre-fill líneas desde solicitud de compra (SC → OC directo, sin cotización)
+  const ctxScApplied = useRef(false);
+  useEffect(() => {
+    if (!ctx.solicitud_id || ctxScApplied.current || medicamentos.length === 0) return;
+    ctxScApplied.current = true;
+    const scId = ctx.solicitud_id;
+    untypedTable("solicitudes_compra_items")
+      .select("*")
+      .eq("solicitud_id", scId)
+      .then(({ data, error }) => {
+        if (error) return; // keep context on fetch failure so user can retry
+        const its = (data ?? []) as { medicamento_id: string | null; cantidad: number; precio_estimado: number | null }[];
+        const mapped = its
+          .filter((it) => it.medicamento_id)
+          .map((it, i) => {
+            const med = medicamentos.find((m) => m.id === it.medicamento_id);
+            return {
+              _key: Date.now() + i,
+              medicamento_id: it.medicamento_id as string,
+              cantidad_pedida: it.cantidad,
+              precio_unitario_centavos: Math.round((it.precio_estimado ?? 0) * 100),
+              tasa_iva: med?.tasa_iva ?? 0,
+            };
+          });
+        if (mapped.length) setLineItems(mapped);
+        setPendingSolicitudId(scId);
+        setDialogOpen(true);
+        clearCtx();
+      })
+      .catch(() => { /* network failure — context preserved, user can retry */ });
+  }, [ctx.solicitud_id, clearCtx, medicamentos]);
 
   useEffect(() => {
     if (!activeClinicId) return;
@@ -161,7 +196,11 @@ export default function OrdenesCompra() {
     }
     setSaving(true);
     try {
-      await create({ ...form, items: validLines });
+      const ocId = await create({ ...form, items: validLines });
+      if (pendingSolicitudId) {
+        await marcarConvertida(pendingSolicitudId, ocId);
+        setPendingSolicitudId(null);
+      }
       toast({ title: "Orden de compra creada" });
       setDialogOpen(false);
       setForm({ proveedor_id: "", fecha_entrega_est: "", terminos_pago: 30, notas: "", requiere_anticipo: false });
@@ -347,7 +386,7 @@ export default function OrdenesCompra() {
       </div>
 
       {/* Dialog: Nueva OC */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setPendingSolicitudId(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nueva Orden de Compra</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
@@ -459,7 +498,7 @@ export default function OrdenesCompra() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setDialogOpen(false); setPendingSolicitudId(null); }} disabled={saving}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={saving}>
               {saving ? "Guardando…" : "Crear orden"}
             </Button>

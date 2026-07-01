@@ -1,23 +1,5 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## 🔴 URGENTE — próxima sesión primero: integrika.mx en blanco
-
-**Síntoma**: sitio en blanco, consola: `[supabase/client] VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY son requeridos.`
-
-**Causa raíz real**: `npm ci` falla en GitHub Actions (workflow "Deploy to Cloudflare Workers") — `package-lock.json` desincronizado de `package.json`:
-```
-npm error Missing: react-barcode@1.6.1 from lock file
-npm error Missing: jsbarcode@3.12.3 from lock file
-```
-Preexistente, no de los commits `731feba`/`e4a64e1`/`815e373`/`79df026` de la sesión 2026-07-02. Cada push desde que se agregaron esas 2 deps rompe el deploy → queda sirviendo un build viejo → ese build viejo sí tiene el bug de env vars sin configurar → blanco congelado.
-Confirmado con: `gh run list --limit 5` (3 runs "Deploy to Cloudflare Workers" en failure) + `gh run view <id> --log-failed`.
-
-**Fix**:
-1. `npm install` local (regenera lock con las 2 deps) → commit `package-lock.json`
-2. Verificar secrets GitHub Actions: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
-3. Push → verificar deploy verde → verificar `integrika.mx` carga en navegador
-4. Ver protocolo completo en `CLAUDE.md` sección "Lovable Security Fix Protocol"
-
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
@@ -26,6 +8,25 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - **Backend**: Supabase (proyecto: `kyfkvdyxpvpiacyymldc`)
 - **Deploy**: Cloudflare Workers (`https://clinica-mexico-spa.integric-ia.workers.dev`)
 - **Dominio**: `https://integrika.mx`
+
+## Completado (Jul 1, 2026 — fix deploy roto integrika.mx)
+
+- [x] Causa raíz #1: `package-lock.json` desincronizado (`react-barcode`, `jsbarcode` faltantes) → `npm ci` fallaba en GitHub Actions → deploy servía build viejo con bug de env vars → sitio en blanco.
+- [x] `npm install` local regeneró lock (+20 líneas) → commit `d859759`
+- [x] Merge con fix paralelo de Lovable (`types.ts`, `9ceaf0b`) → push `384df45`
+- [x] Secrets GitHub Actions verificados OK: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+- [x] Run "Deploy to Cloudflare Workers" verde (28553759744, 1m29s)
+
+### Causa raíz #2 (recurrencia misma tarde) — GH Actions verde pero Cloudflare servía bundle viejo <!-- /aprende 2026-07-01 -->
+- Tras el fix de arriba, el deploy automático reportó **success** pero `integrika.mx` seguía sirviendo `index-BgkOAiyU.js` (bundle roto), no el `index-Dq2K1e0h.js` generado por ese mismo run. El GH Action Worker deploy no se propagó al Worker real (causa exacta no confirmada — sospecha de deploy no efectivo del step `wrangler deploy` vía Action, no cache de Cloudflare).
+- **Fix aplicado**: deploy manual local —
+  ```powershell
+  cd C:\Users\pablo\clinica-mexico-spa
+  npm run build:all
+  wrangler deploy
+  ```
+  Bundle nuevo `index-qEwn6MAY.js` confirmado sirviendo (`curl https://integrika.mx/` con cache-bust). Usuario confirmó "ya carga bien".
+- **Pendiente para próxima sesión**: investigar por qué el step de deploy del workflow GH Actions no propaga al Worker aunque el job reporte success — revisar `wrangler deploy` output dentro del log del Action (`gh run view <id> --log`) comparando Version ID desplegado vs. el manual.
 
 ## Completado (Jul 2, 2026 — sesión 2026-07-02 — 4 pendientes de CxP/proveedores)
 

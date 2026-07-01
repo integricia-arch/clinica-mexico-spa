@@ -13,7 +13,7 @@ import { toast } from "@/lib/toast";
 import { Plus, ChevronDown, ChevronUp, ClipboardList, Check, X, Send, ShoppingCart, Trash2 } from "lucide-react";
 
 interface Medicamento { id: string; nombre: string; unidad: string; }
-interface Props { medicamentos: Medicamento[]; onConvertirOC?: (scId: string, items: SCItem[]) => void; }
+interface Props { medicamentos: Medicamento[]; }
 
 const ESTATUS_BADGE: Record<string, { label: string; color: string }> = {
   borrador:   { label: "Borrador",   color: "bg-muted text-muted-foreground border-0" },
@@ -28,7 +28,7 @@ const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigit
 
 const EMPTY_LINEA = { medicamento_id: null as string | null, descripcion: "", cantidad: 1, unidad: "", precio_estimado: 0, justificacion: "" };
 
-export default function SolicitudesCompra({ medicamentos, onConvertirOC }: Props) {
+export default function SolicitudesCompra({ medicamentos }: Props) {
   const { activeClinicId } = useActiveClinic();
   const { hasRole } = useAuth();
   const { navigateTo } = useComprasNav();
@@ -100,7 +100,7 @@ export default function SolicitudesCompra({ medicamentos, onConvertirOC }: Props
   const handleConvertirOC = async (sc: SolicitudCompra) => {
     const its = scItems[sc.id] ?? await getItems(sc.id);
     setScItems((prev) => ({ ...prev, [sc.id]: its }));
-    onConvertirOC?.(sc.id, its);
+    navigateTo("oc", { solicitud_id: sc.id, solicitud_folio: sc.folio });
   };
 
   if (loading) return <div className="py-12 text-center text-muted-foreground text-sm">Cargando solicitudes…</div>;
