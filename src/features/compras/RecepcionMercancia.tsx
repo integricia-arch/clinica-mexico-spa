@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useComprasNav } from "@/context/ComprasNavContext";
+import { useComprasNav } from "@/features/compras/ComprasNavContext";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useProveedores } from "@/hooks/useProveedores";
 import { useOrdenesCompra } from "@/hooks/useOrdenesCompra";

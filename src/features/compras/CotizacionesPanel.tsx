@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useComprasNav } from "@/context/ComprasNavContext";
+import { useComprasNav } from "@/features/compras/ComprasNavContext";
 import { useCotizaciones, type Cotizacion, type CotizacionItem, type NuevaCotizacion } from "@/hooks/useCotizaciones";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";

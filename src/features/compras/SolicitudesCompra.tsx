@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useComprasNav } from "@/context/ComprasNavContext";
+import { useComprasNav } from "@/features/compras/ComprasNavContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

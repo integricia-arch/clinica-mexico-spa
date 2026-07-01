@@ -1,4 +1,4 @@
-import { ComprasNavProvider, useComprasNav } from "@/context/ComprasNavContext";
+import { ComprasNavProvider, useComprasNav } from "@/features/compras/ComprasNavContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
