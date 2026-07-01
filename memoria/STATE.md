@@ -18,8 +18,8 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - [x] `tsc --noEmit` = 0 errores · `npm run build` limpio (solo warnings preexistentes de code-splitting)
 
 ### Pendiente / siguiente sesión
-- [ ] Commit + push de los 4 items de esta sesión (no committeado aún)
-- [ ] Opcional: columna "ABC" en tabla de proveedores de `inventario.tsx` (solo se agregó al form, no a la tabla de listado)
+- [x] Commit + push de los 4 items de esta sesión — `731feba` + `e4a64e1`
+- [x] Columna "ABC" en tabla de proveedores de `inventario.tsx` — badge circular junto a RFC — `815e373`
 - [ ] Verificar visualmente en navegador el flujo recepción→XML→CxP (no probado en browser esta sesión, solo tsc+build)
 
 ## Completado (Jun 24, 2026 — Farmacia Fidelización Etapa 1 — PLAN COMPLETO ✅)
