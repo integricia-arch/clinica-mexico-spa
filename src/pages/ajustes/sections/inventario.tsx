@@ -519,6 +519,9 @@ const EMPTY_PROVEEDOR: ProveedorInput = {
   rfc: "", regimen_fiscal: "", domicilio_fiscal: "", clabe: "", banco: "",
   terminos_pago: 30, plazo_entrega: 3, requiere_cofepris: false,
   clasificacion: "regular", estatus_efos: "no_verificado", notas: "",
+  clasificacion_abc: "C", cuenta_clabe: "", banco_nombre: "",
+  limite_credito_centavos: 0, dias_credito: 30,
+  descuento_pronto_pago_pct: 0, dias_pronto_pago: 10,
 };
 
 function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdit: boolean }) {
@@ -542,6 +545,10 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
       clabe: p.clabe, banco: p.banco, terminos_pago: p.terminos_pago, plazo_entrega: p.plazo_entrega,
       requiere_cofepris: p.requiere_cofepris, clasificacion: p.clasificacion,
       estatus_efos: p.estatus_efos, notas: p.notas,
+      clasificacion_abc: p.clasificacion_abc, cuenta_clabe: p.cuenta_clabe,
+      banco_nombre: p.banco_nombre, limite_credito_centavos: p.limite_credito_centavos,
+      dias_credito: p.dias_credito, descuento_pronto_pago_pct: p.descuento_pronto_pago_pct,
+      dias_pronto_pago: p.dias_pronto_pago,
     });
     resetProvErrors();
     setDialogOpen(true);
@@ -748,6 +755,79 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
                   <option value="regular">Regular</option>
                   <option value="ocasional">Ocasional</option>
                 </select>
+              </Field>
+            </div>
+
+            {/* CxP BI: crédito y pronto pago */}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Crédito y pronto pago (CxP)</p>
+            <div className="grid grid-cols-3 gap-4">
+              <Field label="Clasificación ABC">
+                <select
+                  value={form.clasificacion_abc}
+                  onChange={(e) => setField("clasificacion_abc", e.target.value as ProveedorInput["clasificacion_abc"])}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                </select>
+              </Field>
+              <Field label="Límite de crédito (MXN)">
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={form.limite_credito_centavos / 100}
+                  onChange={(e) => setField("limite_credito_centavos", Math.round(Number(e.target.value) * 100))}
+                  placeholder="0.00"
+                />
+              </Field>
+              <Field label="Días de crédito">
+                <Input
+                  type="number"
+                  min={0}
+                  max={180}
+                  value={form.dias_credito}
+                  onChange={(e) => setField("dias_credito", Number(e.target.value))}
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Descuento pronto pago (%)">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={form.descuento_pronto_pago_pct}
+                  onChange={(e) => setField("descuento_pronto_pago_pct", Number(e.target.value))}
+                />
+              </Field>
+              <Field label="Días para pronto pago">
+                <Input
+                  type="number"
+                  min={0}
+                  max={90}
+                  value={form.dias_pronto_pago}
+                  onChange={(e) => setField("dias_pronto_pago", Number(e.target.value))}
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Cuenta CLABE (auditoría)">
+                <Input
+                  value={form.cuenta_clabe}
+                  onChange={(e) => setField("cuenta_clabe", e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000000000000000"
+                  maxLength={18}
+                />
+              </Field>
+              <Field label="Banco (auditoría)">
+                <Input
+                  value={form.banco_nombre}
+                  onChange={(e) => setField("banco_nombre", e.target.value)}
+                  placeholder="Ej. BBVA, HSBC, Banorte"
+                />
               </Field>
             </div>
 

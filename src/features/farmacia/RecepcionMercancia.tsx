@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useComprasNav } from "@/context/ComprasNavContext";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useProveedores } from "@/hooks/useProveedores";
 import { useOrdenesCompra } from "@/hooks/useOrdenesCompra";
 import { useRecepcionesMercancia, type RecepcionItem } from "@/hooks/useRecepcionesMercancia";
+import { useFacturasProveedor } from "@/hooks/useFacturasProveedor";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ChevronDown, ChevronUp, CheckCircle, PackageOpen, AlertTriangle } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, CheckCircle, PackageOpen, AlertTriangle, Upload } from "lucide-react";
+import CfdiUploadPanel from "./CfdiUploadPanel";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Recepcion } from "@/hooks/useRecepcionesMercancia";
@@ -42,13 +45,19 @@ const EMPTY_ITEM: RecepcionItem = {
 export default function RecepcionMercancia() {
   const { activeClinicId } = useActiveClinic();
   const { toast } = useToast();
+  const { ctx, clearCtx } = useComprasNav();
   const { items: proveedores } = useProveedores(activeClinicId);
   const { items: ordenes, getItems: getOCItems } = useOrdenesCompra(activeClinicId);
   const { items: recepciones, loading, error, create, verificar, getItems } = useRecepcionesMercancia(activeClinicId);
+  const { create: createFactura } = useFacturasProveedor(activeClinicId);
+  const ctxApplied = useRef(false);
 
   const [medicamentos, setMedicamentos] = useState<MedicamentoOption[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Record<string, RecepcionItem[]>>({});
+  const [xmlPanelId, setXmlPanelId] = useState<string | null>(null);
+  const [recepcionFacturaId, setRecepcionFacturaId] = useState<Record<string, string>>({});
+  const [creatingFactura, setCreatingFactura] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -118,6 +127,36 @@ export default function RecepcionMercancia() {
     }
   }, [expanded, expandedItems, getItems]);
 
+  const handleSubirXML = useCallback(async (rec: Recepcion) => {
+    if (recepcionFacturaId[rec.id]) {
+      setXmlPanelId(rec.id);
+      return;
+    }
+    setCreatingFactura(rec.id);
+    try {
+      const facturaId = await createFactura({
+        proveedor_id: rec.proveedor_id,
+        orden_id: rec.orden_id,
+        recepcion_id: rec.id,
+        uuid_sat: "",
+        serie_folio_proveedor: rec.numero_remision ?? "",
+        fecha_factura: rec.fecha_recepcion,
+        fecha_vencimiento: rec.fecha_recepcion,
+        subtotal_centavos: 0,
+        iva_centavos: 0,
+        total_centavos: 0,
+        concepto: `Recepción ${rec.folio_recepcion}`,
+        notas: "",
+      });
+      setRecepcionFacturaId((prev) => ({ ...prev, [rec.id]: facturaId }));
+      setXmlPanelId(rec.id);
+    } catch (e) {
+      toast({ title: String(e), variant: "destructive" });
+    } finally {
+      setCreatingFactura(null);
+    }
+  }, [recepcionFacturaId, createFactura, toast]);
+
   const updateLine = (key: number, field: keyof RecepcionItem, value: string | number | null) =>
     setLineItems((prev) =>
       prev.map((l) => l._key === key ? { ...l, [field]: value } : l)
@@ -168,6 +207,16 @@ export default function RecepcionMercancia() {
       setSaving(false);
     }
   };
+
+  // Pre-select OC from navigation context once ordenes are loaded
+  useEffect(() => {
+    if (!ctx.orden_id || !ordenes.length) return;
+    const oc = ordenes.find((o) => o.id === ctx.orden_id);
+    if (!oc || (oc.estatus !== "confirmada" && oc.estatus !== "parcial")) return;
+    void handleOCSelect(ctx.orden_id);
+    setDialogOpen(true);
+    clearCtx();
+  }, [ctx.orden_id, ordenes, handleOCSelect, clearCtx]);
 
   const ordenesRecibibles = ordenes.filter((o) => o.estatus === "confirmada" || o.estatus === "parcial");
 
@@ -236,6 +285,32 @@ export default function RecepcionMercancia() {
                       <span>Esta recepción tiene diferencias respecto a la OC. Revisa y valida.</span>
                     </div>
                   )}
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CFDI XML · Trazabilidad anti-robo</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        disabled={creatingFactura === rec.id}
+                        onClick={() => xmlPanelId === rec.id ? setXmlPanelId(null) : handleSubirXML(rec)}
+                      >
+                        <Upload className="h-3 w-3 mr-1" />
+                        {creatingFactura === rec.id ? "Preparando…" : xmlPanelId === rec.id ? "Cerrar" : "Subir XML factura"}
+                      </Button>
+                    </div>
+                    {xmlPanelId === rec.id && recepcionFacturaId[rec.id] && (
+                      <div className="rounded-lg border bg-muted/20 p-3">
+                        <CfdiUploadPanel
+                          facturaProveedorId={recepcionFacturaId[rec.id]}
+                          ordenCompraId={rec.orden_id ?? undefined}
+                          recepcionId={rec.id}
+                          proveedorId={rec.proveedor_id}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">

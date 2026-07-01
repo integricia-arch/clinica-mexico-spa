@@ -9,6 +9,19 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - **Deploy**: Cloudflare Workers (`https://clinica-mexico-spa.integric-ia.workers.dev`)
 - **Dominio**: `https://integrika.mx`
 
+## Completado (Jul 2, 2026 — sesión 2026-07-02 — 4 pendientes de CxP/proveedores)
+
+- [x] `supabase db push --linked --include-all` — 2 migrations aplicadas: `ordenes_compra_requiere_anticipo` + `cxp_bi_proveedores` (tablas `cxp_alertas`, `historial_clabe_proveedor`, triggers duplicado/límite crédito, 4 views KPI)
+- [x] CxP alertas UI: `src/hooks/useCxpAlertas.ts` (pendientes/críticas/resolver) + `AlertasCxpPanel.tsx` (lista resolvable) montado en `FacturasProveedor.tsx` + badge count destructive en TabsTrigger "cxp" de `ComprasTabs.tsx`
+- [x] Form proveedores enriquecido: `clasificacion_abc` (A/B/C), `cuenta_clabe`, `banco_nombre`, `limite_credito_centavos`, `dias_credito`, `descuento_pronto_pago_pct`, `dias_pronto_pago` — agregados a `useProveedores.ts` (Proveedor/ProveedorInput/toRow/toProveedor/EMPTY_PROVEEDOR_INPUT) + sección "Crédito y pronto pago (CxP)" en dialog de `ajustes/sections/inventario.tsx`
+- [x] XML CFDI en recepción: `RecepcionMercancia.tsx` — botón "Subir XML factura" por recepción crea factura_proveedor provisional (subtotal/iva/total=0, linked a recepcion_id+orden_id) vía `useFacturasProveedor.create()`, luego monta `CfdiUploadPanel` existente para 4-way match / alerta anti-robo (cantidad facturada > recibida). Montos reales se completan después vía "Registrar CFDI real" (flujo `confirmarProvisional` ya existente en tab CxP).
+- [x] `tsc --noEmit` = 0 errores · `npm run build` limpio (solo warnings preexistentes de code-splitting)
+
+### Pendiente / siguiente sesión
+- [ ] Commit + push de los 4 items de esta sesión (no committeado aún)
+- [ ] Opcional: columna "ABC" en tabla de proveedores de `inventario.tsx` (solo se agregó al form, no a la tabla de listado)
+- [ ] Verificar visualmente en navegador el flujo recepción→XML→CxP (no probado en browser esta sesión, solo tsc+build)
+
 ## Completado (Jun 24, 2026 — Farmacia Fidelización Etapa 1 — PLAN COMPLETO ✅)
 
 Branch: `feat/loyalty-module-etapa1` → mergeada a `main` `2b4ad85` ✅
@@ -884,6 +897,28 @@ Commit final: `66bf606` · Deploy Workers: `e58cf44d`
 
 ---
 
+### ✅ Ciclo Compras — Fase 1 + Fase 5 COMPLETO (Jun 28, 2026)
+Migration: `20260709000001_ciclo_compras_trazabilidad.sql` · Aplicada ✅
+
+**Fase 1 — Trazabilidad BD:**
+- [x] `ordenes_compra.cotizacion_id UUID` FK → `cotizaciones(id)` + índice
+- [x] `facturas_proveedor.solicitud_id UUID` FK → `solicitudes_compra(id)` + índice
+- [x] Vista `v_ciclo_compras`: SC → Cotización → OC → GR → Factura → Pago
+
+**Fase 5 — COSO Segregación:**
+- [x] RLS `coso_update_recepciones`: solo admin/manager confirman GR
+- [x] RPC `confirmar_recepcion_mercancia(p_recepcion_id)` SECURITY DEFINER
+- [x] RLS `coso_update_facturas_proveedor`: diferencia ≠0 requiere admin/manager
+- [x] RPC `aprobar_diferencia_factura(p_factura_id, p_notas)` SECURITY DEFINER
+
+**Pendiente (Fases 2, 3, 4, 6):**
+- [ ] Fase 2: Triggers DB para eventos del ciclo
+- [ ] Fase 3: UI workflow ciclo de compras
+- [ ] Fase 4: KPI dashboard métricas compras
+- [ ] Fase 6: Reportes auditoría ciclo compras
+
+---
+
 ### Cola de investigación (próximas sesiones — requieren análisis antes de implementar)
 
 #### INV-A: Validación operativa contable y administrativa
@@ -1356,6 +1391,42 @@ Deploy Workers: `30a3a2d0` · `integrika.mx/enfermeria` operativo ✅
   - Toolbar sticky con botones Regresar / Guardar / Imprimir
 - [x] Ruta `/expediente/:patientId` en `App.tsx` (roles: admin, doctor, nurse)
 - [x] `types.ts` regenerado desde Supabase prod
+
+---
+
+## Completado (Jul 1, 2026 — ciclo compras nav + code review + CxP BI)
+
+### Botones navegación ciclo compras ✅
+- [x] SC "Cotizar →" → `navigateTo("cotizaciones")`, CotizacionesPanel pre-selecciona SC
+- [x] Cotizaciones "Generar OC →" → `navigateTo("oc")`, OrdenesCompra pre-rellena proveedor
+- [x] OC "Registrar recepción →" → `navigateTo("recepcion")`, RecepcionMercancia pre-selecciona (solo confirmada/parcial)
+- [x] FacturasProveedor gate: pago bloqueado hasta `recepcion_estatus = 'verificada'`, salvo `requiere_anticipo`
+- [x] Migration: `ordenes_compra.requiere_anticipo boolean DEFAULT false`
+
+### Code review HIGH — 8 findings CONFIRMED, todos fixed ✅
+1. Tab names `"ordenes"`→`"oc"`, `"recepciones"`→`"recepcion"` (botones de nav completamente rotos)
+2. `clearCtx()` incondicional → solo en éxito fetch
+3. Sin `.catch()` en fetch cotizacion → preserva ctx en fallo red
+4. `ocFetched.current.add(id)` antes de resolver → movido a callback success
+5. Swallowed error FacturasProveedor → no marca como fetched si error
+6. `handleOCSelect` en OC no-recibible → guard estatus añadido
+7. `ctxApplied` refs redundantes eliminados (CotizacionesPanel, RecepcionMercancia)
+8. `grOk = !!f.recepcion_id` → `f.recepcion_estatus === 'verificada'`
+9. `as never` casts → `untypedTable()` en FacturasProveedor + OrdenesCompra
+10. `useFacturasProveedor`: join GR estatus + campo `recepcion_estatus`
+
+### CxP BI — Inteligencia de Negocios con Proveedores ✅
+Migration `20260701130000_cxp_bi_proveedores.sql` (PENDIENTE: `supabase db push --linked --include-all`):
+- `proveedores`: +8 cols BI (clasificacion_abc, rfc_verificado, clabe, limite_credito, dias_credito, descuento_pronto_pago_pct, dias_pronto_pago)
+- `historial_clabe_proveedor` tabla + RLS (control dual COSO)
+- `cxp_alertas` tabla + RLS + triggers anti-duplicado UUID SAT + límite crédito
+- 4 views: `kpi_dpo_proveedor`, `concentracion_proveedores`, `kpi_descuento_pronto_pago`, `resumen_alertas_cxp`
+
+**Pendiente siguiente sesión:**
+- [ ] `supabase db push --linked --include-all` (2 migrations pendientes)
+- [ ] Hook `useCxpAlertas` + UI badge + lista resolvable en tab CxP
+- [ ] Populate `fecha_limite_pronto_pago` al crear factura
+- [ ] UI enriquecer form proveedores (clasificación, CLABE, límite, descuento)
 
 ---
 

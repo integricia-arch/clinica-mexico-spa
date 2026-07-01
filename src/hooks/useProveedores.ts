@@ -21,6 +21,13 @@ export interface Proveedor {
   estatus_efos: "no_verificado" | "ok" | "alerta";
   ultima_verificacion_efos: string | null;
   notas: string;
+  clasificacion_abc: "A" | "B" | "C";
+  cuenta_clabe: string;
+  banco_nombre: string;
+  limite_credito_centavos: number;
+  dias_credito: number;
+  descuento_pronto_pago_pct: number;
+  dias_pronto_pago: number;
 }
 
 export interface ProveedorInput {
@@ -40,6 +47,13 @@ export interface ProveedorInput {
   clasificacion: "critico" | "regular" | "ocasional";
   estatus_efos: "no_verificado" | "ok" | "alerta";
   notas: string;
+  clasificacion_abc: "A" | "B" | "C";
+  cuenta_clabe: string;
+  banco_nombre: string;
+  limite_credito_centavos: number;
+  dias_credito: number;
+  descuento_pronto_pago_pct: number;
+  dias_pronto_pago: number;
 }
 
 interface ProveedorRow {
@@ -61,6 +75,13 @@ interface ProveedorRow {
   estatus_efos: string | null;
   ultima_verificacion_efos: string | null;
   notas: string | null;
+  clasificacion_abc: string | null;
+  cuenta_clabe: string | null;
+  banco_nombre: string | null;
+  limite_credito_centavos: number | null;
+  dias_credito: number | null;
+  descuento_pronto_pago_pct: number | null;
+  dias_pronto_pago: number | null;
 }
 
 const toProveedor = (row: ProveedorRow): Proveedor => ({
@@ -82,6 +103,13 @@ const toProveedor = (row: ProveedorRow): Proveedor => ({
   estatus_efos: (row.estatus_efos as Proveedor["estatus_efos"]) ?? "no_verificado",
   ultima_verificacion_efos: row.ultima_verificacion_efos ?? null,
   notas: row.notas ?? "",
+  clasificacion_abc: (row.clasificacion_abc as Proveedor["clasificacion_abc"]) ?? "C",
+  cuenta_clabe: row.cuenta_clabe ?? "",
+  banco_nombre: row.banco_nombre ?? "",
+  limite_credito_centavos: row.limite_credito_centavos ?? 0,
+  dias_credito: row.dias_credito ?? 30,
+  descuento_pronto_pago_pct: row.descuento_pronto_pago_pct ?? 0,
+  dias_pronto_pago: row.dias_pronto_pago ?? 10,
 });
 
 const toRow = (input: ProveedorInput) => ({
@@ -101,6 +129,13 @@ const toRow = (input: ProveedorInput) => ({
   clasificacion: input.clasificacion,
   estatus_efos: input.estatus_efos,
   notas: input.notas.trim() || null,
+  clasificacion_abc: input.clasificacion_abc,
+  cuenta_clabe: input.cuenta_clabe.replace(/\s/g, "") || null,
+  banco_nombre: input.banco_nombre.trim() || null,
+  limite_credito_centavos: input.limite_credito_centavos,
+  dias_credito: input.dias_credito,
+  descuento_pronto_pago_pct: input.descuento_pronto_pago_pct,
+  dias_pronto_pago: input.dias_pronto_pago,
 });
 
 export const EMPTY_PROVEEDOR_INPUT: ProveedorInput = {
@@ -108,6 +143,9 @@ export const EMPTY_PROVEEDOR_INPUT: ProveedorInput = {
   rfc: "", regimen_fiscal: "", domicilio_fiscal: "", clabe: "", banco: "",
   terminos_pago: 30, plazo_entrega: 3, requiere_cofepris: false,
   clasificacion: "regular", estatus_efos: "no_verificado", notas: "",
+  clasificacion_abc: "C", cuenta_clabe: "", banco_nombre: "",
+  limite_credito_centavos: 0, dias_credito: 30,
+  descuento_pronto_pago_pct: 0, dias_pronto_pago: 10,
 };
 
 export function useProveedores(clinicId: string | null) {
@@ -125,7 +163,7 @@ export function useProveedores(clinicId: string | null) {
     setError(null);
     try {
       const { data, error: qErr } = await untypedTable("proveedores")
-        .select("id, nombre, contacto, telefono, email, activo, rfc, regimen_fiscal, domicilio_fiscal, clabe, banco, terminos_pago, plazo_entrega, requiere_cofepris, clasificacion, estatus_efos, ultima_verificacion_efos, notas")
+        .select("id, nombre, contacto, telefono, email, activo, rfc, regimen_fiscal, domicilio_fiscal, clabe, banco, terminos_pago, plazo_entrega, requiere_cofepris, clasificacion, estatus_efos, ultima_verificacion_efos, notas, clasificacion_abc, cuenta_clabe, banco_nombre, limite_credito_centavos, dias_credito, descuento_pronto_pago_pct, dias_pronto_pago")
         .eq("clinic_id", clinicId)
         .order("nombre");
       if (qErr) throw qErr;

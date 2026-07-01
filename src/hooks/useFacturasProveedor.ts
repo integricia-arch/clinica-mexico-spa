@@ -10,6 +10,7 @@ export interface FacturaProveedor {
   proveedor_nombre?: string;
   orden_id: string | null;
   recepcion_id: string | null;
+  recepcion_estatus: string | null;
   folio_interno: string;
   uuid_sat: string | null;
   serie_folio_proveedor: string;
@@ -76,6 +77,7 @@ interface FacturaRow {
   proveedores?: { nombre: string } | null;
   orden_id: string | null;
   recepcion_id: string | null;
+  recepciones_mercancia?: { estatus: string } | null;
   folio_interno: string;
   uuid_sat: string | null;
   serie_folio_proveedor: string | null;
@@ -105,6 +107,7 @@ const toFactura = (row: FacturaRow): FacturaProveedor => ({
   proveedor_nombre: row.proveedores?.nombre ?? "",
   orden_id: row.orden_id,
   recepcion_id: row.recepcion_id,
+  recepcion_estatus: row.recepciones_mercancia?.estatus ?? null,
   folio_interno: row.folio_interno,
   uuid_sat: row.uuid_sat,
   serie_folio_proveedor: row.serie_folio_proveedor ?? "",
@@ -144,7 +147,7 @@ export function useFacturasProveedor(clinicId: string | null) {
     setError(null);
     try {
       const { data, error: qErr } = await untypedTable("facturas_proveedor")
-        .select("*, proveedores(nombre)")
+        .select("*, proveedores(nombre), recepciones_mercancia!recepcion_id(estatus)")
         .eq("clinic_id", clinicId)
         .order("fecha_vencimiento", { ascending: true });
       if (qErr) throw qErr;

@@ -1,4 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { untypedTable } from "@/lib/untypedTable";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useProveedores } from "@/hooks/useProveedores";
 import { useFacturasProveedor, type FacturaProveedor, type FacturaInput, type PagoProveedor } from "@/hooks/useFacturasProveedor";
@@ -12,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, ChevronDown, ChevronUp, AlertTriangle, FileText, CreditCard, Upload } from "lucide-react";
 import ThreeWayMatchPanel from "./ThreeWayMatchPanel";
 import CfdiUploadPanel from "./CfdiUploadPanel";
+import AlertasCxpPanel from "./AlertasCxpPanel";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -49,6 +52,8 @@ export default function FacturasProveedor() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedPagos, setExpandedPagos] = useState<Record<string, PagoProveedor[]>>({});
   const [filtro, setFiltro] = useState<"todas" | "pendientes" | "vencidas">("pendientes");
+  const [ocAnticipoMap, setOcAnticipoMap] = useState<Record<string, boolean>>({});
+  const ocFetched = useRef<Set<string>>(new Set());
 
   const [factDialog, setFactDialog] = useState(false);
   const [pagoDialog, setPagoDialog] = useState<string | null>(null);
@@ -69,7 +74,28 @@ export default function FacturasProveedor() {
         setExpandedPagos((prev) => ({ ...prev, [id]: pagos }));
       } catch { /* non-critical */ }
     }
-  }, [expanded, expandedPagos, getPagos]);
+    // Fetch requiere_anticipo from linked OC for payment gate
+    if (!ocFetched.current.has(id)) {
+      const factura = items.find((f) => f.id === id);
+      if (factura?.orden_id) {
+        untypedTable("ordenes_compra")
+          .select("requiere_anticipo")
+          .eq("id", factura.orden_id)
+          .single()
+          .then(({ data, error }) => {
+            if (error) return; // leave unfetched so next expand retries
+            ocFetched.current.add(id);
+            const d = data as { requiere_anticipo: boolean } | null;
+            setOcAnticipoMap((prev) => ({ ...prev, [id]: d?.requiere_anticipo ?? false }));
+          })
+          .catch(() => { /* network failure — retry on next expand */ });
+      } else {
+        // No OC linked — mark as fetched with false to avoid repeated no-ops
+        ocFetched.current.add(id);
+        setOcAnticipoMap((prev) => ({ ...prev, [id]: false }));
+      }
+    }
+  }, [expanded, expandedPagos, getPagos, items]);
 
   const handleCreateFactura = async () => {
     if (!factForm.proveedor_id) {
@@ -185,6 +211,7 @@ export default function FacturasProveedor() {
 
   return (
     <div className="space-y-4">
+      <AlertasCxpPanel />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold">Cuentas por Pagar</h3>
@@ -339,11 +366,20 @@ export default function FacturasProveedor() {
                       <FileText className="h-4 w-4 mr-1" /> Registrar CFDI real
                     </Button>
                   )}
-                  {(f.estatus === "pendiente" || f.estatus === "parcial") && (
-                    <Button size="sm" onClick={() => { setPagoDialog(f.id); setPagoForm({ ...EMPTY_PAGO, monto_str: (f.saldo_pendiente_centavos / 100).toFixed(2) }); }}>
-                      <CreditCard className="h-4 w-4 mr-1" /> Registrar pago
-                    </Button>
-                  )}
+                  {(f.estatus === "pendiente" || f.estatus === "parcial") && (() => {
+                    const grOk = f.recepcion_estatus === "verificada";
+                    const anticipo = ocAnticipoMap[f.id] ?? false;
+                    return grOk || anticipo ? (
+                      <Button size="sm" onClick={() => { setPagoDialog(f.id); setPagoForm({ ...EMPTY_PAGO, monto_str: (f.saldo_pendiente_centavos / 100).toFixed(2) }); }}>
+                        <CreditCard className="h-4 w-4 mr-1" /> Registrar pago
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        Pago bloqueado — se requiere GR vinculada. Activa "Requiere anticipo" en la OC para desbloquear anticipadamente.
+                      </div>
+                    );
+                  })()}
 
                   {/* Historial de pagos */}
                   {(expandedPagos[f.id] ?? []).length > 0 && (
