@@ -30,6 +30,7 @@ export interface OrdenCompra {
   iva_centavos: number;
   total_centavos: number;
   notas: string;
+  requiere_anticipo: boolean;
   created_at: string;
   items?: OrdenCompraItem[];
 }
@@ -46,6 +47,7 @@ export interface OrdenCompraInput {
   fecha_entrega_est: string;
   terminos_pago: number;
   notas: string;
+  requiere_anticipo?: boolean;
   items: OrdenCompraItemInput[];
 }
 
@@ -64,6 +66,7 @@ interface OrdenRow {
   iva_centavos: number;
   total_centavos: number;
   notas: string | null;
+  requiere_anticipo: boolean;
   created_at: string;
 }
 
@@ -82,6 +85,7 @@ const toOrden = (row: OrdenRow): OrdenCompra => ({
   iva_centavos: row.iva_centavos,
   total_centavos: row.total_centavos,
   notas: row.notas ?? "",
+  requiere_anticipo: row.requiere_anticipo ?? false,
   created_at: row.created_at,
 });
 
@@ -158,6 +162,7 @@ export function useOrdenesCompra(clinicId: string | null) {
         terminos_pago: input.terminos_pago,
         fecha_entrega_est: input.fecha_entrega_est || null,
         notas: input.notas.trim() || null,
+        requiere_anticipo: input.requiere_anticipo ?? false,
         estatus,
         ...totales,
       })

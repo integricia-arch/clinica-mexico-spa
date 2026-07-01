@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useComprasNav } from "@/context/ComprasNavContext";
 import { useCotizaciones, type Cotizacion, type CotizacionItem, type NuevaCotizacion } from "@/hooks/useCotizaciones";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -287,11 +288,18 @@ export default function CotizacionesPanel() {
   const { fetchCotizaciones, seleccionarCotizacion, loading, error } = useCotizaciones();
   const { activeClinicId } = useActiveClinic();
   const { toast } = useToast();
+  const { ctx, navigateTo, clearCtx } = useComprasNav();
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [solicitudes, setSolicitudes] = useState<SolicitudOption[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [scFiltro, setScFiltro] = useState("todas");
+  // Pre-select SC from navigation context
+  useEffect(() => {
+    if (!ctx.solicitud_id) return;
+    setScFiltro(ctx.solicitud_id);
+    clearCtx();
+  }, [ctx.solicitud_id, clearCtx]);
 
   const cargar = useCallback(async () => {
     const sc = scFiltro !== "todas" ? scFiltro : undefined;
@@ -400,11 +408,22 @@ export default function CotizacionesPanel() {
                       {c.notas ? ` · ${c.notas}` : ""}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold">{fmt(c.total_centavos)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {fmt(c.subtotal_centavos)} + {fmt(c.iva_centavos)} IVA
-                    </p>
+                  <div className="flex items-center gap-3">
+                    {c.seleccionada && (
+                      <Button
+                        size="sm"
+                        className="gap-1.5 text-xs bg-green-700 hover:bg-green-800 text-white shrink-0"
+                        onClick={() => navigateTo("oc", { cotizacion_id: c.id })}
+                      >
+                        <ShoppingCart className="h-3.5 w-3.5" /> Generar OC →
+                      </Button>
+                    )}
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{fmt(c.total_centavos)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {fmt(c.subtotal_centavos)} + {fmt(c.iva_centavos)} IVA
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}

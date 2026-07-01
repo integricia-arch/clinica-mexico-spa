@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useComprasNav } from "@/context/ComprasNavContext";
+import { untypedTable } from "@/lib/untypedTable";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { useProveedores } from "@/hooks/useProveedores";
@@ -11,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Plus, ChevronDown, ChevronUp, ShoppingCart, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, ChevronDown, ChevronUp, ShoppingCart, CheckCircle, XCircle, Trash2, PackageOpen } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -43,6 +45,7 @@ export default function OrdenesCompra() {
   const { toast } = useToast();
   const { items: proveedores } = useProveedores(activeClinicId);
   const { hasRole } = useAuth();
+  const { ctx, navigateTo, clearCtx } = useComprasNav();
   const isManager = hasRole("admin") || hasRole("manager");
   const { items: ordenes, loading, error, create, confirmar, aprobar, rechazar, cancelar, getItems, refresh } = useOrdenesCompra(activeClinicId);
   const [rechazarDialog, setRechazarDialog] = useState<string | null>(null);
@@ -59,7 +62,29 @@ export default function OrdenesCompra() {
     fecha_entrega_est: "",
     terminos_pago: 30,
     notas: "",
+    requiere_anticipo: false,
   });
+  const ctxApplied = useRef(false);
+
+  // Pre-fill proveedor from cotizacion context
+  useEffect(() => {
+    if (!ctx.cotizacion_id || ctxApplied.current) return;
+    ctxApplied.current = true;
+    untypedTable("cotizaciones")
+      .select("proveedor_id")
+      .eq("id", ctx.cotizacion_id)
+      .single()
+      .then(({ data, error }) => {
+        if (error) return; // keep context on fetch failure so user can retry
+        const d = data as { proveedor_id: string } | null;
+        if (d?.proveedor_id) {
+          setForm((f) => ({ ...f, proveedor_id: d.proveedor_id }));
+          setDialogOpen(true);
+          clearCtx();
+        }
+      })
+      .catch(() => { /* network failure — context preserved, user can retry */ });
+  }, [ctx.cotizacion_id, clearCtx]);
   const [lineItems, setLineItems] = useState<(OrdenCompraItemInput & { _key: number })[]>([
     { ...EMPTY_ITEM, _key: Date.now() },
   ]);
@@ -139,7 +164,7 @@ export default function OrdenesCompra() {
       await create({ ...form, items: validLines });
       toast({ title: "Orden de compra creada" });
       setDialogOpen(false);
-      setForm({ proveedor_id: "", fecha_entrega_est: "", terminos_pago: 30, notas: "" });
+      setForm({ proveedor_id: "", fecha_entrega_est: "", terminos_pago: 30, notas: "", requiere_anticipo: false });
       setLineItems([{ ...EMPTY_ITEM, _key: Date.now() }]);
     } catch (e) {
       toast({ title: String(e), variant: "destructive" });
@@ -263,6 +288,16 @@ export default function OrdenesCompra() {
                         </Button>
                       </>
                     )}
+                    {(oc.estatus === "confirmada" || oc.estatus === "parcial") && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-green-500 text-green-700 hover:bg-green-50"
+                        onClick={() => navigateTo("recepcion", { orden_id: oc.id, orden_folio: oc.folio })}
+                      >
+                        <PackageOpen className="h-4 w-4 mr-1" /> Registrar recepción →
+                      </Button>
+                    )}
                     {(oc.estatus === "borrador" || oc.estatus === "confirmada") && (
                       <Button size="sm" variant="outline" onClick={() => handleCancelar(oc.id)}>
                         <XCircle className="h-4 w-4 mr-1" /> Cancelar
@@ -350,6 +385,18 @@ export default function OrdenesCompra() {
               <div className="space-y-1">
                 <Label>Notas</Label>
                 <Input value={form.notas} onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))} placeholder="Instrucciones especiales…" />
+              </div>
+              <div className="flex items-center gap-2 col-span-2">
+                <input
+                  type="checkbox"
+                  id="requiere_anticipo"
+                  checked={form.requiere_anticipo}
+                  onChange={(e) => setForm((f) => ({ ...f, requiere_anticipo: e.target.checked }))}
+                  className="h-4 w-4 accent-primary"
+                />
+                <Label htmlFor="requiere_anticipo" className="text-sm cursor-pointer font-normal">
+                  Requiere anticipo — permite pago antes de recibir mercancía
+                </Label>
               </div>
             </div>
 

@@ -28,6 +28,7 @@ import DevolucionesProveedor from "@/features/farmacia/DevolucionesProveedor";
 import EvaluacionProveedores from "@/features/farmacia/EvaluacionProveedores";
 import ActasMerma from "@/features/farmacia/ActasMerma";
 import DashboardCompras from "@/features/farmacia/DashboardCompras";
+import ComprasTabs from "@/features/farmacia/ComprasTabs";
 import PuntoReorden from "@/features/farmacia/PuntoReorden";
 import LibroControlControlados from "@/features/farmacia/LibroControlControlados";
 import SolicitudesCompra from "@/features/farmacia/SolicitudesCompra";
@@ -1119,36 +1120,7 @@ export default function Farmacia() {
       </>}
         </TabsContent>
         <TabsContent value="compras" className="space-y-6">
-          <Tabs defaultValue="dashboard">
-            <TabsList>
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="solicitudes">Solicitudes</TabsTrigger>
-              <TabsTrigger value="oc">Órdenes de Compra</TabsTrigger>
-              <TabsTrigger value="recepcion">Recepción de Mercancía</TabsTrigger>
-              <TabsTrigger value="cxp">Cuentas por Pagar</TabsTrigger>
-              <TabsTrigger value="aging">Aging / Vencimientos</TabsTrigger>
-              <TabsTrigger value="devoluciones">Devoluciones</TabsTrigger>
-              <TabsTrigger value="evaluacion">Evaluación</TabsTrigger>
-              <TabsTrigger value="cotizaciones">Cotizaciones</TabsTrigger>
-              <TabsTrigger value="presupuesto">Presupuesto</TabsTrigger>
-              <TabsTrigger value="temperatura">Temperatura</TabsTrigger>
-              {hasRole("admin") || hasRole("manager") ? (
-                <TabsTrigger value="auditoria">Auditoría</TabsTrigger>
-              ) : null}
-            </TabsList>
-            <TabsContent value="dashboard" className="mt-4"><DashboardCompras /></TabsContent>
-            <TabsContent value="solicitudes" className="mt-4"><SolicitudesCompra medicamentos={medicamentos} /></TabsContent>
-            <TabsContent value="oc" className="mt-4"><OrdenesCompra /></TabsContent>
-            <TabsContent value="recepcion" className="mt-4"><RecepcionMercancia /></TabsContent>
-            <TabsContent value="cxp" className="mt-4"><FacturasProveedor /></TabsContent>
-            <TabsContent value="aging" className="mt-4"><ReporteAgingCxP /></TabsContent>
-            <TabsContent value="devoluciones" className="mt-4"><DevolucionesProveedor /></TabsContent>
-            <TabsContent value="evaluacion" className="mt-4"><EvaluacionProveedores /></TabsContent>
-            <TabsContent value="cotizaciones" className="mt-4"><CotizacionesPanel /></TabsContent>
-            <TabsContent value="presupuesto" className="mt-4"><PresupuestoPanel /></TabsContent>
-            <TabsContent value="temperatura" className="mt-4"><BitacoraTemperaturaPanel /></TabsContent>
-            <TabsContent value="auditoria" className="mt-4"><AuditLogPanel /></TabsContent>
-          </Tabs>
+          <ComprasTabs medicamentos={medicamentos} />
         </TabsContent>
         <TabsContent value="cierre" className="space-y-6">
           <CajaTurno onTurnoCerrado={() => setTab("pos")} />

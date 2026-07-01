@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useComprasNav } from "@/context/ComprasNavContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,7 @@ const EMPTY_LINEA = { medicamento_id: null as string | null, descripcion: "", ca
 export default function SolicitudesCompra({ medicamentos, onConvertirOC }: Props) {
   const { activeClinicId } = useActiveClinic();
   const { hasRole } = useAuth();
+  const { navigateTo } = useComprasNav();
   const { items, loading, error, paraAprobar, create, enviar, aprobar, rechazar, getItems, refresh } = useSolicitudesCompra(activeClinicId);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -176,9 +178,18 @@ export default function SolicitudesCompra({ medicamentos, onConvertirOC }: Props
                         </>
                       )}
                       {sc.estatus === "aprobada" && (
-                        <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => handleConvertirOC(sc)}>
-                          <ShoppingCart className="h-3.5 w-3.5" /> Convertir a OC
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            className="gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                            onClick={() => navigateTo("cotizaciones", { solicitud_id: sc.id, solicitud_folio: sc.folio })}
+                          >
+                            <ShoppingCart className="h-3.5 w-3.5" /> Cotizar →
+                          </Button>
+                          <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => handleConvertirOC(sc)}>
+                            <ShoppingCart className="h-3.5 w-3.5" /> Convertir a OC
+                          </Button>
+                        </>
                       )}
                       {sc.rechazo_motivo && (
                         <span className="text-xs text-destructive">Motivo rechazo: {sc.rechazo_motivo}</span>
