@@ -1,5 +1,23 @@
 # Estado del Proyecto — clinica-mexico-spa
 
+## 🔴 URGENTE — próxima sesión primero: integrika.mx en blanco
+
+**Síntoma**: sitio en blanco, consola: `[supabase/client] VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY son requeridos.`
+
+**Causa raíz real**: `npm ci` falla en GitHub Actions (workflow "Deploy to Cloudflare Workers") — `package-lock.json` desincronizado de `package.json`:
+```
+npm error Missing: react-barcode@1.6.1 from lock file
+npm error Missing: jsbarcode@3.12.3 from lock file
+```
+Preexistente, no de los commits `731feba`/`e4a64e1`/`815e373`/`79df026` de la sesión 2026-07-02. Cada push desde que se agregaron esas 2 deps rompe el deploy → queda sirviendo un build viejo → ese build viejo sí tiene el bug de env vars sin configurar → blanco congelado.
+Confirmado con: `gh run list --limit 5` (3 runs "Deploy to Cloudflare Workers" en failure) + `gh run view <id> --log-failed`.
+
+**Fix**:
+1. `npm install` local (regenera lock con las 2 deps) → commit `package-lock.json`
+2. Verificar secrets GitHub Actions: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+3. Push → verificar deploy verde → verificar `integrika.mx` carga en navegador
+4. Ver protocolo completo en `CLAUDE.md` sección "Lovable Security Fix Protocol"
+
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
