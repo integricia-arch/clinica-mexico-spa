@@ -17,27 +17,14 @@ import { friendlyError } from "@/lib/errors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SurtirReceta from "@/features/farmacia/SurtirReceta";
 import PuntoDeVenta from "@/features/farmacia/PuntoDeVenta";
-import OrdenesCompra from "@/features/farmacia/OrdenesCompra";
-import RecepcionMercancia from "@/features/farmacia/RecepcionMercancia";
-import FacturasProveedor from "@/features/farmacia/FacturasProveedor";
 import InventarioCiclico from "@/features/farmacia/InventarioCiclico";
 import ReporteCOFEPRIS from "@/features/farmacia/ReporteCOFEPRIS";
 import ReporteRotacionABC from "@/features/farmacia/ReporteRotacionABC";
-import ReporteAgingCxP from "@/features/farmacia/ReporteAgingCxP";
-import DevolucionesProveedor from "@/features/farmacia/DevolucionesProveedor";
-import EvaluacionProveedores from "@/features/farmacia/EvaluacionProveedores";
 import ActasMerma from "@/features/farmacia/ActasMerma";
-import DashboardCompras from "@/features/farmacia/DashboardCompras";
-import ComprasTabs from "@/features/farmacia/ComprasTabs";
-import PuntoReorden from "@/features/farmacia/PuntoReorden";
+import PuntoReorden from "@/features/compras/PuntoReorden";
 import LibroControlControlados from "@/features/farmacia/LibroControlControlados";
-import SolicitudesCompra from "@/features/farmacia/SolicitudesCompra";
 import SolicitudesInsumos from "@/features/farmacia/SolicitudesInsumos";
-import MedicamentoProveedoresPanel from "@/features/farmacia/MedicamentoProveedoresPanel";
-import BitacoraTemperaturaPanel from "@/features/farmacia/BitacoraTemperaturaPanel";
-import CotizacionesPanel from "@/features/farmacia/CotizacionesPanel";
-import PresupuestoPanel from "@/features/farmacia/PresupuestoPanel";
-import AuditLogPanel from "@/features/farmacia/AuditLogPanel";
+import MedicamentoProveedoresPanel from "@/features/compras/MedicamentoProveedoresPanel";
 import CajaTurno from "@/pages/CajaTurno";
 import CorteTurno from "@/features/caja/CorteTurno";
 import { useTurno } from "@/components/TurnoGuard";
@@ -372,7 +359,6 @@ export default function Farmacia() {
           <TabsTrigger value="surtir">Surtir receta</TabsTrigger>
           <TabsTrigger value="inventario">Inventario</TabsTrigger>
           <TabsTrigger value="insumos">Insumos</TabsTrigger>
-          <TabsTrigger value="compras">Compras</TabsTrigger>
           <TabsTrigger value="cierre">Cierre</TabsTrigger>
         </TabsList>
         <TabsContent value="pos" forceMount className={tab !== "pos" ? "hidden" : ""}>
@@ -1118,9 +1104,6 @@ export default function Farmacia() {
         </DialogContent>
       </Dialog>
       </>}
-        </TabsContent>
-        <TabsContent value="compras" className="space-y-6">
-          <ComprasTabs medicamentos={medicamentos} />
         </TabsContent>
         <TabsContent value="cierre" className="space-y-6">
           <CajaTurno onTurnoCerrado={() => setTab("pos")} />
