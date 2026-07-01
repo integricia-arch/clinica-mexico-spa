@@ -594,6 +594,7 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
             <TableHeader><TableRow>
               <TableHead>Proveedor</TableHead>
               <TableHead>RFC</TableHead>
+              <TableHead>ABC</TableHead>
               <TableHead>Clasificación</TableHead>
               <TableHead>Términos</TableHead>
               <TableHead>EFOS</TableHead>
@@ -608,6 +609,15 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
                     {p.requiere_cofepris && <span className="ml-1.5 text-xs text-blue-600 font-semibold">COFEPRIS</span>}
                   </TableCell>
                   <TableCell className="font-mono text-xs">{p.rfc || "—"}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-semibold ${
+                      p.clasificacion_abc === "A" ? "bg-emerald-100 text-emerald-700" :
+                      p.clasificacion_abc === "B" ? "bg-amber-100 text-amber-700" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {p.clasificacion_abc}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                       p.clasificacion === "critico" ? "bg-destructive/10 text-destructive" :
