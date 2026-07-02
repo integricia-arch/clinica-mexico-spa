@@ -17,6 +17,7 @@ Tras push del módulo Compras separado (`0b6f166`), `integrika.mx` volvió a ser
 - [x] Fix manual aplicado (mismo procedimiento documentado arriba): `npm run build:all` + `wrangler deploy` → bundle `index-BVlEO0rm.js`, Version ID `994b723c-fe40-4d49-9f3a-13dbbfeff589`
 - [x] Verificado con `curl` cache-bust — usuario confirmó "ya carga bien"
 - [ ] **Sigue pendiente investigar causa raíz** del deploy-via-Action que no propaga (2 recurrencias mismo día) — comparar `wrangler deploy` output del log del Action vs. manual
+- [ ] Investigación iniciada Jul 1 sesión 3, no completada (costo crítico $287 forzó parar). Revisado `.github/workflows/deploy-cloudflare.yml`: build corre `npm run build:all` con env vars correctas, deploy usa `cloudflare/wrangler-action@v3` (`wranglerVersion: 4.96.0`), nada obviamente roto en el YAML. **Próximo paso concreto:** `gh run list --workflow=deploy-cloudflare.yml` + `gh run view <id> --log` del run que reportó verde pero no propagó, comparar contra output de `wrangler deploy` manual (buscar diffs en Version ID desplegado, mensajes de "already up to date" en assets, o el Action corriendo sobre un commit distinto al esperado).
 
 ## Completado (Jul 1, 2026 — módulo Compras separado de Caja/Farmacia)
 
