@@ -9,6 +9,15 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - **Deploy**: Cloudflare Workers (`https://clinica-mexico-spa.integric-ia.workers.dev`)
 - **Dominio**: `https://integrika.mx`
 
+## Completado (Jul 1, 2026 — 3ra recurrencia bundle roto post-deploy módulo Compras)
+
+Tras push del módulo Compras separado (`0b6f166`), `integrika.mx` volvió a servir `index-BgkOAiyU.js` (mismo bundle roto de la "Causa raíz #2" de esta misma fecha) pese a GH Actions en verde. Confirma que el bug de propagación del Worker vía Action sigue sin causa raíz identificada — 2da recurrencia el mismo día.
+
+- [x] Diagnóstico: `curl integrika.mx` mostraba `index-BgkOAiyU.js` en vez del bundle recién generado
+- [x] Fix manual aplicado (mismo procedimiento documentado arriba): `npm run build:all` + `wrangler deploy` → bundle `index-BVlEO0rm.js`, Version ID `994b723c-fe40-4d49-9f3a-13dbbfeff589`
+- [x] Verificado con `curl` cache-bust — usuario confirmó "ya carga bien"
+- [ ] **Sigue pendiente investigar causa raíz** del deploy-via-Action que no propaga (2 recurrencias mismo día) — comparar `wrangler deploy` output del log del Action vs. manual
+
 ## Completado (Jul 1, 2026 — módulo Compras separado de Caja/Farmacia)
 
 Spec: `docs/superpowers/specs/2026-07-01-modulo-compras-separado-design.md`
