@@ -9,6 +9,21 @@ Producción activa — desarrollo iterativo de features de caja/farmacia
 - **Deploy**: Cloudflare Workers (`https://clinica-mexico-spa.integric-ia.workers.dev`)
 - **Dominio**: `https://integrika.mx`
 
+## Completado (Jul 1, 2026 — módulo Compras separado de Caja/Farmacia)
+
+Spec: `docs/superpowers/specs/2026-07-01-modulo-compras-separado-design.md`
+Plan: `docs/superpowers/plans/2026-07-01-modulo-compras-separado.md`
+
+- [x] 18 componentes de compras + `ComprasNavContext.tsx` movidos de `src/features/farmacia/` → `src/features/compras/` (`git mv`, historial preservado)
+- [x] `src/pages/Compras.tsx` nueva — wrapper delgado, carga medicamentos activos, renderiza `ComprasTabs`
+- [x] `Farmacia.tsx` — quitado tab "Compras" + imports muertos; `PuntoReorden`/`MedicamentoProveedoresPanel` ahora importados desde `@/features/compras/`
+- [x] Ruta `/compras` en `App.tsx` — mismos roles que `/farmacia` (`admin,nurse,receptionist,cajero`), **sin** `TurnoGuard` (compras es back-office, no depende de turno de caja abierto)
+- [x] Sidebar (`AppLayout.tsx`): item propio "Compras" (ícono `ShoppingCart`), separado de "Caja" (`/farmacia`); no agregado a `FOCUS_ROUTES`
+- [x] `npm run build` limpio + `npx vitest run` 8/8 archivos, 68/68 tests
+- [x] Smoke test Chrome: `/compras` responde igual que rutas protegidas (redirige a `/login` sin sesión, sin errores de consola)
+- [ ] Pendiente: click-through logueado (visual) del sidebar + tabs de compras cargando datos reales — no hecho esta sesión
+- 7 commits en `main`: `a165b2b` (mover archivos) → `f0a4460`/`2ad7b4b` (fix commit-hygiene) → `b081cdf` (Compras.tsx) → `c11f50f` (limpiar Farmacia.tsx) → `5e04783` (ruta) → `7e70763` (nav) → `ab6fcfe` (ledger scratch)
+
 ## Completado (Jul 1, 2026 — fix deploy roto integrika.mx)
 
 - [x] Causa raíz #1: `package-lock.json` desincronizado (`react-barcode`, `jsbarcode` faltantes) → `npm ci` fallaba en GitHub Actions → deploy servía build viejo con bug de env vars → sitio en blanco.
