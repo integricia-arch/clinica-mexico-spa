@@ -3,6 +3,27 @@
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
+## Completado (Jul 2, 2026 — sesión 5 — cache Cloudflare + Supabase GitHub integration + scoping Almacén)
+
+### Purge cache Cloudflare — implementado, falta permiso de token
+- [x] Paso "Purge Cloudflare edge cache (index.html)" en `.github/workflows/deploy-cloudflare.yml`, commit `c42015a`, pusheado a main
+- [x] Probado 2 veces: 1ra falló por `CLOUDFLARE_ZONE_ID` faltante (agregado por usuario), 2da falló con `{"errors":[{"code":10000,"message":"Authentication error"}]}`
+- [ ] **Pendiente del usuario**: el token usado en `CLOUDFLARE_API_TOKEN` (probablemente "Edit Cloudflare Workers", ya scoped a 1 zona) no tiene permiso **Zone → Cache Purge → Purge**. Agregar ese permiso al token existente (no requiere generar uno nuevo) y volver a correr `gh workflow run deploy-cloudflare.yml --ref main` para confirmar
+
+### Supabase ↔ GitHub integration — conectada, sin probar aún
+- [x] Usuario conectó el repo `integricia-arch/clinica-mexico-spa` (branch `main`) en Supabase dashboard → Integrations → GitHub
+- [x] Verificado: las 145 migraciones locales (`supabase/migrations/`) coinciden 1:1 con `list_migrations` remoto — DB al día, pero por `supabase db push --linked` manual en sesiones previas, NO por esta integración (recién conectada, nunca probada)
+- [ ] **Pendiente**: probar con el próximo push a `main` que incluya un archivo nuevo en `supabase/migrations/` — confirmar en el dashboard de Supabase (Database → Migrations o log de la integración) que se aplica solo, sin correr `supabase db push` manual
+
+### Módulo Almacén — separar de Caja/Farmacia (mismo patrón que Compras) — SOLO SCOPING, no iniciado
+- Objetivo acordado con usuario: sacar el tab completo "Inventario" de `Farmacia.tsx` a módulo propio `/almacen`, igual que se hizo con Compras (`docs/superpowers/plans/2026-07-01-modulo-compras-separado-design.md`)
+- **Hallazgo de alcance** (Jul 2, sesión 5): a diferencia de Compras (que ya eran componentes en archivos separados, solo `git mv`), el tab Inventario mezcla:
+  - Ya son componentes propios en `src/features/farmacia/`: `InventarioCiclico.tsx` (conteos), `ReporteCOFEPRIS.tsx`, `ReporteRotacionABC.tsx`, mermas (`ActasMerma.tsx`)
+  - **JSX inline dentro de `Farmacia.tsx`** (~líneas 429-953, sin extraer a componente): vistas `catalogo`, `faltantes`, `caducidades`, `reorden`, `controlados`
+  - `inventarioView` state (línea 96) controla las 9 sub-vistas: `catalogo | faltantes | caducidades | conteos | cofepris | abc | mermas | reorden | controlados`
+- **Trabajo real requerido**: extraer las 5 vistas inline a componentes propios en `src/features/almacen/` ANTES de poder armar la ruta `/almacen` — no es un simple `git mv` como Compras, es refactor real de ~500 líneas
+- [ ] **Decisión del usuario (Jul 2)**: pausar por hoy dado el costo de sesión ya alto — retomar en sesión dedicada. Próximo paso concreto: escribir plan detallado (spec + plan como se hizo para Compras) antes de tocar código, luego ejecutar extracción componente por componente
+
 ## Stack
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind + shadcn/ui
 - **Backend**: Supabase (proyecto: `kyfkvdyxpvpiacyymldc`)
