@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Tables } from "@/integrations/supabase/types";
+import CatalogoMedicamentos from "@/features/almacen/CatalogoMedicamentos";
 import InventarioCiclico from "@/features/almacen/InventarioCiclico";
 import FaltantesPanel from "@/features/almacen/FaltantesPanel";
 import CaducidadesPanel from "@/features/almacen/CaducidadesPanel";
@@ -24,7 +25,7 @@ interface Props {
 }
 
 export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: Props) {
-  const [view, setView] = useState<AlmacenView>("conteos");
+  const [view, setView] = useState<AlmacenView>("catalogo");
 
   const stockTotal = (medId: string) =>
     lotes.filter(l => l.medicamento_id === medId).reduce((s, l) => s + l.existencia, 0);
@@ -50,6 +51,10 @@ export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: 
       </div>
 
       <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setView("catalogo")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "catalogo" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >Catálogo</button>
         <button
           onClick={() => setView("caducidades")}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors relative ${view === "caducidades" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
@@ -96,6 +101,7 @@ export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: 
         >Controlados</button>
       </div>
 
+      {view === "catalogo" && <CatalogoMedicamentos medicamentos={medicamentos} lotes={lotes} onReload={onReload} />}
       {view === "faltantes" && <FaltantesPanel />}
       {view === "caducidades" && <CaducidadesPanel medicamentos={medicamentos} lotes={lotes} />}
       {view === "conteos" && <InventarioCiclico />}
