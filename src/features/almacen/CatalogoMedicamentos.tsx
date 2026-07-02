@@ -267,8 +267,8 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload }: 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Farmacia y almacén</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Control de inventario y dispensación</p>
+          <h2 className="text-lg font-semibold">Catálogo de medicamentos</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Existencias, precios y datos regulatorios</p>
         </div>
         {canWrite && (
           <div className="flex gap-2">
