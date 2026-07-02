@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Tables } from "@/integrations/supabase/types";
 import InventarioCiclico from "@/features/almacen/InventarioCiclico";
+import FaltantesPanel from "@/features/almacen/FaltantesPanel";
 import ReporteCOFEPRIS from "@/features/almacen/ReporteCOFEPRIS";
 import ReporteRotacionABC from "@/features/almacen/ReporteRotacionABC";
 import ActasMerma from "@/features/almacen/ActasMerma";
@@ -45,6 +46,10 @@ export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: 
 
       <div className="flex gap-2 flex-wrap">
         <button
+          onClick={() => setView("faltantes")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "faltantes" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >Faltantes</button>
+        <button
           onClick={() => setView("conteos")}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "conteos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
         >Conteos</button>
@@ -75,6 +80,7 @@ export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: 
         >Controlados</button>
       </div>
 
+      {view === "faltantes" && <FaltantesPanel />}
       {view === "conteos" && <InventarioCiclico />}
       {view === "cofepris" && <ReporteCOFEPRIS />}
       {view === "abc" && <ReporteRotacionABC />}
