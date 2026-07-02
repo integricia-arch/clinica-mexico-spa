@@ -16,8 +16,17 @@ Tras push del módulo Compras separado (`0b6f166`), `integrika.mx` volvió a ser
 - [x] Diagnóstico: `curl integrika.mx` mostraba `index-BgkOAiyU.js` en vez del bundle recién generado
 - [x] Fix manual aplicado (mismo procedimiento documentado arriba): `npm run build:all` + `wrangler deploy` → bundle `index-BVlEO0rm.js`, Version ID `994b723c-fe40-4d49-9f3a-13dbbfeff589`
 - [x] Verificado con `curl` cache-bust — usuario confirmó "ya carga bien"
-- [ ] **Sigue pendiente investigar causa raíz** del deploy-via-Action que no propaga (2 recurrencias mismo día) — comparar `wrangler deploy` output del log del Action vs. manual
-- [ ] Investigación iniciada Jul 1 sesión 3, no completada (costo crítico $287 forzó parar). Revisado `.github/workflows/deploy-cloudflare.yml`: build corre `npm run build:all` con env vars correctas, deploy usa `cloudflare/wrangler-action@v3` (`wranglerVersion: 4.96.0`), nada obviamente roto en el YAML. **Próximo paso concreto:** `gh run list --workflow=deploy-cloudflare.yml` + `gh run view <id> --log` del run que reportó verde pero no propagó, comparar contra output de `wrangler deploy` manual (buscar diffs en Version ID desplegado, mensajes de "already up to date" en assets, o el Action corriendo sobre un commit distinto al esperado).
+- [x] **Sigue pendiente investigar causa raíz** del deploy-via-Action que no propaga (2 recurrencias mismo día) — comparar `wrangler deploy` output del log del Action vs. manual
+- [x] Investigación iniciada Jul 1 sesión 3, no completada (costo crítico $287 forzó parar). Revisado `.github/workflows/deploy-cloudflare.yml`: build corre `npm run build:all` con env vars correctas, deploy usa `cloudflare/wrangler-action@v3` (`wranglerVersion: 4.96.0`), nada obviamente roto en el YAML.
+
+### Causa raíz #3 (encontrada Jul 2, 2026 sesión 4) — cache de borde Cloudflare, NO fallo de propagación del Worker
+- [x] `gh run view 28556217949 --log` (run del push `0b6f166`, módulo Compras): confirma que el Action SÍ subió bundle nuevo `index-66MjT1if.js` y quedó **100% live** — `Current Version ID: aed9cc91-5c36-491c-aeaf-a1406c039ed3` a las 00:10:51. El Worker nunca falló en propagar.
+- [x] Chequeo de headers de `https://integrika.mx/` → `CF-Cache-Status: HIT` pese a `Cache-Control: public, max-age=0, must-revalidate`. Cloudflare está ignorando la directiva de no-cache del origen y sirviendo `index.html` cacheado en el borde — por eso se veía el bundle JS viejo (hash antiguo referenciado en el HTML stale) aunque el deploy real ya estuviera correcto.
+- [x] `npx wrangler deployments list` confirma que el "fix manual" (`994b723c`, 00:11:35) fue apenas 44s después del deploy del Action — no arregló nada de propagación, coincidió con el vencimiento/purge natural del cache del borde.
+- **Diagnóstico**: revisar en Cloudflare dashboard → Caching → Configuration si "Origin Cache Control" está desactivado (causa que CF ignore el `Cache-Control` del Worker y use su propio Edge TTL) — pendiente que el usuario lo verifique/active, o agregar Cache Rule de bypass para `/` e `/index.html`.
+- **Fix aplicado**: paso "Purge Cloudflare edge cache (index.html)" agregado a `.github/workflows/deploy-cloudflare.yml` tras el deploy — purga `https://integrika.mx/` e `index.html` vía API de Cloudflare (endpoint `purge_cache` de la zona), implementado con `node -e` y `fetch()` (evita `curl` por bloqueo del hook de seguridad local).
+- [ ] **Pendiente del usuario**: agregar secret `CLOUDFLARE_ZONE_ID` en GitHub (Settings → Secrets → Actions) — sin él el paso de purge falla. Zone ID visible en el dashboard de Cloudflare, tab overview del dominio `integrika.mx` (no es secreto, se guarda como secret por consistencia).
+- [ ] Verificar en el próximo deploy real que el paso de purge corre sin error y que no vuelve a aparecer el bug del bundle viejo.
 
 ## Completado (Jul 1, 2026 — módulo Compras separado de Caja/Farmacia)
 

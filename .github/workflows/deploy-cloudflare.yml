@@ -39,3 +39,24 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4.96.0"
+
+      - name: Purge Cloudflare edge cache (index.html)
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: |
+          node -e "
+          const vars = process['env'];
+          fetch('https://api.cloudflare.com/client/v4/zones/' + vars.CF_ZONE_ID + '/purge_cache', {
+            method: 'POST',
+            headers: {
+              Authorization: 'Bearer ' + vars.CF_API_TOKEN,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ files: ['https://integrika.mx/', 'https://integrika.mx/index.html'] })
+          }).then(async (r) => {
+            const body = await r.text();
+            console.log(body);
+            if (!r.ok) process.exit(1);
+          }).catch((e) => { console.error(e); process.exit(1); });
+          "
