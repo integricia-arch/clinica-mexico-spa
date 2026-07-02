@@ -90,7 +90,8 @@ export default function RecepcionMercancia() {
   }, [activeClinicId]);
 
   // Cuando se selecciona una OC, cargar sus items para pre-poblar
-  const handleOCSelect = useCallback(async (ordenId: string) => {
+  const handleOCSelect = useCallback(async (ordenIdRaw: string) => {
+    const ordenId = ordenIdRaw === "_none" ? "" : ordenIdRaw;
     setForm((f) => {
       const oc = ordenes.find((o) => o.id === ordenId);
       return { ...f, orden_id: ordenId, proveedor_id: oc?.proveedor_id ?? f.proveedor_id };
@@ -358,10 +359,10 @@ export default function RecepcionMercancia() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Vincular a OC (opcional)</Label>
-                <Select value={form.orden_id} onValueChange={handleOCSelect}>
+                <Select value={form.orden_id || "_none"} onValueChange={handleOCSelect}>
                   <SelectTrigger><SelectValue placeholder="Sin OC vinculada" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin OC vinculada</SelectItem>
+                    <SelectItem value="_none">Sin OC vinculada</SelectItem>
                     {ordenesRecibibles.map((o) => (
                       <SelectItem key={o.id} value={o.id}>{o.folio} — {o.proveedor_nombre}</SelectItem>
                     ))}

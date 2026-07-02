@@ -183,10 +183,10 @@ function NuevaCotizacionForm({
         </div>
         <div className="space-y-1">
           <Label>Solicitud de Compra</Label>
-          <Select value={form.solicitud_compra_id} onValueChange={(v) => setForm({ ...form, solicitud_compra_id: v })}>
+          <Select value={form.solicitud_compra_id || "_none"} onValueChange={(v) => setForm({ ...form, solicitud_compra_id: v === "_none" ? "" : v })}>
             <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Sin solicitud</SelectItem>
+              <SelectItem value="_none">Sin solicitud</SelectItem>
               {solicitudes.map((s) => (
                 <SelectItem key={s.id} value={s.id}>{s.folio} — {s.motivo ?? "Sin descripción"}</SelectItem>
               ))}
