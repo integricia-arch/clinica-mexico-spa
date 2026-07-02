@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Tables } from "@/integrations/supabase/types";
 import InventarioCiclico from "@/features/almacen/InventarioCiclico";
 import FaltantesPanel from "@/features/almacen/FaltantesPanel";
+import CaducidadesPanel from "@/features/almacen/CaducidadesPanel";
 import ReporteCOFEPRIS from "@/features/almacen/ReporteCOFEPRIS";
 import ReporteRotacionABC from "@/features/almacen/ReporteRotacionABC";
 import ActasMerma from "@/features/almacen/ActasMerma";
@@ -29,6 +30,10 @@ export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: 
     lotes.filter(l => l.medicamento_id === medId).reduce((s, l) => s + l.existencia, 0);
   const bajosStock = medicamentos.filter(m => stockTotal(m.id) < m.stock_minimo);
 
+  const hoy = new Date();
+  const en90 = new Date(hoy); en90.setDate(hoy.getDate() + 90);
+  const proxCaducidad = lotes.filter(l => l.fecha_caducidad && new Date(l.fecha_caducidad) <= en90 && l.existencia > 0);
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -45,6 +50,17 @@ export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: 
       </div>
 
       <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setView("caducidades")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors relative ${view === "caducidades" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >
+          Caducidades
+          {proxCaducidad.length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold h-4 min-w-[1rem] px-1">
+              {proxCaducidad.length}
+            </span>
+          )}
+        </button>
         <button
           onClick={() => setView("faltantes")}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "faltantes" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
@@ -81,6 +97,7 @@ export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: 
       </div>
 
       {view === "faltantes" && <FaltantesPanel />}
+      {view === "caducidades" && <CaducidadesPanel medicamentos={medicamentos} lotes={lotes} />}
       {view === "conteos" && <InventarioCiclico />}
       {view === "cofepris" && <ReporteCOFEPRIS />}
       {view === "abc" && <ReporteRotacionABC />}
