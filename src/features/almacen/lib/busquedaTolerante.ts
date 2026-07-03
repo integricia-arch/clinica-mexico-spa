@@ -1,8 +1,9 @@
 /**
  * Normaliza texto para búsqueda: minúsculas, sin espacios extremos, sin
- * diacríticos (acentos). La ñ NO se toca — en descomposición NFD la ñ es
- * un carácter propio (U+00F1), no una letra base + diacrítico combinante,
- * así que el rango de combining marks (U+0300–U+036F) no la afecta.
+ * diacríticos (acentos). La ñ se preserva — aunque NFD descompone ñ en
+ * n + U+0303 (combining tilde), la regex deliberadamente excluye U+0303
+ * de su rango, permitiendo que la tilde sobreviva al strip de diacríticos
+ * y que NFC recompongas n + U+0303 de vuelta en ñ.
  */
 export function normalizarTexto(s: string): string {
   return s
