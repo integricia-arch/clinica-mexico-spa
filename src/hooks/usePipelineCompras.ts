@@ -72,7 +72,7 @@ function fechaReferencia(row: CicloRow, etapa: EtapaPipeline): string | null {
     case "orden_compra":
       return row.aprobada_at ?? row.fecha_solicitud;
     case "recepcion":
-      return row.aprobada_at ?? row.fecha_solicitud;
+      return row.fecha_recepcion ?? row.aprobada_at ?? row.fecha_solicitud;
     case "factura":
       return row.fecha_recepcion ?? row.aprobada_at ?? row.fecha_solicitud;
     case "pago":

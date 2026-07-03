@@ -135,4 +135,17 @@ describe("calcularDiasEnEtapa + esAtrasado", () => {
   it("etapa pago nunca está atrasada", () => {
     expect(esAtrasado(9999, "pago" as EtapaPipeline)).toBe(false);
   });
+  it("cuenta días desde fecha_recepcion (no desde aprobada_at) en etapa recepcion", () => {
+    const ahora = new Date("2026-06-20T00:00:00.000Z");
+    const row = fila({
+      cotizacion_id: "cot-1",
+      orden_id: "oc-1",
+      aprobada_at: "2026-05-01T00:00:00.000Z",
+      recepcion_id: "gr-1",
+      fecha_recepcion: "2026-06-15T00:00:00.000Z",
+      factura_id: null,
+    });
+    const dias = calcularDiasEnEtapa(row, "recepcion", ahora);
+    expect(dias).toBe(5); // desde fecha_recepcion (15 jun), no desde aprobada_at (1 may)
+  });
 });
