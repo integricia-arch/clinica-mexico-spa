@@ -36,7 +36,8 @@ del usuario: **queda en backlog**, no se implementa esta sesión.
 
 ### Sentry logs estructurados — COMPLETO ✅
 - [x] `src/instrument.ts`: `enableLogs: true` + `Sentry.consoleLoggingIntegration({ levels: ["log","warn","error"] })` — commiteado y pusheado (`2f7f826`)
-- [ ] **Pendiente del usuario**: agregar `VITE_SENTRY_DSN` a `.env` local y como GitHub secret (`gh secret set VITE_SENTRY_DSN`) — DSN nunca se pegó en el chat, solo el usuario lo tiene.
+- [x] `VITE_SENTRY_DSN` seteado como GitHub secret (`gh secret set`, usuario) — verificado con `gh secret list`.
+- [x] `VITE_SENTRY_DSN` agregado a `.env` local (usuario, vía `Read-Host -AsSecureString` para no exponer el valor) — Sentry ya activo en dev local y CI.
 
 ## Completado (Jul 2, 2026 — sesión 7 — módulo Almacén implementado + gap trazabilidad Compras)
 
