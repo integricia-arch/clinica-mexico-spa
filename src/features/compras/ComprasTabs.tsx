@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useCxpAlertas } from "@/hooks/useCxpAlertas";
 import DashboardCompras from "./DashboardCompras";
+import PipelineCompras from "./PipelineCompras";
 import SolicitudesCompra from "./SolicitudesCompra";
 import OrdenesCompra from "./OrdenesCompra";
 import RecepcionMercancia from "./RecepcionMercancia";
@@ -29,6 +30,7 @@ function ComprasTabsInner({ medicamentos }: { medicamentos: Medicamento[] }) {
     <Tabs value={tab} onValueChange={(t) => navigateTo(t)}>
       <TabsList className="flex-wrap">
         <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+        <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
         <TabsTrigger value="solicitudes">Solicitudes</TabsTrigger>
         <TabsTrigger value="cotizaciones">Cotizaciones</TabsTrigger>
         <TabsTrigger value="oc">Órdenes de Compra</TabsTrigger>
@@ -49,6 +51,7 @@ function ComprasTabsInner({ medicamentos }: { medicamentos: Medicamento[] }) {
         )}
       </TabsList>
       <TabsContent value="dashboard"    className="mt-4"><DashboardCompras /></TabsContent>
+      <TabsContent value="pipeline"     className="mt-4"><PipelineCompras /></TabsContent>
       <TabsContent value="solicitudes"  className="mt-4"><SolicitudesCompra medicamentos={medicamentos} /></TabsContent>
       <TabsContent value="cotizaciones" className="mt-4"><CotizacionesPanel /></TabsContent>
       <TabsContent value="oc"           className="mt-4"><OrdenesCompra /></TabsContent>
