@@ -15,11 +15,32 @@ import { es } from "date-fns/locale";
 import type { Tables } from "@/integrations/supabase/types";
 import { friendlyError } from "@/lib/errors";
 import MedicamentoProveedoresPanel from "@/features/compras/MedicamentoProveedoresPanel";
+import { normalizarTexto, distanciaLevenshtein } from "@/features/almacen/lib/busquedaTolerante";
 
 type Medicamento = Tables<"medicamentos">;
 type Lote = Tables<"lotes_medicamento">;
 
 const formatMXN = (n: number) => n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+
+/**
+ * Compara un campo del medicamento contra el término de búsqueda ya
+ * normalizado, palabra por palabra. Términos vacíos matchean cualquier
+ * campo (mismo comportamiento que .includes("") === true).
+ */
+export function matchTolerante(campo: string | null | undefined, terminoNormalizado: string): boolean {
+  if (!terminoNormalizado) return true;
+  const campoNorm = normalizarTexto(campo ?? "");
+  if (!campoNorm) return false;
+  if (campoNorm.includes(terminoNormalizado)) return true;
+
+  const palabrasTermino = terminoNormalizado.split(/\s+/).filter(w => w.length > 4);
+  if (palabrasTermino.length === 0) return false;
+  const palabrasCampo = campoNorm.split(/\s+/).filter(w => w.length > 4);
+
+  return palabrasTermino.some(pt =>
+    palabrasCampo.some(pc => distanciaLevenshtein(pt, pc, 1)),
+  );
+}
 
 const CATEGORIAS = ["Analgésico","Antibiótico","Antiinflamatorio","Antihipertensivo","Antidiabético",
   "Gastrointestinal","Antihistamínico","Broncodilatador","Neurológico","Soluciones","Vitaminas","Tópico","Otro"];
@@ -87,7 +108,7 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload }: 
   const proxCaducidad = lotes.filter(l => l.fecha_caducidad && new Date(l.fecha_caducidad) <= en30 && l.existencia > 0);
 
   const filtered = medicamentos.filter(m => {
-    const s = search.trim().toLowerCase();
+    const s = normalizarTexto(search);
     if (!s) return true;
     const mx = m as Medicamento & {
       barcode?: string | null; sku?: string | null; codigo_interno?: string | null;
@@ -98,7 +119,7 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload }: 
       m.nombre, m.categoria,
       mx.barcode, mx.sku, mx.codigo_interno,
       mx.laboratorio, mx.principio_activo, mx.concentracion, mx.presentacion,
-    ].some(v => (v ?? "").toLowerCase().includes(s));
+    ].some(v => matchTolerante(v, s));
   });
 
   // ── Medicamento CRUD ──────────────────────────────────────────────
