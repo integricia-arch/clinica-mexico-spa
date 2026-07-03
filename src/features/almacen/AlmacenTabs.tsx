@@ -1,5 +1,10 @@
 import { useState } from "react";
 import type { Tables } from "@/integrations/supabase/types";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { ChevronDown } from "lucide-react";
 import CatalogoMedicamentos from "@/features/almacen/CatalogoMedicamentos";
 import InventarioCiclico from "@/features/almacen/InventarioCiclico";
 import FaltantesPanel from "@/features/almacen/FaltantesPanel";
@@ -26,6 +31,7 @@ interface Props {
 
 export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: Props) {
   const [view, setView] = useState<AlmacenView>("catalogo");
+  const [quickFilter, setQuickFilter] = useState<"bajo_stock" | "por_caducar" | null>(null);
 
   const stockTotal = (medId: string) =>
     lotes.filter(l => l.medicamento_id === medId).reduce((s, l) => s + l.existencia, 0);
@@ -50,58 +56,76 @@ export default function AlmacenTabs({ medicamentos, lotes, onReload, loading }: 
         <p className="mt-1 text-sm text-muted-foreground">Control de inventario y compras</p>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2">
         <button
-          onClick={() => setView("catalogo")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "catalogo" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-        >Catálogo</button>
-        <button
-          onClick={() => setView("caducidades")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors relative ${view === "caducidades" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
+          onClick={() => { setQuickFilter(q => q === "bajo_stock" ? null : "bajo_stock"); setView("catalogo"); }}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors relative ${quickFilter === "bajo_stock" ? "bg-orange-500 text-white" : "text-muted-foreground hover:bg-muted"}`}
         >
-          Caducidades
+          Bajo stock
+          {bajosStock.length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold h-4 min-w-[1rem] px-1">
+              {bajosStock.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => { setQuickFilter(q => q === "por_caducar" ? null : "por_caducar"); setView("catalogo"); }}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors relative ${quickFilter === "por_caducar" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
+        >
+          Por caducar
           {proxCaducidad.length > 0 && (
             <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold h-4 min-w-[1rem] px-1">
               {proxCaducidad.length}
             </span>
           )}
         </button>
-        <button
-          onClick={() => setView("faltantes")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "faltantes" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-        >Faltantes</button>
-        <button
-          onClick={() => setView("conteos")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "conteos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-        >Conteos</button>
-        <button
-          onClick={() => setView("cofepris")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "cofepris" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
-        >COFEPRIS</button>
-        <button
-          onClick={() => setView("abc")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "abc" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-        >ABC / Rotación</button>
-        <button
-          onClick={() => setView("mermas")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "mermas" ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"}`}
-        >Mermas</button>
-        <button
-          onClick={() => setView("reorden")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors relative ${view === "reorden" ? "bg-orange-500 text-white" : "text-muted-foreground hover:bg-muted"}`}
-        >
-          Reorden
-          {bajosStock.length > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-orange-500 text-white text-xs font-bold h-4 min-w-[1rem] px-1">{bajosStock.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setView("controlados")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === "controlados" ? "bg-red-600 text-white" : "text-muted-foreground hover:bg-muted"}`}
-        >Controlados</button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors flex items-center gap-1">
+              Reportes y control
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setView("faltantes")} className="cursor-pointer">
+              Faltantes
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setView("conteos")} className="cursor-pointer">
+              Conteos
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setView("cofepris")} className="cursor-pointer">
+              COFEPRIS
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setView("abc")} className="cursor-pointer">
+              ABC / Rotación
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setView("mermas")} className="cursor-pointer">
+              Mermas
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setView("reorden")} className="cursor-pointer gap-2">
+              Reorden
+              {bajosStock.length > 0 && (
+                <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{bajosStock.length}</Badge>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setView("controlados")} className="cursor-pointer">
+              Controlados
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {view !== "catalogo" && (
+          <button
+            onClick={() => setView("catalogo")}
+            className="rounded-lg px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground"
+          >
+            ← Volver al catálogo
+          </button>
+        )}
       </div>
 
-      {view === "catalogo" && <CatalogoMedicamentos medicamentos={medicamentos} lotes={lotes} onReload={onReload} />}
+      {view === "catalogo" && <CatalogoMedicamentos medicamentos={medicamentos} lotes={lotes} onReload={onReload} quickFilter={quickFilter} />}
       {view === "faltantes" && <FaltantesPanel />}
       {view === "caducidades" && <CaducidadesPanel medicamentos={medicamentos} lotes={lotes} />}
       {view === "conteos" && <InventarioCiclico />}
