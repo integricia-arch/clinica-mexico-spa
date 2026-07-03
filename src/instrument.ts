@@ -15,6 +15,9 @@ if (dsn) {
     replaysSessionSampleRate: 0.05,
     replaysOnErrorSampleRate: 1.0,
 
+    // Logs: enviar console.log/warn/error como logs estructurados a Sentry
+    enableLogs: true,
+
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration({
@@ -22,6 +25,7 @@ if (dsn) {
         maskAllText: true,
         blockAllMedia: false,
       }),
+      Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
     ],
 
     // PII: nunca enviar cuerpos de requests ni cookies (datos clínicos, tokens)
