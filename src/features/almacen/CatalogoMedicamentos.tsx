@@ -42,6 +42,23 @@ export function matchTolerante(campo: string | null | undefined, terminoNormaliz
   );
 }
 
+export function aplicaQuickFilter(
+  m: Medicamento,
+  lotes: Lote[],
+  quickFilter: "bajo_stock" | "por_caducar" | null | undefined,
+): boolean {
+  if (!quickFilter) return true;
+  const lotesDelMed = lotes.filter(l => l.medicamento_id === m.id);
+  if (quickFilter === "bajo_stock") {
+    const stock = lotesDelMed.reduce((s, l) => s + l.existencia, 0);
+    return stock < m.stock_minimo;
+  }
+  // por_caducar
+  const hoy = new Date();
+  const en90 = new Date(hoy); en90.setDate(hoy.getDate() + 90);
+  return lotesDelMed.some(l => l.fecha_caducidad && new Date(l.fecha_caducidad) <= en90 && l.existencia > 0);
+}
+
 const CATEGORIAS = ["Analgésico","Antibiótico","Antiinflamatorio","Antihipertensivo","Antidiabético",
   "Gastrointestinal","Antihistamínico","Broncodilatador","Neurológico","Soluciones","Vitaminas","Tópico","Otro"];
 const UNIDADES = ["tableta","cápsula","frasco","ampolleta","pieza","sobre","ml","g"];
@@ -78,9 +95,10 @@ interface Props {
   medicamentos: Medicamento[];
   lotes: Lote[];
   onReload: () => void;
+  quickFilter?: "bajo_stock" | "por_caducar" | null;
 }
 
-export default function CatalogoMedicamentos({ medicamentos, lotes, onReload }: Props) {
+export default function CatalogoMedicamentos({ medicamentos, lotes, onReload, quickFilter = null }: Props) {
   const { hasRole } = useAuth();
   const { toast } = useToast();
   const canWrite = hasRole("admin") || hasRole("nurse");
@@ -108,6 +126,7 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload }: 
   const proxCaducidad = lotes.filter(l => l.fecha_caducidad && new Date(l.fecha_caducidad) <= en30 && l.existencia > 0);
 
   const filtered = medicamentos.filter(m => {
+    if (!aplicaQuickFilter(m, lotes, quickFilter)) return false;
     const s = normalizarTexto(search);
     if (!s) return true;
     const mx = m as Medicamento & {
