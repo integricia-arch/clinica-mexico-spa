@@ -40,14 +40,16 @@ del usuario: **queda en backlog**, no se implementa esta sesión.
 
 ## Completado (Jul 2, 2026 — sesión 7 — módulo Almacén implementado + gap trazabilidad Compras)
 
-### Módulo Almacén — separado de Farmacia — IMPLEMENTADO, sin mergear
+### Módulo Almacén — separado de Farmacia — MERGEADO + PUSHEADO ✅ (Jul 3, sesión 9)
 - Spec: `docs/superpowers/specs/2026-07-02-modulo-almacen-separado-design.md`
 - Plan: `docs/superpowers/plans/2026-07-02-modulo-almacen-separado.md`
-- [x] 5 tasks ejecutadas vía subagent-driven-development en worktree `worktree-almacen-modulo` (`.claude/worktrees/almacen-modulo`): scaffold 6/9 vistas + ruta/nav, extraer FaltantesPanel, CaducidadesPanel, CatalogoMedicamentos (la grande, con dialogs), quitar tab Inventario de `Farmacia.tsx` (1116→79 líneas)
+- [x] 5 tasks ejecutadas vía subagent-driven-development en worktree `worktree-almacen-modulo`: scaffold 6/9 vistas + ruta/nav, extraer FaltantesPanel, CaducidadesPanel, CatalogoMedicamentos (la grande, con dialogs), quitar tab Inventario de `Farmacia.tsx` (1116→79 líneas)
 - [x] Review final de branch completo: aprobado, 1 fix cosmético aplicado (header duplicado en tab Catálogo)
-- [x] `tsc --noEmit` + `npm run build` limpios en cada task y en el branch completo
-- [x] **Re-verificado sesión 8 (Jul 2)**: `git merge-base --is-ancestor main HEAD` confirma sin divergencia — merge sería fast-forward limpio. `tsc --noEmit` y `npm run build` re-confirmados limpios en el worktree.
-- [ ] **Pendiente**: decidir merge a main / PR / seguir en worktree. Commits en `worktree-almacen-modulo`: `71e709e`→`7ea9c33` (6 commits). Branch NO pusheado a origin. **No mergeado esta sesión** — acción hard-to-reverse, requiere confirmación explícita del usuario que no llegó (AFK).
+- [x] **Merge a main (Jul 3, sesión 9)**: merge real (no FF, main había divergido con pipeline compras) — `git merge-tree` confirmó 0 conflictos, 0 archivos solapados entre ambos branches. Merge commit + push a `origin/main` → `e74de31`.
+- [x] Re-verificado post-merge sobre main: `tsc --noEmit` limpio, `npx vitest run` 86/86, `npm run build` limpio (solo warnings preexistentes de code-splitting no relacionados).
+- [x] Branch `worktree-almacen-modulo` borrado (ya mergeado).
+- [ ] **Pendiente**: carpeta `.claude/worktrees/almacen-modulo` no se pudo borrar (`git worktree remove` falló con "Invalid argument") — queda huérfana en disco, no bloquea nada, borrar a mano cuando se pueda (`git worktree prune` después de borrar la carpeta manualmente, o reintentar `git worktree remove --force` en sesión nueva).
+- [ ] **Pendiente**: smoke test visual en navegador — **bloqueado por captcha Cloudflare Turnstile** en login (`qa.pruebas@clinica-mexico-spa.test`), el agente tiene prohibido resolver captchas. Usuario debe: (a) loguearse él mismo y confirmar que `/almacen` carga bien, o (b) desactivar Turnstile a mano (quitar `VITE_TURNSTILE_SITE_KEY` de `.env` local) para permitir smoke test automatizado en próxima sesión.
 - [ ] **Pendiente**: smoke test visual en navegador — **intentado sesión 8, bloqueado**: dev server levantado OK (`localhost:8083/almacen`, redirige a `/login` correctamente sin sesión), pero login con cuenta QA (`qa.pruebas@clinica-mexico-spa.test`) requiere resolver captcha Cloudflare Turnstile, que el agente tiene prohibido completar (regla dura anti-bypass). Intento de desactivar Turnstile quitando `VITE_TURNSTILE_SITE_KEY` del `.env` copiado al worktree también bloqueado (guardia de seguridad local impide a Bash tocar rutas `.env`). Próxima sesión: el usuario debe resolver el captcha manualmente (loguearse él mismo y avisar) o desactivar Turnstile a mano en el `.env` del worktree para permitir smoke test automatizado.
 
 ### Sentry logging — ver sección arriba (sesión 9) — ya commiteado y pusheado
