@@ -3,6 +3,30 @@
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
+## Completado (Jul 3, 2026 — sesión 10 — Sentry DSN cerrado + spec Almacén catálogo unificado)
+
+### Sentry DSN — CERRADO ✅ (pendiente #1 de sesión 9)
+- [x] `VITE_SENTRY_DSN` seteado como GitHub secret por el usuario (`gh secret set`), verificado con `gh secret list`.
+- [x] `VITE_SENTRY_DSN` agregado a `.env` local por el usuario vía `Read-Host -AsSecureString` (valor nunca expuesto en chat ni en historial). Duplicado detectado y limpiado (línea vieja sin comillas + línea nueva con comillas → quedó 1 sola línea).
+- [x] Commit `f3f80ae` pusheado.
+
+### Smoke test Almacén — CERRADO ✅ (pendiente #2 de sesión 9)
+- [x] Usuario logueó manualmente en `integrika.mx/almacen` — confirmó que carga bien.
+
+### Spec: Almacén — Catálogo unificado + buscador tolerante — ESCRITO, NO implementado
+Usuario pidió (tras el smoke test) simplificar UX de Almacén: sacar "ruido"
+de 9 pestañas en una fila, hacer Catálogo la vista prominente por default,
+reducir clicks pa' tareas frecuentes, buscador que ignore acentos y tolere
+typos.
+
+- [x] Brainstorming completo (superpowers:brainstorming) + validación con frontend-design skill (aplicado como principios UX, NO paleta/tipografía nueva — es app interna con sistema Tailwind/shadcn ya establecido).
+- [x] Confirmado: accesos a Almacén desde Caja/Farmacia YA están limpios (sesión 9) — sin acción.
+- [x] Spec escrito y pusheado: `docs/superpowers/specs/2026-07-03-almacen-catalogo-unificado-design.md` (`216c0b9`).
+  - Diseño: `AlmacenTabs.tsx` — Catálogo por default + 2 chips filtro rápido ("Bajo stock", "Por caducar", reusan cálculos ya existentes) + dropdown "Reportes y control" agrupando las 7 pestañas restantes (Faltantes, Conteos, COFEPRIS, ABC, Mermas, Reorden, Controlados).
+  - `CatalogoMedicamentos.tsx`: prop nueva `quickFilter`, buscador normalizado (sin acentos, NFD) + tolerancia a 1 typo (Levenshtein liviano, palabras >4 letras) en archivo nuevo `src/features/almacen/lib/busquedaTolerante.ts`.
+  - Ningún componente interno (FaltantesPanel, CaducidadesPanel, etc.) cambia lógica — solo el "chrome" de navegación.
+- [ ] **Pendiente próxima sesión**: escribir el plan de implementación (`superpowers:writing-plans`, TDD, tests antes de código como pidió el usuario) a partir del spec ya aprobado, y ejecutarlo. Sesión cortada acá por costo ($51+, marcado crítico por el sistema) — spec está listo, solo falta plan + ejecución.
+
 ## Completado (Jul 3, 2026 — sesión 9 — pipeline visual Compras IMPLEMENTADO + mergeado + pusheado)
 
 ### Pipeline visual del ciclo de Compras + KPIs Inteligencia — COMPLETO ✅
@@ -50,8 +74,7 @@ del usuario: **queda en backlog**, no se implementa esta sesión.
 - [x] Re-verificado post-merge sobre main: `tsc --noEmit` limpio, `npx vitest run` 86/86, `npm run build` limpio (solo warnings preexistentes de code-splitting no relacionados).
 - [x] Branch `worktree-almacen-modulo` borrado (ya mergeado).
 - [ ] **Pendiente**: carpeta `.claude/worktrees/almacen-modulo` no se pudo borrar (`git worktree remove` falló con "Invalid argument") — queda huérfana en disco, no bloquea nada, borrar a mano cuando se pueda (`git worktree prune` después de borrar la carpeta manualmente, o reintentar `git worktree remove --force` en sesión nueva).
-- [ ] **Pendiente**: smoke test visual en navegador — **bloqueado por captcha Cloudflare Turnstile** en login (`qa.pruebas@clinica-mexico-spa.test`), el agente tiene prohibido resolver captchas. Usuario debe: (a) loguearse él mismo y confirmar que `/almacen` carga bien, o (b) desactivar Turnstile a mano (quitar `VITE_TURNSTILE_SITE_KEY` de `.env` local) para permitir smoke test automatizado en próxima sesión.
-- [ ] **Pendiente**: smoke test visual en navegador — **intentado sesión 8, bloqueado**: dev server levantado OK (`localhost:8083/almacen`, redirige a `/login` correctamente sin sesión), pero login con cuenta QA (`qa.pruebas@clinica-mexico-spa.test`) requiere resolver captcha Cloudflare Turnstile, que el agente tiene prohibido completar (regla dura anti-bypass). Intento de desactivar Turnstile quitando `VITE_TURNSTILE_SITE_KEY` del `.env` copiado al worktree también bloqueado (guardia de seguridad local impide a Bash tocar rutas `.env`). Próxima sesión: el usuario debe resolver el captcha manualmente (loguearse él mismo y avisar) o desactivar Turnstile a mano en el `.env` del worktree para permitir smoke test automatizado.
+- [x] **Smoke test visual — CERRADO (sesión 10)**: usuario logueó manualmente en `integrika.mx/almacen`, confirmó que carga bien. A partir de ese smoke test surgió pedido de UX (ver spec "Catálogo unificado" arriba, sesión 10).
 
 ### Sentry logging — ver sección arriba (sesión 9) — ya commiteado y pusheado
 
