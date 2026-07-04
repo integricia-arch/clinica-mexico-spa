@@ -10,7 +10,7 @@ import { es } from "date-fns/locale";
 
 interface MedControlado {
   id: string;
-  nombre_generico: string;
+  nombre: string;
   principio_activo: string;
   concentracion: string;
   forma_farmaceutica: string;
@@ -97,7 +97,7 @@ export default function ReporteCOFEPRIS() {
     // Medicamentos controlados
     const { data: meds } = await supabase
       .from("medicamentos" as never)
-      .select("id, nombre_generico, principio_activo, concentracion, forma_farmaceutica, laboratorio, registro_sanitario, sale_type")
+      .select("id, nombre, principio_activo, concentracion, forma_farmaceutica, laboratorio, registro_sanitario, sale_type")
       .eq("clinic_id", activeClinicId)
       .or("is_controlled.eq.true,sale_type.eq.controlado")
       .eq("activo", true);
@@ -132,7 +132,7 @@ export default function ReporteCOFEPRIS() {
         return {
           id: l.id,
           medicamento_id: l.medicamento_id,
-          medicamento_nombre: m?.nombre_generico ?? "",
+          medicamento_nombre: m?.nombre ?? "",
           principio_activo: m?.principio_activo ?? "",
           concentracion: m?.concentracion ?? "",
           forma_farmaceutica: m?.forma_farmaceutica ?? "",
@@ -181,7 +181,7 @@ export default function ReporteCOFEPRIS() {
       movsList.map((m) => ({
         id: m.id,
         medicamento_id: m.medicamento_id,
-        medicamento_nombre: medMap[m.medicamento_id]?.nombre_generico ?? "",
+        medicamento_nombre: medMap[m.medicamento_id]?.nombre ?? "",
         lote_id: m.lote_id,
         numero_lote: m.lote_id ? (loteNumMap[m.lote_id] ?? "—") : "—",
         tipo: m.tipo,

@@ -79,14 +79,14 @@ export default function ThreeWayMatchPanel({
     try {
       // Fetch OC items
       const { data: ocItems } = await untypedTable("ordenes_compra_items")
-        .select("*, medicamentos(nombre_generico)")
+        .select("*, medicamentos(nombre)")
         .eq("orden_id", ordenId);
 
       // Fetch recepción items (use recepcion_id if set, else find by orden_id)
       let recItems: Record<string, unknown>[] = [];
       if (recepcionId) {
         const { data } = await untypedTable("recepciones_items")
-          .select("*, medicamentos(nombre_generico)")
+          .select("*, medicamentos(nombre)")
           .eq("recepcion_id", recepcionId);
         recItems = (data ?? []) as Record<string, unknown>[];
       } else {
@@ -98,14 +98,14 @@ export default function ThreeWayMatchPanel({
           .limit(1);
         if (recs && recs.length > 0) {
           const { data } = await untypedTable("recepciones_items")
-            .select("*, medicamentos(nombre_generico)")
+            .select("*, medicamentos(nombre)")
             .eq("recepcion_id", (recs[0] as { id: string }).id);
           recItems = (data ?? []) as Record<string, unknown>[];
         }
       }
 
-      type OcItem = { medicamento_id: string; cantidad_pedida: number; precio_unitario_centavos: number; subtotal_centavos: number; medicamentos?: { nombre_generico: string } | null };
-      type RecItem = { medicamento_id: string; cantidad_recibida: number; precio_unitario_centavos: number; medicamentos?: { nombre_generico: string } | null };
+      type OcItem = { medicamento_id: string; cantidad_pedida: number; precio_unitario_centavos: number; subtotal_centavos: number; medicamentos?: { nombre: string } | null };
+      type RecItem = { medicamento_id: string; cantidad_recibida: number; precio_unitario_centavos: number; medicamentos?: { nombre: string } | null };
 
       const oci = (ocItems ?? []) as OcItem[];
       const reci = recItems as RecItem[];
@@ -119,7 +119,7 @@ export default function ThreeWayMatchPanel({
         const oc = oci.find((i) => i.medicamento_id === medId);
         const rec = reci.find((i) => i.medicamento_id === medId);
         return {
-          descripcion: oc?.medicamentos?.nombre_generico ?? rec?.medicamentos?.nombre_generico ?? medId.slice(0, 8),
+          descripcion: oc?.medicamentos?.nombre ?? rec?.medicamentos?.nombre ?? medId.slice(0, 8),
           oc_qty: oc?.cantidad_pedida ?? 0,
           oc_precio: oc?.precio_unitario_centavos ?? 0,
           rec_qty: rec?.cantidad_recibida ?? 0,

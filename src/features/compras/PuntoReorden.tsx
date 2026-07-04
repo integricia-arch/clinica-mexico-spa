@@ -55,6 +55,7 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
   });
   const [saving, setSaving] = useState(false);
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
+  const [precios, setPrecios] = useState<Record<string, number>>({});
 
   const stockTotal = (medId: string) =>
     lotes.filter((l) => l.medicamento_id === medId).reduce((s, l) => s + l.existencia, 0);
@@ -84,11 +85,16 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
   const efectivaCantidad = (row: ReordenRow) =>
     cantidades[row.med.id] !== undefined ? cantidades[row.med.id] : row.aPedir;
 
+  const efectivoPrecio = (row: ReordenRow) =>
+    precios[row.med.id] !== undefined ? precios[row.med.id] : row.ultimoCosto;
+
   const itemsParaOC = bajosStock.filter((r) => efectivaCantidad(r) > 0);
+  const itemsSinPrecio = itemsParaOC.filter((r) => efectivoPrecio(r) <= 0);
 
   const handleGenerarOC = async () => {
     if (!proveedorId) { toast.error("Selecciona un proveedor"); return; }
     if (itemsParaOC.length === 0) { toast.error("Sin ítems a pedir"); return; }
+    if (itemsSinPrecio.length > 0) { toast.error("Carga el precio unitario de todos los productos antes de generar la OC"); return; }
     setSaving(true);
     try {
       await create({
@@ -99,7 +105,7 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
         items: itemsParaOC.map((r) => ({
           medicamento_id: r.med.id,
           cantidad_pedida: efectivaCantidad(r),
-          precio_unitario_centavos: r.ultimoCosto,
+          precio_unitario_centavos: efectivoPrecio(r),
           tasa_iva: r.med.tasa_iva ?? 0,
         })),
       });
@@ -212,13 +218,34 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
             <DialogTitle>Generar OC Sugerida</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="rounded-md bg-muted p-3 text-sm space-y-1">
+            <div className="rounded-md bg-muted p-3 text-sm space-y-2">
               <p className="font-medium">{itemsParaOC.length} producto(s) incluido(s)</p>
-              <ul className="text-xs text-muted-foreground space-y-0.5 max-h-32 overflow-y-auto">
-                {itemsParaOC.map((r) => (
-                  <li key={r.med.id}>• {r.med.nombre} — {efectivaCantidad(r)} {r.med.unidad}</li>
-                ))}
-              </ul>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {itemsParaOC.map((r) => {
+                  const sinPrecio = efectivoPrecio(r) <= 0;
+                  return (
+                    <div key={r.med.id} className="flex items-center gap-2 text-xs">
+                      <span className="flex-1 truncate">{r.med.nombre} — {efectivaCantidad(r)} {r.med.unidad}</span>
+                      <span className="text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        className={`h-7 w-24 text-xs ${sinPrecio ? "border-destructive" : ""}`}
+                        value={(efectivoPrecio(r) / 100).toFixed(2)}
+                        onChange={(e) =>
+                          setPrecios((prev) => ({ ...prev, [r.med.id]: Math.max(0, Math.round(Number(e.target.value) * 100)) }))
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              {itemsSinPrecio.length > 0 && (
+                <p className="text-xs text-destructive">
+                  Falta precio unitario en {itemsSinPrecio.length} producto(s) — sin costo de referencia previo, cárgalo manualmente.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -239,17 +266,12 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Se creará como borrador en Órdenes de Compra. Podrás ajustar precios antes de confirmar.
-              {itemsParaOC.some((r) => !r.ultimoCosto) && (
-                <span className="block mt-1 text-orange-600">
-                  ⚠ Algunos productos sin costo de referencia — ajusta precios en la OC.
-                </span>
-              )}
+              Se creará como borrador en Órdenes de Compra.
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOcDialog(false)} disabled={saving}>Cancelar</Button>
-            <Button onClick={handleGenerarOC} disabled={saving} className="gap-1">
+            <Button onClick={handleGenerarOC} disabled={saving || itemsSinPrecio.length > 0} className="gap-1">
               {saving ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
               {saving ? "Creando…" : "Crear OC borrador"}
             </Button>

@@ -82,11 +82,11 @@ export default function ReporteRotacionABC() {
     // Medicamentos activos con existencia
     const { data: meds } = await supabase
       .from("medicamentos" as never)
-      .select("id, nombre_generico, categoria, precio_unitario")
+      .select("id, nombre, categoria, precio_unitario")
       .eq("clinic_id", activeClinicId)
       .eq("activo", true);
 
-    const medList = (meds ?? []) as { id: string; nombre_generico: string; categoria: string; precio_unitario: number }[];
+    const medList = (meds ?? []) as { id: string; nombre: string; categoria: string; precio_unitario: number }[];
 
     // Lotes actuales (existencia)
     const { data: lotes } = await supabase
@@ -135,7 +135,7 @@ export default function ReporteRotacionABC() {
 
       return {
         medicamento_id: m.id,
-        nombre: m.nombre_generico,
+        nombre: m.nombre,
         categoria: m.categoria ?? "—",
         existencia_actual: existencia,
         unidades_vendidas: unidades,

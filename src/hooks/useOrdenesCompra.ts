@@ -229,11 +229,11 @@ export function useOrdenesCompra(clinicId: string | null) {
 
   const getItems = useCallback(async (ordenId: string): Promise<OrdenCompraItem[]> => {
     const { data, error: qErr } = await untypedTable("ordenes_compra_items")
-      .select("*, medicamentos(nombre_generico)")
+      .select("*, medicamentos(nombre)")
       .eq("orden_id", ordenId);
     if (qErr) throw new Error(friendlyError(qErr, "No se pudieron cargar los productos."));
-    return ((data ?? []) as (OrdenCompraItem & { medicamentos?: { nombre_generico: string } })[])
-      .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre_generico ?? "" }));
+    return ((data ?? []) as (OrdenCompraItem & { medicamentos?: { nombre: string } })[])
+      .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre ?? "" }));
   }, []);
 
   return { items, loading, error, create, confirmar, aprobar, rechazar, cancelar, getItems, refresh: load };
