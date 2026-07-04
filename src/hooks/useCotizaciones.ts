@@ -206,6 +206,19 @@ export function useCotizaciones() {
     [activeClinicId]
   );
 
+  const vincularOrdenCompra = useCallback(
+    async (cotizacionId: string, ordenCompraId: string): Promise<void> => {
+      if (!activeClinicId) return;
+      const { error: err } = await supabase
+        .from("cotizaciones")
+        .update({ seleccionada: true, orden_compra_id: ordenCompraId })
+        .eq("id", cotizacionId)
+        .eq("clinic_id", activeClinicId);
+      if (err) throw new Error(err.message);
+    },
+    [activeClinicId]
+  );
+
   const deseleccionarCotizacion = useCallback(
     async (cotizacionId: string): Promise<void> => {
       if (!activeClinicId) throw new Error("Sin clínica activa");
@@ -236,5 +249,5 @@ export function useCotizaciones() {
     [activeClinicId]
   );
 
-  return { fetchCotizaciones, crearCotizacion, seleccionarCotizacion, marcarSeleccionadas, deseleccionarCotizacion, loading, error };
+  return { fetchCotizaciones, crearCotizacion, seleccionarCotizacion, marcarSeleccionadas, vincularOrdenCompra, deseleccionarCotizacion, loading, error };
 }

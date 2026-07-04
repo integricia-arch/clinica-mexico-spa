@@ -23,7 +23,7 @@ interface FilaComparativa {
 
 export default function SeleccionPorMedicamento({ cotizaciones, onGenerado }: Props) {
   const { activeClinicId } = useActiveClinic();
-  const { marcarSeleccionadas } = useCotizaciones();
+  const { vincularOrdenCompra } = useCotizaciones();
   const { create } = useOrdenesCompra(activeClinicId);
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -79,9 +79,8 @@ export default function SeleccionPorMedicamento({ cotizaciones, onGenerado }: Pr
         return;
       }
 
-      const cotizacionesUsadas = new Set<string>();
       for (const grupo of grupos) {
-        await create({
+        const ocId = await create({
           proveedor_id: grupo.proveedor_id,
           fecha_entrega_est: "",
           terminos_pago: 30,
@@ -93,10 +92,8 @@ export default function SeleccionPorMedicamento({ cotizaciones, onGenerado }: Pr
             tasa_iva: it.tasa_iva,
           })),
         });
-        grupo.items.forEach(() => cotizacionesUsadas.add(grupo.cotizacion_id));
+        await vincularOrdenCompra(grupo.cotizacion_id, ocId);
       }
-
-      await marcarSeleccionadas(Array.from(cotizacionesUsadas));
       toast({ title: `${grupos.length} orden(es) de compra generada(s)` });
       onGenerado();
     } catch (e) {

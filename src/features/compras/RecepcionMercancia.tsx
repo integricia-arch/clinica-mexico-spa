@@ -469,10 +469,11 @@ export default function RecepcionMercancia() {
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">P. Unit. (MXN)</Label>
                           <Input
-                            type="number" min={0} step={0.01}
+                            key={`precio-${l._key}-${l.precio_unitario_centavos}`}
+                            type="text" inputMode="decimal"
                             className={`h-8 text-sm ${l.medicamento_id && l.precio_unitario_centavos <= 0 ? "border-destructive" : ""}`}
-                            value={(l.precio_unitario_centavos / 100).toFixed(2)}
-                            onChange={(e) => updateLine(l._key, "precio_unitario_centavos", Math.round(Number(e.target.value) * 100))}
+                            defaultValue={(l.precio_unitario_centavos / 100).toFixed(2)}
+                            onBlur={(e) => updateLine(l._key, "precio_unitario_centavos", Math.round((parseFloat(e.target.value.replace(",", ".")) || 0) * 100))}
                           />
                         </div>
                       </div>

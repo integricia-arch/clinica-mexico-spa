@@ -42,7 +42,7 @@ function ItemsForm({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Conceptos</p>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Productos / servicios cotizados</p>
         <Button type="button" size="sm" variant="outline" onClick={addItem}>
           <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
         </Button>
@@ -71,13 +71,13 @@ function ItemsForm({
           <div>
             {idx === 0 && <Label className="text-xs">Precio unit. MXN</Label>}
             <Input
-              type="number"
-              min="0"
-              step="0.01"
+              key={`precio-${idx}-${it.precio_unitario_centavos}`}
+              type="text"
+              inputMode="decimal"
               placeholder="0.00"
-              value={it.precio_unitario_centavos > 0 ? (it.precio_unitario_centavos / 100).toFixed(2) : ""}
-              onChange={(e) =>
-                updateItem(idx, { precio_unitario_centavos: Math.round(parseFloat(e.target.value || "0") * 100) })
+              defaultValue={it.precio_unitario_centavos > 0 ? (it.precio_unitario_centavos / 100).toFixed(2) : ""}
+              onBlur={(e) =>
+                updateItem(idx, { precio_unitario_centavos: Math.round((parseFloat(e.target.value.replace(",", ".")) || 0) * 100) })
               }
             />
           </div>
@@ -307,6 +307,7 @@ export default function CotizacionesPanel() {
   const [solicitudes, setSolicitudes] = useState<SolicitudOption[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [scFiltro, setScFiltro] = useState("todas");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   // Pre-select SC from navigation context
   useEffect(() => {
     if (!ctx.solicitud_id) return;
@@ -419,36 +420,70 @@ export default function CotizacionesPanel() {
             )}
             <div className="space-y-2">
               {cots.map((c) => (
-                <div key={c.id} className="rounded-lg border px-3 py-2 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{c.proveedor?.nombre ?? "—"}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{c.folio}</p>
-                      {c.seleccionada && <Badge className="bg-green-600 text-white text-xs">Seleccionada</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(c.fecha_cotizacion), "dd/MM/yyyy", { locale: es })}
-                      {c.plazo_entrega_dias != null ? ` · ${c.plazo_entrega_dias} días` : ""}
-                      {c.notas ? ` · ${c.notas}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {c.seleccionada && (
-                      <Button
-                        size="sm"
-                        className="gap-1.5 text-xs bg-green-700 hover:bg-green-800 text-white shrink-0"
-                        onClick={() => navigateTo("oc", { cotizacion_id: c.id })}
-                      >
-                        <ShoppingCart className="h-3.5 w-3.5" /> Generar OC →
-                      </Button>
-                    )}
-                    <div className="text-right">
-                      <p className="text-sm font-bold">{fmt(c.total_centavos)}</p>
+                <div key={c.id} className="rounded-lg border">
+                  <div
+                    className="px-3 py-2 flex items-center justify-between gap-3 cursor-pointer hover:bg-muted/30"
+                    onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">{c.proveedor?.nombre ?? "—"}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{c.folio}</p>
+                        {c.seleccionada && <Badge className="bg-green-600 text-white text-xs">Seleccionada</Badge>}
+                        {c.orden_compra_id && <Badge variant="outline" className="text-xs">OC generada</Badge>}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        {fmt(c.subtotal_centavos)} + {fmt(c.iva_centavos)} IVA
+                        {format(new Date(c.fecha_cotizacion), "dd/MM/yyyy", { locale: es })}
+                        {c.plazo_entrega_dias != null ? ` · ${c.plazo_entrega_dias} días` : ""}
+                        {c.notas ? ` · ${c.notas}` : ""}
+                        {` · ${c.items?.length ?? 0} producto(s) — clic para ver detalle`}
                       </p>
                     </div>
+                    <div className="flex items-center gap-3">
+                      {c.seleccionada && !c.orden_compra_id && (
+                        <Button
+                          size="sm"
+                          className="gap-1.5 text-xs bg-green-700 hover:bg-green-800 text-white shrink-0"
+                          onClick={(e) => { e.stopPropagation(); navigateTo("oc", { cotizacion_id: c.id }); }}
+                        >
+                          <ShoppingCart className="h-3.5 w-3.5" /> Generar OC →
+                        </Button>
+                      )}
+                      <div className="text-right">
+                        <p className="text-sm font-bold">{fmt(c.total_centavos)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {fmt(c.subtotal_centavos)} + {fmt(c.iva_centavos)} IVA
+                        </p>
+                      </div>
+                    </div>
                   </div>
+                  {expandedId === c.id && (
+                    <div className="border-t px-3 py-2 bg-muted/10">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-muted-foreground border-b">
+                            <th className="text-left pb-1">Producto / servicio</th>
+                            <th className="text-right pb-1">Cant.</th>
+                            <th className="text-right pb-1">P. Unit.</th>
+                            <th className="text-right pb-1">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(c.items ?? []).map((it, i) => (
+                            <tr key={it.id ?? i} className="border-b last:border-0">
+                              <td className="py-1 pr-2">{it.descripcion}</td>
+                              <td className="py-1 text-right">{it.cantidad}</td>
+                              <td className="py-1 text-right">{fmt(it.precio_unitario_centavos)}</td>
+                              <td className="py-1 text-right">{fmt(it.subtotal_centavos ?? it.cantidad * it.precio_unitario_centavos)}</td>
+                            </tr>
+                          ))}
+                          {(c.items ?? []).length === 0 && (
+                            <tr><td colSpan={4} className="py-2 text-center text-muted-foreground">Sin productos registrados.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProveedores } from "@/hooks/useProveedores";
 import { useOrdenesCompra, type OrdenCompra, type OrdenCompraItem, type OrdenCompraItemInput } from "@/hooks/useOrdenesCompra";
 import { useSolicitudesCompra } from "@/hooks/useSolicitudesCompra";
+import { useCotizaciones } from "@/hooks/useCotizaciones";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -50,9 +51,11 @@ export default function OrdenesCompra() {
   const isManager = hasRole("admin") || hasRole("manager");
   const { items: ordenes, loading, error, create, confirmar, aprobar, rechazar, cancelar, revertirABorrador, getItems, refresh } = useOrdenesCompra(activeClinicId);
   const { marcarConvertida } = useSolicitudesCompra(activeClinicId);
+  const { vincularOrdenCompra } = useCotizaciones();
   const [rechazarDialog, setRechazarDialog] = useState<string | null>(null);
   const [rechazarMotivo, setRechazarMotivo] = useState("");
   const [pendingSolicitudId, setPendingSolicitudId] = useState<string | null>(null);
+  const [pendingCotizacionId, setPendingCotizacionId] = useState<string | null>(null);
 
   const [medicamentos, setMedicamentos] = useState<MedicamentoOption[]>([]);
   const [ultimoCosto, setUltimoCosto] = useState<Record<string, number>>({});
@@ -83,6 +86,7 @@ export default function OrdenesCompra() {
         const d = data as { proveedor_id: string } | null;
         if (d?.proveedor_id) {
           setForm((f) => ({ ...f, proveedor_id: d.proveedor_id }));
+          setPendingCotizacionId(ctx.cotizacion_id ?? null);
           setDialogOpen(true);
           clearCtx();
         }
@@ -227,6 +231,10 @@ export default function OrdenesCompra() {
       if (pendingSolicitudId) {
         await marcarConvertida(pendingSolicitudId, ocId);
         setPendingSolicitudId(null);
+      }
+      if (pendingCotizacionId) {
+        await vincularOrdenCompra(pendingCotizacionId, ocId);
+        setPendingCotizacionId(null);
       }
       toast({ title: "Orden de compra creada" });
       setDialogOpen(false);
@@ -427,7 +435,7 @@ export default function OrdenesCompra() {
       </div>
 
       {/* Dialog: Nueva OC */}
-      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setPendingSolicitudId(null); }}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setPendingSolicitudId(null); setPendingCotizacionId(null); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nueva Orden de Compra</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
@@ -513,10 +521,11 @@ export default function OrdenesCompra() {
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Precio unit. (MXN)</Label>
                       <Input
-                        type="number" min={0} step={0.01}
+                        key={`precio-${l._key}-${l.medicamento_id}-${l.precio_unitario_centavos}`}
+                        type="text" inputMode="decimal"
                         className={`h-8 text-sm ${l.medicamento_id && l.precio_unitario_centavos <= 0 ? "border-destructive" : ""}`}
-                        value={(l.precio_unitario_centavos / 100).toFixed(2)}
-                        onChange={(e) => updateLine(l._key, "precio_unitario_centavos", Math.round(Number(e.target.value) * 100))}
+                        defaultValue={(l.precio_unitario_centavos / 100).toFixed(2)}
+                        onBlur={(e) => updateLine(l._key, "precio_unitario_centavos", Math.round((parseFloat(e.target.value.replace(",", ".")) || 0) * 100))}
                       />
                     </div>
                     <Button
@@ -546,7 +555,7 @@ export default function OrdenesCompra() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDialogOpen(false); setPendingSolicitudId(null); }} disabled={saving}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setDialogOpen(false); setPendingSolicitudId(null); setPendingCotizacionId(null); }} disabled={saving}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={saving || itemsSinPrecio.length > 0}>
               {saving ? "Guardando…" : "Crear orden"}
             </Button>
