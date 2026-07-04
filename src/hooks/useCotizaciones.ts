@@ -98,6 +98,13 @@ export function useCotizaciones() {
   const crearCotizacion = useCallback(
     async (input: NuevaCotizacion): Promise<Cotizacion> => {
       if (!activeClinicId) throw new Error("Sin clínica activa");
+      if (!input.items.length) throw new Error("La cotización necesita al menos un concepto.");
+      const itemInvalido = input.items.find(
+        (it) => !it.descripcion.trim() || it.cantidad <= 0 || it.precio_unitario_centavos <= 0
+      );
+      if (itemInvalido) {
+        throw new Error("Todos los conceptos deben tener descripción, cantidad y precio unitario mayores a cero.");
+      }
       setLoading(true);
       setError(null);
       try {

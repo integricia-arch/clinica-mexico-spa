@@ -184,14 +184,20 @@ export default function OrdenesCompra() {
     { subtotal: 0, iva: 0 }
   );
 
+  const validLines = lineItems.filter((l) => l.medicamento_id && l.cantidad_pedida > 0);
+  const itemsSinPrecio = validLines.filter((l) => l.precio_unitario_centavos <= 0);
+
   const handleSubmit = async () => {
     if (!form.proveedor_id) {
       toast({ title: "Selecciona un proveedor", variant: "destructive" });
       return;
     }
-    const validLines = lineItems.filter((l) => l.medicamento_id && l.cantidad_pedida > 0);
     if (!validLines.length) {
       toast({ title: "Agrega al menos un producto", variant: "destructive" });
+      return;
+    }
+    if (itemsSinPrecio.length > 0) {
+      toast({ title: "Carga el precio unitario de todos los productos antes de crear la orden", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -472,7 +478,8 @@ export default function OrdenesCompra() {
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Precio unit. (MXN)</Label>
                       <Input
-                        type="number" min={0} step={0.01} className="h-8 text-sm"
+                        type="number" min={0} step={0.01}
+                        className={`h-8 text-sm ${l.medicamento_id && l.precio_unitario_centavos <= 0 ? "border-destructive" : ""}`}
                         value={(l.precio_unitario_centavos / 100).toFixed(2)}
                         onChange={(e) => updateLine(l._key, "precio_unitario_centavos", Math.round(Number(e.target.value) * 100))}
                       />
@@ -489,6 +496,12 @@ export default function OrdenesCompra() {
                 ))}
               </div>
 
+              {itemsSinPrecio.length > 0 && (
+                <p className="text-xs text-destructive mt-2">
+                  Falta precio unitario en {itemsSinPrecio.length} producto(s) — cárgalo antes de crear la orden.
+                </p>
+              )}
+
               {/* Totales */}
               <div className="mt-3 rounded-md bg-muted/40 p-3 text-sm space-y-1 text-right">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatMXN(totales.subtotal)}</span></div>
@@ -499,7 +512,7 @@ export default function OrdenesCompra() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDialogOpen(false); setPendingSolicitudId(null); }} disabled={saving}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={saving}>
+            <Button onClick={handleSubmit} disabled={saving || itemsSinPrecio.length > 0}>
               {saving ? "Guardando…" : "Crear orden"}
             </Button>
           </DialogFooter>

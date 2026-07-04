@@ -105,6 +105,13 @@ export function useRecepcionesMercancia(clinicId: string | null) {
 
   const create = useCallback(async (input: RecepcionInput): Promise<string> => {
     if (!clinicId) throw new Error("No hay clínica activa.");
+    if (!input.items.length) throw new Error("La recepción necesita al menos un producto.");
+    const itemInvalido = input.items.find(
+      (it) => it.cantidad_recibida <= 0 || it.precio_unitario_centavos <= 0
+    );
+    if (itemInvalido) {
+      throw new Error("Todos los productos deben tener cantidad recibida y precio unitario mayores a cero.");
+    }
     const folio = nextFolioRec(items.map((r) => r.folio_recepcion));
 
     // Detectar diferencias: si todos los items tienen cantidad_recibida >= pedida → verificada

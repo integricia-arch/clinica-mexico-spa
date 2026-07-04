@@ -149,6 +149,10 @@ function NuevaCotizacionForm({
       toast({ title: "Agrega al menos un concepto", variant: "destructive" });
       return;
     }
+    if (form.items.some((it) => !it.descripcion.trim() || it.precio_unitario_centavos <= 0)) {
+      toast({ title: "Todos los conceptos necesitan descripción y precio unitario mayor a cero", variant: "destructive" });
+      return;
+    }
     try {
       const input: NuevaCotizacion = {
         proveedor_id:        form.proveedor_id,

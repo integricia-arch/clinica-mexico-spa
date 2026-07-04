@@ -145,6 +145,13 @@ export function useOrdenesCompra(clinicId: string | null) {
 
   const create = useCallback(async (input: OrdenCompraInput) => {
     if (!clinicId) throw new Error("No hay clínica activa.");
+    if (!input.items.length) throw new Error("La orden necesita al menos un producto.");
+    const itemSinDatos = input.items.find(
+      (it) => it.cantidad_pedida <= 0 || it.precio_unitario_centavos <= 0
+    );
+    if (itemSinDatos) {
+      throw new Error("Todos los productos deben tener cantidad y precio unitario mayores a cero.");
+    }
     const totales = calcTotales(input.items);
     const folio = nextFolio(items.map((o) => o.folio));
 

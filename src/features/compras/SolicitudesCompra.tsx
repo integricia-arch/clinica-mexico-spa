@@ -69,6 +69,10 @@ export default function SolicitudesCompra({ medicamentos }: Props) {
     setSaving(true);
     try {
       await create({ ...form, items: validLineas });
+      const sinEstimado = validLineas.filter((l) => !l.precio_estimado || l.precio_estimado <= 0);
+      if (sinEstimado.length > 0) {
+        toast.warning(`${sinEstimado.length} ítem(s) sin precio estimado — agrégalo si lo conoces para agilizar la cotización.`);
+      }
       toast.success("Solicitud de compra creada");
       setNewOpen(false);
       setForm({ area_solicitante: "", fecha_requerida: "", motivo: "", notas: "" });

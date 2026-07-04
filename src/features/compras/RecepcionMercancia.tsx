@@ -186,6 +186,15 @@ export default function RecepcionMercancia() {
       });
       return;
     }
+    const sinPrecio = validLines.filter((l) => l.precio_unitario_centavos <= 0);
+    if (sinPrecio.length > 0) {
+      toast({
+        title: `${sinPrecio.length} producto(s) sin precio unitario`,
+        description: "Carga el precio de costo antes de registrar la recepción.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setSaving(true);
     try {
@@ -452,7 +461,8 @@ export default function RecepcionMercancia() {
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">P. Unit. (MXN)</Label>
                           <Input
-                            type="number" min={0} step={0.01} className="h-8 text-sm"
+                            type="number" min={0} step={0.01}
+                            className={`h-8 text-sm ${l.medicamento_id && l.precio_unitario_centavos <= 0 ? "border-destructive" : ""}`}
                             value={(l.precio_unitario_centavos / 100).toFixed(2)}
                             onChange={(e) => updateLine(l._key, "precio_unitario_centavos", Math.round(Number(e.target.value) * 100))}
                           />
