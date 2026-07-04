@@ -3,6 +3,80 @@
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
+## Completado (Jul 4, 2026 — sesión 15 — cierre de pendientes de sesión 14 + fix validación Compras 360°)
+
+### Vercel deploy roto — CERRADO ✅ (root cause real, distinto del de sesión 14)
+El deploy de Vercel seguía fallando tras el fix de "multiple regions" (sesión 14) —
+causa real distinta: `vercel.json` tenía `"env": {"VITE_SUPABASE_URL": "@vite_supabase_url", ...}`,
+sintaxis vieja de Vercel (`@secret_name`) que requiere un Vercel Secret creado por
+CLI — nunca existió, confirmado por el status check de GitHub ("references Secret
+vite_supabase_url, which does not exist"). Fix: se quitó el bloque `env` completo
+de `vercel.json` — Vite ya lee las VITE_* desde las Environment Variables del
+dashboard de Vercel en build time sin necesitar este mapeo. Commit `71bc22a`,
+pusheado. **No se pudo confirmar que el próximo deploy pase** — cuenta Vercel
+sigue sin acceso (ver siguiente sección), no se pudo verificar en el dashboard
+si las Environment Variables ya están configuradas ahí.
+
+### Recuperación cuenta Vercel — SIGUE BLOQUEADO, sin cambios
+Revisado Gmail: Support Case #01281203 (abierto 29-jun) sigue **sin respuesta**
+de Vercel Support — único correo es el de apertura del caso. `npx vercel whoami`
+confirma que no hay sesión CLI activa (pidió device auth login, cancelado).
+**Pendiente del usuario**: confirmar si ya envió el form "Recover account access
+without 2FA" y seguir esperando respuesta del caso.
+
+### Carpeta huérfana `.claude/worktrees/almacen-modulo` — CASI CERRADO
+Ya no aparece en `git worktree list` (no es worktree activo). Contenido borrado
+(era copia de `main`, working tree limpio, sin cambios sin commitear). El
+directorio vacío en sí quedó bloqueado por Windows ("Device or resource busy",
+probablemente handle de indexado/antivirus) — sin impacto funcional, reintentar
+`rmdir` en sesión futura si molesta visualmente.
+
+### Verificación visual real en browser — HECHO ✅ (Almacén + Compras, PR #15+#16)
+Sesión logueada como admin real (`integric.ia`) en `integrika.mx`. Almacén:
+chips "Bajo stock"/"Por caducar", dropdown "Reportes y control", catálogo con
+datos reales (51 productos, 32 bajo stock), 0 errores de consola. Compras:
+todas las tabs cargan (Dashboard, Pipeline, Solicitudes, Cotizaciones, Órdenes
+de Compra, Recepción, CxP, Aging, Devoluciones, Evaluación, Presupuesto,
+Temperatura, Auditoría).
+
+### Bug real encontrado en la verificación — CERRADO ✅ (fix 360° en todo Compras)
+Se encontró **OC-0001 en prod con 32 items a $0.00** — el mismo bug que sesión 14
+dijo haber cerrado (PuntoReorden.tsx bloqueaba precio $0), pero **reapareció por
+otra vía**: el dialog "Nueva OC" en `OrdenesCompra.tsx` (creación manual, y
+también el flujo Solicitud→OC) nunca tuvo el mismo guard — el fix de sesión 14
+vivía solo en un componente, no en la función compartida.
+
+Usuario pidió explícitamente auditar **todo el módulo de Compras** (filosofía
+"guiar al usuario sin errores, nunca avanzar con datos incompletos"). Auditoría
+(subagente Explore) encontró 9 gaps desde DB hasta UI. Fix en 3 capas:
+
+- **DB** (`supabase/migrations/20260710000001_compras_check_precio_cantidad.sql`,
+  aplicada a prod): `CHECK (cantidad>0 AND precio_unitario_centavos>0)` en
+  `ordenes_compra_items`, `cotizaciones_items`, `recepciones_items`; `CHECK
+  (subtotal_centavos>0)` en `facturas_proveedor`. Es la red de seguridad real —
+  ningún caller futuro puede colarse otra vez.
+- **Hooks compartidos**: `useOrdenesCompra.create()`, `useCotizaciones.crearCotizacion()`,
+  `useRecepcionesMercancia.create()` ahora validan antes del INSERT (antes solo
+  la UI de un caller validaba).
+- **UI**: `OrdenesCompra.tsx`, `CotizacionesPanel.tsx`, `RecepcionMercancia.tsx`
+  bloquean el submit y resaltan en rojo (`border-destructive`) las líneas sin
+  precio — mismo patrón que ya usaba `PuntoReorden.tsx`. `SolicitudesCompra.tsx`
+  agrega aviso no bloqueante (precio estimado es opcional por diseño ahí, no
+  compromete gasto real).
+
+Limpieza de datos en prod: borrada OC-0001 (32 items, $0) y una cotización de
+prueba (`COT-MR3R7TYL`, "aspirinas", $0) — ambas hubieran violado los constraints
+nuevos. `tsc` 0 errores, 108/108 tests, build limpio. Commit `6bf349d`, pusheado
+y **verificado en vivo en producción**: browser real, intento de crear OC con
+precio $0 → input en rojo, mensaje de error, botón "Crear orden" deshabilitado.
+
+### Pendientes externos que siguen sin cambios (requieren acción del usuario)
+1. **Recuperación cuenta Vercel** — Support Case #01281203, sin respuesta.
+2. **Twilio en Supabase Auth dashboard** — pendiente desde módulo Fidelización
+   (externo, dashboard de terceros).
+3. **Deploy Vercel `loyalty.integrika.mx`** — bloqueado por el mismo problema
+   de acceso a cuenta Vercel.
+
 ## Completado (Jul 4, 2026 — sesión 14 — /pitch en blanco: root cause + fix)
 
 ### `/pitch` pantalla en blanco en producción — CERRADO ✅
