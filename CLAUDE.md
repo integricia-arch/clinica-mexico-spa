@@ -46,6 +46,31 @@ Prod project ref: **kyfkvdyxpvpiacyymldc**.
 - Supabase service role key and Telegram bot token are **env-only**. Never commit.
 - If a Supabase access token is exposed during debugging, **revoke and rotate it**.
 
+## Checklist obligatorio — toda función `SECURITY DEFINER` nueva (learned 2026-07-04)
+
+Auditoría de seguridad (`get_advisors`) encontró múltiples funciones `SECURITY DEFINER`
+en producción sin ningún control de acceso — la peor (`cfdi_get_secret`,
+`doctor_calendar_get_token`, etc.) era llamable con la anon key pública SIN LOGIN
+y leía secretos del vault / tokens OAuth por UUID. Ver
+`memoria/proyectos/seguridad-auditoria-supabase-2026-07-04.md` para el detalle completo.
+
+Toda migración que cree o reemplace una función `SECURITY DEFINER` DEBE incluir,
+en el mismo archivo:
+
+1. `SET search_path = public` (o el schema que corresponda) en la firma de la función.
+2. `REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC;` explícito, seguido de
+   `GRANT EXECUTE ... TO <rol mínimo necesario>` (`authenticated`, o `service_role`
+   si solo la llaman Edge Functions — nunca dejar el grant default implícito).
+3. Si la función toca datos multi-tenant: check de `clinic_memberships`/`auth.uid()`
+   como PRIMERA operación del body, antes de cualquier lectura/escritura.
+4. Vistas nuevas sobre datos multi-tenant: `security_invoker = on` por default.
+5. Nunca `USING (true)` en una policy RLS salvo tabla explícitamente pública
+   (documentar el motivo en comentario SQL arriba de la policy).
+
+Correr `mcp__supabase__get_advisors(type="security")` después de cualquier tanda
+de migraciones nuevas — ya es recomendación oficial de Supabase MCP, formalizado
+aquí como hábito de este proyecto.
+
 ## Vault secrets — regla de seguridad (learned 2026-06-21)
 
 **NUNCA** hacer `SELECT decrypted_secret FROM vault.decrypted_secrets` y mostrar el resultado en output/logs.

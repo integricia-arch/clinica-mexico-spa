@@ -3,6 +3,37 @@
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
+## Completado (Jul 4, 2026 — sesión 18 — auditoría de seguridad Supabase)
+
+Revisión diaria reportó `recepcion_revertir()` sin authz (borraba recepciones
+de otra clínica). Al corregirlo se corrió `get_advisors(security)` completo
+(449 findings) — ver [[seguridad-auditoria-supabase-2026-07-04]] para detalle
+completo, tabla de fixes y backlog priorizado.
+
+**6 hallazgos críticos/altos cerrados y verificados en prod:**
+`recepcion_revertir` authz, secretos vault/tokens OAuth expuestos a `anon` SIN
+NINGÚN check (peor hallazgo — CRITICAL, explotable sin login), RLS de
+`prescriptions`/`prescription_items` que exponía PHI de cualquier paciente a
+cualquier autenticado, 12 funciones sin `search_path` fijo, 5 vistas CxP
+definer+grant-all cruzando datos financieros entre clínicas, RLS faltante en
+`recetas_folio_contadores`. Todo commiteado (`74b9b39`, `ba55c31`), historial
+de migraciones reparado (Lovable había aplicado 2 fuera del CLI).
+
+**Pendiente — NO iniciado, requiere revisión caso por caso (ver doc completo):**
+- P1: 26 funciones `SECURITY DEFINER`+`anon` sin ningún check interno —
+  varias son fuga real de datos de negocio entre clínicas o mutación sin
+  autorización (`increment_lote_existencia`, `loyalty_redeem`,
+  `get_corte_pago_total`, etc.), otras probablemente diseño intencional
+  (bot FAQ público) — necesitan juicio de producto antes de tocar.
+- P2: 19 policies RLS "always true", bloque grande en tablas `journey_*` (11
+  tablas, probablemente 1 solo diseño de policy las resuelve todas).
+- P3: 4 extensiones en schema `public` (mover, riesgo bajo/esfuerzo medio),
+  toggle de "leaked password protection" en dashboard de Supabase (no
+  scriptable).
+
+Sesión cerrada por costo alto (usuario notificado repetidamente); continuar
+en sesión nueva empezando por P1 (fuga de datos de negocio).
+
 ## Completado (Jul 4, 2026 — sesión 17 — bugs reales de Cotizaciones tras smoke test del usuario)
 
 Usuario probó en browser real lo de sesión 16 y reportó 4 problemas concretos
