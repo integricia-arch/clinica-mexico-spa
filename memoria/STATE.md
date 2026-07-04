@@ -3,6 +3,67 @@
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
+## Completado (Jul 4, 2026 — sesión 16 — precio sugerido + multi-proveedor + reversa)
+
+Pedido del usuario tras revisar el fix de validación de sesión 15: el botón
+bloqueado en "Nueva OC" es correcto pero necesita un precio SUGERIDO (no $0
+en blanco) para no frenar la operación real de "comprar lo que está en rojo
+para evitar desabasto". Además pidió 2 features grandes: split multi-proveedor
+por medicamento, y reversa para corregir mala captura.
+
+### Precio sugerido = último costo de compra — CERRADO ✅
+`OrdenesCompra.tsx` (dialog "Nueva OC") ahora precarga `precio_unitario_centavos`
+con el costo del lote más reciente al elegir medicamento (mismo criterio que
+`PuntoReorden.tsx`). Fix de bug real de paso: `PuntoReorden.tsx` calculaba
+"último costo" ordenando por costo más ALTO, no por fecha más reciente —
+corregido a `fecha_entrada DESC`. Commit `c659d0a`.
+
+### Multi-proveedor por medicamento — CERRADO ✅
+Nuevo componente `SeleccionPorMedicamento.tsx` dentro de la comparativa de
+Cotizaciones (`CotizacionesPanel.tsx`): cuando 2+ proveedores cotizan la misma
+solicitud, el usuario elige POR MEDICAMENTO a qué proveedor comprarle (default:
+más barato, editable). Al confirmar, genera automáticamente 1 OC por proveedor
+con solo sus items — reutiliza `useOrdenesCompra.create()` ya validado (precio
+sugerido, guard $0). `useCotizaciones.marcarSeleccionadas()` nueva, marca
+varias cotizaciones activas a la vez (a diferencia de `seleccionarCotizacion()`
+que es ganador único). No requirió cambio de esquema — `cotizaciones` ya
+soportaba N registros por `solicitud_compra_id`.
+
+### Reversa para corregir mala captura — CERRADO ✅ (ambas: OC/Cotización + Recepción)
+- **OC**: `useOrdenesCompra.revertirABorrador()` — de `confirmada`/`pendiente_aprobacion`
+  vuelve a `borrador`. Bloqueado si ya tiene recepciones registradas (protege
+  trazabilidad una vez que hay mercancía física de por medio).
+- **Cotización**: `useCotizaciones.deseleccionarCotizacion()` — deshace el
+  marcado "seleccionada". Bloqueado si la OC generada ya avanzó de borrador.
+- **Recepción de mercancía**: nueva RPC `recepcion_revertir` (SECURITY DEFINER,
+  `supabase/migrations/20260710000002_recepcion_revertir_rpc.sql`, aplicada a
+  prod) — revierte existencia de lotes, `cantidad_recibida` en la OC, borra el
+  accrual provisional (`facturas_proveedor` sin CFDI real), recalcula estatus
+  de la OC (`recibida`/`parcial`→`confirmada` si ya no queda nada recibido).
+  Bloquea si: ya hay CFDI real cargado, la factura provisional ya tiene pagos
+  aplicados, o el lote ya se consumió por debajo de lo recibido (venta real
+  ya ocurrida) — para no romper integridad contable/inventario.
+
+Los 3 botones de reversa quedaron visibles en su UI correspondiente
+(`OrdenesCompra.tsx`, `CotizacionesPanel.tsx`, `RecepcionMercancia.tsx`).
+`tsc` 0 errores, 108/108 tests, build limpio. Commit `f43c1e9`, pusheado.
+**No verificado en browser real esta sesión** (por costo) — queda como
+pendiente de smoke test para próxima sesión.
+
+### Investigación de precios/proveedores reales de México — HECHA, NO cargada a DB
+Se investigó (agente con WebSearch, sin inventar datos regulatorios) laboratorio,
+presentación y precio de referencia para los 51 medicamentos del catálogo, más
+7 distribuidores/laboratorios mexicanos reales (Nadro, Marzam, Collins, PiSA,
+Senosiain, Liomont, Chinoin) con datos públicos de contacto. Ningún RFC ni
+registro sanitario COFEPRIS fue verificado en fuente primaria — se dejaron
+explícitamente como "no verificado" en vez de inventarse (dato regulatorio
+falso sería grave en un sistema de salud real). Reporte completo solo en el
+historial de conversación de esta sesión, **no se aplicó nada a Supabase**.
+**Pendiente**: decidir si cargar estos datos (marcados como referencia
+investigada, no precio negociado real) a `medicamentos`/`proveedores`, y
+resolver a mano los ~10 medicamentos con precio contradictorio o sin dato antes
+de cargarlos.
+
 ## Completado (Jul 4, 2026 — sesión 15 — cierre de pendientes de sesión 14 + fix validación Compras 360°)
 
 ### Vercel deploy roto — CERRADO ✅ (root cause real, distinto del de sesión 14)
