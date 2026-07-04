@@ -388,3 +388,19 @@ Sin `unschedule` previo, re-aplicar la migration crea jobs duplicados.
 - Label "Retención ≤90d" era semánticamente incorrecto — implica cross-período.
 - Fix correcto: renombrar label a "Pac. frecuentes" con suffix "≥2 citas/período". La lógica de cálculo no requiere cambio.
 - Si se quiere retención real (cross-período), es una métrica diferente: pacientes con cita en período N que también tuvieron cita en período N-1.
+
+## Learnings (added by /aprende 2026-07-04)
+
+### Una sola librería de animación: `motion`, NUNCA `framer-motion` directo <!-- /aprende 2026-07-04 -->
+`https://integrika.mx/pitch` quedó en pantalla en blanco en producción por
+`TypeError: e is not a function`. Causa: `Pitch.tsx` importaba `framer-motion`
+(dependencia directa v11.18.2) mientras el resto de la app (lealtad, PWA) usa
+`motion` (v12.40.0, que trae su propia copia interna de framer-motion). Como
+`Pitch.tsx` no está lazy-loaded, ambas versiones terminaban en el mismo chunk
+JS de producción y chocaban en runtime (solo se reproduce en build minificado,
+`vite dev` no lo muestra). Fix: `import { motion, useInView } from "motion/react"`
+(re-exporta la misma API), nunca `from "framer-motion"`. La dependencia
+`framer-motion` fue removida de `package.json`.
+**Regla:** cualquier componente nuevo con animaciones usa `motion/react`.
+Si `npm ls framer-motion` alguna vez muestra más de una copia, es señal de
+regresión — investigar antes de mergear.

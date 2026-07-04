@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView } from "motion/react";
 import {
   MessageCircle, Calendar, Bell, Shield, Users, Stethoscope,
   Pill, Receipt, Inbox as InboxIcon, ClipboardCheck, Bot, Clock,

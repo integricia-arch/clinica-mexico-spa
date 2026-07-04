@@ -3,6 +3,36 @@
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
+## Completado (Jul 4, 2026 — sesión 14 — /pitch en blanco: root cause + fix)
+
+### `/pitch` pantalla en blanco en producción — CERRADO ✅
+Reportado por el usuario: `https://integrika.mx/pitch` no funcionaba (pantalla en blanco).
+
+**Root cause:** dos versiones de `framer-motion` instaladas y bundleadas juntas
+en el mismo chunk JS de producción — `framer-motion@11.18.2` (dependencia directa,
+usada solo por `Pitch.tsx`) y `framer-motion@12.40.0` (anidada dentro de
+`motion@12.40.0`, usada por todo el resto de la app — lealtad, PWA). `Pitch.tsx`
+no está lazy-loaded (import estático en `App.tsx`), así que ambas copias
+terminaban en el mismo bundle principal (`index-*.js`, 3.2MB) y chocaban en
+runtime: `TypeError: e is not a function` en cada `useInView`/`whileInView`
+(framer-motion tiene singletons internos de módulo que no toleran dos copias
+coexistiendo en el mismo scope minificado). Reproducido local con
+`vite preview` (build de prod) — en `vite dev` no explotaba porque ahí cada
+paquete vive en su propio módulo ESM sin bundling/minificación que colisione.
+
+**Fix:** migrado `Pitch.tsx` de `framer-motion` a `motion/react` (mismo import
+`motion`, `useInView`, API idéntica — `motion/react` re-exporta su propia copia
+interna de framer-motion v12). Eliminada la dependencia `framer-motion` de
+`package.json` (ya sin uso), `npm install` removió 13 paquetes. Bundle bajó de
+864KB a 828KB gzip. Verificado en browser real (`vite preview`, build de
+producción): renderiza completo, scroll dispara todas las animaciones
+`whileInView`, cero errores de consola.
+
+**Prevención (queda como pendiente de implementar, ver abajo):** nunca debería
+haber 2 librerías de animación (`framer-motion` directa + `motion` que la
+envuelve) en el mismo proyecto — cualquier componente nuevo debe usar `motion/react`,
+nunca instalar `framer-motion` aparte. Agregar regla a este CLAUDE.md.
+
 ## Completado (Jul 3-4, 2026 — sesión 12/13 — Almacén catálogo unificado + fix OC/Compras — MERGEADO A MAIN)
 
 ### Plan Almacén catálogo unificado — COMPLETO ✅ Y MERGEADO (PR #15)
@@ -78,8 +108,13 @@ warnings preexistentes de chunk size / dynamic import, no bloqueantes).
    ya mergeados) — nunca se pudo hacer, login bloqueado por regla de seguridad.
    Usuario debe confirmar en `integrika.mx`.
 2. Vercel `multiple-function-regions` — no investigado.
-3. Commitear + pushear el fix de typecheck (types.ts regenerado + 5 archivos) —
-   sesión 14 dejó cambios sin commitear, ver `git status`.
+3. **Commitear + pushear el fix de `/pitch`** (migración a `motion/react` +
+   `package.json` sin `framer-motion`) — sesión 14, ver `git status`.
+4. Agregar regla explícita al `CLAUDE.md` del proyecto: nunca instalar
+   `framer-motion` como dependencia directa — el proyecto ya usa `motion`
+   (que envuelve su propia copia de framer-motion) para toda animación.
+   Instalarlas ambas duplica la librería en el bundle principal (`Pitch.tsx`
+   no es lazy) y rompe en producción con `TypeError: e is not a function`.
 
 ## Completado (Jul 3, 2026 — sesión 10 — Sentry DSN cerrado + spec Almacén catálogo unificado)
 
