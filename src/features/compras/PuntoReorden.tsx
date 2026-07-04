@@ -26,6 +26,7 @@ interface Lote {
   existencia: number;
   costo_unitario_centavos?: number | null;
   proveedor_id?: string | null;
+  fecha_entrada?: string | null;
 }
 
 interface Props {
@@ -67,10 +68,10 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
         const stockActual = stockTotal(m.id);
         const stockMax = m.stock_maximo ?? m.stock_minimo * 3;
         const aPedir = Math.max(0, stockMax - stockActual);
-        // Find most recent lote's cost and proveedor
+        // Find most recent lote's cost and proveedor (última compra, no el costo más alto)
         const loteDeMed = lotes
           .filter((l) => l.medicamento_id === m.id && l.costo_unitario_centavos)
-          .sort((a, b) => (b.costo_unitario_centavos ?? 0) - (a.costo_unitario_centavos ?? 0));
+          .sort((a, b) => new Date(b.fecha_entrada ?? 0).getTime() - new Date(a.fecha_entrada ?? 0).getTime());
         return {
           med: m,
           stockActual,

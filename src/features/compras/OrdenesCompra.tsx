@@ -55,6 +55,7 @@ export default function OrdenesCompra() {
   const [pendingSolicitudId, setPendingSolicitudId] = useState<string | null>(null);
 
   const [medicamentos, setMedicamentos] = useState<MedicamentoOption[]>([]);
+  const [ultimoCosto, setUltimoCosto] = useState<Record<string, number>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Record<string, OrdenCompraItem[]>>({});
 
@@ -140,6 +141,23 @@ export default function OrdenesCompra() {
       });
   }, [activeClinicId]);
 
+  // Precio sugerido = costo del lote más reciente por medicamento (última compra)
+  useEffect(() => {
+    if (!activeClinicId) return;
+    untypedTable("lotes_medicamento")
+      .select("medicamento_id, costo_unitario_centavos, fecha_entrada")
+      .eq("clinic_id", activeClinicId)
+      .not("costo_unitario_centavos", "is", null)
+      .order("fecha_entrada", { ascending: false })
+      .then(({ data }) => {
+        const map: Record<string, number> = {};
+        for (const l of (data ?? []) as { medicamento_id: string; costo_unitario_centavos: number }[]) {
+          if (map[l.medicamento_id] === undefined) map[l.medicamento_id] = l.costo_unitario_centavos;
+        }
+        setUltimoCosto(map);
+      });
+  }, [activeClinicId]);
+
   const toggleExpand = useCallback(async (id: string) => {
     if (expanded === id) { setExpanded(null); return; }
     setExpanded(id);
@@ -165,6 +183,9 @@ export default function OrdenesCompra() {
         if (field === "medicamento_id") {
           const med = medicamentos.find((m) => m.id === value);
           updated.tasa_iva = med?.tasa_iva ?? 0;
+          if (!l.precio_unitario_centavos) {
+            updated.precio_unitario_centavos = ultimoCosto[value as string] ?? 0;
+          }
         }
         return updated;
       })
