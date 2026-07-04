@@ -225,6 +225,21 @@ export function useOrdenesCompra(clinicId: string | null) {
     await load();
   }, [load]);
 
+  const revertirABorrador = useCallback(async (id: string) => {
+    const { count } = await untypedTable("recepciones_mercancia")
+      .select("id", { count: "exact", head: true })
+      .eq("orden_id", id);
+    if ((count ?? 0) > 0) {
+      throw new Error("No se puede revertir: la orden ya tiene recepciones de mercancía registradas.");
+    }
+    const { error: uErr } = await untypedTable("ordenes_compra")
+      .update({ estatus: "borrador" })
+      .eq("id", id)
+      .in("estatus", ["confirmada", "pendiente_aprobacion"]);
+    if (uErr) throw new Error(friendlyError(uErr, "No se pudo revertir la orden a borrador."));
+    await load();
+  }, [load]);
+
   const cancelar = useCallback(async (id: string) => {
     const { error: uErr } = await untypedTable("ordenes_compra")
       .update({ estatus: "cancelada" })
@@ -243,5 +258,5 @@ export function useOrdenesCompra(clinicId: string | null) {
       .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre ?? "" }));
   }, []);
 
-  return { items, loading, error, create, confirmar, aprobar, rechazar, cancelar, getItems, refresh: load };
+  return { items, loading, error, create, confirmar, aprobar, rechazar, cancelar, revertirABorrador, getItems, refresh: load };
 }

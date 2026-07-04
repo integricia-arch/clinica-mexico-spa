@@ -48,7 +48,7 @@ export default function RecepcionMercancia() {
   const { ctx, clearCtx } = useComprasNav();
   const { items: proveedores } = useProveedores(activeClinicId);
   const { items: ordenes, getItems: getOCItems } = useOrdenesCompra(activeClinicId);
-  const { items: recepciones, loading, error, create, verificar, getItems } = useRecepcionesMercancia(activeClinicId);
+  const { items: recepciones, loading, error, create, verificar, revertir, getItems } = useRecepcionesMercancia(activeClinicId);
   const { create: createFactura } = useFacturasProveedor(activeClinicId);
   const ctxApplied = useRef(false);
 
@@ -281,14 +281,22 @@ export default function RecepcionMercancia() {
 
               {isOpen && (
                 <div className="border-t px-3 pb-3 pt-2 space-y-3">
-                  {rec.estatus === "pendiente" && (
-                    <Button size="sm" onClick={async () => {
-                      try { await verificar(rec.id); toast({ title: "Recepción verificada" }); }
+                  <div className="flex gap-2 flex-wrap">
+                    {rec.estatus === "pendiente" && (
+                      <Button size="sm" onClick={async () => {
+                        try { await verificar(rec.id); toast({ title: "Recepción verificada" }); }
+                        catch (e) { toast({ title: String(e), variant: "destructive" }); }
+                      }}>
+                        <CheckCircle className="h-4 w-4 mr-1" /> Marcar verificada
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={async () => {
+                      try { await revertir(rec.id); toast({ title: "Recepción revertida" }); }
                       catch (e) { toast({ title: String(e), variant: "destructive" }); }
                     }}>
-                      <CheckCircle className="h-4 w-4 mr-1" /> Marcar verificada
+                      Revertir recepción
                     </Button>
-                  )}
+                  </div>
                   {rec.estatus === "con_diferencias" && (
                     <div className="flex items-center gap-2 text-sm text-yellow-600 bg-yellow-50 rounded p-2">
                       <AlertTriangle className="h-4 w-4 shrink-0" />

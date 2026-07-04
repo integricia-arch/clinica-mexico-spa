@@ -262,5 +262,13 @@ export function useRecepcionesMercancia(clinicId: string | null) {
       .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre ?? "" }));
   }, []);
 
-  return { items, loading, error, create, verificar, getItems, refresh: load };
+  const revertir = useCallback(async (id: string) => {
+    const { error: rErr } = await (supabase.rpc as unknown as (
+      fn: string, args: Record<string, unknown>
+    ) => Promise<{ error: unknown }>)("recepcion_revertir", { p_recepcion_id: id });
+    if (rErr) throw new Error(friendlyError(rErr as never, "No se pudo revertir la recepción."));
+    await load();
+  }, [load]);
+
+  return { items, loading, error, create, revertir, verificar, getItems, refresh: load };
 }

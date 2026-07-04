@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Plus, ChevronDown, ChevronUp, ShoppingCart, CheckCircle, XCircle, Trash2, PackageOpen } from "lucide-react";
+import { AlertTriangle, Plus, ChevronDown, ChevronUp, ShoppingCart, CheckCircle, XCircle, Trash2, PackageOpen, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -48,7 +48,7 @@ export default function OrdenesCompra() {
   const { hasRole } = useAuth();
   const { ctx, navigateTo, clearCtx } = useComprasNav();
   const isManager = hasRole("admin") || hasRole("manager");
-  const { items: ordenes, loading, error, create, confirmar, aprobar, rechazar, cancelar, getItems, refresh } = useOrdenesCompra(activeClinicId);
+  const { items: ordenes, loading, error, create, confirmar, aprobar, rechazar, cancelar, revertirABorrador, getItems, refresh } = useOrdenesCompra(activeClinicId);
   const { marcarConvertida } = useSolicitudesCompra(activeClinicId);
   const [rechazarDialog, setRechazarDialog] = useState<string | null>(null);
   const [rechazarMotivo, setRechazarMotivo] = useState("");
@@ -278,6 +278,15 @@ export default function OrdenesCompra() {
     }
   };
 
+  const handleRevertir = async (id: string) => {
+    try {
+      await revertirABorrador(id);
+      toast({ title: "Orden revertida a borrador" });
+    } catch (e) {
+      toast({ title: String(e), variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -362,6 +371,11 @@ export default function OrdenesCompra() {
                         onClick={() => navigateTo("recepcion", { orden_id: oc.id, orden_folio: oc.folio })}
                       >
                         <PackageOpen className="h-4 w-4 mr-1" /> Registrar recepción →
+                      </Button>
+                    )}
+                    {(oc.estatus === "confirmada" || oc.estatus === "pendiente_aprobacion") && (
+                      <Button size="sm" variant="outline" onClick={() => handleRevertir(oc.id)}>
+                        <RotateCcw className="h-4 w-4 mr-1" /> Revertir a borrador
                       </Button>
                     )}
                     {(oc.estatus === "borrador" || oc.estatus === "confirmada") && (

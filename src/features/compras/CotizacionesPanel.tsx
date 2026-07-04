@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useComprasNav } from "@/features/compras/ComprasNavContext";
 import { useCotizaciones, type Cotizacion, type CotizacionItem, type NuevaCotizacion } from "@/hooks/useCotizaciones";
+import SeleccionPorMedicamento from "@/features/compras/SeleccionPorMedicamento";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,7 +224,7 @@ function NuevaCotizacionForm({
   );
 }
 
-function ComparativaTable({ cotizaciones, onSeleccionar }: { cotizaciones: Cotizacion[]; onSeleccionar: (id: string, scId?: string) => void }) {
+function ComparativaTable({ cotizaciones, onSeleccionar, onDeseleccionar }: { cotizaciones: Cotizacion[]; onSeleccionar: (id: string, scId?: string) => void; onDeseleccionar: (id: string) => void }) {
   if (cotizaciones.length < 2) return null;
 
   const minTotal = Math.min(...cotizaciones.map((c) => c.total_centavos));
@@ -270,7 +271,15 @@ function ComparativaTable({ cotizaciones, onSeleccionar }: { cotizaciones: Cotiz
                 </td>
                 <td className="px-3 py-2 text-center">
                   {c.seleccionada
-                    ? <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
+                    ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <Button size="sm" variant="ghost" className="h-6 text-xs px-1.5 text-muted-foreground"
+                          onClick={() => onDeseleccionar(c.id)}>
+                          Deshacer
+                        </Button>
+                      </div>
+                    )
                     : (
                       <Button size="sm" variant="outline" className="h-7 text-xs"
                         onClick={() => onSeleccionar(c.id, c.solicitud_compra_id ?? undefined)}>
@@ -289,7 +298,7 @@ function ComparativaTable({ cotizaciones, onSeleccionar }: { cotizaciones: Cotiz
 }
 
 export default function CotizacionesPanel() {
-  const { fetchCotizaciones, seleccionarCotizacion, loading, error } = useCotizaciones();
+  const { fetchCotizaciones, seleccionarCotizacion, deseleccionarCotizacion, loading, error } = useCotizaciones();
   const { activeClinicId } = useActiveClinic();
   const { toast } = useToast();
   const { ctx, navigateTo, clearCtx } = useComprasNav();
@@ -328,6 +337,16 @@ export default function CotizacionesPanel() {
     try {
       await seleccionarCotizacion(id, scId);
       toast({ title: "Cotización seleccionada" });
+      await cargar();
+    } catch (e) {
+      toast({ title: e instanceof Error ? e.message : "Error", variant: "destructive" });
+    }
+  };
+
+  const handleDeseleccionar = async (id: string) => {
+    try {
+      await deseleccionarCotizacion(id);
+      toast({ title: "Selección deshecha" });
       await cargar();
     } catch (e) {
       toast({ title: e instanceof Error ? e.message : "Error", variant: "destructive" });
@@ -391,7 +410,8 @@ export default function CotizacionesPanel() {
               {sc ? `SC ${sc.folio} — ${sc.motivo ?? ""}` : "Sin solicitud de compra"}
               <span className="ml-2 text-xs">({cots.length} cotización{cots.length !== 1 ? "es" : ""})</span>
             </h3>
-            <ComparativaTable cotizaciones={cots} onSeleccionar={handleSeleccionar} />
+            <ComparativaTable cotizaciones={cots} onSeleccionar={handleSeleccionar} onDeseleccionar={handleDeseleccionar} />
+            {cots.length >= 2 && <SeleccionPorMedicamento cotizaciones={cots} onGenerado={cargar} />}
             {cots.length < 2 && (
               <p className="text-xs text-muted-foreground">
                 Agrega al menos 2 cotizaciones para ver la comparativa.

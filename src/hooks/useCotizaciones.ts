@@ -193,5 +193,48 @@ export function useCotizaciones() {
     [activeClinicId]
   );
 
-  return { fetchCotizaciones, crearCotizacion, seleccionarCotizacion, loading, error };
+  const marcarSeleccionadas = useCallback(
+    async (cotizacionIds: string[]): Promise<void> => {
+      if (!activeClinicId || !cotizacionIds.length) return;
+      const { error: err } = await supabase
+        .from("cotizaciones")
+        .update({ seleccionada: true })
+        .in("id", cotizacionIds)
+        .eq("clinic_id", activeClinicId);
+      if (err) throw new Error(err.message);
+    },
+    [activeClinicId]
+  );
+
+  const deseleccionarCotizacion = useCallback(
+    async (cotizacionId: string): Promise<void> => {
+      if (!activeClinicId) throw new Error("Sin clínica activa");
+      const { data: cot } = await supabase
+        .from("cotizaciones")
+        .select("orden_compra_id")
+        .eq("id", cotizacionId)
+        .single();
+      const ordenId = (cot as { orden_compra_id: string | null } | null)?.orden_compra_id;
+      if (ordenId) {
+        const { data: orden } = await supabase
+          .from("ordenes_compra")
+          .select("estatus")
+          .eq("id", ordenId)
+          .single();
+        const estatus = (orden as { estatus: string } | null)?.estatus;
+        if (estatus && estatus !== "borrador") {
+          throw new Error("No se puede deshacer: la orden de compra generada ya avanzó de borrador.");
+        }
+      }
+      const { error: err } = await supabase
+        .from("cotizaciones")
+        .update({ seleccionada: false })
+        .eq("id", cotizacionId)
+        .eq("clinic_id", activeClinicId);
+      if (err) throw new Error(err.message);
+    },
+    [activeClinicId]
+  );
+
+  return { fetchCotizaciones, crearCotizacion, seleccionarCotizacion, marcarSeleccionadas, deseleccionarCotizacion, loading, error };
 }
