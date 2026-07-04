@@ -3,6 +3,50 @@
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
+## Completado (Jul 4, 2026 — sesión 17 — bugs reales de Cotizaciones tras smoke test del usuario)
+
+Usuario probó en browser real lo de sesión 16 y reportó 4 problemas concretos
+en el módulo Cotizaciones:
+
+### Cotización nunca se ligaba a la OC generada — CERRADO ✅
+El botón "Generar OC →" solo prefillaba el proveedor en el diálogo, pero nunca
+escribía `orden_compra_id` de vuelta en la cotización — bug preexistente
+(no introducido esta sesión), y el feature multi-proveedor de sesión 16 tenía
+el mismo hueco (`marcarSeleccionadas` solo marcaba `seleccionada`, no el link).
+Fix: `useCotizaciones.vincularOrdenCompra(cotizacionId, ordenId)` nueva,
+usada en ambos flujos (`OrdenesCompra.tsx` single-provider vía
+`ctx.cotizacion_id`, y `SeleccionPorMedicamento.tsx` multi-proveedor, una vez
+por cada OC generada). Badge "OC generada" visible en la lista una vez ligada.
+
+### Sin vista de detalle de items en la lista de cotizaciones — CERRADO ✅
+`CotizacionesPanel.tsx` cargaba `c.items` pero nunca los pintaba. Ahora la fila
+es expandible (clic) y muestra tabla producto/cantidad/precio/subtotal.
+
+### Input de precio se autodestruía mientras se escribía — CERRADO ✅
+Bug real de UX en 3 archivos (`CotizacionesPanel.tsx`, `OrdenesCompra.tsx`,
+`RecepcionMercancia.tsx`): el input de precio era controlado directamente
+desde `precio_unitario_centavos`, así que en cada tecla se reformateaba a
+`.toFixed(2)` y borraba el punto decimal a medio escribir (typear "12." se
+convertía en "12.00" antes de poder seguir tecleando el decimal). Fix: input
+de texto no-controlado (`defaultValue` + `key` que cambia con el valor +
+commit en `onBlur`), permite escribir el importe completo sin interrupciones.
+
+### "Conceptos" — renombrado ✅
+Etiqueta confusa en el formulario de nueva cotización → "Productos / servicios
+cotizados".
+
+`tsc` 0 errores, 108/108 tests, build limpio. Commit `14383cb`, pusheado.
+**No verificado de nuevo en browser real** (costo de sesión ya crítico,
+usuario decidió cerrar) — pendiente smoke test de estos 4 fixes + los de
+sesión 16 (precio sugerido, multi-proveedor, reversa) en la próxima sesión.
+
+### Pendiente nuevo reportado por el usuario — NO iniciado
+Manual de ayuda (`/manual`, Docusaurus) desincronizado/no funciona, y el bot
+de ayuda al usuario tampoco funciona. Usuario decidió explícitamente dejarlo
+para sesión nueva por el costo ya alto de esta sesión. Ver sección "Manual de
+usuario + portal público" en `CLAUDE.md` del repo para contexto de arquitectura
+del manual antes de investigar.
+
 ## Completado (Jul 4, 2026 — sesión 16 — precio sugerido + multi-proveedor + reversa)
 
 Pedido del usuario tras revisar el fix de validación de sesión 15: el botón
