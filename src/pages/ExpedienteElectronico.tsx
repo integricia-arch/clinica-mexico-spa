@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -123,7 +123,7 @@ function F({ label, value }: { label: string; value: string | null | undefined }
 export default function ExpedienteElectronico() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
-  const { activeClinicId } = useAuth();
+  const { activeClinicId } = useActiveClinic();
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [ant, setAnt] = useState<Antecedentes | null>(null);

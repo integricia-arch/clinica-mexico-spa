@@ -26,7 +26,7 @@ function normalizeMember(raw: Record<string, unknown>): LoyaltyMember {
   if (raw && typeof raw.nivel === 'string' && !isValidNivel(raw.nivel)) {
     return { ...raw, nivel: 'bronce' } as LoyaltyMember
   }
-  return raw as LoyaltyMember
+  return raw as unknown as LoyaltyMember
 }
 
 // FIX 4: Whitelist sanitization — only allow alphanumeric, accented chars, spaces, @, ., -, +
@@ -140,7 +140,7 @@ export function useLoyaltyMember(clinicId: string | null) {
     })
 
     if (error) return { ok: false, error: error.message }
-    return data as RegisterSaleResult
+    return data as unknown as RegisterSaleResult
   }
 
   async function redeem(
@@ -156,7 +156,7 @@ export function useLoyaltyMember(clinicId: string | null) {
     })
 
     if (error) return { ok: false, error: error.message }
-    return data as RedeemResult
+    return data as unknown as RedeemResult
   }
 
   async function getAll(cId: string): Promise<LoyaltyMember[]> {

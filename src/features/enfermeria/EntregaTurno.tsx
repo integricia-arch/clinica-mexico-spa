@@ -96,7 +96,7 @@ export default function EntregaTurno() {
       .limit(30)
     setLoading(false)
     if (error) { toast.error("Error cargando entregas de turno"); return }
-    setEntregas((data ?? []) as EntregaDB[])
+    setEntregas((data ?? []) as unknown as EntregaDB[])
   }, [activeClinicId])
 
   useEffect(() => {

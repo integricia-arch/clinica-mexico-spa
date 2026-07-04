@@ -58,7 +58,7 @@ interface MemberDrawerProps {
 }
 
 function MemberDrawer({ member, open, onClose, valorPuntoMxn }: MemberDrawerProps) {
-  const { getMovimientos } = useLoyaltyMember()
+  const { getMovimientos } = useLoyaltyMember(null)
   const [movimientos, setMovimientos] = useState<LoyaltyMovimiento[]>([])
   const [loadingMovs, setLoadingMovs] = useState(false)
 
@@ -166,7 +166,7 @@ export function LoyaltyMiembros() {
     setLoading(true)
     try {
       const data = q.trim().length >= 2
-        ? await searchMembers(q, activeClinicId)
+        ? await searchMembers(q)
         : await getAll(activeClinicId)
       setMembers(data)
     } catch {

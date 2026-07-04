@@ -98,7 +98,7 @@ export function useLoyaltyPWA(slug: string) {
     if (!member) return
     const now = new Date().toISOString()
     await supabase
-      .from('loyalty_members' as never)
+      .from('loyalty_members')
       .update({
         consent_marketing: value,
         consent_marketing_at: value ? now : member.consent_marketing_at,
