@@ -110,7 +110,7 @@ export function useInventarioCiclico(clinicId: string | null) {
 
     // Cargar lotes con existencia > 0 (conteo ciego: SIN mostrar existencia_sistema al contador)
     let lotesQuery = untypedTable("lotes_medicamento")
-      .select("id, medicamento_id, numero_lote, existencia, medicamentos(nombre_generico, categoria)")
+      .select("id, medicamento_id, numero_lote, existencia, medicamentos(nombre, categoria)")
       .eq("clinic_id", clinicId)
       .gt("existencia", 0);
     if (categoriaFiltro) {
@@ -120,7 +120,7 @@ export function useInventarioCiclico(clinicId: string | null) {
 
     const itemRows = ((lotes ?? []) as {
       id: string; medicamento_id: string; numero_lote: string | null; existencia: number;
-      medicamentos?: { nombre_generico: string } | null;
+      medicamentos?: { nombre: string } | null;
     }[]).map((l) => ({
       conteo_id: conteoId,
       medicamento_id: l.medicamento_id,
@@ -139,7 +139,7 @@ export function useInventarioCiclico(clinicId: string | null) {
 
     const createdItems: ConteoItem[] = itemRows.map((r, i) => ({
       id: "", conteo_id: conteoId, medicamento_id: r.medicamento_id,
-      medicamento_nombre: ((lotes ?? []) as { id: string; medicamentos?: { nombre_generico: string } | null }[])[i]?.medicamentos?.nombre_generico ?? "",
+      medicamento_nombre: ((lotes ?? []) as { id: string; medicamentos?: { nombre: string } | null }[])[i]?.medicamentos?.nombre ?? "",
       lote_id: r.lote_id, numero_lote: r.numero_lote,
       existencia_sistema: r.existencia_sistema, existencia_contada: null,
       diferencia: null, fue_ajustado: false, nota_diferencia: "", contado_at: null,
@@ -167,12 +167,12 @@ export function useInventarioCiclico(clinicId: string | null) {
 
   const getItems = useCallback(async (conteoId: string): Promise<ConteoItem[]> => {
     const { data, error: qErr } = await untypedTable("conteos_items")
-      .select("*, medicamentos(nombre_generico)")
+      .select("*, medicamentos(nombre)")
       .eq("conteo_id", conteoId)
-      .order("medicamentos(nombre_generico)");
+      .order("medicamentos(nombre)");
     if (qErr) throw new Error(friendlyError(qErr, "No se pudieron cargar los items."));
-    return ((data ?? []) as (ConteoItem & { medicamentos?: { nombre_generico: string } })[])
-      .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre_generico ?? "" }));
+    return ((data ?? []) as (ConteoItem & { medicamentos?: { nombre: string } })[])
+      .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre ?? "" }));
   }, []);
 
   return { items, loading, error, iniciarConteo, registrarConteo, cerrarConteo, getItems, refresh: load };

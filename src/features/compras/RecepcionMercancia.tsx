@@ -77,14 +77,14 @@ export default function RecepcionMercancia() {
     if (!activeClinicId) return;
     supabase
       .from("medicamentos" as never)
-      .select("id, nombre_generico, tasa_iva")
+      .select("id, nombre, tasa_iva")
       .eq("clinic_id", activeClinicId)
       .eq("activo", true)
-      .order("nombre_generico")
+      .order("nombre")
       .then(({ data }) => {
         setMedicamentos(
-          ((data ?? []) as { id: string; nombre_generico: string; tasa_iva: number }[])
-            .map((m) => ({ id: m.id, nombre: m.nombre_generico, tasa_iva: m.tasa_iva ?? 0 }))
+          ((data ?? []) as { id: string; nombre: string; tasa_iva: number }[])
+            .map((m) => ({ id: m.id, nombre: m.nombre, tasa_iva: m.tasa_iva ?? 0 }))
         );
       });
   }, [activeClinicId]);

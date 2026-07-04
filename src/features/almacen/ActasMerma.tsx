@@ -84,13 +84,13 @@ export default function ActasMerma() {
   useEffect(() => {
     if (!activeClinicId) return;
     supabase.from("medicamentos" as never)
-      .select("id, nombre_generico")
+      .select("id, nombre")
       .eq("clinic_id", activeClinicId)
       .eq("activo", true)
-      .order("nombre_generico")
+      .order("nombre")
       .then(({ data }) =>
-        setMedicamentos(((data ?? []) as { id: string; nombre_generico: string }[])
-          .map((m) => ({ id: m.id, nombre: m.nombre_generico })))
+        setMedicamentos(((data ?? []) as { id: string; nombre: string }[])
+          .map((m) => ({ id: m.id, nombre: m.nombre })))
       );
 
     supabase.rpc("get_clinic_supervisors", { p_clinic_id: activeClinicId })

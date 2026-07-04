@@ -248,11 +248,11 @@ export function useRecepcionesMercancia(clinicId: string | null) {
 
   const getItems = useCallback(async (recepcionId: string): Promise<RecepcionItem[]> => {
     const { data, error: qErr } = await untypedTable("recepciones_items")
-      .select("*, medicamentos(nombre_generico)")
+      .select("*, medicamentos(nombre)")
       .eq("recepcion_id", recepcionId);
     if (qErr) throw new Error(friendlyError(qErr, "No se pudieron cargar los productos."));
-    return ((data ?? []) as (RecepcionItem & { medicamentos?: { nombre_generico: string } })[])
-      .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre_generico ?? "" }));
+    return ((data ?? []) as (RecepcionItem & { medicamentos?: { nombre: string } })[])
+      .map((r) => ({ ...r, medicamento_nombre: r.medicamentos?.nombre ?? "" }));
   }, []);
 
   return { items, loading, error, create, verificar, getItems, refresh: load };
