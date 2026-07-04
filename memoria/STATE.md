@@ -28,10 +28,41 @@ interna de framer-motion v12). Eliminada la dependencia `framer-motion` de
 producción): renderiza completo, scroll dispara todas las animaciones
 `whileInView`, cero errores de consola.
 
-**Prevención (queda como pendiente de implementar, ver abajo):** nunca debería
-haber 2 librerías de animación (`framer-motion` directa + `motion` que la
-envuelve) en el mismo proyecto — cualquier componente nuevo debe usar `motion/react`,
-nunca instalar `framer-motion` aparte. Agregar regla a este CLAUDE.md.
+**Prevención — HECHO ✅:** regla agregada a `CLAUDE.md` (sección "Learnings
+added by /aprende 2026-07-04"): nunca instalar `framer-motion` como dependencia
+directa, siempre `motion/react`. Commiteado y pusheado a main (`9c1c391`).
+Verificado en `integrika.mx/pitch` real (browser + curl): carga completo,
+bundle nuevo (`index-BWSdUEEw.js`), cero errores de consola.
+
+### Vercel `multiple-function-regions` — CERRADO ✅ (sesión 14)
+Causa confirmada por correo real de Vercel (`vercel[bot]` en PRs #7 al #17,
+mismo error siempre): *"Deploying Serverless Functions to multiple regions is
+restricted to the Pro and Enterprise plans"*. `vercel.json` tenía
+`"regions": ["iad1", "gru1"]` (2 regiones) sin tener ninguna Serverless
+Function real (`api/` no existe, es un sitio estático). Usuario pidió no
+borrar la config — se redujo a `"regions": ["iad1"]` (1 sola región, sin
+eliminar la clave). Commiteado y pusheado (`7d8a298`).
+**Sin verificar aún si el próximo deploy de Vercel pasa** — ningún PR de este
+repo (#7 al #17) tuvo jamás un deploy exitoso en Vercel, así que no hay
+`*.vercel.app` URL histórica para confirmar contra. Vercel es deploy espejo;
+el sitio real (`integrika.mx`) corre en Cloudflare Workers, no afectado por
+esto.
+
+### Recuperación de cuenta Vercel (2FA perdido) — EN CURSO, pendiente para próxima sesión
+Usuario no tiene acceso a 2FA de su cuenta Vercel (`integric.ia@gmail.com`).
+Ya existe un **Support Case #01281203** abierto (29-jun-2026, "Vercel account
+update") — confirmado en Gmail. Usuario está llenando el form
+"Recover account access without 2FA" de Vercel. Datos ya reunidos para el form:
+- Vercel account email: `integric.ia@gmail.com`
+- GitHub username: `integricia-arch`
+- Project URL: **no existe** — ningún deploy de Vercel tuvo éxito nunca en
+  este repo (PRs #7-#17, siempre mismo error de regiones). Sugerido escribir
+  `clinica-mexico-spa` (nombre del proyecto/repo) + nota "nunca completó un
+  deploy exitoso, sin URL pública generada — ver Support Case #01281203".
+- Recibo de pago / correo "Vercel sign up code": **no encontrados** en la
+  búsqueda de Gmail — revisar manualmente o dejar en blanco.
+- **Pendiente:** confirmar si el usuario ya envió el form y si Vercel Support
+  respondió al Case #01281203.
 
 ## Completado (Jul 3-4, 2026 — sesión 12/13 — Almacén catálogo unificado + fix OC/Compras — MERGEADO A MAIN)
 
@@ -107,14 +138,12 @@ warnings preexistentes de chunk size / dynamic import, no bloqueantes).
 1. **Verificación manual en browser** de los fixes de Compras/Almacén (PR #15+#16,
    ya mergeados) — nunca se pudo hacer, login bloqueado por regla de seguridad.
    Usuario debe confirmar en `integrika.mx`.
-2. Vercel `multiple-function-regions` — no investigado.
-3. **Commitear + pushear el fix de `/pitch`** (migración a `motion/react` +
-   `package.json` sin `framer-motion`) — sesión 14, ver `git status`.
-4. Agregar regla explícita al `CLAUDE.md` del proyecto: nunca instalar
-   `framer-motion` como dependencia directa — el proyecto ya usa `motion`
-   (que envuelve su propia copia de framer-motion) para toda animación.
-   Instalarlas ambas duplica la librería en el bundle principal (`Pitch.tsx`
-   no es lazy) y rompe en producción con `TypeError: e is not a function`.
+2. **Recuperación de cuenta Vercel** — usuario llenando form "Recover account
+   access without 2FA", Support Case #01281203 ya abierto. Confirmar si se
+   envió y si hubo respuesta (ver sección arriba con los datos ya reunidos).
+3. Confirmar si el próximo push/PR ya genera un deploy exitoso en Vercel
+   (nunca pasó en la historia del repo, ver sección arriba) — no bloqueante,
+   el sitio real corre en Cloudflare Workers.
 
 ## Completado (Jul 3, 2026 — sesión 10 — Sentry DSN cerrado + spec Almacén catálogo unificado)
 
