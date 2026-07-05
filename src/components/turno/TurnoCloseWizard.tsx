@@ -56,13 +56,13 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
   const [denomBreakdown, setDenomBreakdown] = useState<DenomBreakdown>({});
 
   useEffect(() => {
-    supabase
+    (supabase as any)
       .from("fondos_movimientos")
       .select("monto")
       .eq("turno_id", turno.id)
       .eq("tipo", "egreso")
       .ilike("motivo", "Reembolso%")
-      .then(({ data }) => {
+      .then(({ data }: { data: Array<{ monto: number | string }> | null }) => {
         if (!data || data.length === 0) return;
         setCashRefunds({
           count: data.length,
@@ -77,12 +77,12 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
     setSaving(true);
     setOverrideData(null);
 
-    const { data, error } = await supabase.rpc("turno_close", {
+    const { data, error } = await (supabase as any).rpc("turno_close", {
       p_turno_id: turno.id,
       p_cash_count: amount,
       p_notes: notes.trim() || null,
       p_supervisor_override: supervisorOverride,
-    } as never);
+    });
 
     setSaving(false);
 
@@ -318,10 +318,10 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
                       const f = Number(fondoInput);
                       if (isNaN(f) || f < 0) { toast.error("Monto inválido"); return; }
                       setSavingFondo(true);
-                      const { error } = await supabase.rpc("corte_set_fondo", {
+                      const { error } = await (supabase as any).rpc("corte_set_fondo", {
                         p_corte_id: result.corte_id,
                         p_fondo_siguiente: f,
-                      } as never);
+                      });
                       setSavingFondo(false);
                       if (error) { toast.error(`No se pudo guardar: ${error.message}`); return; }
                       setFondoGuardado({ fondo: f, deposito: Math.max(result.counted_cash - f, 0) });
