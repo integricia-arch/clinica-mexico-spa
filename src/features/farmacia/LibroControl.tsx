@@ -61,7 +61,25 @@ export function LibroControl({ clinicId, clinicName }: Props) {
 
       const { data, error } = await q;
       if (error) throw error;
-      setRows((data ?? []) as RecetaRow[]);
+      const mapped: RecetaRow[] = ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+        id: String(r.id ?? ""),
+        folio_secuencial: (r.folio_secuencial as number | null) ?? null,
+        clinic_id: String(r.clinic_id ?? ""),
+        sale_id: (r.sale_id as string | null) ?? null,
+        nombre_medico: (r.nombre_medico as string | null) ?? null,
+        cedula_profesional: (r.cedula_profesional as string | null) ?? null,
+        especialidad: (r.especialidad as string | null) ?? null,
+        fecha_receta: (r.fecha_receta as string | null) ?? null,
+        folio_receta: (r.folio_receta as string | null) ?? null,
+        nombre_paciente: (r.nombre_paciente as string | null) ?? null,
+        diagnostico: (r.diagnostico as string | null) ?? null,
+        receta_retenida: (r.receta_retenida as boolean | null) ?? null,
+        grupo: (r.grupo as string | null) ?? null,
+        folio_cofepris: (r.folio_cofepris as string | null) ?? null,
+        notas: (r.notas as string | null) ?? null,
+        created_at: String(r.created_at ?? ""),
+      }));
+      setRows(mapped);
     } catch (e: unknown) {
       toast({ title: "Error al cargar libro", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
