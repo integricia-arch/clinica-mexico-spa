@@ -54,6 +54,31 @@ interface SnapshotJson {
   progress_percent?: number;
 }
 
+function parseSnapshot(
+  raw: import("@/integrations/supabase/types").Json | null | undefined,
+): SnapshotJson {
+  if (raw == null) return {};
+  let obj: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      obj = JSON.parse(raw);
+    } catch (e) {
+      console.warn("[useDoctorQueue] snapshot_json inválido (string no-JSON)", e);
+      return {};
+    }
+  }
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return {};
+  const rec = obj as Record<string, unknown>;
+  const snap: SnapshotJson = {};
+  if (typeof rec.current_step_key === "string") snap.current_step_key = rec.current_step_key;
+  const p = rec.progress_percent;
+  if (typeof p === "number" && Number.isFinite(p)) snap.progress_percent = p;
+  else if (typeof p === "string" && p.trim() !== "" && Number.isFinite(Number(p))) {
+    snap.progress_percent = Number(p);
+  }
+  return snap;
+}
+
 function startEndOfDay(iso = new Date()) {
   const d = new Date(iso);
   const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).toISOString();
