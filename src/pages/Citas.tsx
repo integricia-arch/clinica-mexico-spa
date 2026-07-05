@@ -81,7 +81,7 @@ export default function Citas() {
   const [showNueva, setShowNueva] = useState(false);
 
   useEffect(() => {
-    supabase.from("doctors").select("id,nombre,apellidos,activo").eq("activo", true)
+    (supabase as any).from("doctors").select("id,nombre,apellidos,activo").eq("activo", true)
       .order("nombre").then(({ data }) => setDoctors((data ?? []) as Doctor[]));
   }, []);
 
@@ -90,7 +90,7 @@ export default function Citas() {
     // Explicit Mexico City offset (-06:00) so range is always correct regardless of browser timezone
     const start = new Date(from + "T00:00:00-06:00").toISOString();
     const end = new Date(to + "T23:59:59-06:00").toISOString();
-    let q = supabase
+    let q = (supabase as any)
       .from("appointments")
       .select("*, patients(id,nombre,apellidos,telefono), doctors(id,nombre,apellidos), servicios(id,nombre)")
       .gte("fecha_inicio", start)
@@ -119,7 +119,7 @@ export default function Citas() {
   const cambiarStatus = async (nuevo: Status) => {
     if (!selected) return;
     setUpdating(true);
-    const { error } = await supabase.from("appointments").update({ status: nuevo }).eq("id", selected.id);
+    const { error } = await (supabase as any).from("appointments").update({ status: nuevo }).eq("id", selected.id);
     setUpdating(false);
     if (error) { toast.error("No se pudo actualizar"); return; }
     toast.success("Status actualizado");
@@ -129,10 +129,10 @@ export default function Citas() {
 
   const verConversacion = async () => {
     if (!selected?.patient_id) return;
-    const { data: ident } = await supabase
+    const { data: ident } = await (supabase as any)
       .from("identidades_canal").select("id").eq("patient_id", selected.patient_id).limit(1).maybeSingle();
     if (!ident) { toast.info("Paciente sin canal asociado"); return; }
-    const { data: conv } = await supabase
+    const { data: conv } = await (supabase as any)
       .from("conversaciones").select("id").eq("identidad_canal_id", ident.id)
       .order("last_message_at", { ascending: false }).limit(1).maybeSingle();
     if (!conv) { toast.info("Sin conversación previa"); return; }

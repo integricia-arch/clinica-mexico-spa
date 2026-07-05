@@ -37,7 +37,7 @@ export interface PatientStudy {
 
 // patient_studies is not yet in the generated Supabase types — suppress until regenerated
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tbl = (name: string) => supabase.from(name as any);
+const tbl = (name: string) => (supabase as any).from(name as any);
 
 const BUCKET = "estudios-resultados";
 

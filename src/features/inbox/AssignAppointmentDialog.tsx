@@ -51,8 +51,8 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
     if (!open) return;
     (async () => {
       const [s, r] = await Promise.all([
-        supabase.from("servicios").select("id, nombre, duracion_minutos").eq("activo", true).order("nombre"),
-        supabase.from("rooms").select("id, nombre").eq("activo", true).order("nombre"),
+        (supabase as any).from("servicios").select("id, nombre, duracion_minutos").eq("activo", true).order("nombre"),
+        (supabase as any).from("rooms").select("id, nombre").eq("activo", true).order("nombre"),
       ]);
       setServicios((s.data ?? []) as Servicio[]);
       setRooms((r.data ?? []) as Room[]);
@@ -63,7 +63,7 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
   useEffect(() => {
     if (!servicioId) { setDoctores([]); setDoctorId(""); return; }
     (async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("doctor_servicios")
         .select("doctor:doctors(id, nombre, apellidos, horario_inicio, horario_fin, activo, operational_status, operational_status_until, operational_status_reason)")
         .eq("servicio_id", servicioId);
@@ -95,7 +95,7 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
       const endIso   = `${fecha}T23:59:59-06:00`;
       const filters = [`doctor_id.eq.${doctorId}`];
       if (roomId) filters.push(`room_id.eq.${roomId}`);
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("appointments")
         .select("fecha_inicio, fecha_fin, status, doctor_id, room_id")
         .gte("fecha_inicio", startIso)
@@ -129,7 +129,7 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
     setSaving(true);
     const fin = new Date(new Date(slotIso).getTime() + (servicio?.duracion_minutos ?? 30) * 60000).toISOString();
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("appointments")
       .insert({
         patient_id: patientId,
@@ -159,7 +159,7 @@ export function AssignAppointmentDialog({ open, onOpenChange, conversacionId, pa
     }
 
     // Audit
-    await supabase.from("audit_logs").insert({
+    await (supabase as any).from("audit_logs").insert({
       tabla: "appointments",
       registro_id: data.id,
       accion: "cita_desde_inbox",

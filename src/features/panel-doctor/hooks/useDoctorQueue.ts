@@ -75,7 +75,7 @@ export function useDoctorQueue(doctorId: string | null) {
     setLoading(true);
     try {
       const { start, end } = startEndOfDay();
-      const { data: appts, error: e1 } = await supabase
+      const { data: appts, error: e1 } = await (supabase as any)
         .from("appointments")
         .select(
           "id, fecha_inicio, fecha_fin, status, motivo_consulta, patient_id, servicio_id, room_id",
@@ -100,23 +100,23 @@ export function useDoctorQueue(doctorId: string | null) {
 
       const [pat, srv, rms, jrn, cons] = await Promise.all([
         patientIds.length
-          ? supabase
+          ? (supabase as any)
               .from("patients")
               .select("id, nombre, apellidos, fecha_nacimiento, sexo, telefono, alergias")
               .in("id", patientIds)
           : Promise.resolve({ data: [] as PatientRow[], error: null }),
         servicioIds.length
-          ? supabase.from("servicios").select("id, nombre").in("id", servicioIds)
+          ? (supabase as any).from("servicios").select("id, nombre").in("id", servicioIds)
           : Promise.resolve({ data: [] as NameRow[], error: null }),
         roomIds.length
-          ? supabase.from("rooms").select("id, nombre").in("id", roomIds)
+          ? (supabase as any).from("rooms").select("id, nombre").in("id", roomIds)
           : Promise.resolve({ data: [] as NameRow[], error: null }),
-        supabase
+        (supabase as any)
           .from("journey_instances")
           .select("id, appointment_id, snapshot_json")
           .in("appointment_id", apptIds),
         patientIds.length
-          ? supabase
+          ? (supabase as any)
               .from("consentimientos")
               .select("patient_id")
               .in("patient_id", patientIds)

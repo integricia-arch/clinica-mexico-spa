@@ -81,7 +81,7 @@ export function useDoctores(clinicId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: qErr } = await supabase
+      const { data, error: qErr } = await (supabase as any)
         .from("doctors")
         .select(
           "id, nombre, apellidos, especialidad, cedula_profesional, telefono, horario_inicio, horario_fin, activo",
@@ -104,7 +104,7 @@ export function useDoctores(clinicId: string | null) {
   const create = useCallback(
     async (input: DoctorInput) => {
       if (!clinicId) throw new Error("No hay clínica activa seleccionada.");
-      const { error: cErr } = await supabase
+      const { error: cErr } = await (supabase as any)
         .from("doctors")
         .insert({ ...toRow(input), clinic_id: clinicId } as never);
       if (cErr) throw new Error(friendlyError(cErr, "No se pudo crear el doctor."));
@@ -115,7 +115,7 @@ export function useDoctores(clinicId: string | null) {
 
   const update = useCallback(
     async (id: string, input: DoctorInput) => {
-      const { error: uErr } = await supabase.from("doctors").update(toRow(input)).eq("id", id);
+      const { error: uErr } = await (supabase as any).from("doctors").update(toRow(input)).eq("id", id);
       if (uErr) throw new Error(friendlyError(uErr, "No se pudo actualizar el doctor."));
       await load();
     },
@@ -124,7 +124,7 @@ export function useDoctores(clinicId: string | null) {
 
   const remove = useCallback(
     async (id: string) => {
-      const { error: dErr } = await supabase.from("doctors").delete().eq("id", id);
+      const { error: dErr } = await (supabase as any).from("doctors").delete().eq("id", id);
       if (dErr) throw new Error(friendlyError(dErr, "No se pudo eliminar el doctor."));
       await load();
     },

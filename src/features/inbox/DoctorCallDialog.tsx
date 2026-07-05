@@ -52,7 +52,7 @@ export function DoctorCallDialog({ open, onOpenChange, appointmentId, doctorId, 
     const { data: userRes } = await supabase.auth.getUser();
     const userId = userRes.user?.id;
 
-    const { error: insErr } = await supabase
+    const { error: insErr } = await (supabase as any)
       .from("doctor_contact_attempts")
       .insert({
         clinic_id: clinicId,
@@ -65,7 +65,7 @@ export function DoctorCallDialog({ open, onOpenChange, appointmentId, doctorId, 
       });
     if (insErr) { setSaving(false); toast.error("No se pudo registrar la llamada: " + insErr.message); return; }
 
-    await supabase.from("audit_logs").insert({
+    await (supabase as any).from("audit_logs").insert({
       tabla: "doctor_contact_attempts",
       registro_id: appointmentId,
       accion: "doctor_contact_attempt_created",
@@ -79,7 +79,7 @@ export function DoctorCallDialog({ open, onOpenChange, appointmentId, doctorId, 
         body: { appointment_id: appointmentId, decision: "confirmed", reason: "Confirmado por llamada telefónica" },
       });
       if (error) toast.message("Llamada registrada, pero la notificación falló: " + error.message);
-      await supabase.from("audit_logs").insert({
+      await (supabase as any).from("audit_logs").insert({
         tabla: "appointments", registro_id: appointmentId,
         accion: "doctor_confirmo_por_llamada",
         datos_nuevos: { channel, notes }, clinic_id: clinicId,
@@ -90,14 +90,14 @@ export function DoctorCallDialog({ open, onOpenChange, appointmentId, doctorId, 
         body: { appointment_id: appointmentId, decision: "declined", reason: notes },
       });
       if (error) toast.message("Llamada registrada, pero la notificación falló: " + error.message);
-      await supabase.from("audit_logs").insert({
+      await (supabase as any).from("audit_logs").insert({
         tabla: "appointments", registro_id: appointmentId,
         accion: "doctor_rechazo_por_llamada",
         datos_nuevos: { channel, reason: notes }, clinic_id: clinicId,
       });
       toast.success("Cita marcada como rechazada. Reasigna desde Inbox.");
     } else if (result === "no_answer" || result === "busy" || result === "callback_requested") {
-      await supabase.from("audit_logs").insert({
+      await (supabase as any).from("audit_logs").insert({
         tabla: "appointments", registro_id: appointmentId,
         accion: "doctor_no_contesto",
         datos_nuevos: { channel, status: result, notes }, clinic_id: clinicId,

@@ -106,7 +106,7 @@ export default function DetalleCita() {
 
   const loadEnfermeraInfo = async (assignedNurseId: string | null) => {
     if (!assignedNurseId) { setEnfermeraInfo(null); return; }
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("nurses")
       .select("nombre, apellidos, categoria")
       .eq("user_id", assignedNurseId)
@@ -116,7 +116,7 @@ export default function DetalleCita() {
 
   const reloadJourney = async () => {
     if (!id) return;
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("journey_instances")
       .select("id, appointment_id, patient_id, status, snapshot_json, updated_at, created_at")
       .eq("appointment_id", id)
@@ -249,12 +249,12 @@ export default function DetalleCita() {
     if (!id) return;
     (async () => {
       const [aRes, rRes, remRes] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("appointments")
           .select("*, patients(*), doctors(nombre, apellidos, especialidad), rooms(nombre, piso)")
           .eq("id", id)
           .single(),
-        supabase.from("appointment_resources").select("*").eq("appointment_id", id),
+        (supabase as any).from("appointment_resources").select("*").eq("appointment_id", id),
         supabaseAny
           .from("recordatorios_cita")
           .select("*, identidades_canal(canal_id, display_name)")
@@ -266,14 +266,14 @@ export default function DetalleCita() {
       setRecordatorios(remRes.data ?? []);
       await loadEnfermeraInfo((aRes.data as { assigned_nurse_id?: string | null } | null)?.assigned_nurse_id ?? null);
       if (aRes.data?.patient_id) {
-        const { data: icData } = await supabase
+        const { data: icData } = await (supabase as any)
           .from("identidades_canal")
           .select("id, canal_id, display_name")
           .eq("patient_id", aRes.data.patient_id);
         setIdentidadesCanal(icData ?? []);
       }
       if (aRes.data?.servicio_id) {
-        const { data: sData } = await supabase
+        const { data: sData } = await (supabase as any)
           .from("servicios")
           .select("nombre, precio_centavos, duracion_minutos")
           .eq("id", aRes.data.servicio_id)
@@ -287,7 +287,7 @@ export default function DetalleCita() {
 
   useEffect(() => {
     if (!puedeReasignarEnfermera) return;
-    supabase
+    (supabase as any)
       .from("nurses")
       .select("user_id, nombre, apellidos, categoria")
       .eq("activo", true)
@@ -300,7 +300,7 @@ export default function DetalleCita() {
     if (!id) return;
     const anterior = appointment?.assigned_nurse_id ?? null;
     setReassigningNurse(true);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("appointments")
       .update({ assigned_nurse_id: nuevoUserId })
       .eq("id", id);
@@ -326,7 +326,7 @@ export default function DetalleCita() {
 
   const updateStatus = async (newStatus: AppointmentStatus) => {
     const oldStatus = appointment!.status;
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("appointments")
       .update({ status: newStatus })
       .eq("id", id);
@@ -336,7 +336,7 @@ export default function DetalleCita() {
       return;
     }
 
-    await supabase.rpc("log_audit", {
+    await (supabase as any).rpc("log_audit", {
       _accion: newStatus === "cancelada" ? "cancelar" : "actualizar",
       _tabla: "appointments",
       _registro_id: id!,

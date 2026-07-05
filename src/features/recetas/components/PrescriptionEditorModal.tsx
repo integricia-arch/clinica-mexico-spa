@@ -74,7 +74,7 @@ export default function PrescriptionEditorModal({
   async function fetchStockForIds(medIds: string[]) {
     if (medIds.length === 0) return;
     const today = new Date().toISOString().slice(0, 10);
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("lotes_medicamento")
       .select("medicamento_id, existencia")
       .in("medicamento_id", medIds)
@@ -101,7 +101,7 @@ export default function PrescriptionEditorModal({
         // Buscar borrador existente ligado a la nota
         let rxId: string | null = null;
         if (consultationNoteId) {
-          const { data } = await supabase
+          const { data } = await (supabase as any)
             .from("prescriptions")
             .select("id, diagnosis")
             .eq("consultation_note_id", consultationNoteId)
@@ -114,7 +114,7 @@ export default function PrescriptionEditorModal({
         }
         setPrescriptionId(rxId);
         if (rxId) {
-          const { data: its } = await supabase
+          const { data: its } = await (supabase as any)
             .from("prescription_items")
             .select("*")
             .eq("prescription_id", rxId)
@@ -127,7 +127,7 @@ export default function PrescriptionEditorModal({
         } else {
           setItems([]);
         }
-        const { data: m } = await supabase
+        const { data: m } = await (supabase as any)
           .from("medicamentos")
           .select("id, nombre, descripcion, categoria, unidad")
           .eq("activo", true)
@@ -144,7 +144,7 @@ export default function PrescriptionEditorModal({
   async function ensurePrescription(): Promise<string | null> {
     if (prescriptionId) {
       // Actualizar diagnóstico (incluyendo string vacío para limpiar)
-      await supabase.from("prescriptions").update({ diagnosis: diag || null }).eq("id", prescriptionId);
+      await (supabase as any).from("prescriptions").update({ diagnosis: diag || null }).eq("id", prescriptionId);
       return prescriptionId;
     }
     const res = await createPrescriptionFromConsultation({
@@ -176,7 +176,7 @@ export default function PrescriptionEditorModal({
     if (!res.ok) {
       toast({ variant: "destructive", title: "Error", description: res.error });
     } else {
-      const { data: its } = await supabase.from("prescription_items").select("*").eq("prescription_id", rxId).order("created_at");
+      const { data: its } = await (supabase as any).from("prescription_items").select("*").eq("prescription_id", rxId).order("created_at");
       setItems(its ?? []);
       setDraft(EMPTY_ITEM);
       toast({ title: "Medicamento agregado" });
@@ -198,7 +198,7 @@ export default function PrescriptionEditorModal({
       return;
     }
     setIssuing(true);
-    await supabase.from("prescriptions").update({ diagnosis: diag || null }).eq("id", prescriptionId);
+    await (supabase as any).from("prescriptions").update({ diagnosis: diag || null }).eq("id", prescriptionId);
     const res = await issuePrescription(prescriptionId);
     setIssuing(false);
     if (!res.ok) {

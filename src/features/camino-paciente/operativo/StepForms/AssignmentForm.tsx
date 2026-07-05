@@ -29,11 +29,11 @@ export default function AssignmentForm({
   useEffect(() => {
     (async () => {
       const [d, r, s, appt] = await Promise.all([
-        supabase.from("doctors").select("id,nombre,apellidos").eq("activo", true).order("apellidos"),
-        supabase.from("rooms").select("id,nombre").eq("activo", true).order("nombre"),
-        supabase.from("servicios").select("id,nombre").eq("activo", true).order("nombre"),
+        (supabase as any).from("doctors").select("id,nombre,apellidos").eq("activo", true).order("apellidos"),
+        (supabase as any).from("rooms").select("id,nombre").eq("activo", true).order("nombre"),
+        (supabase as any).from("servicios").select("id,nombre").eq("activo", true).order("nombre"),
         appointmentId
-          ? supabase.from("appointments").select("doctor_id,room_id,servicio_id").eq("id", appointmentId).maybeSingle()
+          ? (supabase as any).from("appointments").select("doctor_id,room_id,servicio_id").eq("id", appointmentId).maybeSingle()
           : Promise.resolve({ data: null as ApptIds | null }),
       ]);
       setDoctors(d.data ?? []);
@@ -56,7 +56,7 @@ export default function AssignmentForm({
     }
     setSaving(true);
     if (appointmentId) {
-      await supabase
+      await (supabase as any)
         .from("appointments")
         .update({ doctor_id: doctorId, room_id: roomId, servicio_id: servicioId || null })
         .eq("id", appointmentId);

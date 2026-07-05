@@ -44,7 +44,7 @@ export function usePresupuesto() {
         const m = mes   ?? hoy.getMonth() + 1;
         const a = anio  ?? hoy.getFullYear();
 
-        const db = supabase.from("v_presupuesto_ejecucion");
+        const db = (supabase as any).from("v_presupuesto_ejecucion");
         const { data, error: err } = await db
           .select("*")
           .eq("clinic_id", activeClinicId)
@@ -69,7 +69,7 @@ export function usePresupuesto() {
       setLoading(true);
       setError(null);
       try {
-        const db = supabase.from("presupuesto_categorias");
+        const db = (supabase as any).from("presupuesto_categorias");
         const { data, error: err } = await db
           .upsert(
             {
@@ -101,7 +101,7 @@ export function usePresupuesto() {
   const deletePresupuesto = useCallback(
     async (id: string): Promise<void> => {
       if (!activeClinicId) throw new Error("Sin clínica activa");
-      const db = supabase.from("presupuesto_categorias");
+      const db = (supabase as any).from("presupuesto_categorias");
       const { error: err } = await db.delete().eq("id", id).eq("clinic_id", activeClinicId);
       if (err) throw err;
     },

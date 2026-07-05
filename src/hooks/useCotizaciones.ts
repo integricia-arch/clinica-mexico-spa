@@ -76,7 +76,7 @@ export function useCotizaciones() {
       setLoading(true);
       setError(null);
       try {
-        const db = supabase.from("cotizaciones");
+        const db = (supabase as any).from("cotizaciones");
         let q = db
           .select("*, proveedor:proveedores(nombre, rfc), items:cotizaciones_items(*)")
           .eq("clinic_id", activeClinicId)
@@ -109,7 +109,7 @@ export function useCotizaciones() {
       setError(null);
       try {
         const { subtotal, iva, total } = calcTotales(input.items);
-        const db = supabase.from("cotizaciones");
+        const db = (supabase as any).from("cotizaciones");
         const { data: cot, error: errCot } = await db
           .insert({
             clinic_id:           activeClinicId,
@@ -132,7 +132,7 @@ export function useCotizaciones() {
         const cotizacion = cot as Cotizacion;
 
         if (input.items.length > 0) {
-          const dbItems = supabase.from("cotizaciones_items");
+          const dbItems = (supabase as any).from("cotizaciones_items");
           const { error: errItems } = await dbItems.insert(
             input.items.map((it, idx) => {
               const desc = 1 - (it.descuento_pct ?? 0) / 100;
@@ -169,7 +169,7 @@ export function useCotizaciones() {
       if (!activeClinicId) throw new Error("Sin clínica activa");
       setLoading(true);
       try {
-        const db = supabase.from("cotizaciones");
+        const db = (supabase as any).from("cotizaciones");
         // Deselect all in same solicitud
         if (solicitudCompraId) {
           await db
@@ -196,7 +196,7 @@ export function useCotizaciones() {
   const marcarSeleccionadas = useCallback(
     async (cotizacionIds: string[]): Promise<void> => {
       if (!activeClinicId || !cotizacionIds.length) return;
-      const { error: err } = await supabase
+      const { error: err } = await (supabase as any)
         .from("cotizaciones")
         .update({ seleccionada: true })
         .in("id", cotizacionIds)
@@ -209,7 +209,7 @@ export function useCotizaciones() {
   const vincularOrdenCompra = useCallback(
     async (cotizacionId: string, ordenCompraId: string): Promise<void> => {
       if (!activeClinicId) return;
-      const { error: err } = await supabase
+      const { error: err } = await (supabase as any)
         .from("cotizaciones")
         .update({ seleccionada: true, orden_compra_id: ordenCompraId })
         .eq("id", cotizacionId)
@@ -222,14 +222,14 @@ export function useCotizaciones() {
   const deseleccionarCotizacion = useCallback(
     async (cotizacionId: string): Promise<void> => {
       if (!activeClinicId) throw new Error("Sin clínica activa");
-      const { data: cot } = await supabase
+      const { data: cot } = await (supabase as any)
         .from("cotizaciones")
         .select("orden_compra_id")
         .eq("id", cotizacionId)
         .single();
       const ordenId = (cot as { orden_compra_id: string | null } | null)?.orden_compra_id;
       if (ordenId) {
-        const { data: orden } = await supabase
+        const { data: orden } = await (supabase as any)
           .from("ordenes_compra")
           .select("estatus")
           .eq("id", ordenId)
@@ -239,7 +239,7 @@ export function useCotizaciones() {
           throw new Error("No se puede deshacer: la orden de compra generada ya avanzó de borrador.");
         }
       }
-      const { error: err } = await supabase
+      const { error: err } = await (supabase as any)
         .from("cotizaciones")
         .update({ seleccionada: false })
         .eq("id", cotizacionId)

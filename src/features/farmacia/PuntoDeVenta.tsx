@@ -82,7 +82,7 @@ async function logPosAudit(
   userId?: string | null,
 ) {
   try {
-    await supabase.from("audit_logs").insert({
+    await (supabase as any).from("audit_logs").insert({
       user_id: userId ?? (await supabase.auth.getUser()).data.user?.id ?? null,
       accion: event.includes("error") || event.includes("bloqueado") ? "error" : "crear",
       tabla: "pharmacy_sales",
@@ -103,7 +103,7 @@ async function logPosError(
   error_detail: string,
   payload: Record<string, unknown>,
 ) {
-  const { error } = await supabase.from("pos_error_logs").insert({
+  const { error } = await (supabase as any).from("pos_error_logs").insert({
     user_id: userId ?? null,
     clinic_id: clinicId,
     funcion,
@@ -241,8 +241,8 @@ export default function PuntoDeVenta({
     (async () => {
       setLoading(true);
       const [{ data: m }, { data: l }] = await Promise.all([
-        supabase.from("medicamentos").select("*").eq("activo", true).order("nombre"),
-        supabase.from("lotes_medicamento").select("*").gt("existencia", 0).order("created_at"),
+        (supabase as any).from("medicamentos").select("*").eq("activo", true).order("nombre"),
+        (supabase as any).from("lotes_medicamento").select("*").gt("existencia", 0).order("created_at"),
       ]);
       setMeds((m as Med[]) ?? []);
       setLotes((l as Lote[]) ?? []);
@@ -257,7 +257,7 @@ export default function PuntoDeVenta({
     }
     const t = setTimeout(async () => {
       const q = patientSearch.trim().replace(/[%(),]/g, "");
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("patients")
         .select("id, nombre, apellidos")
         .or(`nombre.ilike.%${q}%,apellidos.ilike.%${q}%`)
@@ -511,7 +511,7 @@ export default function PuntoDeVenta({
         discount: c.discount,
       })),
     };
-    const { data: saleId, error } = await supabase.rpc("pharmacy_register_sale", { p_payload: payload as never });
+    const { data: saleId, error } = await (supabase as any).rpc("pharmacy_register_sale", { p_payload: payload as never });
     if (error) {
       setSubmitting(false);
       const detail = `${error.message} | code: ${error.code} | hint: ${error.hint ?? ""} | details: ${error.details ?? ""}`;
@@ -528,7 +528,7 @@ export default function PuntoDeVenta({
     // Si el cobro fue por Stripe, actualizar payment_transactions con el sale_id
     const resolvedStripeTxnId = stripeTxnIdOverride ?? stripeTxnId;
     if (resolvedStripeTxnId) {
-      await supabase
+      await (supabase as any)
         .from("payment_transactions" as never)
         .update({ sale_id: saleId } as never)
         .eq("id", resolvedStripeTxnId as never);
@@ -543,7 +543,7 @@ export default function PuntoDeVenta({
       created_by: user?.id ?? null,
     }));
     if (rows.length > 0) {
-      const { error: pErr } = await supabase.from("pharmacy_sale_payments").insert(rows as never);
+      const { error: pErr } = await (supabase as any).from("pharmacy_sale_payments").insert(rows as never);
       if (pErr) {
         const pDetail = `${pErr.message} | code: ${pErr.code} | hint: ${pErr.hint ?? ""} | details: ${pErr.details ?? ""}`;
         await Promise.all([
@@ -595,7 +595,7 @@ export default function PuntoDeVenta({
     }
 
     if (perms.isManager && globalDiscount > 0 && user?.id) {
-      await supabase.from("pharmacy_sales")
+      await (supabase as any).from("pharmacy_sales")
         .update({ manager_authorized_by: user.id } as never)
         .eq("id", saleId as never);
     }
@@ -642,7 +642,7 @@ export default function PuntoDeVenta({
     setClienteTipo("publico");
     setLoyaltyDescuento(0);
     setLoyaltyMemberId(null);
-    const { data: l } = await supabase
+    const { data: l } = await (supabase as any)
       .from("lotes_medicamento").select("*").gt("existencia", 0).order("created_at");
     setLotes((l as Lote[]) ?? []);
     inputRef.current?.focus();
@@ -659,7 +659,7 @@ export default function PuntoDeVenta({
 
   async function saveRecetaPostSale(recetaData: RecetaData) {
     if (!pendingRxSaleId) return;
-    await supabase.from("recetas_capturadas").insert({
+    await (supabase as any).from("recetas_capturadas").insert({
       clinic_id: activeClinicId,
       sale_id: pendingRxSaleId,
       nombre_medico: recetaData.nombre_medico,

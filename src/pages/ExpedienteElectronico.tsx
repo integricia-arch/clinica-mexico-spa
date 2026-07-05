@@ -138,10 +138,10 @@ export default function ExpedienteElectronico() {
     if (!patientId) return;
     setLoading(true);
     Promise.all([
-      supabase.from("patients").select("*").eq("id", patientId).single(),
-      supabase.from("antecedentes_clinicos").select("*").eq("patient_id", patientId).maybeSingle(),
-      supabase.from("expedientes").select("id").eq("patient_id", patientId),
-      supabase.from("prescriptions")
+      (supabase as any).from("patients").select("*").eq("id", patientId).single(),
+      (supabase as any).from("antecedentes_clinicos").select("*").eq("patient_id", patientId).maybeSingle(),
+      (supabase as any).from("expedientes").select("id").eq("patient_id", patientId),
+      (supabase as any).from("prescriptions")
         .select("id,created_at,prescription_number,diagnosis,status")
         .eq("patient_id", patientId)
         .order("created_at", { ascending: false })
@@ -196,7 +196,7 @@ export default function ExpedienteElectronico() {
 
       const expIds = (expRes.data ?? []).map((e: { id: string }) => e.id);
       if (expIds.length > 0) {
-        const { data: nd } = await supabase
+        const { data: nd } = await (supabase as any)
           .from("notas_consulta")
           .select("id,fecha_consulta,subjetivo,objetivo,analisis,plan,diagnostico_principal")
           .in("expediente_id", expIds)
@@ -247,9 +247,9 @@ export default function ExpedienteElectronico() {
       mastografia_fecha: ant.mastografia_fecha || null,
     };
     if (ant.id) {
-      await supabase.from("antecedentes_clinicos").update(payload).eq("id", ant.id);
+      await (supabase as any).from("antecedentes_clinicos").update(payload).eq("id", ant.id);
     } else {
-      const { data } = await supabase.from("antecedentes_clinicos").insert(payload).select("id").single();
+      const { data } = await (supabase as any).from("antecedentes_clinicos").insert(payload).select("id").single();
       if (data) setAnt(prev => prev ? { ...prev, id: (data as { id: string }).id } : prev);
     }
     setSaving(false);

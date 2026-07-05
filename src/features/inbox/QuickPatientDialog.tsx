@@ -70,7 +70,7 @@ export function QuickPatientDialog({
     if (tel.length < 6 && term.length < 3) { setMatches([]); return; }
     setSearching(true);
     const t = setTimeout(async () => {
-      let q = supabase
+      let q = (supabase as any)
         .from("patients")
         .select("id, nombre, apellidos, telefono, fecha_nacimiento")
         .eq("clinic_id", clinicId)
@@ -92,13 +92,13 @@ export function QuickPatientDialog({
 
   const linkPatient = async (patientId: string, audit: "paciente_creado_inbox" | "paciente_vinculado_inbox") => {
     // Vincular en identidades_canal y en conversaciones
-    const { error: e1 } = await supabase
+    const { error: e1 } = await (supabase as any)
       .from("identidades_canal")
       .update({ patient_id: patientId })
       .eq("id", identidadCanalId);
     if (e1) { toast.error("No se pudo vincular identidad: " + e1.message); return false; }
 
-    await supabase.from("audit_logs").insert({
+    await (supabase as any).from("audit_logs").insert({
       tabla: "conversaciones",
       registro_id: conversacionId,
       accion: audit,
@@ -121,7 +121,7 @@ export function QuickPatientDialog({
   const crear = async () => {
     if (!nombre.trim() || !apellidos.trim()) { toast.error("Nombre y apellidos son obligatorios"); return; }
     setSaving(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("patients")
       .insert({
         nombre: nombre.trim(),

@@ -125,8 +125,8 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     setServicioId("__none__"); setMotivo(""); setSaving(false);
 
     Promise.all([
-      supabase.from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos"),
-      supabase.from("servicios").select("id,nombre").order("nombre"),
+      (supabase as any).from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos"),
+      (supabase as any).from("servicios").select("id,nombre").order("nombre"),
       (supabase as any).rpc("list_nurses"),
     ]).then(([{ data: d }, { data: s }, { data: n }]: any) => {
       setDoctores((d ?? []) as Doctor[]);
@@ -169,7 +169,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     if (q.length < 2) { setPacientes([]); setSearching(false); return; }
     setSearching(true);
     const t = setTimeout(async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("patients")
         .select("id,nombre,apellidos,telefono")
         .or(`nombre.ilike.%${q}%,apellidos.ilike.%${q}%`)

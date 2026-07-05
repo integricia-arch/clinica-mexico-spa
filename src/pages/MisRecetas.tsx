@@ -57,7 +57,7 @@ export default function MisRecetas() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data: rxs } = await supabase
+      const { data: rxs } = await (supabase as any)
         .from("prescriptions")
         .select("id, prescription_number, issue_date, status, diagnosis, doctor_id")
         .neq("status", "draft")
@@ -69,8 +69,8 @@ export default function MisRecetas() {
       const ids = list.map((r) => r.id);
       const doctorIds = Array.from(new Set(list.map((r) => r.doctor_id)));
       const [{ data: items }, { data: docs }] = await Promise.all([
-        supabase.from("prescription_items").select("*").in("prescription_id", ids),
-        supabase.from("doctors").select("id, nombre, apellidos, cedula_profesional, especialidad").in("id", doctorIds),
+        (supabase as any).from("prescription_items").select("*").in("prescription_id", ids),
+        (supabase as any).from("doctors").select("id, nombre, apellidos, cedula_profesional, especialidad").in("id", doctorIds),
       ]);
 
       const itemsByRx = new Map<string, Item[]>();

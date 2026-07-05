@@ -76,18 +76,18 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
     setError(null);
     try {
       const [inst, st, ovr, au] = await Promise.allSettled([
-        supabase.from("journey_instances").select("*").eq("id", journeyId).maybeSingle(),
-        supabase
+        (supabase as any).from("journey_instances").select("*").eq("id", journeyId).maybeSingle(),
+        (supabase as any)
           .from("journey_instance_steps")
           .select("*")
           .eq("journey_instance_id", journeyId)
           .order("step_order", { ascending: true }),
-        supabase
+        (supabase as any)
           .from("journey_instance_overrides")
           .select("*")
           .eq("journey_instance_id", journeyId)
           .eq("status", "requested"),
-        supabase
+        (supabase as any)
           .from("journey_instance_audit")
           .select("*")
           .eq("journey_instance_id", journeyId)
@@ -101,7 +101,7 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
 
         // Fetch patient context
         if (instData.patient_id) {
-          const { data: p } = await supabase
+          const { data: p } = await (supabase as any)
             .from("patients")
             .select("id, nombre, apellidos, fecha_nacimiento, sexo")
             .eq("id", instData.patient_id)
@@ -111,7 +111,7 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
 
         // Fetch appointment context (with doctor join)
         if (instData.appointment_id) {
-          const { data: a } = await supabase
+          const { data: a } = await (supabase as any)
             .from("appointments")
             .select("id, fecha_inicio, motivo_consulta, doctors(nombre, apellidos), salas(nombre)")
             .eq("id", instData.appointment_id)
@@ -135,7 +135,7 @@ export function useJourneyInstance(journeyId: string | null): UseJourneyInstance
 
       if (stepsArr.length) {
         const ids = (stepsArr as Array<{ id: string }>).map((s) => s.id);
-        const { data: sd } = await supabase
+        const { data: sd } = await (supabase as any)
           .from("journey_instance_step_data")
           .select("journey_instance_step_id, data_json")
           .in("journey_instance_step_id", ids);

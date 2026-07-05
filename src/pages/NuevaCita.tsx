@@ -42,9 +42,9 @@ export default function NuevaCita() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("doctors").select("*").eq("activo", true).order("apellidos"),
-      supabase.from("patients").select("id, nombre, apellidos").eq("activo", true).order("apellidos"),
-      supabase.from("rooms").select("*").eq("activo", true).order("nombre"),
+      (supabase as any).from("doctors").select("*").eq("activo", true).order("apellidos"),
+      (supabase as any).from("patients").select("id, nombre, apellidos").eq("activo", true).order("apellidos"),
+      (supabase as any).from("rooms").select("*").eq("activo", true).order("nombre"),
     ]).then(([d, p, r]) => {
       setDoctors(d.data ?? []);
       setPatients(p.data ?? []);

@@ -488,7 +488,7 @@ function StepEditorSheet({ step, onClose, onSaved }: { step: JourneyStep | null;
       return;
     }
     setSaving(true);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("journey_step_definitions")
       .update({
         step_name: name.trim(),
@@ -599,7 +599,7 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
   const load = async () => {
     if (!currentStep) return;
     setLoading(true);
-    const { data } = await supabase.from("journey_step_fields").select("*").eq("step_definition_id", currentStep.id).order("sort_order");
+    const { data } = await (supabase as any).from("journey_step_fields").select("*").eq("step_definition_id", currentStep.id).order("sort_order");
     setFields((data ?? []) as StepFieldRow[]);
     setLoading(false);
   };
@@ -645,7 +645,7 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
                 size="sm"
                 variant="ghost"
                 onClick={async () => {
-                  const { error } = await supabase.from("journey_step_fields").delete().eq("id", f.id);
+                  const { error } = await (supabase as any).from("journey_step_fields").delete().eq("id", f.id);
                   if (error) toast.error(friendlyError(error));
                   else { toast.success("Campo eliminado"); load(); }
                 }}
@@ -667,7 +667,7 @@ function FieldsPanel({ steps }: { steps: JourneyStep[] }) {
                 className="w-full text-left rounded-md border border-border bg-background p-3 hover:border-primary"
                 onClick={async () => {
                   if (!currentStep) return;
-                  const { error } = await supabase.from("journey_step_fields").insert({
+                  const { error } = await (supabase as any).from("journey_step_fields").insert({
                     step_definition_id: currentStep.id,
                     field_key: opt.key,
                     field_label: opt.label,
@@ -700,8 +700,8 @@ function CatalogsPanel() {
 
   const load = async () => {
     setLoading(true);
-    const { data: cats } = await supabase.from("journey_option_catalogs").select("*").order("catalog_name");
-    const { data: its } = await supabase.from("journey_option_items").select("*").order("sort_order");
+    const { data: cats } = await (supabase as any).from("journey_option_catalogs").select("*").order("catalog_name");
+    const { data: its } = await (supabase as any).from("journey_option_items").select("*").order("sort_order");
     const map: Record<string, CatalogItemRow[]> = {};
     (its ?? []).forEach((i: CatalogItemRow) => { (map[i.catalog_id] ??= []).push(i); });
     setCatalogs((cats ?? []) as CatalogRow[]);
@@ -711,7 +711,7 @@ function CatalogsPanel() {
   useEffect(() => { load(); }, []);
 
   const toggleItem = async (it: CatalogItemRow) => {
-    const { error } = await supabase.from("journey_option_items").update({ is_active: !it.is_active }).eq("id", it.id);
+    const { error } = await (supabase as any).from("journey_option_items").update({ is_active: !it.is_active }).eq("id", it.id);
     if (error) toast.error(friendlyError(error)); else load();
   };
 
@@ -768,7 +768,7 @@ function RulesPanel({ steps, versionId }: { steps: JourneyStep[]; versionId: str
   const load = async () => {
     if (!versionId) return;
     setLoading(true);
-    const { data } = await supabase.from("journey_validation_rules").select("*").eq("template_version_id", versionId).order("created_at");
+    const { data } = await (supabase as any).from("journey_validation_rules").select("*").eq("template_version_id", versionId).order("created_at");
     setRules((data ?? []) as RuleRow[]);
     setLoading(false);
   };
@@ -782,7 +782,7 @@ function RulesPanel({ steps, versionId }: { steps: JourneyStep[]; versionId: str
       toast.error("Completa todos los campos"); return;
     }
     if (!stepKeys.has(sourceStep)) { toast.error("La etapa origen no existe"); return; }
-    const { error } = await supabase.from("journey_validation_rules").insert({
+    const { error } = await (supabase as any).from("journey_validation_rules").insert({
       template_version_id: versionId,
       rule_name: ruleName.trim(),
       source_step_key: sourceStep,
@@ -872,7 +872,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("journey_template_versions")
       .select("*")
       .eq("template_id", templateId)
@@ -887,7 +887,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
     if (!active) { toast.error("No hay versión activa para clonar"); return; }
     const nextNumber = Math.max(...versions.map((v) => v.version_number)) + 1;
 
-    const { data: newVersion, error } = await supabase
+    const { data: newVersion, error } = await (supabase as any)
       .from("journey_template_versions")
       .insert({ template_id: templateId, version_number: nextNumber, status: "draft", config_json: active.config_json as unknown as import("@/integrations/supabase/types").Json })
       .select()
@@ -895,7 +895,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
     if (error || !newVersion) { toast.error(error?.message ?? "Error"); return; }
 
     // clone steps
-    const { data: srcSteps } = await supabase.from("journey_step_definitions").select("*").eq("template_version_id", active.id);
+    const { data: srcSteps } = await (supabase as any).from("journey_step_definitions").select("*").eq("template_version_id", active.id);
     if (srcSteps && srcSteps.length > 0) {
       const rows = srcSteps.map((s: any) => ({
         template_version_id: newVersion.id,
@@ -915,7 +915,7 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
         allowed_complete_roles: s.allowed_complete_roles,
         allowed_override_roles: s.allowed_override_roles,
       }));
-      await supabase.from("journey_step_definitions").insert(rows);
+      await (supabase as any).from("journey_step_definitions").insert(rows);
     }
     toast.success(`Borrador v${nextNumber} creado`);
     load(); onChange();
@@ -926,10 +926,10 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
     if (!reason.trim()) { toast.error("Indica el motivo del cambio"); return; }
 
     // archive current active
-    await supabase.from("journey_template_versions").update({ status: "archived" }).eq("template_id", templateId).eq("status", "active");
+    await (supabase as any).from("journey_template_versions").update({ status: "archived" }).eq("template_id", templateId).eq("status", "active");
     // publish this one
-    await supabase.from("journey_template_versions").update({ status: "active", publish_reason: reason, published_at: new Date().toISOString() }).eq("id", v.id);
-    await supabase.from("journey_templates").update({ active_version_id: v.id }).eq("id", templateId);
+    await (supabase as any).from("journey_template_versions").update({ status: "active", publish_reason: reason, published_at: new Date().toISOString() }).eq("id", v.id);
+    await (supabase as any).from("journey_templates").update({ active_version_id: v.id }).eq("id", templateId);
     toast.success(`v${v.version_number} publicada`);
     setReason("");
     load(); onChange();
@@ -937,9 +937,9 @@ function VersionsPanel({ templateId, canPublish, onChange }: { templateId: strin
 
   const restore = async (v: VersionRow) => {
     if (!confirm(`¿Restaurar v${v.version_number} como activa? La actual será archivada.`)) return;
-    await supabase.from("journey_template_versions").update({ status: "archived" }).eq("template_id", templateId).eq("status", "active");
-    await supabase.from("journey_template_versions").update({ status: "active" }).eq("id", v.id);
-    await supabase.from("journey_templates").update({ active_version_id: v.id }).eq("id", templateId);
+    await (supabase as any).from("journey_template_versions").update({ status: "archived" }).eq("template_id", templateId).eq("status", "active");
+    await (supabase as any).from("journey_template_versions").update({ status: "active" }).eq("id", v.id);
+    await (supabase as any).from("journey_templates").update({ active_version_id: v.id }).eq("id", templateId);
     toast.success("Versión restaurada");
     load(); onChange();
   };
@@ -1047,14 +1047,14 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
     setSaving(true);
 
     // find base template
-    const { data: base } = await supabase
+    const { data: base } = await (supabase as any)
       .from("journey_templates")
       .select("*, journey_template_versions!journey_template_versions_template_id_fkey(*)")
       .eq("is_default", true)
       .maybeSingle();
 
     // create template
-    const { data: tpl, error: e1 } = await supabase
+    const { data: tpl, error: e1 } = await (supabase as any)
       .from("journey_templates")
       .insert({ name: name.trim(), description: desc.trim() || null, type })
       .select()
@@ -1062,7 +1062,7 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
     if (e1 || !tpl) { setSaving(false); toast.error(e1?.message ?? "Error"); return; }
 
     // create v1 active
-    const { data: ver, error: e2 } = await supabase
+    const { data: ver, error: e2 } = await (supabase as any)
       .from("journey_template_versions")
       .insert({ template_id: tpl.id, version_number: 1, status: "active", publish_reason: "Plantilla nueva basada en base segura", published_at: new Date().toISOString() })
       .select()
@@ -1071,7 +1071,7 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
 
     // copy steps from base active version
     if (base?.active_version_id) {
-      const { data: srcSteps } = await supabase.from("journey_step_definitions").select("*").eq("template_version_id", base.active_version_id);
+      const { data: srcSteps } = await (supabase as any).from("journey_step_definitions").select("*").eq("template_version_id", base.active_version_id);
       if (srcSteps && srcSteps.length > 0) {
         const rows = srcSteps.map((s: any) => ({
           template_version_id: ver.id,
@@ -1091,7 +1091,7 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
           allowed_complete_roles: s.allowed_complete_roles,
           allowed_override_roles: s.allowed_override_roles,
         }));
-        await supabase.from("journey_step_definitions").insert(rows);
+        await (supabase as any).from("journey_step_definitions").insert(rows);
       }
     } else {
       // fallback: create critical steps with valid defaults per step
@@ -1107,10 +1107,10 @@ function NewTemplateDialog({ open, onClose, onCreated }: { open: boolean; onClos
         requires_responsible: (["consultation", "prescription", "discharge"] as string[]).includes(k),
         allowed_complete_roles: k === "prescription" ? ["doctor", "admin"] : ["admin"],
       }));
-      await supabase.from("journey_step_definitions").insert(rows);
+      await (supabase as any).from("journey_step_definitions").insert(rows);
     }
 
-    await supabase.from("journey_templates").update({ active_version_id: ver.id }).eq("id", tpl.id);
+    await (supabase as any).from("journey_templates").update({ active_version_id: ver.id }).eq("id", tpl.id);
 
     setSaving(false);
     setName(""); setDesc("");

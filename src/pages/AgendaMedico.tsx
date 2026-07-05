@@ -46,7 +46,7 @@ export default function AgendaMedico() {
   const weekDays = Array.from({ length: 6 }, (_, i) => addDays(weekStart, i)); // Lun-Sáb
 
   useEffect(() => {
-    supabase.from("doctors").select("*").eq("activo", true).then(({ data }) => {
+    (supabase as any).from("doctors").select("*").eq("activo", true).then(({ data }) => {
       setDoctors(data ?? []);
       if (user && data) {
         const me = data.find((d) => d.user_id === user.id);
@@ -60,7 +60,7 @@ export default function AgendaMedico() {
     const from = weekDays[0].toISOString();
     const to = addDays(weekDays[weekDays.length - 1], 1).toISOString();
 
-    let query = supabase
+    let query = (supabase as any)
       .from("appointments")
       .select("*, patients(nombre, apellidos), doctors(nombre, apellidos)")
       .gte("fecha_inicio", from)

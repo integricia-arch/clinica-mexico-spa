@@ -22,7 +22,7 @@ export default function PrescriptionStepForm({
 
   useEffect(() => {
     if (!patientId) return;
-    supabase.from("prescriptions")
+    (supabase as any).from("prescriptions")
       .select("id, prescription_number, status, created_at")
       .eq("patient_id", patientId)
       .order("created_at", { ascending: false })

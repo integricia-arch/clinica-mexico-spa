@@ -92,7 +92,7 @@ export default function Inbox() {
 
   // Cargar conversaciones
   const fetchConversaciones = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("conversaciones")
       .select("*, identidades_canal(*, patients(nombre, apellidos, telefono))")
       .order("last_message_at", { ascending: false })
@@ -105,7 +105,7 @@ export default function Inbox() {
     const ids = (data ?? []).map((c) => c.id);
     const previews: Record<string, string> = {};
     if (ids.length) {
-      const { data: msgs } = await supabase
+      const { data: msgs } = await (supabase as any)
         .from("mensajes")
         .select("conversacion_id, contenido, created_at")
         .in("conversacion_id", ids)
@@ -131,7 +131,7 @@ export default function Inbox() {
   useEffect(() => {
     if (!selectedId) { setMensajes([]); return; }
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("mensajes")
         .select("*")
         .eq("conversacion_id", selectedId)
@@ -202,7 +202,7 @@ export default function Inbox() {
 
   const tomarControl = async () => {
     if (!selected || !user) return;
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("conversaciones")
       .update({ status: "escalada", asignada_humano_id: user.id })
       .eq("id", selected.id);
@@ -212,12 +212,12 @@ export default function Inbox() {
 
   const cerrarConversacion = async () => {
     if (!selected) return;
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("conversaciones")
       .update({ status: "cerrada" })
       .eq("id", selected.id);
     if (error) { toast.error("No se pudo cerrar"); return; }
-    await supabase.from("audit_logs").insert({
+    await (supabase as any).from("audit_logs").insert({
       tabla: "conversaciones", registro_id: selected.id,
       accion: "conv_cerrada", datos_nuevos: { by: user?.id ?? null },
       clinic_id: selected.clinic_id,

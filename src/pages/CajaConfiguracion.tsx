@@ -35,7 +35,7 @@ export default function CajaConfiguracion() {
   const load = async () => {
     if (!activeClinic?.id) return;
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("cajas")
       .select("*")
       .eq("clinic_id", activeClinic.id)
@@ -48,7 +48,7 @@ export default function CajaConfiguracion() {
   useEffect(() => { load(); }, [activeClinic?.id]);
 
   const toggleActivo = async (caja: Caja) => {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("cajas")
       .update({ activo: !caja.activo })
       .eq("id", caja.id);
@@ -60,7 +60,7 @@ export default function CajaConfiguracion() {
     if (!form.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
     if (!activeClinic?.id) { toast.error("Sin clínica activa"); return; }
     setSaving(true);
-    const { error } = await supabase.from("cajas").insert({
+    const { error } = await (supabase as any).from("cajas").insert({
       clinic_id: activeClinic.id,
       nombre: form.nombre.trim(),
       descripcion: form.descripcion.trim() || null,

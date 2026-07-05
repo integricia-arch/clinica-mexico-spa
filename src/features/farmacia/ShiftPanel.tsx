@@ -90,7 +90,7 @@ export function OpenShiftCard({ onOpened }: { onOpened: (shift: Shift) => void }
       return;
     }
     setSubmitting(true);
-    const { data: shiftId, error } = await supabase.rpc("pharmacy_open_shift", {
+    const { data: shiftId, error } = await (supabase as any).rpc("pharmacy_open_shift", {
       p_clinic_id: activeClinicId,
       p_opening_amount: amount,
       p_notes: notes || null,
@@ -100,7 +100,7 @@ export function OpenShiftCard({ onOpened }: { onOpened: (shift: Shift) => void }
       toast({ title: "No se pudo abrir turno", description: friendlyError(error), variant: "destructive" });
       return;
     }
-    const { data: shift } = await supabase
+    const { data: shift } = await (supabase as any)
       .from("pharmacy_cash_shifts")
       .select("*")
       .eq("id", shiftId as never)
@@ -165,7 +165,7 @@ export function CloseShiftDialog({
   useEffect(() => {
     if (!open || !shift) return;
     setCashRefunds(null);
-    supabase
+    (supabase as any)
       .from("fondos_movimientos")
       .select("monto")
       .eq("pharmacy_shift_id", shift.id)
@@ -208,7 +208,7 @@ export function CloseShiftDialog({
     setSubmitting(true);
     setOverridePrompt(null);
 
-    const { data, error } = await supabase.rpc("pharmacy_close_shift", {
+    const { data, error } = await (supabase as any).rpc("pharmacy_close_shift", {
       p_shift_id: shift.id,
       p_cash_count: amount,
       p_notes: notes || null,
@@ -309,7 +309,7 @@ export function CloseShiftDialog({
                     const f = Number(fondoInput);
                     if (isNaN(f) || f < 0) { toast({ title: "Monto inválido", variant: "destructive" }); return; }
                     setSavingFondo(true);
-                    const { error } = await supabase.rpc("corte_set_fondo", {
+                    const { error } = await (supabase as any).rpc("corte_set_fondo", {
                       p_corte_id: result.corte_id, p_fondo_siguiente: f,
                     } as never);
                     setSavingFondo(false);
@@ -446,7 +446,7 @@ export function CorteXDialog({
   async function generate() {
     if (!shift) return;
     setSubmitting(true);
-    const { data, error } = await supabase.rpc("pharmacy_corte_x", {
+    const { data, error } = await (supabase as any).rpc("pharmacy_corte_x", {
       p_shift_id: shift.id,
     } as never);
     setSubmitting(false);
@@ -535,7 +535,7 @@ export function FondoMovimientoDialog({
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.rpc("pharmacy_fondo_movimiento", {
+    const { error } = await (supabase as any).rpc("pharmacy_fondo_movimiento", {
       p_shift_id: shift.id,
       p_tipo: tipo,
       p_monto: amount,
@@ -623,7 +623,7 @@ function ResultRow({ label, value }: { label: string; value: string }) {
 }
 
 export async function fetchCurrentShift(): Promise<Shift | null> {
-  const { data } = await supabase.rpc("pharmacy_current_shift", { p_clinic: null } as never);
+  const { data } = await (supabase as any).rpc("pharmacy_current_shift", { p_clinic: null } as never);
   if (!data) return null;
   const row = Array.isArray(data) ? data[0] : data;
   return (row ?? null) as Shift | null;

@@ -56,7 +56,7 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
     try {
       // Folio = primeros 8 chars del UUID (mayúsculas)
       const prefix = folio.trim().toLowerCase();
-      const { data: sales, error } = await supabase
+      const { data: sales, error } = await (supabase as any)
         .from("pharmacy_sales")
         .select("id, status, total")
         .eq("clinic_id", clinicId)
@@ -74,7 +74,7 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
       setSaleId(sale.id);
 
       // Cargar ítems de la venta
-      const { data: saleItems, error: itemsErr } = await supabase
+      const { data: saleItems, error: itemsErr } = await (supabase as any)
         .from("pharmacy_sale_items")
         .select("id, medicamento_id, lote_id, quantity, unit_price, subtotal")
         .eq("sale_id", sale.id);
@@ -82,7 +82,7 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
       if (itemsErr) throw itemsErr;
 
       // Cargar devoluciones previas para este sale
-      const { data: prevReturns } = await supabase
+      const { data: prevReturns } = await (supabase as any)
         .from("pharmacy_return_items")
         .select("sale_item_id, quantity")
         .in("sale_item_id", (saleItems ?? []).map((i) => i.id));
@@ -94,7 +94,7 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
 
       // Cargar nombres de medicamentos
       const medIds = [...new Set((saleItems ?? []).map((i) => i.medicamento_id))];
-      const { data: meds } = await supabase
+      const { data: meds } = await (supabase as any)
         .from("medicamentos")
         .select("id, nombre")
         .in("id", medIds);
@@ -160,7 +160,7 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
         items: selectedLines.map((l) => ({ sale_item_id: l.sale_item_id, quantity: l.qty })),
       };
 
-      const { error } = await supabase.rpc("pharmacy_register_return", { p_payload: payload } as never);
+      const { error } = await (supabase as any).rpc("pharmacy_register_return", { p_payload: payload } as never);
       if (error) throw error;
 
       toast({ title: "Devolución registrada", description: `Reembolso: ${formatMXN(totalRefund)}` });

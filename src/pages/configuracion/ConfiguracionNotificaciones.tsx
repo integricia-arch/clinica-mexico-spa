@@ -52,7 +52,7 @@ export default function ConfiguracionNotificaciones() {
 
   const fetchRules = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("notification_rules")
       .select("id, role, event_type, channel, enabled")
       .eq("clinic_id", activeClinicId)
@@ -66,7 +66,7 @@ export default function ConfiguracionNotificaciones() {
 
   const toggleEnabled = async (rule: Rule) => {
     setSavingId(rule.id);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("notification_rules")
       .update({ enabled: !rule.enabled })
       .eq("id", rule.id);
@@ -77,7 +77,7 @@ export default function ConfiguracionNotificaciones() {
 
   const handleCreate = async () => {
     setCreating(true);
-    const { error } = await supabase.from("notification_rules").insert({
+    const { error } = await (supabase as any).from("notification_rules").insert({
       clinic_id: activeClinicId, role: newRole, event_type: newEvent, channel: newChannel, enabled: true,
     });
     setCreating(false);
