@@ -124,11 +124,17 @@ export function useDoctorQueue(doctorId: string | null) {
           : Promise.resolve({ data: [] as ConsentRow[], error: null }),
       ]);
 
-      const patientMap = new Map((pat.data ?? []).map((p: PatientRow) => [p.id, p]));
-      const srvMap = new Map((srv.data ?? []).map((s: NameRow) => [s.id, s.nombre]));
-      const roomMap = new Map((rms.data ?? []).map((r: NameRow) => [r.id, r.nombre]));
-      const journeyMap = new Map((jrn.data ?? []).map((j: any) => [j.appointment_id, j as JourneyRow] as [string, JourneyRow]));
-      const consentSet = new Set((cons.data ?? []).map((c: ConsentRow) => c.patient_id));
+      const patientMap = new Map<string, PatientRow>(
+        ((pat.data ?? []) as PatientRow[]).map((p) => [p.id, p]),
+      );
+      const srvMap = new Map<string, string>(((srv.data ?? []) as NameRow[]).map((s) => [s.id, s.nombre]));
+      const roomMap = new Map<string, string>(((rms.data ?? []) as NameRow[]).map((r) => [r.id, r.nombre]));
+      const journeyMap = new Map<string, JourneyRow>(
+        ((jrn.data ?? []) as JourneyRow[])
+          .filter((j) => j.appointment_id)
+          .map((j) => [j.appointment_id as string, j]),
+      );
+      const consentSet = new Set<string>(((cons.data ?? []) as ConsentRow[]).map((c) => c.patient_id));
 
       const result: DoctorQueueItem[] = apptList.map((a) => {
         const j = journeyMap.get(a.id);
