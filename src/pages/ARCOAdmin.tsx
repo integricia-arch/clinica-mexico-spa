@@ -63,7 +63,7 @@ export default function ARCOAdmin() {
 
   const fetchRequests = async () => {
     setLoading(true);
-    const q = supabase
+    const q = (supabase as any)
       .from("arco_requests")
       .select("*")
       .order("created_at", { ascending: false });
@@ -88,7 +88,7 @@ export default function ARCOAdmin() {
   const saveChanges = async (newStatus: ARCOStatus) => {
     if (!selected) return;
     setSaving(true);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("arco_requests")
       .update({
         status: newStatus,

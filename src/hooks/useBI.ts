@@ -215,21 +215,21 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
         botCostRes,
         botCostPrevRes,
       ] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("appointments")
           .select("id,fecha_inicio,status,origen,doctor_id,patient_id")
           .eq("clinic_id", activeClinicId)
           .gte("fecha_inicio", desde.toISOString())
           .lte("fecha_inicio", hasta.toISOString()),
 
-        supabase
+        (supabase as any)
           .from("appointments")
           .select("id", { count: "exact", head: true })
           .eq("clinic_id", activeClinicId)
           .gte("fecha_inicio", prevDesde.toISOString())
           .lte("fecha_inicio", prevHasta.toISOString()),
 
-        supabase
+        (supabase as any)
           .from("pharmacy_sales")
           .select("id,created_at,total,payment_method")
           .eq("clinic_id", activeClinicId)
@@ -237,7 +237,7 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
           .gte("created_at", desde.toISOString())
           .lte("created_at", hasta.toISOString()),
 
-        supabase
+        (supabase as any)
           .from("pharmacy_sales")
           .select("total")
           .eq("clinic_id", activeClinicId)
@@ -245,54 +245,54 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
           .gte("created_at", prevDesde.toISOString())
           .lte("created_at", prevHasta.toISOString()),
 
-        supabase
+        (supabase as any)
           .from("patients")
           .select("id", { count: "exact", head: true })
           .eq("activo", true),
 
-        supabase
+        (supabase as any)
           .from("patients")
           .select("id", { count: "exact", head: true })
           .eq("activo", true)
           .gte("created_at", desde.toISOString()),
 
-        supabase
+        (supabase as any)
           .from("doctors")
           .select("id,nombre,apellidos")
           .eq("activo", true),
 
-        supabase
+        (supabase as any)
           .from("medicamentos")
           .select("id,nombre,categoria,stock_minimo")
           .eq("activo", true),
 
-        supabase
+        (supabase as any)
           .from("lotes_medicamento")
           .select("id,medicamento_id,numero_lote,fecha_caducidad,existencia")
           .eq("clinic_id", activeClinicId)
           .gt("existencia", 0),
 
-        supabase
+        (supabase as any)
           .from("facturas_proveedor")
           .select("saldo_pendiente_centavos,fecha_vencimiento")
           .eq("clinic_id", activeClinicId)
           .in("estatus", ["pendiente", "parcial"]),
 
-        supabase
+        (supabase as any)
           .from("pharmacy_sale_items")
           .select("medicamento_id,subtotal,quantity")
           .eq("clinic_id", activeClinicId)
           .gte("created_at", desde.toISOString())
           .lte("created_at", hasta.toISOString()),
 
-        supabase
+        (supabase as any)
           .from("bot_usage_costs")
           .select("channel,provider_cost_mxn,input_tokens,output_tokens")
           .eq("organization_id", activeClinicId)
           .gte("created_at", desde.toISOString())
           .lte("created_at", hasta.toISOString()),
 
-        supabase
+        (supabase as any)
           .from("bot_usage_costs")
           .select("provider_cost_mxn")
           .eq("organization_id", activeClinicId)
