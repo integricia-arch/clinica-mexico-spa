@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import integrikaLogo from "@/assets/integrika-logo.jpeg";
+import Logo from "@/components/Logo";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { supabase } from "@/integrations/supabase/client";

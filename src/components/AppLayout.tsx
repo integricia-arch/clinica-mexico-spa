@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import integrikaLogo from "@/assets/integrika-logo.jpeg";
+import Logo from "@/components/Logo";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, CalendarDays, Receipt, FileText,

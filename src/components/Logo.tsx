@@ -52,7 +52,7 @@ export function Logo({
       />
       {variant === "wordmark" && (
         <div className="min-w-0">
-          <span className="font-display font-semibold text-base tracking-tight text-white/90">IntegriKa</span>
+          <span className="font-display font-semibold text-sm tracking-tight text-white/90">IntegriKa</span>
           <span className="block text-[10px] tracking-wide text-white/40">Sistema Operativo de Clínica</span>
         </div>
       )}
