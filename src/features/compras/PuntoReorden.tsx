@@ -219,14 +219,14 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
 
       {/* Dialog: Generar OC sugerida */}
       <Dialog open={ocDialog} onOpenChange={setOcDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Generar OC Sugerida</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 overflow-y-auto flex-1">
             <div className="rounded-md bg-muted p-3 text-sm space-y-2">
               <p className="font-medium">{itemsParaOC.length} producto(s) incluido(s)</p>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              <div className="space-y-1.5 max-h-[50vh] overflow-y-auto">
                 {itemsParaOC.map((r) => {
                   const sinPrecio = efectivoPrecio(r) <= 0;
                   return (
