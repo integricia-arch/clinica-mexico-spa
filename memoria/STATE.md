@@ -79,6 +79,21 @@ de migraciones reparado (Lovable había aplicado 2 fuera del CLI).
 de los 2 intencionales confirmados; `extension_in_public` solo `pg_net`
 (esperado). Auditoría de seguridad de sesión 18 completamente cerrada.
 
+**Chequeo extra — `get_advisors(performance)`:** se corrió al final para
+verificar que los fixes de P2 no introdujeran regresiones. Encontró que 24 de
+las policies nuevas (`*_clinic_scoped` en `patient_checkout_events`,
+`doctor_prescription_templates`/`_versions`, y los 21 `*_write_admin`/
+`_update_admin`/`_delete_admin` de los 7 catálogos `journey_*`) usaban
+`auth.uid()`/`has_role(auth.uid()...)` sin envolver en `(select ...)`, lo que
+Postgres re-evalúa por fila (`auth_rls_initplan`). Corregido en la misma
+sesión — las 24 ya no aparecen en el advisor.
+
+**Backlog de performance pre-existente (NO de esta sesión, NO iniciado):**
+550 findings: `auth_rls_initplan` (184, en policies viejas no tocadas hoy),
+`unindexed_foreign_keys` (148), `unused_index` (145),
+`multiple_permissive_policies` (73). Queda para sesión aparte — volumen grande,
+necesita su propia priorización.
+
 ## Completado (Jul 4, 2026 — sesión 17 — bugs reales de Cotizaciones tras smoke test del usuario)
 
 Usuario probó en browser real lo de sesión 16 y reportó 4 problemas concretos
