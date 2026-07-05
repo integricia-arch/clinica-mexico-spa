@@ -893,7 +893,7 @@ export default function Pitch() {
               <a href="mailto:contacto@integrika.mx?subject=Demo%20IntegriKa">
                 <button className="pr-btn" style={{ background: "#fff", color: TEAL, fontSize: 15, padding: "16px 32px", fontWeight: 700 }}>Agendar demo gratuita <ArrowRight size={17} /></button>
               </a>
-              <a href="https://wa.me/521XXXXXXXXXX?text=Hola,%20me%20interesa%20IntegriKa" target="_blank" rel="noopener noreferrer">
+              <a href="https://wa.me/5213324508776?text=Hola,%20me%20interesa%20IntegriKa" target="_blank" rel="noopener noreferrer">
                 <button className="pr-btn" style={{ background: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,.4)", fontSize: 15, padding: "16px 32px" }}>Escribir por WhatsApp</button>
               </a>
             </div>
