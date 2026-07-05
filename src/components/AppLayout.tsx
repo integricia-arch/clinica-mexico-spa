@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedTable } from "@/lib/untypedTable";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
