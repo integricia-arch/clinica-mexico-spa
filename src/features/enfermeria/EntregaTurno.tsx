@@ -88,7 +88,7 @@ export default function EntregaTurno() {
   const fetchEntregas = useCallback(async () => {
     if (!activeClinicId) return
     setLoading(true)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("entregas_turno")
       .select("id, sala, turno, fecha, enfermera_entrega, enfermera_recibe, resumen, pacientes_json, pendientes_json, created_at, closed_at")
       .eq("clinic_id", activeClinicId)
@@ -101,7 +101,7 @@ export default function EntregaTurno() {
 
   useEffect(() => {
     void fetchEntregas()
-    void supabase
+    void (supabase as any)
       .from("rooms")
       .select("id, nombre")
       .eq("activo", true)
@@ -110,7 +110,7 @@ export default function EntregaTurno() {
         if (roomsErr) { toast.warning("No se pudo cargar las salas"); return }
         setRooms((data ?? []) as RoomOption[])
       })
-    void supabase
+    void (supabase as any)
       .rpc("list_nurses")
       .then(({ data, error: rpcErr }) => {
         if (rpcErr) { toast.warning("No se pudo cargar la lista de enfermeras"); return }
@@ -166,7 +166,7 @@ export default function EntregaTurno() {
 
   const handleCerrar = async (id: string) => {
     setClosing(true)
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("entregas_turno")
       .update({ closed_at: new Date().toISOString() })
       .eq("id", id)

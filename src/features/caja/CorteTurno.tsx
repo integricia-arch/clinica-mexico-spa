@@ -62,7 +62,7 @@ export default function CorteTurno() {
     if (!activeClinicId || !user?.id) return;
     setLoading(true);
 
-    const { data: turnosData } = await supabase
+    const { data: turnosData } = await (supabase as any)
       .from("turnos")
       .select("id, caja_id, cajero_user_id, estado, monto_apertura, monto_cierre, notas_apertura, notas_cierre, abierto_at, cerrado_at, caja:cajas(nombre)")
       .eq("clinic_id", activeClinicId)
@@ -78,7 +78,7 @@ export default function CorteTurno() {
     }
 
     const ids = turnosList.map((t) => t.id);
-    const { data: cortesData } = await supabase
+    const { data: cortesData } = await (supabase as any)
       .from("cortes")
       .select("id, turno_id, folio_secuencial, efectivo_esperado, conteo_ciego, diferencia, requiere_autorizacion, autorizado_by, total_efectivo, total_general, conteo_movimientos, created_at, datos_json")
       .in("turno_id", ids)

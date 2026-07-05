@@ -41,28 +41,28 @@ export function useFinancialDashboardData() {
       const today = new Date().toISOString().split("T")[0];
 
       const [turnosRes, actasRes, ocRes, cxpRes, faltantesRes] = await Promise.allSettled([
-        supabase
+        (supabase as any)
           .from("turnos")
           .select("id, caja_id, estado, monto_apertura, abierto_at, pharmacy_shift_id, cajas(nombre)")
           .eq("clinic_id", activeClinic.id)
           .eq("estado", "abierto"),
-        supabase
+        (supabase as any)
           .from("actas_merma")
           .select("id", { count: "exact", head: true })
           .eq("clinic_id", activeClinic.id)
           .eq("estatus", "pendiente_firma"),
-        supabase
+        (supabase as any)
           .from("ordenes_compra")
           .select("id", { count: "exact", head: true })
           .eq("clinic_id", activeClinic.id)
           .eq("estatus", "pendiente_aprobacion"),
-        supabase
+        (supabase as any)
           .from("facturas_proveedor")
           .select("id", { count: "exact", head: true })
           .eq("clinic_id", activeClinic.id)
           .lte("fecha_vencimiento", today)
           .gt("saldo_pendiente_centavos", 0),
-        supabase
+        (supabase as any)
           .from("almacen_alertas")
           .select("id", { count: "exact", head: true })
           .eq("clinic_id", activeClinic.id)
@@ -76,7 +76,7 @@ export function useFinancialDashboardData() {
         rawTurnos.map(async (t: Record<string, unknown>) => {
           let ventas = 0;
           if (t.pharmacy_shift_id) {
-            const { data: sales } = await supabase
+            const { data: sales } = await (supabase as any)
               .from("pharmacy_sales")
               .select("total")
               .eq("shift_id", t.pharmacy_shift_id as string)
