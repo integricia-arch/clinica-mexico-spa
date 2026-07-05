@@ -143,7 +143,7 @@ export default function PacienteModal({ open, onClose, patient, onSaved }: Props
           consentimiento_privacidad_at: new Date().toISOString(),
           consentimiento_privacidad_version: "1.0",
         };
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("patients")
           .insert(insertPayload)
           .select()

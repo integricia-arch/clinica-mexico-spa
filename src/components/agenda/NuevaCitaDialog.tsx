@@ -127,8 +127,8 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     Promise.all([
       supabase.from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos"),
       supabase.from("servicios").select("id,nombre").order("nombre"),
-      supabase.rpc("list_nurses"),
-    ]).then(([{ data: d }, { data: s }, { data: n }]) => {
+      (supabase as any).rpc("list_nurses"),
+    ]).then(([{ data: d }, { data: s }, { data: n }]: any) => {
       setDoctores((d ?? []) as Doctor[]);
       setServicios((s ?? []) as Servicio[]);
       setEnfermeras((n ?? []) as Nurse[]);
@@ -141,7 +141,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     setCheckingEnfermera(true);
     const t = setTimeout(async () => {
       const toUTC = (iso: string) => new Date(iso.includes("T") ? iso : iso + "T00:00:00").toISOString();
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("appointments")
         .select("id")
         .eq("assigned_nurse_id", enfermeraId)
@@ -208,7 +208,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     };
 
     if (!recurrente) {
-      const { data: nueva, error } = await supabase.from("appointments").insert({
+      const { data: nueva, error } = await (supabase as any).from("appointments").insert({
         ...basePayload,
         fecha_inicio: toUTC(fechaInicio),
         fecha_fin:    toUTC(fechaFin),
@@ -228,7 +228,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
     const fechas = generarOcurrencias(toUTC(fechaInicio), recurrenciaTipo, recurrenciaHasta);
     if (fechas.length === 0) { toast.error("No hay ocurrencias en ese rango"); setSaving(false); return; }
 
-    const { data: primera, error: e1 } = await supabase.from("appointments")
+    const { data: primera, error: e1 } = await (supabase as any).from("appointments")
       .insert({
         ...basePayload,
         fecha_inicio:    fechas[0],
@@ -253,7 +253,7 @@ export default function NuevaCitaDialog({ open, defaultDate, onSuccess, onCancel
         recurrencia_num:   i + 2,
         recurrencia_hasta: recurrenciaHasta,
       }));
-      const { error: e2 } = await supabase.from("appointments").insert(siguientes);
+      const { error: e2 } = await (supabase as any).from("appointments").insert(siguientes);
       if (e2) { toast.error("Citas recurrentes creadas con errores: " + e2.message); setSaving(false); return; }
     }
 
