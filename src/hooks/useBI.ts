@@ -300,12 +300,12 @@ export function useBI(periodo: Periodo = "mes_actual"): BIData {
           .lte("created_at", prevHasta.toISOString()),
       ]);
 
-      const citas = citasRes.data ?? [];
-      const farmacia = farmaciaRes.data ?? [];
-      const doctores = doctoresRes.data ?? [];
-      const meds = medicamentosRes.data ?? [];
-      const lotes = lotesRes.data ?? [];
-      const cxp = cxpRes.data ?? [];
+      const citas = (citasRes.data ?? []) as any[];
+      const farmacia = (farmaciaRes.data ?? []) as any[];
+      const doctores = (doctoresRes.data ?? []) as any[];
+      const meds = (medicamentosRes.data ?? []) as any[];
+      const lotes = (lotesRes.data ?? []) as any[];
+      const cxp = (cxpRes.data ?? []) as any[];
 
       // ─── Resumen computes ───────────────────────────────────────────────
       const citasMes = citas.length;
