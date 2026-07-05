@@ -30,6 +30,7 @@ export const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
         ref={ref}
         type="text"
         inputMode="decimal"
+        autoComplete="off"
         className={cn(className)}
         value={value}
         onChange={(e) => onValueChange(sanitizeMoneyText(e.target.value))}
