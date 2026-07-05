@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedTable } from "@/lib/untypedTable";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -124,8 +125,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !roles.some((r) => ["admin", "manager", "receptionist"].includes(r))) return;
     const fetchAyudaCount = async () => {
-      const { count } = await supabase
-        .from("ayuda_chat_sesiones")
+      const { count } = await untypedTable("ayuda_chat_sesiones")
         .select("id", { count: "exact", head: true })
         .eq("estado", "escalada");
       setAyudaEscaladaCount(count ?? 0);

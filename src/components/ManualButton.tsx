@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { HelpCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { supabase } from "@/integrations/supabase/client";
+import { untypedTable } from "@/lib/untypedTable";
 import { useAuth } from "@/hooks/useAuth";
+
+interface ManualPaginaRow { id: string; slug: string; titulo: string; ruta: string; }
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -38,12 +40,12 @@ export default function ManualButton() {
   useEffect(() => {
     let active = true;
     const resolve = async () => {
-      const { data, error } = await supabase
-        .from("manual_paginas")
+      const { data, error } = await untypedTable("manual_paginas")
         .select("id, slug, titulo, ruta")
         .eq("activo", true);
       if (error || !data || !active) return;
-      const candidates = data
+      const rows = data as ManualPaginaRow[];
+      const candidates = rows
         .filter((p) => location.pathname === p.ruta || location.pathname.startsWith(p.ruta))
         .sort((a, b) => b.ruta.length - a.ruta.length);
       setPagina(candidates[0] ?? null);
@@ -62,7 +64,7 @@ export default function ManualButton() {
       const md = loader ? await loader() : null;
       setContenido(md ? paraUsuarioFinal(md) : "_Manual pendiente de redactar para esta pantalla._");
       if (user) {
-        await supabase.from("manual_consultas").insert({ manual_id: pagina.id, user_id: user.id });
+        await untypedTable("manual_consultas").insert({ manual_id: pagina.id, user_id: user.id });
       }
     } finally {
       setLoading(false);

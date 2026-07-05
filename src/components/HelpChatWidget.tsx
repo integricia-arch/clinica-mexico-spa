@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { LifeBuoy, X, Send, Bot, User, Users, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { untypedTable } from "@/lib/untypedTable";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
@@ -89,8 +90,7 @@ export default function HelpChatWidget() {
 
   const ensureSesion = async (): Promise<Sesion | null> => {
     if (!user) return null;
-    const { data: existing } = await supabase
-      .from("ayuda_chat_sesiones")
+    const { data: existing } = await untypedTable("ayuda_chat_sesiones")
       .select("id, estado")
       .eq("user_id", user.id)
       .eq("estado", "abierta")
@@ -99,8 +99,7 @@ export default function HelpChatWidget() {
       .maybeSingle();
     if (existing) return existing as Sesion;
 
-    const { data: created, error } = await supabase
-      .from("ayuda_chat_sesiones")
+    const { data: created, error } = await untypedTable("ayuda_chat_sesiones")
       .insert({ user_id: user.id, clinic_id: activeClinicId, ruta_origen: location.pathname })
       .select("id, estado")
       .single();
@@ -119,10 +118,10 @@ export default function HelpChatWidget() {
     const sid = sesionIdRef.current;
     if (!sid) return;
     const despedida = "No recibí respuesta en 5 minutos. Si necesitas más ayuda, abre una nueva consulta. ¡Hasta luego!";
-    await supabase.from("ayuda_chat_mensajes").insert({
+    await untypedTable("ayuda_chat_mensajes").insert({
       sesion_id: sid, rol: "asistente_ia", autor_id: null, contenido: despedida,
     });
-    await supabase.from("ayuda_chat_sesiones").update({ estado: "cerrada" }).eq("id", sid);
+    await untypedTable("ayuda_chat_sesiones").update({ estado: "cerrada" }).eq("id", sid);
     setSesion((prev) => prev ? { ...prev, estado: "cerrada" } : prev);
   };
 
@@ -134,13 +133,12 @@ export default function HelpChatWidget() {
   const cerrarSesion = async () => {
     if (!sesion || sesion.estado === "cerrada") return;
     if (inactivityRef.current) clearTimeout(inactivityRef.current);
-    await supabase.from("ayuda_chat_sesiones").update({ estado: "cerrada" }).eq("id", sesion.id);
+    await untypedTable("ayuda_chat_sesiones").update({ estado: "cerrada" }).eq("id", sesion.id);
     setSesion((prev) => prev ? { ...prev, estado: "cerrada" } : prev);
   };
 
   const loadMensajes = async (sesionId: string) => {
-    const { data } = await supabase
-      .from("ayuda_chat_mensajes")
+    const { data } = await untypedTable("ayuda_chat_mensajes")
       .select("id, rol, contenido, created_at, autor_id")
       .eq("sesion_id", sesionId)
       .order("created_at", { ascending: true });
@@ -217,7 +215,7 @@ export default function HelpChatWidget() {
       }
 
       // Insertar mensaje del usuario
-      const { error } = await supabase.from("ayuda_chat_mensajes").insert({
+      const { error } = await untypedTable("ayuda_chat_mensajes").insert({
         sesion_id: activeSesion.id,
         rol: "usuario",
         autor_id: user.id,
