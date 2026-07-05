@@ -159,7 +159,7 @@ export function useDashboardHoy(): DashboardHoyData {
 
       const [citasRes, ventasRes, pacientesRes, auditRes, alertasRes] =
         await Promise.all([
-          supabase
+          (supabase as any)
             .from("appointments")
             .select(
               "id, fecha_inicio, status, motivo_consulta, patients(nombre, apellidos), doctors(nombre, apellidos)"
@@ -169,7 +169,7 @@ export function useDashboardHoy(): DashboardHoyData {
             .lt("fecha_inicio", tomorrowStart)
             .order("fecha_inicio", { ascending: true }),
 
-          supabase
+          (supabase as any)
             .from("pharmacy_sales")
             .select("total")
             .eq("clinic_id", activeClinicId)
@@ -177,12 +177,12 @@ export function useDashboardHoy(): DashboardHoyData {
             .gte("created_at", todayStart)
             .lt("created_at", tomorrowStart),
 
-          supabase
+          (supabase as any)
             .from("patients")
             .select("id", { count: "exact", head: true })
             .eq("activo", true),
 
-          supabase
+          (supabase as any)
             .from("audit_logs" as unknown as "appointments")
             .select("id, created_at, accion, tabla, datos_nuevos")
             .eq("clinic_id", activeClinicId)
@@ -191,7 +191,7 @@ export function useDashboardHoy(): DashboardHoyData {
             .order("created_at", { ascending: false })
             .limit(10),
 
-          supabase
+          (supabase as any)
             .from("almacen_alertas")
             .select("id", { count: "exact", head: true })
             .eq("clinic_id", activeClinicId)

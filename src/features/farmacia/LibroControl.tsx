@@ -49,7 +49,7 @@ export function LibroControl({ clinicId, clinicName }: Props) {
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      let q = supabase
+      let q = (supabase as any)
         .from("recetas_capturadas")
         .select("*")
         .eq("clinic_id", clinicId)

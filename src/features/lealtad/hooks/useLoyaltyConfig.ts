@@ -18,7 +18,7 @@ export function useLoyaltyConfig(clinicId: string | null) {
     setLoading(true)
     setError(null)
 
-    supabase
+    (supabase as any)
       .from('loyalty_config')
       .select('*')
       .eq('clinic_id', clinicId)
@@ -38,7 +38,7 @@ export function useLoyaltyConfig(clinicId: string | null) {
 
   async function save(updates: Partial<LoyaltyConfig>): Promise<boolean> {
     if (!clinicId) return false
-    const { error: err } = await supabase
+    const { error: err } = await (supabase as any)
       .from('loyalty_config')
       .upsert({
         ...updates,
