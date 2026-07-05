@@ -186,17 +186,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           {/* Logo */}
           <div className={`flex h-16 items-center border-b border-sidebar-border shrink-0 ${isCollapsed ? "justify-center px-3" : "gap-2.5 px-5"}`}>
-            <img
-              src={integrikaLogo}
-              alt="IntegriKa"
-              className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-[0_4px_16px_hsl(239_84%_62%/0.30)]"
-            />
-            {!isCollapsed && (
-              <div className="min-w-0">
-                <span className="font-display font-semibold text-sm tracking-tight text-white/90">IntegriKa</span>
-                <span className="block text-[10px] tracking-wide text-white/40">Sistema Operativo de Clínica</span>
-              </div>
-            )}
+            <Logo variant={isCollapsed ? "icon" : "wordmark"} size="md" />
             {/* Mobile close button */}
             <button
               onClick={closeSidebar}

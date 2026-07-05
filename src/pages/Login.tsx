@@ -149,11 +149,7 @@ export default function Login() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <img
-            src={integrikaLogo}
-            alt="IntegriKa"
-            className="mx-auto h-16 w-16 rounded-2xl object-cover shadow-[0_8px_32px_hsl(239_84%_62%/0.35),0_2px_8px_hsl(239_84%_62%/0.20)]"
-          />
+          <Logo size="xl" className="justify-center" />
           <h1 className="mt-4 font-display text-2xl font-bold text-foreground">IntegriKa</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sistema Operativo de Clínica</p>
         </div>
