@@ -64,7 +64,7 @@ export default function ManualButton() {
       const md = loader ? await loader() : null;
       setContenido(md ? paraUsuarioFinal(md) : "_Manual pendiente de redactar para esta pantalla._");
       if (user) {
-        await supabase.from("manual_consultas").insert({ manual_id: pagina.id, user_id: user.id });
+        await untypedTable("manual_consultas").insert({ manual_id: pagina.id, user_id: user.id });
       }
     } finally {
       setLoading(false);
