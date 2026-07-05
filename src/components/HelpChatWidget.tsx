@@ -90,8 +90,7 @@ export default function HelpChatWidget() {
 
   const ensureSesion = async (): Promise<Sesion | null> => {
     if (!user) return null;
-    const { data: existing } = await supabase
-      .from("ayuda_chat_sesiones")
+    const { data: existing } = await untypedTable("ayuda_chat_sesiones")
       .select("id, estado")
       .eq("user_id", user.id)
       .eq("estado", "abierta")
@@ -100,8 +99,7 @@ export default function HelpChatWidget() {
       .maybeSingle();
     if (existing) return existing as Sesion;
 
-    const { data: created, error } = await supabase
-      .from("ayuda_chat_sesiones")
+    const { data: created, error } = await untypedTable("ayuda_chat_sesiones")
       .insert({ user_id: user.id, clinic_id: activeClinicId, ruta_origen: location.pathname })
       .select("id, estado")
       .single();
@@ -140,8 +138,7 @@ export default function HelpChatWidget() {
   };
 
   const loadMensajes = async (sesionId: string) => {
-    const { data } = await supabase
-      .from("ayuda_chat_mensajes")
+    const { data } = await untypedTable("ayuda_chat_mensajes")
       .select("id, rol, contenido, created_at, autor_id")
       .eq("sesion_id", sesionId)
       .order("created_at", { ascending: true });
