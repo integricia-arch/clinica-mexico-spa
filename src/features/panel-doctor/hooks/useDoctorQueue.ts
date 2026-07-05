@@ -127,7 +127,7 @@ export function useDoctorQueue(doctorId: string | null) {
       const patientMap = new Map((pat.data ?? []).map((p: PatientRow) => [p.id, p]));
       const srvMap = new Map((srv.data ?? []).map((s: NameRow) => [s.id, s.nombre]));
       const roomMap = new Map((rms.data ?? []).map((r: NameRow) => [r.id, r.nombre]));
-      const journeyMap = new Map((jrn.data ?? []).map((j: JourneyRow) => [j.appointment_id, j]));
+      const journeyMap = new Map((jrn.data ?? []).map((j: any) => [j.appointment_id, j as JourneyRow] as [string, JourneyRow]));
       const consentSet = new Set((cons.data ?? []).map((c: ConsentRow) => c.patient_id));
 
       const result: DoctorQueueItem[] = apptList.map((a) => {
