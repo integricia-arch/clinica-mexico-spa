@@ -55,9 +55,9 @@ export default function SupervisorAuthDialog({
     setPassword("");
     setError(null);
 
-    supabase
+    (supabase as any)
       .rpc("get_clinic_supervisors", { p_clinic_id: clinicId })
-      .then(({ data, error: e }) => {
+      .then(({ data, error: e }: { data: unknown; error: { message: string } | null }) => {
         if (e) { setError("No se pudieron cargar los supervisores"); return; }
         setSupervisors((data ?? []) as Supervisor[]);
       });
@@ -80,7 +80,7 @@ export default function SupervisorAuthDialog({
       const rpcParams = mode === "pharmacy"
         ? { p_shift_id: turnoId, p_supervisor_id: selected.user_id, p_pin: pin, p_cash_count: cashCount, p_notes: notes || null }
         : { p_turno_id: turnoId, p_supervisor_id: selected.user_id, p_pin: pin, p_cash_count: cashCount, p_notes: notes || null };
-      const { data, error: e } = await supabase.rpc(rpcName, rpcParams as never);
+      const { data, error: e } = await (supabase as any).rpc(rpcName, rpcParams);
       setSubmitting(false);
       if (e) {
         if (e.message?.includes("PIN_INCORRECT")) setError("PIN incorrecto");
@@ -114,7 +114,7 @@ export default function SupervisorAuthDialog({
         closeData = res.data;
         closeErr = res.error;
       } else {
-        const res = await supabase.rpc("turno_close", {
+        const res = await (supabase as any).rpc("turno_close", {
           p_turno_id: turnoId,
           p_cash_count: cashCount,
           p_notes: notes || null,

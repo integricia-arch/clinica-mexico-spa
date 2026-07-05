@@ -41,8 +41,8 @@ export default function PagoReconcile({ corteId, metodo }: Props) {
 
   useEffect(() => {
     if (!corteId) return;
-    supabase
-      .rpc("get_corte_pago_total", { p_corte_id: corteId, p_metodo: metodo } as never)
+    (supabase as any)
+      .rpc("get_corte_pago_total", { p_corte_id: corteId, p_metodo: metodo })
       .then(({ data, error }) => {
         setLoading(false);
         if (error || data === null) return;
@@ -116,11 +116,11 @@ export default function PagoReconcile({ corteId, metodo }: Props) {
           onClick={async () => {
             if (isNaN(declared) || declared < 0) { toast.error("Monto inválido"); return; }
             setSaving(true);
-            const { data, error } = await supabase.rpc("corte_set_pago_declarado", {
+            const { data, error } = await (supabase as any).rpc("corte_set_pago_declarado", {
               p_corte_id: corteId,
               p_metodo: metodo,
               p_declarado: declared,
-            } as never);
+            });
             setSaving(false);
             if (error) { toast.error(`No se pudo guardar: ${error.message}`); return; }
             setSaved({ declarado: declared, diff: declared - Number(data ?? sistemaTot) });
