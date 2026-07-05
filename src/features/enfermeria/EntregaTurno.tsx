@@ -145,7 +145,7 @@ export default function EntregaTurno() {
       toast.error("Sesión no válida, vuelve a iniciar sesión")
       return
     }
-    const { error } = await supabase.from("entregas_turno").insert({
+    const { error } = await (supabase as any).from("entregas_turno").insert({
       clinic_id: activeClinicId,
       sala: sala.trim(),
       turno,
