@@ -47,7 +47,7 @@ function HorarioClinicaSection() {
   useEffect(() => {
     if (!activeClinicId) return;
     (async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("clinic_settings")
         .select("data")
         .eq("clinic_id", activeClinicId)
@@ -71,7 +71,7 @@ function HorarioClinicaSection() {
     if (dias.length === 0) { toast.error("Selecciona al menos un día"); return; }
     if (apertura >= cierre) { toast.error("La apertura debe ser antes del cierre"); return; }
     setSaving(true);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("clinic_settings")
       .upsert(
         { clinic_id: activeClinicId, section: "horario", data: { dias_laborales: dias, hora_apertura: apertura, hora_cierre: cierre } },
@@ -157,7 +157,7 @@ export default function Configuracion() {
 
   const loadRooms = async () => {
     setLoadingRooms(true);
-    const { data } = await supabase.from("rooms").select("*").order("nombre");
+    const { data } = await (supabase as any).from("rooms").select("*").order("nombre");
     setRooms((data as any) ?? []);
     setLoadingRooms(false);
   };
@@ -165,7 +165,7 @@ export default function Configuracion() {
   useEffect(() => { loadRooms(); }, []);
 
   const toggleRoom = async (r: Room) => {
-    const { error } = await supabase.from("rooms").update({ activo: !r.activo }).eq("id", r.id);
+    const { error } = await (supabase as any).from("rooms").update({ activo: !r.activo }).eq("id", r.id);
     if (error) { toast.error("No se pudo actualizar: " + friendlyError(error)); return; }
     setRooms((prev) => prev.map((x) => (x.id === r.id ? { ...x, activo: !r.activo } : x)));
   };
@@ -173,7 +173,7 @@ export default function Configuracion() {
   const saveRoom = async () => {
     if (!roomForm.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
     setSavingRoom(true);
-    const { error } = await supabase.from("rooms").insert({
+    const { error } = await (supabase as any).from("rooms").insert({
       nombre: roomForm.nombre.trim(),
       piso: roomForm.piso.trim() || null,
       capacidad: roomForm.capacidad || 1,

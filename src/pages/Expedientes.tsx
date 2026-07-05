@@ -96,13 +96,13 @@ export default function Expedientes() {
 
   useEffect(() => {
     loadExpedientes();
-    supabase.from("doctors").select("id, nombre, apellidos").eq("activo", true).order("apellidos")
+    (supabase as any).from("doctors").select("id, nombre, apellidos").eq("activo", true).order("apellidos")
       .then(({ data }) => setDoctors(data ?? []));
   }, [myDoctorId]); // re-run when doctor profile resolves
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase
+    (supabase as any)
       .from("doctors")
       .select("id")
       .eq("user_id", user.id)
@@ -217,7 +217,7 @@ export default function Expedientes() {
       const prevDoctorId = editTarget.doctor_id;
       const doctorChanged = editForm.doctor_id !== prevDoctorId;
 
-      await supabase
+      await (supabase as any)
         .from("expedientes")
         .update({ doctor_id: editForm.doctor_id, tipo: editForm.tipo as "primera_vez" | "seguimiento" | "urgencia" | "cirugia" | "cronico" })
         .eq("id", editTarget.id);
@@ -313,7 +313,7 @@ export default function Expedientes() {
       `NOM-004-SSA3-2012 requiere retención de 5 años — no se borra de la base de datos.`
     )) return;
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("expedientes")
         .update({ activo: false } as never)
         .eq("id", exp.id);
@@ -335,8 +335,8 @@ export default function Expedientes() {
 
   async function openNewExpModal() {
     const [pd, dd] = await Promise.all([
-      supabase.from("patients").select("id, nombre, apellidos").eq("activo", true).order("apellidos"),
-      supabase.from("doctors").select("id, nombre, apellidos").eq("activo", true).order("apellidos"),
+      (supabase as any).from("patients").select("id, nombre, apellidos").eq("activo", true).order("apellidos"),
+      (supabase as any).from("doctors").select("id, nombre, apellidos").eq("activo", true).order("apellidos"),
     ]);
     setPatients(pd.data ?? []);
     setDoctors(dd.data ?? []);

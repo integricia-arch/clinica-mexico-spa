@@ -27,7 +27,7 @@ export default function VerificarReceta() {
     if (!id) return;
     (async () => {
       setLoading(true);
-      const { data: rx } = await supabase
+      const { data: rx } = await (supabase as any)
         .from("prescriptions")
         .select("prescription_number, status, issue_date, doctor_id, patient_id")
         .eq("id", id)
@@ -40,9 +40,9 @@ export default function VerificarReceta() {
       }
 
       const [{ data: doctor }, { data: patient }, { count }] = await Promise.all([
-        supabase.from("doctors").select("nombre, apellidos, cedula_profesional, especialidad").eq("id", rx.doctor_id).maybeSingle(),
-        supabase.from("patients").select("nombre, apellidos").eq("id", rx.patient_id).maybeSingle(),
-        supabase.from("prescription_items").select("id", { count: "exact", head: true }).eq("prescription_id", id),
+        (supabase as any).from("doctors").select("nombre, apellidos, cedula_profesional, especialidad").eq("id", rx.doctor_id).maybeSingle(),
+        (supabase as any).from("patients").select("nombre, apellidos").eq("id", rx.patient_id).maybeSingle(),
+        (supabase as any).from("prescription_items").select("id", { count: "exact", head: true }).eq("prescription_id", id),
       ]);
 
       setData({

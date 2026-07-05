@@ -84,7 +84,7 @@ export default function ConfiguracionCFDI() {
     if (!activeClinicId) return;
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("cfdi_config")
         .select("id, rfc, razon_social, regimen_fiscal, domicilio_fiscal_cp, serie_defecto, pac_proveedor, pac_ambiente, pac_usuario, csd_cer_nombre, csd_key_nombre, csd_cer_path, csd_key_path, iva_default, zona_fronteriza")
         .eq("clinic_id", activeClinicId)
@@ -178,9 +178,9 @@ export default function ConfiguracionCFDI() {
 
     const { error } = existingId
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ? await supabase.from("cfdi_config" as any).update(payload).eq("id", existingId)
+      ? await (supabase as any).from("cfdi_config" as any).update(payload).eq("id", existingId)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      : await supabase.from("cfdi_config" as any).insert(payload);
+      : await (supabase as any).from("cfdi_config" as any).insert(payload);
 
     if (error) { setSaving(false); toast.error("Error al guardar: " + error.message); return; }
 

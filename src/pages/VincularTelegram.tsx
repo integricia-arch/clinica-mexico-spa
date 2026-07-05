@@ -24,7 +24,7 @@ export default function VincularTelegram() {
 
   useEffect(() => {
     if (!user) return;
-    supabase
+    (supabase as any)
       .from("staff_identidades_canal")
       .select("id")
       .eq("user_id", user.id)
@@ -38,7 +38,7 @@ export default function VincularTelegram() {
     setGenerating(true);
     const nuevoCode = generateCode();
     const expires = new Date(Date.now() + CODE_TTL_MS).toISOString();
-    const { error } = await supabase.from("staff_link_codes").insert({
+    const { error } = await (supabase as any).from("staff_link_codes").insert({
       code: nuevoCode,
       user_id: user.id,
       clinic_id: activeClinicId,

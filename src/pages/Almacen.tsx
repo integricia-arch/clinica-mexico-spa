@@ -14,8 +14,8 @@ export default function Almacen() {
   const loadData = useCallback(async () => {
     setLoading(true);
     const [{ data: meds }, { data: lts }] = await Promise.all([
-      supabase.from("medicamentos").select("*").eq("activo", true).order("nombre"),
-      supabase.from("lotes_medicamento").select("*").order("fecha_caducidad"),
+      (supabase as any).from("medicamentos").select("*").eq("activo", true).order("nombre"),
+      (supabase as any).from("lotes_medicamento").select("*").order("fecha_caducidad"),
     ]);
     setMedicamentos(meds ?? []);
     setLotes(lts ?? []);

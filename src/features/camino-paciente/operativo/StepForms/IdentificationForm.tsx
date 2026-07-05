@@ -26,7 +26,7 @@ export default function IdentificationForm({
 
   useEffect(() => {
     if (!patientId || curp) return;
-    supabase.from("patients").select("curp").eq("id", patientId).maybeSingle().then(({ data }) => {
+    (supabase as any).from("patients").select("curp").eq("id", patientId).maybeSingle().then(({ data }) => {
       if (data?.curp) setCurp(data.curp);
     });
   }, [patientId, curp]);
@@ -42,8 +42,8 @@ export default function IdentificationForm({
 
     setSaving(true);
     if (patientId) {
-      await supabase.from("patients").update({ curp: curpUpper }).eq("id", patientId);
-      await supabase.from("consentimientos").insert({
+      await (supabase as any).from("patients").update({ curp: curpUpper }).eq("id", patientId);
+      await (supabase as any).from("consentimientos").insert({
         patient_id: patientId,
         tipo: "atencion_medica",
         otorgado: true,

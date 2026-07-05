@@ -72,9 +72,9 @@ export function usePatientClinicalSnapshot(patientId: string | null, doctorId: s
     setError(null);
     try {
       const [p, e, r, st] = await Promise.all([
-        supabase.from("patients").select("*").eq("id", patientId).maybeSingle(),
+        (supabase as any).from("patients").select("*").eq("id", patientId).maybeSingle(),
         doctorId
-          ? supabase
+          ? (supabase as any)
               .from("expedientes")
               .select("*")
               .eq("patient_id", patientId)
@@ -83,7 +83,7 @@ export function usePatientClinicalSnapshot(patientId: string | null, doctorId: s
               .limit(1)
               .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
-        supabase
+        (supabase as any)
           .from("prescriptions")
           .select("id, prescription_number, created_at, status, diagnosis")
           .eq("patient_id", patientId)
@@ -98,7 +98,7 @@ export function usePatientClinicalSnapshot(patientId: string | null, doctorId: s
       setStudies(st);
 
       if (exp?.id) {
-        const { data: n } = await supabase
+        const { data: n } = await (supabase as any)
           .from("notas_consulta")
           .select("*")
           .eq("expediente_id", exp.id as string)

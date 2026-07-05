@@ -44,7 +44,7 @@ export default function ConfiguracionPagos() {
     if (!activeClinicId) return;
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("payment_gateway_config" as unknown as "appointments")
         .select("*")
         .eq("clinic_id", activeClinicId)
@@ -100,8 +100,8 @@ export default function ConfiguracionPagos() {
     };
 
     const { error } = existingId
-      ? await supabase.from("payment_gateway_config" as any).update(payload).eq("id", existingId)
-      : await supabase.from("payment_gateway_config" as any).insert(payload);
+      ? await (supabase as any).from("payment_gateway_config" as any).update(payload).eq("id", existingId)
+      : await (supabase as any).from("payment_gateway_config" as any).insert(payload);
 
     setSaving(false);
     if (error) { toast.error("Error al guardar: " + error.message); return; }

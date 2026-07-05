@@ -49,7 +49,7 @@ export function useJourneyTemplates() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("journey_templates")
       .select("*")
       .order("created_at", { ascending: true });
@@ -71,8 +71,8 @@ export function useJourneyVersion(versionId: string | null) {
     if (!versionId) { setVersion(null); setSteps([]); return; }
     setLoading(true);
     const [{ data: v }, { data: s }] = await Promise.all([
-      supabase.from("journey_template_versions").select("*").eq("id", versionId).maybeSingle(),
-      supabase.from("journey_step_definitions").select("*").eq("template_version_id", versionId).order("step_order"),
+      (supabase as any).from("journey_template_versions").select("*").eq("id", versionId).maybeSingle(),
+      (supabase as any).from("journey_step_definitions").select("*").eq("template_version_id", versionId).order("step_order"),
     ]);
     setVersion((v as any) ?? null);
     setSteps(((s as any) ?? []).map((x: any) => ({

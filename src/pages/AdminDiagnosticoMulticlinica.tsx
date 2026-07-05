@@ -38,7 +38,7 @@ export default function AdminDiagnosticoMulticlinica() {
   const load = async () => {
     setLoading(true);
     setError(null);
-    const { data: result, error: err } = await supabase.rpc("multiclinic_diagnostics");
+    const { data: result, error: err } = await (supabase as any).rpc("multiclinic_diagnostics");
     if (err) {
       setError(err.message);
       setData(null);

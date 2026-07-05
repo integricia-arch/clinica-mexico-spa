@@ -283,7 +283,7 @@ export function useFacturasProveedor(clinicId: string | null) {
 
   // COSO: aprobar factura con diferencia 4-way match — solo admin/manager vía RPC
   const aprobarDiferencia = useCallback(async (facturaId: string, notas?: string): Promise<void> => {
-    const { error: rErr } = await supabase.rpc(
+    const { error: rErr } = await (supabase as any).rpc(
       "aprobar_diferencia_factura" as never,
       { p_factura_id: facturaId, p_notas: notas ?? null } as never
     );

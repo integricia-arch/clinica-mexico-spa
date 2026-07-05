@@ -24,7 +24,7 @@ export default function Farmacia() {
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    const { data: meds } = await supabase.from("medicamentos").select("*").eq("activo", true).order("nombre");
+    const { data: meds } = await (supabase as any).from("medicamentos").select("*").eq("activo", true).order("nombre");
     setMedicamentos(meds ?? []);
   }
 

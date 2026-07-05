@@ -245,7 +245,7 @@ export function useRecepcionesMercancia(clinicId: string | null) {
 
   const verificar = useCallback(async (id: string) => {
     // COSO: solo admin/manager — enforced en RPC SECURITY DEFINER
-    const { error: uErr } = await supabase.rpc(
+    const { error: uErr } = await (supabase as any).rpc(
       "confirmar_recepcion_mercancia" as never,
       { p_recepcion_id: id } as never
     );

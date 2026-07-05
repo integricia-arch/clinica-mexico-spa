@@ -66,7 +66,7 @@ export default function Recetas() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data: rxs } = await supabase
+      const { data: rxs } = await (supabase as any)
         .from("prescriptions")
         .select("id, prescription_number, issue_date, status, diagnosis, doctor_id, patient_id, created_at")
         .order("issue_date", { ascending: false, nullsFirst: false })
@@ -85,9 +85,9 @@ export default function Recetas() {
       const patIds = Array.from(new Set(list.map((r) => r.patient_id)));
 
       const [{ data: items }, { data: docs }, { data: pats }] = await Promise.all([
-        supabase.from("prescription_items").select("id, prescription_id, generic_name, is_controlled").in("prescription_id", ids),
-        supabase.from("doctors").select("id, nombre, apellidos, especialidad").in("id", docIds),
-        supabase.from("patients").select("id, nombre, apellidos").in("id", patIds),
+        (supabase as any).from("prescription_items").select("id, prescription_id, generic_name, is_controlled").in("prescription_id", ids),
+        (supabase as any).from("doctors").select("id, nombre, apellidos, especialidad").in("id", docIds),
+        (supabase as any).from("patients").select("id, nombre, apellidos").in("id", patIds),
       ]);
 
       const itemsByRx = new Map<string, Item[]>();

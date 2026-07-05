@@ -64,7 +64,7 @@ export function useServicios(clinicId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: qErr } = await supabase
+      const { data, error: qErr } = await (supabase as any)
         .from("servicios")
         .select("id, nombre, especialidad, duracion_minutos, precio_centavos, activo")
         .eq("clinic_id", clinicId)
@@ -85,7 +85,7 @@ export function useServicios(clinicId: string | null) {
   const create = useCallback(
     async (input: ServicioInput) => {
       if (!clinicId) throw new Error("No hay clínica activa seleccionada.");
-      const { error: cErr } = await supabase
+      const { error: cErr } = await (supabase as any)
         .from("servicios")
         .insert({ ...toRow(input), clinic_id: clinicId });
       if (cErr) throw new Error(friendlyError(cErr, "No se pudo crear el servicio."));
@@ -96,7 +96,7 @@ export function useServicios(clinicId: string | null) {
 
   const update = useCallback(
     async (id: string, input: ServicioInput) => {
-      const { error: uErr } = await supabase.from("servicios").update(toRow(input)).eq("id", id);
+      const { error: uErr } = await (supabase as any).from("servicios").update(toRow(input)).eq("id", id);
       if (uErr) throw new Error(friendlyError(uErr, "No se pudo actualizar el servicio."));
       await load();
     },
@@ -105,7 +105,7 @@ export function useServicios(clinicId: string | null) {
 
   const toggleActivo = useCallback(
     async (id: string, activo: boolean) => {
-      const { error: tErr } = await supabase.from("servicios").update({ activo }).eq("id", id);
+      const { error: tErr } = await (supabase as any).from("servicios").update({ activo }).eq("id", id);
       if (tErr) throw new Error(friendlyError(tErr, "No se pudo cambiar el estado."));
       await load();
     },
@@ -114,7 +114,7 @@ export function useServicios(clinicId: string | null) {
 
   const remove = useCallback(
     async (id: string) => {
-      const { error: dErr } = await supabase.from("servicios").delete().eq("id", id);
+      const { error: dErr } = await (supabase as any).from("servicios").delete().eq("id", id);
       if (dErr) throw new Error(friendlyError(dErr, "No se pudo eliminar el servicio."));
       await load();
     },

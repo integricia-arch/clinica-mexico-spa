@@ -46,7 +46,7 @@ export default function SolicitudesInsumos({ medicamentos }: Props) {
 
   const fetchItems = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("solicitudes_insumos")
       .select("id, medicamento_id, cantidad, motivo, status, solicitado_por, created_at, resolved_at")
       .order("created_at", { ascending: false })
@@ -65,7 +65,7 @@ export default function SolicitudesInsumos({ medicamentos }: Props) {
     const cant = Number(cantidad);
     if (!cant || cant <= 0) { toast.error("Cantidad inválida"); return; }
     setSubmitting(true);
-    const { error } = await supabase.from("solicitudes_insumos").insert({
+    const { error } = await (supabase as any).from("solicitudes_insumos").insert({
       medicamento_id: medicamentoId,
       cantidad: cant,
       motivo: motivo.trim() || null,
@@ -81,7 +81,7 @@ export default function SolicitudesInsumos({ medicamentos }: Props) {
 
   const handleAprobar = async (id: string) => {
     setResolvingId(id);
-    const { error } = await supabase.rpc("aprobar_solicitud_insumo", { p_solicitud_id: id } as never);
+    const { error } = await (supabase as any).rpc("aprobar_solicitud_insumo", { p_solicitud_id: id } as never);
     setResolvingId(null);
     if (error) { toast.error(error.message || "No se pudo aprobar"); return; }
     toast.success("Solicitud aprobada — inventario actualizado");
@@ -90,7 +90,7 @@ export default function SolicitudesInsumos({ medicamentos }: Props) {
 
   const handleRechazar = async (id: string) => {
     setResolvingId(id);
-    const { error } = await supabase.rpc("rechazar_solicitud_insumo", { p_solicitud_id: id } as never);
+    const { error } = await (supabase as any).rpc("rechazar_solicitud_insumo", { p_solicitud_id: id } as never);
     setResolvingId(null);
     if (error) { toast.error(error.message || "No se pudo rechazar"); return; }
     toast.success("Solicitud rechazada");

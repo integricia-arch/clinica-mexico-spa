@@ -46,7 +46,7 @@ export function useLoyaltyMember(clinicId: string | null) {
     const q = sanitizeSearchQuery(query)
     if (q.length === 0) return []
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('loyalty_members')
       .select('*')
       .eq('clinic_id', clinicId)
@@ -66,7 +66,7 @@ export function useLoyaltyMember(clinicId: string | null) {
     if (email) conditions.push(`email.eq.${email}`)
     if (conditions.length === 0) return null
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('loyalty_members')
       .select('*')
       .eq('clinic_id', clinicId)
@@ -82,7 +82,7 @@ export function useLoyaltyMember(clinicId: string | null) {
 
     const now = new Date().toISOString()
 
-    const { data: barcode, error: barcodeErr } = await supabase.rpc(
+    const { data: barcode, error: barcodeErr } = await (supabase as any).rpc(
       'loyalty_generate_barcode',
       { p_clinic_id: clinicId }
     )
@@ -91,7 +91,7 @@ export function useLoyaltyMember(clinicId: string | null) {
 
 
     const normalizedPhone = input.telefono ? normalizePhone(input.telefono) : null
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('loyalty_members')
       .insert({
         clinic_id: clinicId,
@@ -133,7 +133,7 @@ export function useLoyaltyMember(clinicId: string | null) {
   ): Promise<RegisterSaleResult> {
     if (!clinicId) return { ok: false, error: 'sin_clinica' }
 
-    const { data, error } = await supabase.rpc('loyalty_register_sale', {
+    const { data, error } = await (supabase as any).rpc('loyalty_register_sale', {
       p_sale_id: saleId,
       p_member_id: memberId,
       p_clinic_id: clinicId,
@@ -149,7 +149,7 @@ export function useLoyaltyMember(clinicId: string | null) {
   ): Promise<RedeemResult> {
     if (!clinicId) return { ok: false, error: 'sin_clinica' }
 
-    const { data, error } = await supabase.rpc('loyalty_redeem', {
+    const { data, error } = await (supabase as any).rpc('loyalty_redeem', {
       p_member_id: memberId,
       p_clinic_id: clinicId,
       p_puntos: puntos,
@@ -160,7 +160,7 @@ export function useLoyaltyMember(clinicId: string | null) {
   }
 
   async function getAll(cId: string): Promise<LoyaltyMember[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('loyalty_members')
       .select('*')
       .eq('clinic_id', cId)
@@ -172,7 +172,7 @@ export function useLoyaltyMember(clinicId: string | null) {
   }
 
   async function getMovimientos(memberId: string): Promise<LoyaltyMovimiento[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('loyalty_movimientos')
       .select('*')
       .eq('member_id', memberId)

@@ -17,7 +17,7 @@ export default function RecetaImprimir() {
     if (!id) return;
     (async () => {
       try {
-        const { data: rx, error } = await supabase
+        const { data: rx, error } = await (supabase as any)
           .from("prescriptions")
           .select("id, prescription_number, issue_date, diagnosis, notes, qr_code_value, template_snapshot_json, doctor_id, patient_id")
           .eq("id", id)
@@ -28,9 +28,9 @@ export default function RecetaImprimir() {
 
         const rxd = rx as Record<string, unknown>;
         const [docRes, patRes, itemsRes] = await Promise.all([
-          supabase.from("doctors").select("nombre, apellidos, especialidad, cedula_profesional").eq("id", rxd.doctor_id as string).maybeSingle(),
-          supabase.from("patients").select("nombre, apellidos, fecha_nacimiento, sexo").eq("id", rxd.patient_id as string).maybeSingle(),
-          supabase.from("prescription_items").select("*").eq("prescription_id", id),
+          (supabase as any).from("doctors").select("nombre, apellidos, especialidad, cedula_profesional").eq("id", rxd.doctor_id as string).maybeSingle(),
+          (supabase as any).from("patients").select("nombre, apellidos, fecha_nacimiento, sexo").eq("id", rxd.patient_id as string).maybeSingle(),
+          (supabase as any).from("prescription_items").select("*").eq("prescription_id", id),
         ]);
 
         const tpl = (rxd.template_snapshot_json as { logo_path?: string | null; firma_path?: string | null } | null) ?? null;

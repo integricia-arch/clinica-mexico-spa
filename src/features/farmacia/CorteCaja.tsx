@@ -112,7 +112,7 @@ export default function CorteCaja() {
 
   async function loadShifts() {
     if (!activeClinicId) return;
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("pharmacy_cash_shifts")
       .select("*")
       .eq("clinic_id", activeClinicId)
@@ -127,11 +127,11 @@ export default function CorteCaja() {
     setLoading(true);
     setCortes([]);
     const [{ data: s }, { data: p }, { data: fm }] = await Promise.all([
-      supabase.from("pharmacy_sales").select("*").eq("shift_id", shift.id),
-      supabase
+      (supabase as any).from("pharmacy_sales").select("*").eq("shift_id", shift.id),
+      (supabase as any)
         .from("pharmacy_sale_payments")
         .select("*")
-        .in("sale_id", (await supabase.from("pharmacy_sales").select("id").eq("shift_id", shift.id)).data?.map((r: { id: string }) => r.id) ?? []),
+        .in("sale_id", (await (supabase as any).from("pharmacy_sales").select("id").eq("shift_id", shift.id)).data?.map((r: { id: string }) => r.id) ?? []),
       (supabase as any).from("fondos_movimientos")
         .select("id,tipo,monto,motivo,registrado_by,created_at")
         .eq("pharmacy_shift_id", shift.id)
@@ -148,7 +148,7 @@ export default function CorteCaja() {
       .order("created_at", { ascending: true });
     setCortes((ct ?? []) as CorteRow[]);
     if (salesList.length > 0) {
-      const { data: it } = await supabase
+      const { data: it } = await (supabase as any)
         .from("pharmacy_sale_items")
         .select("id,sale_id,quantity,unit_price,medicamento_id")
         .in("sale_id", salesList.map((x) => x.id));
@@ -156,7 +156,7 @@ export default function CorteCaja() {
       setItems(itemsList);
       const medIds = [...new Set(itemsList.map((i) => i.medicamento_id))];
       if (medIds.length > 0) {
-        const { data: m } = await supabase.from("medicamentos").select("id,nombre").in("id", medIds);
+        const { data: m } = await (supabase as any).from("medicamentos").select("id,nombre").in("id", medIds);
         const map: Record<string, string> = {};
         (m ?? []).forEach((r: { id: string; nombre: string }) => { map[r.id] = r.nombre; });
         setMeds(map);

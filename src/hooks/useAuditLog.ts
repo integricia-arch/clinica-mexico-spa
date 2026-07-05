@@ -36,7 +36,7 @@ export function useAuditLog() {
       setLoading(true);
       setError(null);
       try {
-        const db = supabase.from("audit_log");
+        const db = (supabase as any).from("audit_log");
         let q = db.select("*").eq("clinic_id", activeClinicId).order("created_at", { ascending: false });
         if (filters.tabla)       q = q.eq("tabla", filters.tabla);
         if (filters.registro_id) q = q.eq("registro_id", filters.registro_id);

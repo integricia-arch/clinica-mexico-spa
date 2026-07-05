@@ -197,7 +197,7 @@ export function useDevolucionesProveedor(clinicId: string | null) {
       }
 
       // Audit movement
-      await supabase.from("movimientos_inventario" as never).insert({
+      await (supabase as any).from("movimientos_inventario" as never).insert({
         clinic_id: clinicId,
         medicamento_id: item.medicamento_id,
         lote_id: item.lote_id,

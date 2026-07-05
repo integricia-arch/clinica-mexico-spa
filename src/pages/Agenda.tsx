@@ -171,7 +171,7 @@ function BloqueoDialog({ open, doctores, clinicId, onCreated, onCancel }: Bloque
       tipo:       form.tipo,
       todo_el_dia: form.todo_el_dia,
     };
-    const { error } = await (supabase.from("doctor_bloqueos"))
+    const { error } = await ((supabase as any).from("doctor_bloqueos"))
       .insert(payload);
     setSaving(false);
     if (error) { toast.error(friendlyError(error)); return; }
@@ -279,13 +279,13 @@ export default function Agenda() {
     fin.setHours(23, 59, 59, 999);
 
     const [{ data: cdata, error }, { data: ddata }, { data: bdata }] = await Promise.all([
-      supabase.from("appointments")
+      (supabase as any).from("appointments")
         .select("id,fecha_inicio,fecha_fin,status,origen,creada_por_bot,motivo_consulta,doctor_id,patient_id,servicio_id,recurrencia_tipo,cita_padre_id,recurrencia_num,paciente:patients(nombre,apellidos),doctor:doctors(nombre,apellidos),servicio:servicios(nombre)")
         .gte("fecha_inicio", ini.toISOString())
         .lte("fecha_inicio", fin.toISOString())
         .order("fecha_inicio"),
-      supabase.from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos"),
-      (supabase.from("doctor_bloqueos"))
+      (supabase as any).from("doctors").select("id,nombre,apellidos,especialidad").eq("activo", true).order("apellidos"),
+      ((supabase as any).from("doctor_bloqueos"))
         .select("id,doctor_id,fecha_inicio,fecha_fin,motivo,tipo,todo_el_dia")
         .gte("fecha_fin",    ini.toISOString())
         .lte("fecha_inicio", fin.toISOString())
@@ -366,7 +366,7 @@ export default function Agenda() {
       );
     } catch (e) {
       // Fallback directo si edge fn falla
-      const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
+      const { error } = await (supabase as any).from("appointments").update({ status }).eq("id", id);
       if (error) { toast.error(friendlyError(error)); setAccion(false); return; }
       toast.success(status === "confirmada" ? "Cita confirmada" : "Cita cancelada");
     }

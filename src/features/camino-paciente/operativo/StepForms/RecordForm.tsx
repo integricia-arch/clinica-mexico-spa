@@ -22,7 +22,7 @@ export default function RecordForm({
 
   useEffect(() => {
     if (!patientId) return;
-    supabase.from("patients").select("alergias,tipo_sangre,notas").eq("id", patientId).maybeSingle()
+    (supabase as any).from("patients").select("alergias,tipo_sangre,notas").eq("id", patientId).maybeSingle()
       .then(({ data }) => {
         if (data) {
           if (!alergias && data.alergias) setAlergias(data.alergias);
@@ -35,7 +35,7 @@ export default function RecordForm({
   const handleConfirm = async () => {
     setSaving(true);
     if (patientId) {
-      await supabase.from("patients").update({
+      await (supabase as any).from("patients").update({
         alergias: alergias || null,
         tipo_sangre: tipoSangre || null,
       }).eq("id", patientId);

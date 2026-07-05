@@ -15,7 +15,7 @@ export async function logPrescriptionEvent(
   extra?: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await supabase.rpc("log_audit", {
+    await (supabase as any).rpc("log_audit", {
       _accion: "actualizar",
       _tabla: "prescriptions",
       _registro_id: prescriptionId,
@@ -28,7 +28,7 @@ export async function logPrescriptionEvent(
 
 /** Cuenta cuántas impresiones previas existen para detectar reimpresión. */
 export async function countPrintEvents(prescriptionId: string): Promise<number> {
-  const { data } = await supabase
+  const { data } = await (supabase as any)
     .from("audit_logs")
     .select("id, datos_nuevos")
     .eq("tabla", "prescriptions")
@@ -50,7 +50,7 @@ export interface PrescriptionAuditEntry {
 }
 
 export async function getPrescriptionAudit(prescriptionId: string): Promise<PrescriptionAuditEntry[]> {
-  const { data, error } = await supabase.rpc("get_prescription_audit", { _prescription_id: prescriptionId });
+  const { data, error } = await (supabase as any).rpc("get_prescription_audit", { _prescription_id: prescriptionId });
   if (error || !data) return [];
   return (data as any[]).map((r) => ({
     id: r.id,

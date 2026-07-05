@@ -152,7 +152,7 @@ function CloseTurnoDialog({
   useEffect(() => {
     if (!open || !turno) return;
     setCashRefunds(null);
-    supabase
+    (supabase as any)
       .from("fondos_movimientos")
       .select("monto")
       .eq("turno_id", turno.id)
@@ -180,7 +180,7 @@ function CloseTurnoDialog({
     if (Number.isNaN(amount) || amount < 0) { toast.error("Monto inválido"); return; }
     setSubmitting(true); setOverridePrompt(null);
 
-    const { data, error } = await supabase.rpc("turno_close", {
+    const { data, error } = await (supabase as any).rpc("turno_close", {
       p_turno_id: turno.id,
       p_cash_count: amount,
       p_notes: notes || null,
@@ -276,7 +276,7 @@ function CloseTurnoDialog({
                     const f = Number(fondoInput);
                     if (isNaN(f) || f < 0) { toast.error("Monto inválido"); return; }
                     setSavingFondo(true);
-                    const { error } = await supabase.rpc("corte_set_fondo", {
+                    const { error } = await (supabase as any).rpc("corte_set_fondo", {
                       p_corte_id: result.corte_id, p_fondo_siguiente: f,
                     } as never);
                     setSavingFondo(false);
@@ -406,7 +406,7 @@ function FondoMovimientoDialog({
     if (!motivo.trim()) { toast.error("Motivo requerido"); return; }
     setSaving(true);
 
-    const { error } = await supabase.rpc("turno_fondo_movimiento", {
+    const { error } = await (supabase as any).rpc("turno_fondo_movimiento", {
       p_turno_id: turnoId,
       p_tipo: tipo,
       p_monto: amount,
@@ -487,7 +487,7 @@ function CorteXDialog({
   async function generate() {
     if (!turnoId) return;
     setLoading(true);
-    const { data, error } = await supabase.rpc("turno_corte_x", { p_turno_id: turnoId } as never);
+    const { data, error } = await (supabase as any).rpc("turno_corte_x", { p_turno_id: turnoId } as never);
     setLoading(false);
     if (error) { toast.error(`Error: ${error.message}`); return; }
     setResult(data as unknown as CorteXResult);
@@ -695,9 +695,9 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     setLoading(true);
 
     const [{ data: cajasData }, { data: turnoData }, auditRows] = await Promise.all([
-      supabase.from("cajas").select("id, nombre, fondo_default, es_farmacia")
+      (supabase as any).from("cajas").select("id, nombre, fondo_default, es_farmacia")
         .eq("clinic_id", activeClinic.id).eq("activo", true).order("nombre"),
-      supabase.from("turnos").select("*")
+      (supabase as any).from("turnos").select("*")
         .eq("clinic_id", activeClinic.id).eq("cajero_user_id", user.id)
         .eq("estado", "abierto").maybeSingle(),
       restSelect(
@@ -720,7 +720,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
 
     // Fondos del turno activo
     if (activeTurno) {
-      const { data: fondosData } = await supabase
+      const { data: fondosData } = await (supabase as any)
         .from("fondos_movimientos")
         .select("id, tipo, monto, motivo, created_at")
         .eq("turno_id", activeTurno.id)
@@ -731,7 +731,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     }
 
     // Historial de turnos cerrados/cancelados
-    const { data: turnosHist } = await supabase.from("turnos")
+    const { data: turnosHist } = await (supabase as any).from("turnos")
       .select("id, caja_id, estado, monto_apertura, monto_cierre, abierto_at, cerrado_at, notas_cierre")
       .eq("clinic_id", activeClinic.id)
       .neq("estado", "abierto")
@@ -774,7 +774,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     if (!activeClinic?.id || !user?.id) return;
     setSaving(true);
 
-    const { data: newTurno, error } = await supabase.from("turnos").insert({
+    const { data: newTurno, error } = await (supabase as any).from("turnos").insert({
       clinic_id: activeClinic.id,
       caja_id: cajaId,
       cajero_user_id: user.id,
@@ -787,13 +787,13 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
 
     const selectedCaja = cajas.find((c) => c.id === cajaId);
     if (selectedCaja?.es_farmacia && newTurno) {
-      const { data: shiftId, error: shiftError } = await supabase.rpc("pharmacy_open_shift", {
+      const { data: shiftId, error: shiftError } = await (supabase as any).rpc("pharmacy_open_shift", {
         p_clinic_id: activeClinic.id,
         p_opening_amount: montoApertura,
         p_notes: notas.trim() || null,
       } as never);
       if (!shiftError && shiftId) {
-        await supabase.from("turnos").update({ pharmacy_shift_id: shiftId }).eq("id", newTurno.id);
+        await (supabase as any).from("turnos").update({ pharmacy_shift_id: shiftId }).eq("id", newTurno.id);
       } else if (shiftError) {
         toast.warning(`Turno abierto, pero no se pudo abrir turno POS Farmacia: ${shiftError.message}`);
       }

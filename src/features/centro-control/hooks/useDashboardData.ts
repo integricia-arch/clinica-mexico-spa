@@ -39,11 +39,11 @@ export function useDashboardData(date: Date) {
 
       let myDoctorIds: string[] = [];
       if (hasRole("doctor") && user) {
-        const { data: docs } = await supabase.from("doctors").select("id").eq("user_id", user.id);
+        const { data: docs } = await (supabase as any).from("doctors").select("id").eq("user_id", user.id);
         myDoctorIds = (docs ?? []).map((d: { id: string }) => d.id);
       }
 
-      let aptQuery = supabase
+      let aptQuery = (supabase as any)
         .from("appointments")
         .select("*")
         .gte("fecha_inicio", start)
@@ -66,17 +66,17 @@ export function useDashboardData(date: Date) {
         patientsRes, doctorsRes, roomsRes, serviciosRes, instancesRes,
         expRes, conRes, recRes, convRes, allDoctorsRes, allRoomsRes,
       ] = await Promise.allSettled([
-        patientIds.length ? supabase.from("patients").select("id,nombre,apellidos,telefono,email,alergias,activo").in("id", patientIds) : Promise.resolve({ data: [] }),
-        doctorIds.length ? supabase.from("doctors").select("id,nombre,apellidos,especialidad").in("id", doctorIds) : Promise.resolve({ data: [] }),
-        roomIds.length ? supabase.from("rooms").select("id,nombre,piso").in("id", roomIds) : Promise.resolve({ data: [] }),
-        servicioIds.length ? supabase.from("servicios").select("id,nombre,duracion_minutos").in("id", servicioIds) : Promise.resolve({ data: [] }),
-        apIds.length ? supabase.from("journey_instances").select("*").in("appointment_id", apIds) : Promise.resolve({ data: [] }),
-        patientIds.length ? supabase.from("expedientes").select("id,patient_id,activo,tipo").in("patient_id", patientIds).eq("activo", true) : Promise.resolve({ data: [] }),
-        patientIds.length ? supabase.from("consentimientos").select("id,patient_id,tipo,otorgado,otorgado_at").in("patient_id", patientIds).eq("otorgado", true) : Promise.resolve({ data: [] }),
-        supabase.from("recordatorios_cita").select("*").gte("programado_para", start).lt("programado_para", new Date(date.getTime() + 7 * 86400000).toISOString()).order("programado_para").limit(50),
-        supabase.from("conversaciones").select("*").eq("status", "escalada").order("last_message_at", { ascending: false }).limit(20),
-        supabase.from("doctors").select("id,nombre,apellidos,especialidad,activo").eq("activo", true).order("apellidos"),
-        supabase.from("rooms").select("id,nombre,piso,activo").eq("activo", true).order("nombre"),
+        patientIds.length ? (supabase as any).from("patients").select("id,nombre,apellidos,telefono,email,alergias,activo").in("id", patientIds) : Promise.resolve({ data: [] }),
+        doctorIds.length ? (supabase as any).from("doctors").select("id,nombre,apellidos,especialidad").in("id", doctorIds) : Promise.resolve({ data: [] }),
+        roomIds.length ? (supabase as any).from("rooms").select("id,nombre,piso").in("id", roomIds) : Promise.resolve({ data: [] }),
+        servicioIds.length ? (supabase as any).from("servicios").select("id,nombre,duracion_minutos").in("id", servicioIds) : Promise.resolve({ data: [] }),
+        apIds.length ? (supabase as any).from("journey_instances").select("*").in("appointment_id", apIds) : Promise.resolve({ data: [] }),
+        patientIds.length ? (supabase as any).from("expedientes").select("id,patient_id,activo,tipo").in("patient_id", patientIds).eq("activo", true) : Promise.resolve({ data: [] }),
+        patientIds.length ? (supabase as any).from("consentimientos").select("id,patient_id,tipo,otorgado,otorgado_at").in("patient_id", patientIds).eq("otorgado", true) : Promise.resolve({ data: [] }),
+        (supabase as any).from("recordatorios_cita").select("*").gte("programado_para", start).lt("programado_para", new Date(date.getTime() + 7 * 86400000).toISOString()).order("programado_para").limit(50),
+        (supabase as any).from("conversaciones").select("*").eq("status", "escalada").order("last_message_at", { ascending: false }).limit(20),
+        (supabase as any).from("doctors").select("id,nombre,apellidos,especialidad,activo").eq("activo", true).order("apellidos"),
+        (supabase as any).from("rooms").select("id,nombre,piso,activo").eq("activo", true).order("nombre"),
       ]);
 
       const safe = (r: PromiseSettledResult<{ data: unknown[] | null }>) =>

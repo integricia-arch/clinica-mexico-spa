@@ -89,14 +89,14 @@ function SesionesPanel({ user }: { user: { id: string } | null }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const fetchSesiones = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("ayuda_chat_sesiones").select("*")
       .order("started_at", { ascending: false }).limit(200);
     if (error) { toast.error("Error cargando sesiones"); return; }
     setSesiones((data ?? []) as Sesion[]);
     const ids = Array.from(new Set((data ?? []).map((s) => s.user_id)));
     if (ids.length) {
-      const { data: resolved } = await supabase.rpc("ayuda_chat_resolver_usuarios", { p_user_ids: ids });
+      const { data: resolved } = await (supabase as any).rpc("ayuda_chat_resolver_usuarios", { p_user_ids: ids });
       const map: Record<string, UsuarioInfo> = {};
       (resolved ?? []).forEach((r: { user_id: string; email: string | null; full_name: string | null }) => {
         map[r.user_id] = { email: r.email, full_name: r.full_name };
@@ -116,7 +116,7 @@ function SesionesPanel({ user }: { user: { id: string } | null }) {
   useEffect(() => {
     if (!selectedId) return;
     const load = async () => {
-      const { data } = await supabase.from("ayuda_chat_mensajes").select("*")
+      const { data } = await (supabase as any).from("ayuda_chat_mensajes").select("*")
         .eq("sesion_id", selectedId).order("created_at", { ascending: true });
       setMensajes((data ?? []) as Mensaje[]);
     };
@@ -131,17 +131,17 @@ function SesionesPanel({ user }: { user: { id: string } | null }) {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensajes]);
 
   const tomarSesion  = async (s: Sesion) => {
-    await supabase.from("ayuda_chat_sesiones").update({ atendido_por: user!.id, estado: "abierta" }).eq("id", s.id);
+    await (supabase as any).from("ayuda_chat_sesiones").update({ atendido_por: user!.id, estado: "abierta" }).eq("id", s.id);
   };
   const cerrarSesion = async (s: Sesion) => {
-    await supabase.from("ayuda_chat_sesiones").update({ estado: "cerrada", closed_at: new Date().toISOString() }).eq("id", s.id);
+    await (supabase as any).from("ayuda_chat_sesiones").update({ estado: "cerrada", closed_at: new Date().toISOString() }).eq("id", s.id);
     if (selectedId === s.id) setSelectedId(null);
   };
   const handleReply  = async () => {
     if (!reply.trim() || !selectedId || !user) return;
     setSending(true);
     try {
-      const { error } = await supabase.from("ayuda_chat_mensajes").insert({
+      const { error } = await (supabase as any).from("ayuda_chat_mensajes").insert({
         sesion_id: selectedId, rol: "humano", autor_id: user.id, contenido: reply.trim(),
       });
       if (error) { toast.error("Error al enviar"); return; }
@@ -243,7 +243,7 @@ function FaqPanel({ clinicId }: { clinicId: string | null }) {
   const fetchFaqs = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase.from("faq_items").select("*")
+      const { data } = await (supabase as any).from("faq_items").select("*")
         .or(`clinic_id.is.null,clinic_id.eq.${clinicId ?? "00000000-0000-0000-0000-000000000000"}`)
         .order("uso_count", { ascending: false });
       setFaqs((data ?? []) as FaqItem[]);
@@ -251,7 +251,7 @@ function FaqPanel({ clinicId }: { clinicId: string | null }) {
   };
 
   const fetchCandidatos = async () => {
-    const { data } = await supabase.from("chat_preguntas_pendientes").select("*")
+    const { data } = await (supabase as any).from("chat_preguntas_pendientes").select("*")
       .eq("aprobado", false)
       .order("repeticiones", { ascending: false }).limit(50);
     setCandidatos((data ?? []) as Candidato[]);
@@ -260,7 +260,7 @@ function FaqPanel({ clinicId }: { clinicId: string | null }) {
   useEffect(() => { fetchFaqs(); fetchCandidatos(); }, [clinicId]);
 
   const toggleActivo = async (item: FaqItem) => {
-    await supabase.from("faq_items").update({ activo: !item.activo }).eq("id", item.id);
+    await (supabase as any).from("faq_items").update({ activo: !item.activo }).eq("id", item.id);
     setFaqs((prev) => prev.map((f) => f.id === item.id ? { ...f, activo: !f.activo } : f));
   };
 
@@ -284,9 +284,9 @@ function FaqPanel({ clinicId }: { clinicId: string | null }) {
     const triggers = triggersRaw.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
     const payload = { pregunta: item.pregunta, respuesta: item.respuesta, triggers, ruta_activa: item.ruta_activa || null, activo: item.activo, origen: item.origen, clinic_id: clinicId };
     if (item.id) {
-      await supabase.from("faq_items").update(payload).eq("id", item.id);
+      await (supabase as any).from("faq_items").update(payload).eq("id", item.id);
     } else {
-      await supabase.from("faq_items").insert(payload);
+      await (supabase as any).from("faq_items").insert(payload);
     }
     toast.success(item.id ? "FAQ actualizado" : "FAQ creado");
     setDialogOpen(false);
@@ -294,7 +294,7 @@ function FaqPanel({ clinicId }: { clinicId: string | null }) {
   };
 
   const ignorarCandidato = async (id: string) => {
-    await supabase.from("chat_preguntas_pendientes").update({ aprobado: true }).eq("id", id);
+    await (supabase as any).from("chat_preguntas_pendientes").update({ aprobado: true }).eq("id", id);
     setCandidatos((prev) => prev.filter((c) => c.id !== id));
   };
 

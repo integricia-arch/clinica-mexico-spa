@@ -104,7 +104,7 @@ export default function SupervisorAuthDialog({
       let closeData: unknown;
       let closeErr: { message: string } | null;
       if (mode === "pharmacy") {
-        const res = await supabase.rpc("pharmacy_close_shift", {
+        const res = await (supabase as any).rpc("pharmacy_close_shift", {
           p_shift_id: turnoId,
           p_cash_count: cashCount,
           p_notes: notes || null,

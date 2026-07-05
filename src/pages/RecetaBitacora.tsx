@@ -28,7 +28,7 @@ export default function RecetaBitacora() {
       setLoading(true);
       const [list, { data: rx }] = await Promise.all([
         getPrescriptionAudit(id),
-        supabase.from("prescriptions").select("prescription_number").eq("id", id).maybeSingle(),
+        (supabase as any).from("prescriptions").select("prescription_number").eq("id", id).maybeSingle(),
       ]);
       setEntries(list);
       setFolio(rx?.prescription_number ?? null);

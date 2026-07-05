@@ -78,19 +78,19 @@ export default function RecepcionDashboard() {
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
 
     const [todayRes, pendingRes, confirmedRes, listRes, convRes, docPendRes, docDeclRes, callsRes] = await Promise.all([
-      supabase.from("appointments").select("id", { count: "exact", head: true })
+      (supabase as any).from("appointments").select("id", { count: "exact", head: true })
         .gte("fecha_inicio", startOfDay).lt("fecha_inicio", endOfDay),
-      supabase.from("appointments").select("id", { count: "exact", head: true })
+      (supabase as any).from("appointments").select("id", { count: "exact", head: true })
         .in("status", ["solicitada", "tentativa", "pendiente_formulario"]),
-      supabase.from("appointments").select("id", { count: "exact", head: true })
+      (supabase as any).from("appointments").select("id", { count: "exact", head: true })
         .in("status", ["confirmada", "confirmada_paciente", "confirmada_medico"])
         .gte("fecha_inicio", startOfDay).lt("fecha_inicio", endOfDay),
-      supabase.from("appointments")
+      (supabase as any).from("appointments")
         .select("*, doctors(nombre, apellidos), patients(nombre, apellidos, telefono)")
         .gte("fecha_inicio", startOfDay)
         .order("fecha_inicio", { ascending: true })
         .limit(20),
-      supabase.from("conversaciones")
+      (supabase as any).from("conversaciones")
         .select(`
           id, status, prioridad, insiste, escalated_followup_count,
           last_message_at, last_patient_followup_at, motivo_resumen, dolor_intensidad,
@@ -101,18 +101,18 @@ export default function RecepcionDashboard() {
         .eq("status", "escalada")
         .order("last_message_at", { ascending: false })
         .limit(50),
-      supabase.from("appointments")
+      (supabase as any).from("appointments")
         .select("id, fecha_inicio, doctor_confirmation_status, status, doctors(nombre, apellidos), patients(nombre, apellidos)")
         .eq("doctor_confirmation_status", "pending")
         .gte("fecha_inicio", new Date().toISOString())
         .order("fecha_inicio", { ascending: true })
         .limit(20),
-      supabase.from("appointments")
+      (supabase as any).from("appointments")
         .select("id, fecha_inicio, doctor_confirmation_reason, doctors(nombre, apellidos), patients(nombre, apellidos)")
         .eq("doctor_confirmation_status", "declined")
         .order("doctor_confirmation_at", { ascending: false })
         .limit(20),
-      supabase.from("doctor_contact_attempts")
+      (supabase as any).from("doctor_contact_attempts")
         .select("id", { count: "exact", head: true })
         .in("status", ["no_answer", "busy", "callback_requested"]),
     ]);
@@ -132,7 +132,7 @@ export default function RecepcionDashboard() {
     // Cargar nombres de pacientes para los que tengan patient_id
     const patientIds = convsNorm.map((c) => c.identidades_canal.patient_id).filter(Boolean) as string[];
     if (patientIds.length) {
-      const { data: pats } = await supabase
+      const { data: pats } = await (supabase as any)
         .from("patients").select("id, nombre, apellidos").in("id", patientIds);
       const byId = new Map((pats ?? []).map((p) => [p.id, p]));
       convsNorm = convsNorm.map((c) => {

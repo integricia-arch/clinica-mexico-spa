@@ -122,7 +122,7 @@ async function logAudit(
   registroId: string | null = null,
 ) {
   try {
-    await supabase.from("audit_logs").insert({
+    await (supabase as any).from("audit_logs").insert({
       accion: "consultar",
       tabla: "prescriptions",
       registro_id: registroId,
@@ -170,7 +170,7 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
   async function loadPendingPrescriptions() {
     setPendingLoading(true);
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from("prescriptions")
         .select("id, prescription_number, status, issue_date, diagnosis, patient_id")
         .in("status", ["issued", "partially_dispensed"])
@@ -180,7 +180,7 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
       const { data: rxRows } = await query;
       if (!rxRows || rxRows.length === 0) { setPendingRxs([]); return; }
       const patientIds = Array.from(new Set(rxRows.map((r) => r.patient_id)));
-      const { data: pts } = await supabase
+      const { data: pts } = await (supabase as any)
         .from("patients")
         .select("id, nombre, apellidos")
         .in("id", patientIds);
@@ -217,7 +217,7 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
     setSearching(true);
     try {
       // 1) Buscar por prescription_number o id
-      let { data: rxRow } = await supabase
+      let { data: rxRow } = await (supabase as any)
         .from("prescriptions")
         .select(
           "id, prescription_number, status, issue_date, diagnosis, notes, patient_id, doctor_id, appointment_id, clinic_id",
@@ -229,7 +229,7 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
         // intenta por id
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parsedNumber);
         if (isUuid) {
-          const { data } = await supabase
+          const { data } = await (supabase as any)
             .from("prescriptions")
             .select(
               "id, prescription_number, status, issue_date, diagnosis, notes, patient_id, doctor_id, appointment_id, clinic_id",
@@ -271,10 +271,10 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
 
       // 2) Cargar items + sums + paciente/doctor + meds + lotes en paralelo
       const [itemsRes, dispRes, pRes, dRes] = await Promise.all([
-        supabase.from("prescription_items").select("*").eq("prescription_id", rxRow.id).order("created_at"),
-        supabase.from("pharmacy_sale_items").select("prescription_item_id, quantity").not("prescription_item_id", "is", null),
-        supabase.from("patients").select("nombre, apellidos").eq("id", rxRow.patient_id).maybeSingle(),
-        supabase.from("doctors").select("nombre, apellidos, especialidad").eq("id", rxRow.doctor_id).maybeSingle(),
+        (supabase as any).from("prescription_items").select("*").eq("prescription_id", rxRow.id).order("created_at"),
+        (supabase as any).from("pharmacy_sale_items").select("prescription_item_id, quantity").not("prescription_item_id", "is", null),
+        (supabase as any).from("patients").select("nombre, apellidos").eq("id", rxRow.patient_id).maybeSingle(),
+        (supabase as any).from("doctors").select("nombre, apellidos, especialidad").eq("id", rxRow.doctor_id).maybeSingle(),
       ]);
 
       const rxItems = (itemsRes.data as RxItemRow[]) ?? [];
@@ -286,10 +286,10 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
       const medIds = Array.from(new Set(rxItems.map((i) => i.medication_id).filter(Boolean) as string[]));
       const [medsRes, lotesRes] = await Promise.all([
         medIds.length
-          ? supabase.from("medicamentos").select("id, nombre, precio_unitario, unidad, activo, is_controlled, regulatory_notes").in("id", medIds)
+          ? (supabase as any).from("medicamentos").select("id, nombre, precio_unitario, unidad, activo, is_controlled, regulatory_notes").in("id", medIds)
           : Promise.resolve({ data: [] as Med[] }),
         medIds.length
-          ? supabase.from("lotes_medicamento").select("*").in("medicamento_id", medIds).gt("existencia", 0).order("fecha_entrada")
+          ? (supabase as any).from("lotes_medicamento").select("*").in("medicamento_id", medIds).gt("existencia", 0).order("fecha_entrada")
           : Promise.resolve({ data: [] as Lote[] }),
       ]);
       const meds = (medsRes.data as Med[]) ?? [];
@@ -403,7 +403,7 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
       })),
     };
 
-    const { data: saleId, error } = await supabase.rpc("pharmacy_register_sale", {
+    const { data: saleId, error } = await (supabase as any).rpc("pharmacy_register_sale", {
       p_payload: payload as never,
     });
     if (error) {
@@ -417,7 +417,7 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
     }
 
     // Recalcular estado receta
-    const { data: newStatus } = await supabase.rpc("pharmacy_recompute_prescription_status", {
+    const { data: newStatus } = await (supabase as any).rpc("pharmacy_recompute_prescription_status", {
       p_prescription_id: rx.id,
     });
 
@@ -431,7 +431,7 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
     // Resolve shortage alerts for dispensed items
     try {
       const dispensedItemIds = dispensable.map((d) => d.item.id);
-      await supabase
+      await (supabase as any)
         .from("almacen_alertas" as never)
         .update({ status: "resolved", resolved_at: new Date().toISOString() } as never)
         .in("prescription_item_id", dispensedItemIds)

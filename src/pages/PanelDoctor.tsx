@@ -23,11 +23,11 @@ export default function PanelDoctor() {
   useEffect(() => {
     (async () => {
       if (isAdmin) {
-        const { data } = await supabase.from("doctors").select("id, nombre, apellidos, user_id, operational_status, operational_status_reason, operational_status_until").eq("activo", true);
+        const { data } = await (supabase as any).from("doctors").select("id, nombre, apellidos, user_id, operational_status, operational_status_reason, operational_status_until").eq("activo", true);
         setDoctors(data ?? []);
         if (data && data.length > 0 && !doctorId) setDoctorId(data[0].id);
       } else if (user?.id) {
-        const { data } = await supabase.from("doctors").select("id, operational_status, operational_status_reason, operational_status_until").eq("user_id", user.id).maybeSingle();
+        const { data } = await (supabase as any).from("doctors").select("id, operational_status, operational_status_reason, operational_status_until").eq("user_id", user.id).maybeSingle();
         if (data?.id) { setDoctorId(data.id); setDoctorInfo(data); }
         else setNoDoctorProfile(true);
       }

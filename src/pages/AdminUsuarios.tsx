@@ -160,8 +160,8 @@ export default function AdminUsuarios() {
     setLoadingServicios(true);
     try {
       const [catRes, asigRes] = await Promise.all([
-        supabase.from("servicios").select("id,nombre,especialidad,duracion_minutos,precio_centavos").eq("activo", true).order("nombre"),
-        supabase.from("doctor_servicios").select("servicio_id").eq("doctor_id", d.id),
+        (supabase as any).from("servicios").select("id,nombre,especialidad,duracion_minutos,precio_centavos").eq("activo", true).order("nombre"),
+        (supabase as any).from("doctor_servicios").select("servicio_id").eq("doctor_id", d.id),
       ]);
       setCatalogoServicios((catRes.data ?? []) as ServicioCatalog[]);
       setAsignadosIds(new Set(((asigRes.data ?? []) as { servicio_id: string }[]).map((r) => r.servicio_id)));
@@ -182,9 +182,9 @@ export default function AdminUsuarios() {
     setSavingServicios(true);
     try {
       const doctorId = serviciosDialog.doctor.id;
-      await supabase.from("doctor_servicios").delete().eq("doctor_id", doctorId);
+      await (supabase as any).from("doctor_servicios").delete().eq("doctor_id", doctorId);
       if (asignadosIds.size > 0) {
-        await supabase.from("doctor_servicios").insert(
+        await (supabase as any).from("doctor_servicios").insert(
           [...asignadosIds].map((sid) => ({ doctor_id: doctorId, servicio_id: sid }))
         );
       }
@@ -216,7 +216,7 @@ export default function AdminUsuarios() {
 
   const fetchDoctorCalendars = async () => {
     if (!activeClinicId) return;
-    const { data } = await supabase.rpc("get_doctor_calendars", { p_clinic_id: activeClinicId });
+    const { data } = await (supabase as any).rpc("get_doctor_calendars", { p_clinic_id: activeClinicId });
     const map: Record<string, string> = {};
     ((data ?? []) as { doctor_id: string; google_email: string }[]).forEach((c) => {
       map[c.doctor_id] = c.google_email;
@@ -243,7 +243,7 @@ export default function AdminUsuarios() {
 
   const fetchDoctors = async () => {
     setLoadingDoctors(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("doctors")
       .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id, horario_inicio, horario_fin, duracion_cita_min")
       .order("apellidos");
@@ -257,7 +257,7 @@ export default function AdminUsuarios() {
 
   const fetchNurses = async () => {
     setLoadingNurses(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("nurses")
       .select("id, nombre, apellidos, categoria, especialidad, cedula_profesional, telefono, activo, user_id, horario_inicio, horario_fin")
       .order("apellidos");
@@ -430,7 +430,7 @@ export default function AdminUsuarios() {
     if (["admin", "manager"].includes(createRole) && createPin) {
       const newUserId = createPayload?.user_id;
       if (newUserId) {
-        const { error: pinErr } = await supabase.rpc("set_supervisor_pin", {
+        const { error: pinErr } = await (supabase as any).rpc("set_supervisor_pin", {
           p_user_id: newUserId,
           p_pin: createPin,
         } as never);
@@ -682,9 +682,9 @@ export default function AdminUsuarios() {
     };
     let error;
     if (doctorEdit) {
-      ({ error } = await supabase.from("doctors").update(payload).eq("id", doctorEdit.id));
+      ({ error } = await (supabase as any).from("doctors").update(payload).eq("id", doctorEdit.id));
     } else {
-      ({ error } = await supabase.from("doctors").insert({ ...payload, clinic_id: activeClinicId } as never));
+      ({ error } = await (supabase as any).from("doctors").insert({ ...payload, clinic_id: activeClinicId } as never));
     }
     setSavingDoctor(false);
     if (error) {
@@ -699,7 +699,7 @@ export default function AdminUsuarios() {
   const handleDeleteDoctor = async () => {
     if (!doctorDel) return;
     setDeletingDoctor(true);
-    const { error } = await supabase.from("doctors").delete().eq("id", doctorDel.id);
+    const { error } = await (supabase as any).from("doctors").delete().eq("id", doctorDel.id);
     setDeletingDoctor(false);
     if (error) {
       toast.error("No se puede eliminar: el médico tiene registros relacionados. Marca como Inactivo en su lugar.");
@@ -854,9 +854,9 @@ export default function AdminUsuarios() {
     };
     let error;
     if (nurseEdit) {
-      ({ error } = await supabase.from("nurses").update(payload).eq("id", nurseEdit.id));
+      ({ error } = await (supabase as any).from("nurses").update(payload).eq("id", nurseEdit.id));
     } else {
-      ({ error } = await supabase.from("nurses").insert({ ...payload, clinic_id: activeClinicId } as never));
+      ({ error } = await (supabase as any).from("nurses").insert({ ...payload, clinic_id: activeClinicId } as never));
     }
     setSavingNurse(false);
     if (error) {
@@ -871,7 +871,7 @@ export default function AdminUsuarios() {
   const handleDeleteNurse = async () => {
     if (!nurseDel) return;
     setDeletingNurse(true);
-    const { error } = await supabase.from("nurses").delete().eq("id", nurseDel.id);
+    const { error } = await (supabase as any).from("nurses").delete().eq("id", nurseDel.id);
     setDeletingNurse(false);
     if (error) {
       toast.error("No se puede eliminar: la enfermera tiene registros relacionados. Márcala como Inactiva en su lugar.");
@@ -1934,7 +1934,7 @@ export default function AdminUsuarios() {
                 if (!/^\d{4,6}$/.test(pinValue)) { toast.error("PIN debe ser 4-6 dígitos"); return; }
                 if (pinValue !== pinConfirm) { toast.error("Los PINs no coinciden"); return; }
                 setSavingPin(true);
-                const { error } = await supabase.rpc("set_supervisor_pin", {
+                const { error } = await (supabase as any).rpc("set_supervisor_pin", {
                   p_user_id: pinUser.id,
                   p_pin: pinValue,
                 } as never);
