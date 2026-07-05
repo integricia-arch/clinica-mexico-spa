@@ -54,7 +54,7 @@ interface SnapshotJson {
   progress_percent?: number;
 }
 
-function parseSnapshot(
+export function parseSnapshot(
   raw: import("@/integrations/supabase/types").Json | null | undefined,
 ): SnapshotJson {
   if (raw == null) return {};
