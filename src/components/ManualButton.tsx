@@ -40,12 +40,12 @@ export default function ManualButton() {
   useEffect(() => {
     let active = true;
     const resolve = async () => {
-      const { data, error } = await supabase
-        .from("manual_paginas")
+      const { data, error } = await untypedTable("manual_paginas")
         .select("id, slug, titulo, ruta")
         .eq("activo", true);
       if (error || !data || !active) return;
-      const candidates = data
+      const rows = data as ManualPaginaRow[];
+      const candidates = rows
         .filter((p) => location.pathname === p.ruta || location.pathname.startsWith(p.ruta))
         .sort((a, b) => b.ruta.length - a.ruta.length);
       setPagina(candidates[0] ?? null);
