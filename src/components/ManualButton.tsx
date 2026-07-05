@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { HelpCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { supabase } from "@/integrations/supabase/client";
+import { untypedTable } from "@/lib/untypedTable";
 import { useAuth } from "@/hooks/useAuth";
+
+interface ManualPaginaRow { id: string; slug: string; titulo: string; ruta: string; }
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
