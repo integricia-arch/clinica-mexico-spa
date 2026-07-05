@@ -163,7 +163,7 @@ export function useDoctorQueue(doctorId: string | null) {
 
       const result: DoctorQueueItem[] = apptList.map((a) => {
         const j = journeyMap.get(a.id);
-        const snap = (j?.snapshot_json ?? {}) as SnapshotJson;
+        const snap = parseSnapshot(j?.snapshot_json);
         return {
           appointment_id: a.id,
           fecha_inicio: a.fecha_inicio,
