@@ -10,6 +10,7 @@ import {
   Building2, ScanLine, AlertTriangle, ChevronDown, ChevronUp,
   Banknote, Globe, FlaskConical,
 } from "lucide-react";
+import integrikaLogo from "@/assets/integrika-logo.jpeg";
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 const PITCH_STYLES = `
@@ -425,9 +426,7 @@ export default function Pitch() {
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: TEAL, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Activity size={16} color="#fff" strokeWidth={2.5} />
-            </div>
+            <img src={integrikaLogo} alt="IntegriKa" style={{ width: 36, height: 36, borderRadius: 9, objectFit: "cover" }} />
             <span className="pr-h" style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.03em", color: "#0f172a" }}>IntegriKa</span>
             <span style={{ fontSize: 10, color: "#94a3b8", paddingLeft: 4, borderLeft: "1px solid #e2e8f0", marginLeft: 2, display: "none" }} className="pr-nav-links">Sistema Operativo de Clínica</span>
           </div>
@@ -914,9 +913,7 @@ export default function Pitch() {
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: TEAL, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Activity size={14} color="#fff" strokeWidth={2.5} />
-              </div>
+              <img src={integrikaLogo} alt="IntegriKa" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} />
               <span className="pr-h" style={{ fontWeight: 800, fontSize: 15, color: "#0f172a", letterSpacing: "-0.03em" }}>IntegriKa</span>
               <span style={{ fontSize: 12, color: "#94a3b8" }}>· Sistema Operativo de Clínica · México</span>
             </div>
