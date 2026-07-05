@@ -16,7 +16,7 @@ export function useLoyaltyConfig(clinicId: string | null) {
 
     let cancelled = false
     setLoading(true)
-    setError(null)
+    setError(null);
 
     (supabase as any)
       .from('loyalty_config')
