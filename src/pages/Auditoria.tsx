@@ -246,7 +246,7 @@ export default function Auditoria() {
 
   const loadSeguimientos = async () => {
     setSegLoading(true);
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("recordatorios_cita")
       .select("id, appointment_id, programado_para, status, tipo, appointments(fecha_inicio, patients(nombre,apellidos,telefono), doctors(nombre,apellidos))")
       .order("programado_para", { ascending: false })
@@ -257,7 +257,7 @@ export default function Auditoria() {
 
   const loadErrors = async () => {
     setErrLoading(true);
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("pos_error_logs")
       .select("id, created_at, funcion, error_msg, error_detail, payload")
       .order("created_at", { ascending: false })
@@ -269,7 +269,7 @@ export default function Auditoria() {
   const loadFarmLogs = async () => {
     if (!activeClinic?.id) return;
     setFarmLoading(true);
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("audit_logs")
       .select("id, created_at, user_id, accion, tabla, registro_id, datos_nuevos, datos_anteriores, clinic_id")
       .eq("clinic_id", activeClinic.id)
@@ -283,7 +283,7 @@ export default function Auditoria() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("audit_logs")
         .select("*")
         .order("created_at", { ascending: false })

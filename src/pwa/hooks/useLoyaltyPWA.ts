@@ -31,7 +31,7 @@ export function useLoyaltyPWA(slug: string) {
 
   async function loadConfig() {
     setLoading(true)
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('loyalty_config' as never)
       .select('*')
       .eq('slug_farmacia', slug)
@@ -49,7 +49,7 @@ export function useLoyaltyPWA(slug: string) {
   }
 
   async function loadMemberByPhone(phone: string) {
-    const { data: m } = await supabase
+    const { data: m } = await (supabase as any)
       .from('loyalty_members' as never)
       .select('*')
       .eq('telefono', phone)
@@ -58,7 +58,7 @@ export function useLoyaltyPWA(slug: string) {
     if (m) {
       const mem = m as LoyaltyMember
       setMember(mem)
-      const { data: movs } = await supabase
+      const { data: movs } = await (supabase as any)
         .from('loyalty_movimientos' as never)
         .select('*')
         .eq('member_id', mem.id)
@@ -97,7 +97,7 @@ export function useLoyaltyPWA(slug: string) {
   async function updateMarketingConsent(value: boolean) {
     if (!member) return
     const now = new Date().toISOString()
-    await supabase
+    await (supabase as any)
       .from('loyalty_members')
       .update({
         consent_marketing: value,
