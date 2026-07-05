@@ -16,7 +16,7 @@ function sanitizeMoneyText(raw: string): string {
 }
 
 interface MoneyInputProps
-  extends Omit<React.ComponentProps<typeof Input>, "type" | "value" | "onChange" | "onBlur"> {
+  extends Omit<React.ComponentProps<typeof Input>, "type" | "value" | "onChange"> {
   value: string;
   onValueChange: (raw: string) => void;
   onBlurFormat?: boolean;
