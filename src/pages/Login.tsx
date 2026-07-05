@@ -148,13 +148,13 @@ export default function Login() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_8px_32px_hsl(239_84%_62%/0.35),0_2px_8px_hsl(239_84%_62%/0.20)]">
-            <svg viewBox="0 0 24 24" fill="none" className="h-7 w-7" aria-hidden="true">
-              <polyline points="2,12 6,12 8,6 10,18 13,9 15,15 17,12 22,12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <h1 className="mt-4 font-display text-2xl font-bold text-foreground">ClínicaMX</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sistema de Operaciones Clínicas</p>
+          <img
+            src={integrikaLogo}
+            alt="IntegriKa"
+            className="mx-auto h-16 w-16 rounded-2xl object-cover shadow-[0_8px_32px_hsl(239_84%_62%/0.35),0_2px_8px_hsl(239_84%_62%/0.20)]"
+          />
+          <h1 className="mt-4 font-display text-2xl font-bold text-foreground">IntegriKa</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Sistema Operativo de Clínica</p>
         </div>
 
         <div className="rounded-xl bg-card p-6 shadow-[0_4px_24px_hsl(222_47%_7%/0.09),0_1px_4px_hsl(222_47%_7%/0.05),inset_0_0.5px_0_hsl(0_0%_100%/0.90),inset_0_0_0_1px_hsl(228_20%_90%)]">

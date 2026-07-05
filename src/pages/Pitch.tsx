@@ -10,6 +10,7 @@ import {
   Building2, ScanLine, AlertTriangle, ChevronDown, ChevronUp,
   Banknote, Globe, FlaskConical,
 } from "lucide-react";
+import integrikaLogo from "@/assets/integrika-logo.jpeg";
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 const PITCH_STYLES = `
