@@ -19,20 +19,65 @@ definer+grant-all cruzando datos financieros entre clínicas, RLS faltante en
 `recetas_folio_contadores`. Todo commiteado (`74b9b39`, `ba55c31`), historial
 de migraciones reparado (Lovable había aplicado 2 fuera del CLI).
 
-**Pendiente — NO iniciado, requiere revisión caso por caso (ver doc completo):**
-- P1: 26 funciones `SECURITY DEFINER`+`anon` sin ningún check interno —
-  varias son fuga real de datos de negocio entre clínicas o mutación sin
-  autorización (`increment_lote_existencia`, `loyalty_redeem`,
-  `get_corte_pago_total`, etc.), otras probablemente diseño intencional
-  (bot FAQ público) — necesitan juicio de producto antes de tocar.
-- P2: 19 policies RLS "always true", bloque grande en tablas `journey_*` (11
-  tablas, probablemente 1 solo diseño de policy las resuelve todas).
-- P3: 4 extensiones en schema `public` (mover, riesgo bajo/esfuerzo medio),
-  toggle de "leaked password protection" en dashboard de Supabase (no
-  scriptable).
+**P1/P2/P3 cerrados en continuación de la misma sesión 18 (ver doc completo
+[[seguridad-auditoria-supabase-2026-07-04]] para el detalle función por función):**
 
-Sesión cerrada por costo alto (usuario notificado repetidamente); continuar
-en sesión nueva empezando por P1 (fuga de datos de negocio).
+- **P1 (26 funciones `SECURITY DEFINER`+`anon` sin check interno) — CERRADO ✅**
+  - 6 triggers sin necesidad de grant → `REVOKE ALL FROM PUBLIC, anon, authenticated`.
+  - Fuga cross-clínica: `get_medicamentos_en_reorden`, `get_doctor_calendars`,
+    `get_corte_pago_total`, `get_corte_tarjeta_total` → check `clinic_memberships`
+    agregado. Se encontró y corrigió un bug de precedencia SQL propio (`AND ... OR`
+    sin paréntesis) en `get_medicamentos_en_reorden` antes de darlo por cerrado.
+  - Mutación sin autorización: `increment_lote_existencia`, `recepcion_entrada_lote`,
+    `loyalty_redeem`, `loyalty_register_sale`, `update_journey_progress` → mismo
+    patrón de check.
+  - `next_receta_folio` → revocado de anon/authenticated (solo trigger).
+    `generate_prescription_number_for_doctor` → SÍ se llama directo del frontend
+    (`prescriptionService.ts`), así que en vez de revocar se le agregó check de
+    clínica del doctor.
+  - `cancelar_citas_prueba(dias)`: pese al nombre, cancelaba citas REALES
+    `origen='telegram'` recientes, sin ningún check, callable por anon. Confirmado
+    con el usuario → revocada de anon/authenticated/public (sin caller en frontend).
+  - Grupo "diseño intencional" (bot FAQ público, barcode lealtad, jobs sin args):
+    `chat_registrar_pendiente`, `faq_buscar`, `faq_incrementar_uso`,
+    `loyalty_generate_barcode`, `loyalty_expire_points`, `notify_new_user_signup`,
+    `cleanup_abandoned_bot_sesiones` → **NO tocadas**, confirmado con el usuario.
+
+- **P2 (19 policies RLS "always true") — CERRADO ✅**
+  - Las 11 tablas `journey_*` + `patient_checkout_events` +
+    `doctor_prescription_templates`/`_versions` tenían `USING(true) WITH CHECK(true)`
+    para `authenticated` — cualquier usuario logueado veía/editaba journeys de
+    pacientes de cualquier clínica. Fix: nueva función helper
+    `user_can_access_journey_instance(uuid)` + policies scoped a `clinic_memberships`
+    (vía `patient_id`→`clinic_id` o `doctor_id`→`clinic_id` según la tabla).
+  - Catálogos globales sin `clinic_id` (`journey_templates`, `_template_versions`,
+    `journey_step_definitions`, `_step_fields`, `journey_option_catalogs`,
+    `_option_items`, `journey_validation_rules`): lectura abierta a todo
+    `authenticated` (comparten diseño entre clínicas), escritura restringida a
+    `has_role(admin)` — coincide con el guard de frontend
+    (`/configuracion/camino-paciente` ya es admin-only en `App.tsx`).
+  - `arco_requests` (`INSERT` público) y `pos_error_logs` (`INSERT` público)
+    quedaron **intactas** — confirmado con el usuario que es diseño intencional
+    (solicitudes ARCO / tracking de errores anónimo).
+
+- **P3 — CERRADO (con 1 limitación de plataforma):**
+  - `unaccent`, `pg_trgm`, `btree_gist` movidas a schema `extensions`. `pg_net`
+    **no se pudo mover** — Supabase la marca como extensión no-relocatable
+    (`ERROR 0A000: extension "pg_net" does not support SET SCHEMA`); queda en
+    `public` de forma permanente, es limitación de la plataforma no de este proyecto.
+  - Ajustado `search_path` de `unaccent_immutable()` y ambos overloads de
+    `faq_buscar()` a `public, extensions` tras el move (bug propio corregido en el
+    camino: `SET search_path TO 'public, extensions'` con comillas simples crea
+    un solo schema literal con coma en el nombre, no dos schemas — la sintaxis
+    correcta es sin comillas: `SET search_path TO public, extensions`).
+    Verificado post-fix: `faq_buscar()`, `unaccent_immutable()` e índice GIN trigram
+    siguen funcionando.
+  - Toggle "leaked password protection" en dashboard de Supabase: sigue pendiente,
+    no scriptable (acción manual del usuario en Authentication → Settings).
+
+`get_advisors(security)` post-fix: 0 findings de `rls_policy_always_true` fuera
+de los 2 intencionales confirmados; `extension_in_public` solo `pg_net`
+(esperado). Auditoría de seguridad de sesión 18 completamente cerrada.
 
 ## Completado (Jul 4, 2026 — sesión 17 — bugs reales de Cotizaciones tras smoke test del usuario)
 
