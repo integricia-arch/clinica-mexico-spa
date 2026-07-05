@@ -184,7 +184,7 @@ export default function SurtirReceta({ initialCode }: { initialCode?: string } =
         .from("patients")
         .select("id, nombre, apellidos")
         .in("id", patientIds);
-      const ptMap = new Map((pts ?? []).map((p) => [p.id, p]));
+      const ptMap = new Map((pts ?? []).map((p: any) => [p.id, p] as [string, any]));
       setPendingRxs(rxRows.map((r) => {
         const pt = ptMap.get(r.patient_id);
         return {
