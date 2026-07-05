@@ -325,11 +325,11 @@ export default function CotizacionesPanel() {
 
   useEffect(() => {
     if (!activeClinicId) return;
-    const db = supabase.from("proveedores");
+    const db = (supabase as any).from("proveedores");
     db.select("id, nombre, rfc").eq("clinic_id", activeClinicId).eq("activo", true).order("nombre")
       .then(({ data }) => setProveedores((data || []) as Proveedor[]));
 
-    const dbSc = supabase.from("solicitudes_compra");
+    const dbSc = (supabase as any).from("solicitudes_compra");
     dbSc.select("id, folio, motivo").eq("clinic_id", activeClinicId).order("created_at", { ascending: false }).limit(50)
       .then(({ data }) => setSolicitudes((data || []) as SolicitudOption[]));
   }, [activeClinicId]);

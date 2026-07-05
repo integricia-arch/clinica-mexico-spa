@@ -58,6 +58,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          cfdi_emisor: string
           clinic_id: string
           conversacion_id: string | null
           creada_por_bot: boolean
@@ -80,6 +81,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cfdi_emisor?: string
           clinic_id?: string
           conversacion_id?: string | null
           creada_por_bot?: boolean
@@ -102,6 +104,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cfdi_emisor?: string
           clinic_id?: string
           conversacion_id?: string | null
           creada_por_bot?: boolean
@@ -137,6 +140,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "conversaciones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_earnings_by_period"
+            referencedColumns: ["doctor_id"]
           },
           {
             foreignKeyName: "appointments_doctor_id_fkey"
@@ -282,6 +292,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "conversaciones"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_sesiones_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_earnings_by_period"
+            referencedColumns: ["doctor_id"]
           },
           {
             foreignKeyName: "bot_sesiones_doctor_id_fkey"
@@ -695,6 +712,13 @@ export type Database = {
             foreignKeyName: "doctor_contact_attempts_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
+            referencedRelation: "doctor_earnings_by_period"
+            referencedColumns: ["doctor_id"]
+          },
+          {
+            foreignKeyName: "doctor_contact_attempts_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
@@ -862,6 +886,13 @@ export type Database = {
             foreignKeyName: "doctor_servicios_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
+            referencedRelation: "doctor_earnings_by_period"
+            referencedColumns: ["doctor_id"]
+          },
+          {
+            foreignKeyName: "doctor_servicios_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
@@ -887,8 +918,10 @@ export type Database = {
           apellidos: string
           cedula_profesional: string | null
           clinic_id: string
+          codigo_postal_fiscal: string | null
           created_at: string
           duracion_cita_min: number
+          emite_cfdi_propio: boolean
           especialidad: string
           horario_fin: string
           horario_inicio: string
@@ -897,6 +930,9 @@ export type Database = {
           operational_status: Database["public"]["Enums"]["doctor_operational_status"]
           operational_status_reason: string | null
           operational_status_until: string | null
+          razon_social: string | null
+          regimen_fiscal_sat: string | null
+          rfc: string | null
           telefono: string | null
           updated_at: string
           user_id: string | null
@@ -906,8 +942,10 @@ export type Database = {
           apellidos: string
           cedula_profesional?: string | null
           clinic_id?: string
+          codigo_postal_fiscal?: string | null
           created_at?: string
           duracion_cita_min?: number
+          emite_cfdi_propio?: boolean
           especialidad: string
           horario_fin?: string
           horario_inicio?: string
@@ -916,6 +954,9 @@ export type Database = {
           operational_status?: Database["public"]["Enums"]["doctor_operational_status"]
           operational_status_reason?: string | null
           operational_status_until?: string | null
+          razon_social?: string | null
+          regimen_fiscal_sat?: string | null
+          rfc?: string | null
           telefono?: string | null
           updated_at?: string
           user_id?: string | null
@@ -925,8 +966,10 @@ export type Database = {
           apellidos?: string
           cedula_profesional?: string | null
           clinic_id?: string
+          codigo_postal_fiscal?: string | null
           created_at?: string
           duracion_cita_min?: number
+          emite_cfdi_propio?: boolean
           especialidad?: string
           horario_fin?: string
           horario_inicio?: string
@@ -935,6 +978,9 @@ export type Database = {
           operational_status?: Database["public"]["Enums"]["doctor_operational_status"]
           operational_status_reason?: string | null
           operational_status_until?: string | null
+          razon_social?: string | null
+          regimen_fiscal_sat?: string | null
+          rfc?: string | null
           telefono?: string | null
           updated_at?: string
           user_id?: string | null
@@ -987,6 +1033,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clinics"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expedientes_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_earnings_by_period"
+            referencedColumns: ["doctor_id"]
           },
           {
             foreignKeyName: "expedientes_doctor_id_fkey"
@@ -2279,6 +2332,13 @@ export type Database = {
             foreignKeyName: "notas_consulta_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
+            referencedRelation: "doctor_earnings_by_period"
+            referencedColumns: ["doctor_id"]
+          },
+          {
+            foreignKeyName: "notas_consulta_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
             referencedRelation: "doctors"
             referencedColumns: ["id"]
           },
@@ -2779,11 +2839,13 @@ export type Database = {
       pharmacy_sales: {
         Row: {
           cashier_user_id: string | null
+          cfdi_emisor: string
           clinic_id: string
           created_at: string
           created_by: string | null
           customer_name: string | null
           discount: number
+          doctor_id: string | null
           id: string
           manager_authorized_by: string | null
           notes: string | null
@@ -2802,11 +2864,13 @@ export type Database = {
         }
         Insert: {
           cashier_user_id?: string | null
+          cfdi_emisor?: string
           clinic_id?: string
           created_at?: string
           created_by?: string | null
           customer_name?: string | null
           discount?: number
+          doctor_id?: string | null
           id?: string
           manager_authorized_by?: string | null
           notes?: string | null
@@ -2825,11 +2889,13 @@ export type Database = {
         }
         Update: {
           cashier_user_id?: string | null
+          cfdi_emisor?: string
           clinic_id?: string
           created_at?: string
           created_by?: string | null
           customer_name?: string | null
           discount?: number
+          doctor_id?: string | null
           id?: string
           manager_authorized_by?: string | null
           notes?: string | null
@@ -2846,7 +2912,29 @@ export type Database = {
           total?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_sales_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctor_earnings_by_period"
+            referencedColumns: ["doctor_id"]
+          },
+          {
+            foreignKeyName: "pharmacy_sales_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_sales_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       post_consultation_followups: {
         Row: {
@@ -3391,6 +3479,20 @@ export type Database = {
       }
     }
     Views: {
+      doctor_earnings_by_period: {
+        Row: {
+          clinic_id: string | null
+          consultas: number | null
+          doctor_id: string | null
+          doctor_nombre: string | null
+          honorarios_centavos: number | null
+          periodo: string | null
+          total_centavos: number | null
+          ventas_atribuidas: number | null
+          ventas_atribuidas_centavos: number | null
+        }
+        Relationships: []
+      }
       doctors_public: {
         Row: {
           activo: boolean | null

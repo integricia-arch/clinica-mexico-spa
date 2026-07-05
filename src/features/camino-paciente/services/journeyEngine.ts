@@ -54,7 +54,7 @@ export async function audit(
 export async function createJourneyFromAppointment(
   appointmentId: string,
 ): Promise<JourneyServiceResult<{ journey_instance_id: string; created: boolean }>> {
-  const { data: appt, error: ae } = await supabase
+  const { data: appt, error: ae } = await (supabase as any)
     .from("appointments")
     .select("id, patient_id, doctor_id, room_id, assigned_nurse_id")
     .eq("id", appointmentId)
@@ -62,7 +62,7 @@ export async function createJourneyFromAppointment(
   if (ae || !appt) return { ok: false, error: "Cita no encontrada" };
   if (!appt.patient_id) return { ok: false, error: "La cita no tiene paciente asociado" };
 
-  const { data: existing } = await supabase
+  const { data: existing } = await (supabase as any)
     .from("journey_instances")
     .select("id")
     .eq("appointment_id", appointmentId)
@@ -72,7 +72,7 @@ export async function createJourneyFromAppointment(
   }
 
   // Buscar plantilla activa
-  const { data: tpl } = await supabase
+  const { data: tpl } = await (supabase as any)
     .from("journey_templates")
     .select("id, active_version_id")
     .eq("is_active", true)
@@ -91,7 +91,7 @@ export async function createJourneyFromAppointment(
     completed_steps: 0,
   };
 
-  const { data: instance, error: ie } = await supabase
+  const { data: instance, error: ie } = await (supabase as any)
     .from("journey_instances")
     .insert({
       appointment_id: appointmentId,
@@ -133,7 +133,7 @@ export async function openJourneyStepByKey(
   journeyInstanceId: string,
   stepKey: string,
 ): Promise<JourneyServiceResult<{ step_id: string }>> {
-  const { data: step } = await supabase
+  const { data: step } = await (supabase as any)
     .from("journey_instance_steps")
     .select("id, status")
     .eq("journey_instance_id", journeyInstanceId)
@@ -147,7 +147,7 @@ export async function openJourneyStepByKey(
 export async function openJourneyStep(
   stepId: string,
 ): Promise<JourneyServiceResult<{ step_id: string }>> {
-  const { data: step, error } = await supabase
+  const { data: step, error } = await (supabase as any)
     .from("journey_instance_steps")
     .select("*")
     .eq("id", stepId)
@@ -159,7 +159,7 @@ export async function openJourneyStep(
   }
 
   // Validar predecesor requerido cerrado u override
-  const { data: predecessors } = await supabase
+  const { data: predecessors } = await (supabase as any)
     .from("journey_instance_steps")
     .select("status, step_order")
     .eq("journey_instance_id", step.journey_instance_id)
@@ -182,7 +182,7 @@ export async function openJourneyStep(
     opened_at: step.opened_at ?? new Date().toISOString(),
     opened_by: step.opened_by ?? userData.user?.id ?? null,
   };
-  const { error: ue } = await supabase
+  const { error: ue } = await (supabase as any)
     .from("journey_instance_steps")
     .update(patch)
     .eq("id", stepId);
@@ -197,7 +197,7 @@ export async function saveJourneyStepData(
   stepId: string,
   data: Record<string, unknown>,
 ): Promise<JourneyServiceResult> {
-  const { data: existing } = await supabase
+  const { data: existing } = await (supabase as any)
     .from("journey_instance_step_data")
     .select("id, data_json")
     .eq("journey_instance_step_id", stepId)
@@ -208,7 +208,7 @@ export async function saveJourneyStepData(
 
   if (existing) {
     const merged = { ...(existing.data_json as Record<string, unknown>), ...data };
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("journey_instance_step_data")
       .update({ data_json: merged as never, updated_by: userId })
       .eq("id", existing.id);
@@ -230,7 +230,7 @@ export async function closeJourneyStep(
   stepId: string,
   opts: { skipValidation?: boolean; nextAction?: string } = {},
 ): Promise<JourneyServiceResult> {
-  const { data: step } = await supabase
+  const { data: step } = await (supabase as any)
     .from("journey_instance_steps")
     .select("*")
     .eq("id", stepId)
@@ -239,7 +239,7 @@ export async function closeJourneyStep(
 
   const def = getStepDef(step.step_key);
   if (def?.required && !opts.skipValidation) {
-    const { data: sd } = await supabase
+    const { data: sd } = await (supabase as any)
       .from("journey_instance_step_data")
       .select("data_json")
       .eq("journey_instance_step_id", stepId)
@@ -250,7 +250,7 @@ export async function closeJourneyStep(
   }
 
   const { data: userData } = await supabase.auth.getUser();
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("journey_instance_steps")
     .update({
       status: "completed",
@@ -262,7 +262,7 @@ export async function closeJourneyStep(
   if (error) return { ok: false, error: error.message };
 
   // Abrir el siguiente paso pending
-  const { data: next } = await supabase
+  const { data: next } = await (supabase as any)
     .from("journey_instance_steps")
     .select("id, step_order, status")
     .eq("journey_instance_id", step.journey_instance_id)
@@ -273,7 +273,7 @@ export async function closeJourneyStep(
     .maybeSingle();
 
   if (next) {
-    await supabase
+    await (supabase as any)
       .from("journey_instance_steps")
       .update({
         status: "open",
@@ -295,14 +295,14 @@ export async function blockJourneyStep(
   if (!reason || reason.trim().length < 3) {
     return { ok: false, error: "Motivo del bloqueo requerido (mínimo 3 caracteres)" };
   }
-  const { data: step } = await supabase
+  const { data: step } = await (supabase as any)
     .from("journey_instance_steps")
     .select("journey_instance_id")
     .eq("id", stepId)
     .maybeSingle();
   if (!step) return { ok: false, error: "Hito no encontrado" };
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("journey_instance_steps")
     .update({ status: "blocked", blocked_reason: reason })
     .eq("id", stepId);
@@ -321,7 +321,7 @@ export async function requestStepOverride(
   if (!reason || reason.trim().length < 5) {
     return { ok: false, error: "Motivo del override requerido (mínimo 5 caracteres)" };
   }
-  const { data: step } = await supabase
+  const { data: step } = await (supabase as any)
     .from("journey_instance_steps")
     .select("journey_instance_id")
     .eq("id", stepId)
@@ -339,7 +339,7 @@ export async function requestStepOverride(
   });
   if (error) return { ok: false, error: error.message };
 
-  await supabase
+  await (supabase as any)
     .from("journey_instance_steps")
     .update({ status: "needs_review", notes: `Override solicitado: ${reason}` })
     .eq("id", stepId);
@@ -351,7 +351,7 @@ export async function requestStepOverride(
 export async function authorizeStepOverride(
   overrideId: string,
 ): Promise<JourneyServiceResult> {
-  const { data: ov } = await supabase
+  const { data: ov } = await (supabase as any)
     .from("journey_instance_overrides")
     .select("*")
     .eq("id", overrideId)
@@ -362,13 +362,13 @@ export async function authorizeStepOverride(
   const { data: userData } = await supabase.auth.getUser();
   const now = new Date().toISOString();
 
-  const { error: ue1 } = await supabase
+  const { error: ue1 } = await (supabase as any)
     .from("journey_instance_overrides")
     .update({ status: "authorized", authorized_by: userData.user?.id, authorized_at: now })
     .eq("id", overrideId);
   if (ue1) return { ok: false, error: ue1.message };
 
-  await supabase
+  await (supabase as any)
     .from("journey_instance_steps")
     .update({ status: "override_authorized", closed_at: now, closed_by: userData.user?.id })
     .eq("id", ov.journey_instance_step_id);
@@ -382,7 +382,7 @@ export async function assignStepResponsible(
   stepId: string,
   userId: string,
 ): Promise<JourneyServiceResult> {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("journey_instance_steps")
     .update({ assigned_to: userId })
     .eq("id", stepId);

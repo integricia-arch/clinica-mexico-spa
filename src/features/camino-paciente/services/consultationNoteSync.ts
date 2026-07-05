@@ -21,7 +21,7 @@ export async function syncConsultationNote(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     // 1. Get doctor_id + clinic_id from appointment
-    const { data: appt, error: apptErr } = await supabase
+    const { data: appt, error: apptErr } = await (supabase as any)
       .from("appointments")
       .select("doctor_id, clinic_id")
       .eq("id", appointmentId)
@@ -33,7 +33,7 @@ export async function syncConsultationNote(
 
     // 2. Find or create expediente for patient + doctor
     let expedienteId: string;
-    const { data: existing } = await supabase
+    const { data: existing } = await (supabase as any)
       .from("expedientes")
       .select("id")
       .eq("patient_id", patientId)
@@ -46,7 +46,7 @@ export async function syncConsultationNote(
     if (existing?.id) {
       expedienteId = existing.id;
     } else {
-      const { data: created, error: createErr } = await supabase
+      const { data: created, error: createErr } = await (supabase as any)
         .from("expedientes")
         .insert({ patient_id: patientId, doctor_id, clinic_id, activo: true, tipo: "primera_vez" })
         .select("id")
@@ -73,20 +73,20 @@ export async function syncConsultationNote(
     };
 
     // Try update first (if note already exists for this appointment)
-    const { data: existingNote } = await supabase
+    const { data: existingNote } = await (supabase as any)
       .from("notas_consulta")
       .select("id")
       .eq("appointment_id", appointmentId)
       .maybeSingle();
 
     if (existingNote?.id) {
-      const { error: updErr } = await supabase
+      const { error: updErr } = await (supabase as any)
         .from("notas_consulta")
         .update(notePayload)
         .eq("id", existingNote.id);
       if (updErr) return { ok: false, error: updErr.message };
     } else {
-      const { error: insErr } = await supabase
+      const { error: insErr } = await (supabase as any)
         .from("notas_consulta")
         .insert(notePayload);
       if (insErr) return { ok: false, error: insErr.message };

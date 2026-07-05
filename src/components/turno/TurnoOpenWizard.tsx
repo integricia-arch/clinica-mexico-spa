@@ -164,7 +164,7 @@ export default function TurnoOpenWizard({ cajaFilter, onOpened }: Props) {
     if (isNaN(montoContado) || montoContado < 0) { toast.error("Monto inválido"); return; }
     setSaving(true);
 
-    const { data: newTurno, error } = await supabase
+    const { data: newTurno, error } = await (supabase as any)
       .from("turnos")
       .insert({
         clinic_id: activeClinic.id,

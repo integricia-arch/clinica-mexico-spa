@@ -50,7 +50,7 @@ export default function TriageForm({ stepId, stepStatus, existingData, onSaved }
 
   useEffect(() => {
     if (!user || registradoPor) return;
-    supabase
+    (supabase as any)
       .from("nurses")
       .select("nombre, apellidos, cedula_profesional")
       .eq("user_id", user.id)
