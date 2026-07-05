@@ -112,7 +112,7 @@ export async function syncFollowup(params: {
   requiresNewAppointment: boolean;
 }): Promise<{ ok: boolean; error?: string }> {
   try {
-    const { error } = await supabase.from("post_consultation_followups").insert({
+    const { error } = await (supabase as any).from("post_consultation_followups").insert({
       journey_instance_id: params.journeyInstanceId,
       patient_id: params.patientId,
       clinic_id: params.clinicId,

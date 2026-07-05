@@ -218,11 +218,11 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload, qu
       equivalence_group_key: medForm.equivalence_group_key.trim() || null,
     };
     if (editMed) {
-      const { error } = await supabase.from("medicamentos").update(payload).eq("id", editMed.id);
+      const { error } = await (supabase as any).from("medicamentos").update(payload).eq("id", editMed.id);
       if (error) { toast({ variant:"destructive", title:"Error", description: friendlyError(error) }); }
       else { toast({ title:"Medicamento actualizado" }); setMedModal(false); onReload(); }
     } else {
-      const { error } = await supabase.from("medicamentos").insert(payload);
+      const { error } = await (supabase as any).from("medicamentos").insert(payload);
       if (error) { toast({ variant:"destructive", title:"Error", description: friendlyError(error) }); }
       else { toast({ title:"Medicamento registrado" }); setMedModal(false); onReload(); }
     }
@@ -230,7 +230,7 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload, qu
   }
 
   async function deactivateMed(m: Medicamento) {
-    const { error } = await supabase.from("medicamentos").update({ activo: false }).eq("id", m.id);
+    const { error } = await (supabase as any).from("medicamentos").update({ activo: false }).eq("id", m.id);
     if (error) toast({ variant:"destructive", title:"Error", description: friendlyError(error) });
     else { toast({ title:"Medicamento desactivado" }); onReload(); }
   }
@@ -259,13 +259,13 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload, qu
       if (movForm.tipo === "entrada") {
         const existente = lotesDe(movForm.medicamento_id).find(l => l.numero_lote === movForm.numero_lote);
         if (existente) {
-          await supabase.rpc("increment_lote_existencia" as never, {
+          await (supabase as any).rpc("increment_lote_existencia" as never, {
             p_lote_id: existente.id,
             p_cantidad: cantidad,
           } as never);
           loteId = existente.id;
         } else {
-          const { data: nuevoLote, error } = await supabase.from("lotes_medicamento").insert({
+          const { data: nuevoLote, error } = await (supabase as any).from("lotes_medicamento").insert({
             medicamento_id: movForm.medicamento_id,
             numero_lote: movForm.numero_lote,
             fecha_caducidad: movForm.fecha_caducidad,
@@ -283,11 +283,11 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload, qu
             return;
           }
           const nueva = lote.existencia - cantidad;
-          await supabase.from("lotes_medicamento").update({ existencia: nueva }).eq("id", lote.id);
+          await (supabase as any).from("lotes_medicamento").update({ existencia: nueva }).eq("id", lote.id);
         }
       }
 
-      const { error } = await supabase.from("movimientos_inventario").insert({
+      const { error } = await (supabase as any).from("movimientos_inventario").insert({
         medicamento_id: movForm.medicamento_id, lote_id: loteId,
         tipo: movForm.tipo as any, cantidad, motivo: movForm.motivo || null,
       });

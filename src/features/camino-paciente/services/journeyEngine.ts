@@ -36,7 +36,7 @@ export async function audit(
   } = {},
 ) {
   const { data: userData } = await supabase.auth.getUser();
-  await supabase.from("journey_instance_audit").insert({
+  await (supabase as any).from("journey_instance_audit").insert({
     journey_instance_id,
     journey_instance_step_id: opts.step_id ?? null,
     action,
@@ -117,7 +117,7 @@ export async function createJourneyFromAppointment(
     status: "pending",
     assigned_to: appt.assigned_nurse_id && s.closeRoles.includes("nurse") ? appt.assigned_nurse_id : null,
   }));
-  const { error: se } = await supabase.from("journey_instance_steps").insert(stepsPayload);
+  const { error: se } = await (supabase as any).from("journey_instance_steps").insert(stepsPayload);
   if (se) return { ok: false, error: se.message };
 
   await audit(instance.id, "journey_created", { new_value: { appointment_id: appointmentId } });
@@ -188,7 +188,7 @@ export async function openJourneyStep(
     .eq("id", stepId);
   if (ue) return { ok: false, error: ue.message };
 
-  await supabase.rpc("update_journey_progress", { _journey_instance_id: step.journey_instance_id });
+  await (supabase as any).rpc("update_journey_progress", { _journey_instance_id: step.journey_instance_id });
   return { ok: true, data: { step_id: stepId } };
 }
 
@@ -214,7 +214,7 @@ export async function saveJourneyStepData(
       .eq("id", existing.id);
     if (error) return { ok: false, error: error.message };
   } else {
-    const { error } = await supabase.from("journey_instance_step_data").insert({
+    const { error } = await (supabase as any).from("journey_instance_step_data").insert({
       journey_instance_step_id: stepId,
       data_json: data as never,
       created_by: userId,
@@ -283,7 +283,7 @@ export async function closeJourneyStep(
       .eq("id", next.id);
   }
 
-  await supabase.rpc("update_journey_progress", { _journey_instance_id: step.journey_instance_id });
+  await (supabase as any).rpc("update_journey_progress", { _journey_instance_id: step.journey_instance_id });
   return { ok: true };
 }
 
@@ -308,7 +308,7 @@ export async function blockJourneyStep(
     .eq("id", stepId);
   if (error) return { ok: false, error: error.message };
 
-  await supabase.rpc("update_journey_progress", { _journey_instance_id: step.journey_instance_id });
+  await (supabase as any).rpc("update_journey_progress", { _journey_instance_id: step.journey_instance_id });
   return { ok: true };
 }
 
@@ -329,7 +329,7 @@ export async function requestStepOverride(
   if (!step) return { ok: false, error: "Hito no encontrado" };
 
   const { data: userData } = await supabase.auth.getUser();
-  const { error } = await supabase.from("journey_instance_overrides").insert({
+  const { error } = await (supabase as any).from("journey_instance_overrides").insert({
     journey_instance_id: step.journey_instance_id,
     journey_instance_step_id: stepId,
     requested_by: userData.user?.id ?? null,
@@ -373,7 +373,7 @@ export async function authorizeStepOverride(
     .update({ status: "override_authorized", closed_at: now, closed_by: userData.user?.id })
     .eq("id", ov.journey_instance_step_id);
 
-  await supabase.rpc("update_journey_progress", { _journey_instance_id: ov.journey_instance_id });
+  await (supabase as any).rpc("update_journey_progress", { _journey_instance_id: ov.journey_instance_id });
   return { ok: true };
 }
 

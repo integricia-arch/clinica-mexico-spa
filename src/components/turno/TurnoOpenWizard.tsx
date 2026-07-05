@@ -185,13 +185,13 @@ export default function TurnoOpenWizard({ cajaFilter, onOpened }: Props) {
     let pharmacyShiftId = newTurno.pharmacy_shift_id;
 
     if (caja.es_farmacia) {
-      const { data: shiftId, error: shiftErr } = await supabase.rpc("pharmacy_open_shift", {
+      const { data: shiftId, error: shiftErr } = await (supabase as any).rpc("pharmacy_open_shift", {
         p_clinic_id: activeClinic.id,
         p_opening_amount: montoContado,
         p_notes: null,
       } as never);
       if (!shiftErr && shiftId) {
-        await supabase.from("turnos").update({ pharmacy_shift_id: shiftId }).eq("id", newTurno.id);
+        await (supabase as any).from("turnos").update({ pharmacy_shift_id: shiftId }).eq("id", newTurno.id);
         pharmacyShiftId = shiftId as string;
       } else if (shiftErr) {
         toast.warning(`Turno abierto, pero error en turno POS Farmacia: ${shiftErr.message}`);

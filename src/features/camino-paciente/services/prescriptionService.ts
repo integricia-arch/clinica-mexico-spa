@@ -58,7 +58,7 @@ export async function addPrescriptionItem(
   if (!item.generic_name || !item.dose || !item.route || !item.frequency || !item.duration || !item.instructions) {
     return { ok: false, error: "Faltan campos obligatorios del medicamento" };
   }
-  const { error } = await supabase.from("prescription_items").insert({
+  const { error } = await (supabase as any).from("prescription_items").insert({
     prescription_id,
     ...item,
   });
@@ -67,7 +67,7 @@ export async function addPrescriptionItem(
 }
 
 export async function removePrescriptionItem(itemId: string): Promise<RxResult> {
-  const { error } = await supabase.from("prescription_items").delete().eq("id", itemId);
+  const { error } = await (supabase as any).from("prescription_items").delete().eq("id", itemId);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
@@ -115,7 +115,7 @@ export async function issuePrescription(prescription_id: string): Promise<RxResu
   if (incompleto) return { ok: false, error: "Hay medicamentos con campos obligatorios incompletos" };
 
   // Generar folio por doctor (formato RX-AAAAMMDD-CODIGO-NNNNN)
-  const { data: numberRpc, error: nErr } = await supabase.rpc(
+  const { data: numberRpc, error: nErr } = await (supabase as any).rpc(
     "generate_prescription_number_for_doctor",
     { _doctor_id: rx.doctor_id },
   );
@@ -181,7 +181,7 @@ export async function issuePrescription(prescription_id: string): Promise<RxResu
         stockActual = (lotes ?? []).reduce((s, l: { existencia: number }) => s + l.existencia, 0);
       }
       if (stockActual < needed) {
-        await supabase.from("almacen_alertas").insert({
+        await (supabase as any).from("almacen_alertas").insert({
           clinic_id: (rx as unknown as { clinic_id: string | null }).clinic_id ?? null,
           tipo: "faltante_receta",
           medicamento_id: item.medication_id ?? null,
@@ -232,7 +232,7 @@ export async function dispensePrescription(
       .eq("id", log.item_id)
       .maybeSingle();
     if (item?.medication_id) {
-      await supabase.from("movimientos_inventario").insert({
+      await (supabase as any).from("movimientos_inventario").insert({
         medicamento_id: item.medication_id,
         lote_id: log.lote_id ?? null,
         cantidad: -Math.abs(log.quantity),
