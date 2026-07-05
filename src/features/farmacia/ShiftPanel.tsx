@@ -10,6 +10,7 @@ import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -122,9 +123,9 @@ export function OpenShiftCard({ onOpened }: { onOpened: (shift: Shift) => void }
       </p>
       <div className="space-y-1">
         <Label className="text-xs">Monto inicial en caja (MXN)</Label>
-        <Input
-          type="number" min={0} step="0.01" value={opening}
-          onChange={(e) => setOpening(e.target.value)}
+        <MoneyInput
+          value={opening}
+          onValueChange={setOpening}
           className="h-11 text-base"
         />
       </div>
@@ -289,9 +290,8 @@ export function CloseShiftDialog({
           ) : (
             <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
               <p className="text-xs font-medium text-foreground">¿Cuánto dejas de fondo para el siguiente cajero?</p>
-              <Input
-                type="number" min={0} step="0.01"
-                value={fondoInput} onChange={(e) => setFondoInput(e.target.value)}
+              <MoneyInput
+                value={fondoInput} onValueChange={setFondoInput}
                 className="h-9 text-sm"
               />
               {(() => {
@@ -380,9 +380,9 @@ export function CloseShiftDialog({
           )}
           <div className="space-y-1">
             <Label className="text-xs">Efectivo contado físicamente (MXN)</Label>
-            <Input
-              type="number" min={0} step="0.01" value={count}
-              onChange={(e) => setCount(e.target.value)}
+            <MoneyInput
+              value={count}
+              onValueChange={setCount}
               className="h-11 text-base"
               autoFocus
             />
@@ -586,9 +586,9 @@ export function FondoMovimientoDialog({
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Monto (MXN)</Label>
-            <Input
-              type="number" min={0.01} step="0.01" value={monto}
-              onChange={(e) => setMonto(e.target.value)}
+            <MoneyInput
+              value={monto}
+              onValueChange={setMonto}
               className="h-11 text-base"
               placeholder="0.00"
             />

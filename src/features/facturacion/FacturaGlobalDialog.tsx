@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 
 // RFC y datos SAT para público general
@@ -285,12 +286,9 @@ export default function FacturaGlobalDialog({ open, onOpenChange, onSuccess, cli
                     </div>
                     <div>
                       <Label className="text-xs">Valor unitario</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={c.valor_unitario}
-                        onChange={(e) => updateConcepto(c.id, "valor_unitario", parseFloat(e.target.value) || 0)}
+                      <MoneyInput
+                        value={String(c.valor_unitario)}
+                        onValueChange={(raw) => updateConcepto(c.id, "valor_unitario", parseFloat(raw) || 0)}
                         className="text-sm"
                       />
                     </div>

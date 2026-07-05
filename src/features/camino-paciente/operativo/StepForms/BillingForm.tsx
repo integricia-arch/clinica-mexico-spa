@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,7 +63,7 @@ export default function BillingForm({ stepId, stepStatus, existingData, onSaved 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Monto (MXN) <span className="text-destructive">*</span></Label>
-          <Input type="number" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)} disabled={closed} />
+          <MoneyInput value={monto} onValueChange={setMonto} disabled={closed} />
         </div>
         <div className="space-y-2">
           <Label>Método de pago</Label>

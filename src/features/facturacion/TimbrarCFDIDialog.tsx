@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
@@ -374,10 +375,9 @@ export default function TimbrarCFDIDialog({
                   </div>
                   <div>
                     <Label className="text-xs">Valor unitario (sin IVA) *</Label>
-                    <Input
-                      type="number" min="0" step="0.01"
+                    <MoneyInput
                       value={c.valor_unitario}
-                      onChange={(e) => setConc(c.id, "valor_unitario", e.target.value)}
+                      onValueChange={(raw) => setConc(c.id, "valor_unitario", raw)}
                       placeholder="0.00"
                     />
                   </div>

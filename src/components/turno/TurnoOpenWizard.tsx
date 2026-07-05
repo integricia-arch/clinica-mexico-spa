@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Heart, Wallet, CheckCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -81,13 +82,10 @@ function CajaQuickSetup({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="caja-fondo">Fondo inicial sugerido (MXN)</Label>
-          <Input
+          <MoneyInput
             id="caja-fondo"
-            type="number"
-            min={0}
-            step="0.01"
             value={fondo}
-            onChange={(e) => setFondo(e.target.value)}
+            onValueChange={setFondo}
           />
         </div>
         <Button type="submit" className="w-full" disabled={saving || !nombre.trim()}>
@@ -307,13 +305,10 @@ export default function TurnoOpenWizard({ cajaFilter, onOpened }: Props) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="conteo-input">Efectivo contado (MXN)</Label>
-              <Input
+              <MoneyInput
                 id="conteo-input"
-                type="number"
-                min={0}
-                step="0.01"
                 value={conteo}
-                onChange={(e) => { setConteo(e.target.value); setDenomBreakdown({}); }}
+                onValueChange={(raw) => { setConteo(raw); setDenomBreakdown({}); }}
                 className="h-12 text-xl font-semibold text-center"
                 placeholder="0.00"
                 autoFocus

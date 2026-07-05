@@ -5,6 +5,7 @@ import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -156,13 +157,10 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
             )}
             <div className="space-y-1.5">
               <Label htmlFor="close-count">Efectivo contado (MXN)</Label>
-              <Input
+              <MoneyInput
                 id="close-count"
-                type="number"
-                min={0}
-                step="0.01"
                 value={count}
-                onChange={(e) => setCount(e.target.value)}
+                onValueChange={setCount}
                 className="h-12 text-xl font-semibold text-center"
                 autoFocus
               />
@@ -297,12 +295,9 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
             ) : (
               <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
                 <p className="text-xs font-medium text-foreground">¿Cuánto dejas de fondo para el siguiente cajero?</p>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                <MoneyInput
                   value={fondoInput}
-                  onChange={(e) => setFondoInput(e.target.value)}
+                  onValueChange={setFondoInput}
                   className="h-9 text-sm"
                 />
                 {(() => {

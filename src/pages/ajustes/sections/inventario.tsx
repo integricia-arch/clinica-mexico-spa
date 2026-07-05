@@ -3,6 +3,7 @@ import { Plus, Trash2, Loader2, Pencil, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -176,7 +177,7 @@ function InsumosTab({ clinicId, canEdit, proveedores }: {
                 <Input type="date" value={form.caducidad} onChange={(e) => setField("caducidad", e.target.value)} />
               </Field>
               <Field label="Costo (MXN)">
-                <Input type="number" min={0} step="0.01" value={form.costoMxn} onChange={(e) => setField("costoMxn", Number(e.target.value))} />
+                <MoneyInput value={String(form.costoMxn ?? "")} onValueChange={(raw) => setField("costoMxn", raw === "" ? 0 : Number(raw))} />
               </Field>
             </div>
             <Field label="Proveedor">
@@ -447,7 +448,7 @@ function KitsTab({ clinicId, canEdit, insumos }: {
                 </div>
               </Field>
               <Field label="Precio (MXN)">
-                <Input type="number" min={0} step="0.01" value={form.precioMxn} onChange={(e) => setField("precioMxn", Number(e.target.value))} />
+                <MoneyInput value={String(form.precioMxn ?? "")} onValueChange={(raw) => setField("precioMxn", raw === "" ? 0 : Number(raw))} />
               </Field>
             </div>
 
@@ -783,12 +784,9 @@ function ProveedoresTab({ clinicId, canEdit }: { clinicId: string | null; canEdi
                 </select>
               </Field>
               <Field label="Límite de crédito (MXN)">
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={form.limite_credito_centavos / 100}
-                  onChange={(e) => setField("limite_credito_centavos", Math.round(Number(e.target.value) * 100))}
+                <MoneyInput
+                  value={String(form.limite_credito_centavos / 100)}
+                  onValueChange={(raw) => setField("limite_credito_centavos", raw === "" ? 0 : Math.round(Number(raw) * 100))}
                   placeholder="0.00"
                 />
               </Field>

@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 
 const FORMAS_PAGO = [
@@ -171,24 +172,18 @@ export default function RegistrarPagoREPDialog({ open, onOpenChange, onSuccess, 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="rep-saldo-ant">Saldo anterior *</Label>
-              <Input
+              <MoneyInput
                 id="rep-saldo-ant"
-                type="number"
-                step="0.01"
-                min="0"
                 value={saldoAnt}
-                onChange={(e) => setSaldoAnt(e.target.value)}
+                onValueChange={setSaldoAnt}
               />
             </div>
             <div>
               <Label htmlFor="rep-monto">Importe pagado *</Label>
-              <Input
+              <MoneyInput
                 id="rep-monto"
-                type="number"
-                step="0.01"
-                min="0.01"
                 value={monto}
-                onChange={(e) => setMonto(e.target.value)}
+                onValueChange={setMonto}
               />
             </div>
           </div>

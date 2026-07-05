@@ -5,6 +5,7 @@ import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -194,8 +195,8 @@ export default function MedicamentoProveedoresPanel({ medicamentoId, medicamento
               </div>
               <div className="space-y-1">
                 <Label>Precio pactado (MXN) *</Label>
-                <Input type="number" min={0.01} step={0.01} value={precioStr}
-                  onChange={(e) => setPrecioStr(e.target.value)} placeholder="0.00" />
+                <MoneyInput value={precioStr}
+                  onValueChange={setPrecioStr} placeholder="0.00" />
               </div>
             </div>
 

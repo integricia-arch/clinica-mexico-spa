@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -350,18 +351,18 @@ export function SectionCaja({ onChange, registerSave }: SectionProps) {
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field label="Umbral de diferencia (MXN)" hint="Diferencia |faltante/sobrante| que activa autorización. Vacío = sin límite.">
-            <Input
-              type="number" min={0} step="0.01" placeholder="Sin límite"
+            <MoneyInput
+              placeholder="Sin límite"
               value={form.umbral_diferencia}
-              onChange={(e) => { setField("umbral_diferencia", e.target.value); onChange(); }}
+              onValueChange={(raw) => { setField("umbral_diferencia", raw); onChange(); }}
               disabled={readOnly}
             />
           </Field>
           <Field label="Fondo mínimo de caja (MXN)" hint="Aviso al abrir turno si el fondo es menor a este valor.">
-            <Input
-              type="number" min={0} step="0.01" placeholder="Sin mínimo"
+            <MoneyInput
+              placeholder="Sin mínimo"
               value={form.fondo_minimo}
-              onChange={(e) => { setField("fondo_minimo", e.target.value); onChange(); }}
+              onValueChange={(raw) => { setField("fondo_minimo", raw); onChange(); }}
               disabled={readOnly}
             />
           </Field>

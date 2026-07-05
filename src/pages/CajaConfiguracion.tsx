@@ -7,6 +7,7 @@ import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
@@ -160,13 +161,10 @@ export default function CajaConfiguracion() {
             </div>
             <div>
               <Label htmlFor="fondo">Fondo de apertura predeterminado (MXN)</Label>
-              <Input
+              <MoneyInput
                 id="fondo"
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.fondo_default}
-                onChange={(e) => setForm({ ...form, fondo_default: parseFloat(e.target.value) || 0 })}
+                value={String(form.fondo_default)}
+                onValueChange={(raw) => setForm({ ...form, fondo_default: parseFloat(raw) || 0 })}
               />
             </div>
             <label className="flex items-start gap-2 rounded-lg border border-border bg-background px-3 py-2 cursor-pointer">

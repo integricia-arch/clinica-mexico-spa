@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { CheckCircle, CreditCard, ArrowLeftRight, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -94,12 +95,9 @@ export default function PagoReconcile({ corteId, metodo }: Props) {
         <span>Sistema registró</span>
         <span className="font-medium text-foreground">{fmt(sistemaTot)}</span>
       </div>
-      <Input
-        type="number"
-        min={0}
-        step="0.01"
+      <MoneyInput
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onValueChange={setInput}
         placeholder={cfg.placeholder}
         className="h-9 text-sm"
       />

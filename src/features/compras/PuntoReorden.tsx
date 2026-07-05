@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -56,7 +57,7 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
   });
   const [saving, setSaving] = useState(false);
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
-  const [precios, setPrecios] = useState<Record<string, number>>({});
+  const [precios, setPrecios] = useState<Record<string, string>>({});
 
   const stockTotal = (medId: string) =>
     lotes.filter((l) => l.medicamento_id === medId).reduce((s, l) => s + l.existencia, 0);
@@ -86,8 +87,12 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
   const efectivaCantidad = (row: ReordenRow) =>
     cantidades[row.med.id] !== undefined ? cantidades[row.med.id] : row.aPedir;
 
-  const efectivoPrecio = (row: ReordenRow) =>
-    precios[row.med.id] !== undefined ? precios[row.med.id] : row.ultimoCosto;
+  const efectivoPrecio = (row: ReordenRow) => {
+    const raw = precios[row.med.id];
+    if (raw === undefined || raw === "") return row.ultimoCosto;
+    const pesos = Number(raw);
+    return Number.isNaN(pesos) ? row.ultimoCosto : Math.round(pesos * 100);
+  };
 
   const itemsParaOC = bajosStock.filter((r) => efectivaCantidad(r) > 0);
   const itemsSinPrecio = itemsParaOC.filter((r) => efectivoPrecio(r) <= 0);
@@ -228,15 +233,10 @@ export default function PuntoReorden({ medicamentos, lotes, onOcCreada }: Props)
                     <div key={r.med.id} className="flex items-center gap-2 text-xs">
                       <span className="flex-1 truncate">{r.med.nombre} — {efectivaCantidad(r)} {r.med.unidad}</span>
                       <span className="text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
+                      <MoneyInput
                         className={`h-7 w-24 text-xs ${sinPrecio ? "border-destructive" : ""}`}
-                        value={(efectivoPrecio(r) / 100).toFixed(2)}
-                        onChange={(e) =>
-                          setPrecios((prev) => ({ ...prev, [r.med.id]: Math.max(0, Math.round(Number(e.target.value) * 100)) }))
-                        }
+                        value={precios[r.med.id] ?? (efectivoPrecio(r) / 100).toFixed(2)}
+                        onValueChange={(raw) => setPrecios((prev) => ({ ...prev, [r.med.id]: raw }))}
                       />
                     </div>
                   );

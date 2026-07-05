@@ -6,6 +6,7 @@
  * operativos (autorización, terminal, adquirente).
  */
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -218,18 +219,16 @@ export function PaymentCapture({
         <div className="space-y-1">
           <Label className="text-xs">{method === "mixto" ? "Efectivo" : "Monto recibido (efectivo)"}</Label>
           {method === "mixto" ? (
-            <Input
-              type="number" min={0} step="0.01"
-              value={value.efectivo}
-              onChange={(e) => setMixtoEfectivo(Number(e.target.value) || 0)}
+            <MoneyInput
+              value={String(value.efectivo)}
+              onValueChange={(raw) => setMixtoEfectivo(Number(raw) || 0)}
               className="h-11"
             />
           ) : (
             <>
-              <Input
-                type="number" min={0} step="0.01"
-                value={value.monto_recibido}
-                onChange={(e) => onChange({ ...value, monto_recibido: Number(e.target.value) || 0, efectivo: Number(e.target.value) || 0 })}
+              <MoneyInput
+                value={String(value.monto_recibido)}
+                onValueChange={(raw) => onChange({ ...value, monto_recibido: Number(raw) || 0, efectivo: Number(raw) || 0 })}
                 className="h-11"
               />
               {value.monto_recibido >= total && (
@@ -251,9 +250,9 @@ export function PaymentCapture({
           {method === "mixto" && (
             <div className="space-y-1">
               <Label className="text-[11px]">Monto tarjeta</Label>
-              <Input
-                type="number" min={0} step="0.01" value={value.tarjeta}
-                onChange={(e) => setMixtoTarjeta(Number(e.target.value) || 0)}
+              <MoneyInput
+                value={String(value.tarjeta)}
+                onValueChange={(raw) => setMixtoTarjeta(Number(raw) || 0)}
                 className="h-11"
               />
             </div>
@@ -261,9 +260,9 @@ export function PaymentCapture({
           {method === "tarjeta" && (
             <div className="space-y-1">
               <Label className="text-[11px]">Monto tarjeta</Label>
-              <Input
-                type="number" min={0} step="0.01" value={value.card.amount}
-                onChange={(e) => setCardAmount(Number(e.target.value) || 0)}
+              <MoneyInput
+                value={String(value.card.amount)}
+                onValueChange={(raw) => setCardAmount(Number(raw) || 0)}
                 className="h-11"
               />
             </div>
@@ -346,9 +345,9 @@ export function PaymentCapture({
           {method === "mixto" && (
             <div className="space-y-1">
               <Label className="text-[11px]">Monto transferencia</Label>
-              <Input
-                type="number" min={0} step="0.01" value={value.transferencia}
-                onChange={(e) => setMixtoTransferencia(Number(e.target.value) || 0)}
+              <MoneyInput
+                value={String(value.transferencia)}
+                onValueChange={(raw) => setMixtoTransferencia(Number(raw) || 0)}
                 className="h-11"
               />
             </div>
@@ -356,9 +355,9 @@ export function PaymentCapture({
           {method === "transferencia" && (
             <div className="space-y-1">
               <Label className="text-[11px]">Monto transferencia</Label>
-              <Input
-                type="number" min={0} step="0.01" value={value.transfer.amount}
-                onChange={(e) => setTransferAmount(Number(e.target.value) || 0)}
+              <MoneyInput
+                value={String(value.transfer.amount)}
+                onValueChange={(raw) => setTransferAmount(Number(raw) || 0)}
                 className="h-11"
               />
             </div>

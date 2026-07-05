@@ -7,6 +7,7 @@ import { untypedTable } from "@/lib/untypedTable";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -69,6 +70,7 @@ export default function ActasMerma() {
     descripcion: "",
   });
   const [lineItems, setLineItems] = useState<(ActaMermaItem & { _key: number })[]>([EMPTY_ITEM()]);
+  const [costoDrafts, setCostoDrafts] = useState<Record<number, string>>({});
 
   // Firma supervisor
   const [firmaDialog, setFirmaDialog] = useState<string | null>(null);
@@ -401,10 +403,14 @@ export default function ActasMerma() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Costo unit. (MXN)</Label>
-                        <Input
-                          type="number" min={0} step={0.01} className="h-8 text-sm"
-                          value={(l.costo_unitario_centavos / 100).toFixed(2)}
-                          onChange={(e) => updateLine(l._key, "costo_unitario_centavos", Math.round(Number(e.target.value) * 100))}
+                        <MoneyInput
+                          className="h-8 text-sm"
+                          value={costoDrafts[l._key] ?? (l.costo_unitario_centavos / 100).toFixed(2)}
+                          onValueChange={(raw) => {
+                            setCostoDrafts((d) => ({ ...d, [l._key]: raw }));
+                            const pesos = Number(raw);
+                            if (!Number.isNaN(pesos)) updateLine(l._key, "costo_unitario_centavos", Math.round(pesos * 100));
+                          }}
                         />
                       </div>
                       <div className="space-y-1">

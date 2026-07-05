@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -569,8 +570,8 @@ export default function CatalogoMedicamentos({ medicamentos, lotes, onReload, qu
               </div>
               <div className="space-y-1.5">
                 <Label>Precio ($)</Label>
-                <Input type="number" min="0" step="0.01" value={medForm.precio_unitario}
-                  onChange={e => setMedForm(f => ({ ...f, precio_unitario: e.target.value }))} />
+                <MoneyInput value={medForm.precio_unitario}
+                  onValueChange={raw => setMedForm(f => ({ ...f, precio_unitario: raw }))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Stock mínimo (reorden)</Label>

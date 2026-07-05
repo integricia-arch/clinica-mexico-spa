@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -469,7 +470,7 @@ export default function DevolucionesProveedor() {
             </div>
             <div className="space-y-1">
               <Label>Monto (MXN) *</Label>
-              <Input type="number" min={0} step={0.01} value={ncForm.monto_str} onChange={(e) => setNcForm((f) => ({ ...f, monto_str: e.target.value }))} placeholder="0.00" />
+              <MoneyInput value={ncForm.monto_str} onValueChange={(raw) => setNcForm((f) => ({ ...f, monto_str: raw }))} placeholder="0.00" />
             </div>
             <div className="space-y-1">
               <Label>Fecha de la nota</Label>

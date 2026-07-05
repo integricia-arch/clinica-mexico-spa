@@ -10,6 +10,7 @@ import { useActiveClinic } from "@/hooks/useActiveClinic";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -256,9 +257,8 @@ function CloseTurnoDialog({
           ) : (
             <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
               <p className="text-xs font-medium text-foreground">¿Cuánto dejas de fondo para el siguiente cajero?</p>
-              <Input
-                type="number" min={0} step="0.01"
-                value={fondoInput} onChange={(e) => setFondoInput(e.target.value)}
+              <MoneyInput
+                value={fondoInput} onValueChange={setFondoInput}
                 className="h-9 text-sm"
               />
               {(() => {
@@ -344,8 +344,8 @@ function CloseTurnoDialog({
           )}
           <div className="space-y-1">
             <Label className="text-xs">Efectivo contado físicamente (MXN)</Label>
-            <Input type="number" min={0} step="0.01" value={count}
-              onChange={(e) => setCount(e.target.value)} className="h-11 text-base" autoFocus />
+            <MoneyInput value={count}
+              onValueChange={setCount} className="h-11 text-base" autoFocus />
           </div>
           <DenominacionCounter
             onTotal={(total, breakdown) => {
@@ -441,8 +441,8 @@ function FondoMovimientoDialog({
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Monto (MXN)</Label>
-            <Input type="number" min={0.01} step={0.01} value={monto}
-              onChange={(e) => setMonto(e.target.value)} placeholder="0.00" autoFocus />
+            <MoneyInput value={monto}
+              onValueChange={setMonto} placeholder="0.00" autoFocus />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Motivo</Label>
@@ -914,8 +914,8 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
           </div>
           <div>
             <Label htmlFor="monto">Monto de apertura (MXN) *</Label>
-            <Input id="monto" type="number" min={0} step={0.01} value={montoApertura}
-              onChange={(e) => setMontoApertura(parseFloat(e.target.value) || 0)} className="mt-1" />
+            <MoneyInput id="monto" value={String(montoApertura)}
+              onValueChange={(raw) => setMontoApertura(parseFloat(raw) || 0)} className="mt-1" />
           </div>
           <div>
             <Label htmlFor="notas-apertura">Notas de apertura (opcional)</Label>

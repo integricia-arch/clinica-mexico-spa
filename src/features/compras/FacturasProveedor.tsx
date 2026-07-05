@@ -7,6 +7,7 @@ import { useFacturasProveedor, type FacturaProveedor, type FacturaInput, type Pa
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -449,11 +450,11 @@ export default function FacturasProveedor() {
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label>Subtotal (MXN) *</Label>
-                <Input type="number" min={0} step={0.01} value={factForm.subtotal_str} onChange={(e) => setFactForm((f) => ({ ...f, subtotal_str: e.target.value }))} placeholder="0.00" />
+                <MoneyInput value={factForm.subtotal_str} onValueChange={(raw) => setFactForm((f) => ({ ...f, subtotal_str: raw }))} placeholder="0.00" />
               </div>
               <div className="space-y-1">
                 <Label>IVA (MXN)</Label>
-                <Input type="number" min={0} step={0.01} value={factForm.iva_str} onChange={(e) => setFactForm((f) => ({ ...f, iva_str: e.target.value }))} placeholder="0.00" />
+                <MoneyInput value={factForm.iva_str} onValueChange={(raw) => setFactForm((f) => ({ ...f, iva_str: raw }))} placeholder="0.00" />
               </div>
               <div className="space-y-1">
                 <Label>Total</Label>
@@ -515,11 +516,11 @@ export default function FacturasProveedor() {
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label>Subtotal (MXN) *</Label>
-                <Input type="number" min={0} step={0.01} value={factForm.subtotal_str} onChange={(e) => setFactForm((f) => ({ ...f, subtotal_str: e.target.value }))} placeholder="0.00" />
+                <MoneyInput value={factForm.subtotal_str} onValueChange={(raw) => setFactForm((f) => ({ ...f, subtotal_str: raw }))} placeholder="0.00" />
               </div>
               <div className="space-y-1">
                 <Label>IVA (MXN)</Label>
-                <Input type="number" min={0} step={0.01} value={factForm.iva_str} onChange={(e) => setFactForm((f) => ({ ...f, iva_str: e.target.value }))} placeholder="0.00" />
+                <MoneyInput value={factForm.iva_str} onValueChange={(raw) => setFactForm((f) => ({ ...f, iva_str: raw }))} placeholder="0.00" />
               </div>
               <div className="space-y-1">
                 <Label>Total</Label>
@@ -563,7 +564,7 @@ export default function FacturasProveedor() {
 
             <div className="space-y-1">
               <Label>Monto a pagar (MXN) *</Label>
-              <Input type="number" min={0.01} step={0.01} value={pagoForm.monto_str} onChange={(e) => setPagoForm((f) => ({ ...f, monto_str: e.target.value }))} />
+              <MoneyInput value={pagoForm.monto_str} onValueChange={(raw) => setPagoForm((f) => ({ ...f, monto_str: raw }))} />
             </div>
             <div className="space-y-1">
               <Label>Fecha de pago</Label>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLoyaltyConfig } from './hooks/useLoyaltyConfig'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { MoneyInput } from '@/components/ui/money-input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
@@ -215,13 +216,10 @@ export function LoyaltyConfig() {
           </div>
           <div>
             <Label className="text-xs">Valor de 1 punto en $ MXN</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={form.valor_punto_mxn}
-              onChange={e =>
-                setForm(f => ({ ...f, valor_punto_mxn: parseFloat(e.target.value) || 0 }))
+            <MoneyInput
+              value={String(form.valor_punto_mxn)}
+              onValueChange={raw =>
+                setForm(f => ({ ...f, valor_punto_mxn: parseFloat(raw) || 0 }))
               }
               className="h-9 mt-1 font-mono"
             />
