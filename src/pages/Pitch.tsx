@@ -951,6 +951,141 @@ export default function Pitch() {
         </div>
       </section>
 
+      {/* CICLO 360 */}
+      <section id="ciclo360" style={{ padding: "96px 0", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
+        <style>{`
+          @keyframes pr-orbit-dot { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+          .pr-360-wrap { display: none; }
+          .pr-360-v { display: grid; grid-template-columns: 1fr; gap: 12px; }
+          @media (min-width: 900px) {
+            .pr-360-wrap { display: block; }
+            .pr-360-v { display: none; }
+          }
+          .pr-360-dot {
+            position: absolute; width: 14px; height: 14px; border-radius: 50%;
+            background: #0891B2; box-shadow: 0 0 0 4px rgba(8,145,178,.20), 0 0 16px rgba(8,145,178,.55);
+            offset-path: path('M 620 340 A 500 300 0 1 1 619.99 340 Z');
+            offset-rotate: 0deg;
+            animation: pr-orbit-dot 14s linear infinite;
+            top: 0; left: 0;
+          }
+          @media (prefers-reduced-motion: reduce) { .pr-360-dot { animation: none; } }
+        `}</style>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
+          <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ textAlign: "center", maxWidth: 720, margin: "0 auto 52px" }}>
+            <div className="pr-label-g" style={{ marginBottom: 14 }}>El ciclo completo</div>
+            <h2 className="pr-h" style={{ fontSize: "clamp(28px,4vw,44px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.08, color: "#0f172a" }}>
+              Los extremos se juntan: desde que tu paciente escribe hasta que tu farmacia se reabastece.
+            </h2>
+            <p style={{ marginTop: 14, fontSize: 15, color: "#64748b", lineHeight: 1.6 }}>
+              Un solo sistema conecta redes sociales, agenda, consulta, receta, farmacia, almacén y compras a proveedor. Todo auditado, todo en tiempo real.
+            </p>
+          </motion.div>
+
+          {(() => {
+            const flow360 = [
+              { icon: MessageCircle, title: "Redes / Telegram", desc: "Paciente escribe" },
+              { icon: Bot, title: "Bot agenda", desc: "IA confirma cita validando disponibilidad real en BD" },
+              { icon: Bell, title: "Recordatorios", desc: "T-24h y T-2h; escala a Inbox si hace falta" },
+              { icon: Stethoscope, title: "Consulta", desc: "Doctor hace triage, nota y expediente" },
+              { icon: FileText, title: "Receta", desc: "Receta electrónica emitida y auditada" },
+              { icon: Pill, title: "Farmacia", desc: "Surte receta y cobra en punto de venta" },
+              { icon: Package, title: "Almacén", desc: "Inventario se descuenta por lote automáticamente" },
+              { icon: AlertTriangle, title: "Reorden", desc: "Stock bajo dispara solicitud de insumos" },
+              { icon: ShoppingCart, title: "Cotización", desc: "Sistema pide cotización a proveedor" },
+              { icon: CreditCard, title: "Orden de compra", desc: "OC generada y enviada" },
+              { icon: Building2, title: "Recepción", desc: "Mercancía entra a almacén, stock se repone" },
+              { icon: ClipboardCheck, title: "Cierre", desc: "Caja concilia, todo queda auditado con usuario y timestamp" },
+            ];
+            const W = 1240, H = 680, cx = W / 2, cy = H / 2, rx = 500, ry = 300;
+
+            return (
+              <>
+                {/* Desktop: SVG ellipse with nodes */}
+                <div className="pr-360-wrap" style={{ position: "relative", width: "100%", maxWidth: W, margin: "0 auto", aspectRatio: `${W} / ${H}` }}>
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+                    <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#e2e8f0" strokeWidth={1.5} strokeDasharray="4 6" />
+                    {/* arrow indicating "vuelve a empezar" near node 1 */}
+                    <path
+                      d={`M ${cx + rx * Math.cos(-Math.PI / 2 - 0.35)} ${cy + ry * Math.sin(-Math.PI / 2 - 0.35)} A ${rx} ${ry} 0 0 1 ${cx + rx * Math.cos(-Math.PI / 2 - 0.05)} ${cy + ry * Math.sin(-Math.PI / 2 - 0.05)}`}
+                      fill="none" stroke={TEAL} strokeWidth={2} markerEnd="url(#pr-arrow)"
+                    />
+                    <defs>
+                      <marker id="pr-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill={TEAL} />
+                      </marker>
+                    </defs>
+                  </svg>
+
+                  {/* animated orbit dot */}
+                  <div className="pr-360-dot" />
+
+                  {/* center label */}
+                  <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none" }}>
+                    <div className="pr-h" style={{ fontSize: 96, fontWeight: 900, letterSpacing: "-0.06em", background: `linear-gradient(135deg, ${TEAL}, ${GREEN})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1 }}>360°</div>
+                    <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#64748b" }}>y vuelve a empezar</div>
+                  </div>
+
+                  {flow360.map((s, i) => {
+                    const theta = -Math.PI / 2 + (i * 2 * Math.PI) / flow360.length;
+                    const x = cx + rx * Math.cos(theta);
+                    const y = cy + ry * Math.sin(theta);
+                    const color = i % 2 === 0 ? TEAL : GREEN;
+                    const leftPct = (x / W) * 100;
+                    const topPct = (y / H) * 100;
+                    return (
+                      <motion.div
+                        key={i}
+                        variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}
+                        style={{ position: "absolute", left: `${leftPct}%`, top: `${topPct}%`, transform: "translate(-50%,-50%)", width: 190 }}
+                      >
+                        <div className="pr-card" style={{ padding: 12, borderColor: color + "33", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
+                          <div className="pr-icon-box" style={{ color, background: color + "14", borderColor: color + "28", width: 38, height: 38 }}>
+                            <s.icon size={16} />
+                          </div>
+                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color }}>
+                            PASO {String(i + 1).padStart(2, "0")}
+                          </div>
+                          <h3 className="pr-h" style={{ fontWeight: 700, fontSize: 12, color: "#0f172a", lineHeight: 1.25 }}>{s.title}</h3>
+                          <p style={{ fontSize: 10.5, color: "#64748b", lineHeight: 1.4 }}>{s.desc}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                {/* Mobile: vertical list */}
+                <div className="pr-360-v">
+                  {flow360.map((s, i) => {
+                    const color = i % 2 === 0 ? TEAL : GREEN;
+                    return (
+                      <motion.div key={i} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}>
+                        <div className="pr-card" style={{ padding: 16, borderColor: color + "22", display: "flex", gap: 14, alignItems: "flex-start" }}>
+                          <div className="pr-icon-box" style={{ color, background: color + "14", borderColor: color + "28", flexShrink: 0 }}>
+                            <s.icon size={18} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color, marginBottom: 4 }}>
+                              PASO {String(i + 1).padStart(2, "0")}
+                            </div>
+                            <h3 className="pr-h" style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: "#0f172a" }}>{s.title}</h3>
+                            <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>{s.desc}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                  <div style={{ marginTop: 8, padding: "14px 16px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${TEAL}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: TEAL, fontWeight: 700, fontSize: 13 }}>
+                    <ArrowRight size={16} style={{ transform: "rotate(-90deg)" }} />
+                    ↻ vuelve al paso 01 — el ciclo no se detiene
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      </section>
+
       {/* TESTIMONIALES */}
       <section style={{ padding: "96px 0", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
