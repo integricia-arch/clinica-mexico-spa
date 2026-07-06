@@ -782,7 +782,7 @@ export default function Pitch() {
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>No-shows evitados por semana</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={0} max={20} step={1} value={noShowsPorSemana} onChange={(e) => setNoShowsPorSemana(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="text" inputMode="numeric" value={formatNumberInput(noShowsPorSemana)} onChange={(e) => setNoShowsPorSemana(parseNumberInput(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input type="text" {...roiInputProps("noShowsPorSemana", noShowsPorSemana, setNoShowsPorSemana)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
