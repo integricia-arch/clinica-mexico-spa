@@ -9,8 +9,9 @@ import {
   TrendingUp, Database, Menu, X, UserCheck, Star,
   ShoppingCart, BarChart3, Package, FileText, CreditCard,
   Building2, ScanLine, AlertTriangle, ChevronDown, ChevronUp,
-  Banknote, Globe, FlaskConical,
+  Banknote, Globe, FlaskConical, Info,
 } from "lucide-react";
+
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 const PITCH_STYLES = `
@@ -415,6 +416,8 @@ export default function Pitch() {
   const [citasRecuperadas, setCitasRecuperadas] = useState<number>(roiInputs.citasRecuperadas.default);
   const [salarioSecretaria, setSalarioSecretaria] = useState<number>(roiInputs.salarioSecretaria.default);
   const [planSeleccionado, setPlanSeleccionado] = useState(2499);
+  const [roiInfoOpen, setRoiInfoOpen] = useState(false);
+
 
   // Raw text mirror per input — lets the user type intermediate strings ("1,", "1.5")
   // without React clobbering the caret. Committed to numeric state on blur/Enter.
@@ -765,8 +768,57 @@ export default function Pitch() {
               El plan se paga solo con los no-shows que evitas.
             </h2>
             <p style={{ color: SLATE }}>Ajusta los valores de tu clínica y calcula tu ROI en vivo.</p>
+            <button
+              onClick={() => setRoiInfoOpen((v) => !v)}
+              style={{
+                marginTop: 12,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 13,
+                color: TEAL,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+              aria-expanded={roiInfoOpen}
+            >
+              <Info size={15} />
+              ¿Cómo calculamos esto?
+              {roiInfoOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            {roiInfoOpen && (
+              <div className="pr-card" style={{ marginTop: 16, padding: "20px 24px", textAlign: "left" }}>
+                <h4 className="pr-h" style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 14 }}>
+                  Metodología del cálculo
+                </h4>
+                <ul style={{ display: "flex", flexDirection: "column", gap: 10, padding: 0, margin: 0, listStyle: "none", fontSize: 13, color: SLATE, lineHeight: 1.65 }}>
+                  <li>
+                    <strong style={{ color: "#0f172a" }}>Pacientes que no llegan (no-shows) evitados:</strong>{" "}
+                    no-shows/semana × ticket promedio × 4 semanas. Supone que cada no-show evitado se convierte en una consulta cobrada.
+                  </li>
+                  <li>
+                    <strong style={{ color: "#0f172a" }}>Robo hormiga farmacia:</strong>{" "}
+                    4% del valor de tu inventario de farmacia. Este 4% es un promedio de mermas típicas reportadas en clínicas sin control de inventario; tu resultado real puede variar.
+                  </li>
+                  <li>
+                    <strong style={{ color: "#0f172a" }}>Ahorro vs. secretaria extra:</strong>{" "}
+                    salario mensual que ahorrás − costo del plan IntegriKa seleccionado.
+                  </li>
+                  <li>
+                    <strong style={{ color: "#0f172a" }}>Recuperación de citas fuera de horario:</strong>{" "}
+                    citas recuperadas/semana × ticket promedio × 4 semanas. Supone que el bot de WhatsApp captura reservas fuera de horario de atención que hoy se pierden.
+                  </li>
+                </ul>
+                <p style={{ marginTop: 14, fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>
+                  Estos son estimados basados en los valores que ingresás arriba, no una garantía de resultados.
+                </p>
+              </div>
+            )}
           </motion.div>
           <div className="pr-roi-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
+
             <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }}>
               <div className="pr-card" style={{ padding: 24, height: "100%" }}>
                 <h3 className="pr-h" style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#0f172a" }}>Ajusta los valores de tu clínica</h3>
