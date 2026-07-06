@@ -822,7 +822,7 @@ export default function Pitch() {
             </motion.div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
               {[
-                { label: "No-shows evitados / mes", calc: `${noShowsPorSemana} × ${formatCurrency(ticketPromedio)} × 4 semanas`, value: formatCurrency(noShowSavings), color: GREEN },
+                { label: "Pacientes que no llegan / mes", calc: `${noShowsPorSemana} × ${formatCurrency(ticketPromedio)} × 4 semanas`, value: formatCurrency(noShowSavings), color: GREEN },
                 { label: "Reducción robo hormiga farmacia", calc: `4% de ${formatCurrency(inventarioFarmacia)}`, value: formatCurrency(farmaciaSavings), color: TEAL },
                 { label: "Ahorro vs secretaria extra", calc: `${formatCurrency(salarioSecretaria)} − ${formatCurrency(planSeleccionado)} plan ${planName}`, value: formatCurrency(secretariaSavings), color: GREEN },
                 { label: "Recuperación de citas fuera horario", calc: `${citasRecuperadas} citas × ${formatCurrency(ticketPromedio)} × 4 semanas`, value: formatCurrency(citasFueraHorario), color: TEAL },
