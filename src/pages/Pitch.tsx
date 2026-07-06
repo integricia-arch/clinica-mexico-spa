@@ -49,7 +49,7 @@ a:focus-visible{outline:2px solid #0891B2;outline-offset:2px;border-radius:2px;}
 .pr-icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;border:1px solid;transition:all .3s;}
 .pr-featured{border:2px solid #0891b2;box-shadow:0 0 0 4px rgba(8,145,178,.08);}
 .pr-table td,.pr-table th{padding:12px 16px;text-align:left;font-size:13px;}
-.pr-table th{font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #f1f5f9;}
+.pr-table th{font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #f1f5f9;}
 .pr-table tr{border-bottom:1px solid #f8fafc;}
 .pr-table tr:last-child{border-bottom:none;}
 .pr-table tbody tr:hover{background:#f8fafc;}
@@ -345,7 +345,7 @@ function DashboardMockup() {
         <div style={{ display: "flex", gap: 5 }}>
           {["#ff5f57","#febc2e","#28c840"].map((c) => <div key={c} style={{ width: 10, height: 10, borderRadius: "50%", background: c }} />)}
         </div>
-        <span style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace", marginLeft: 8 }}>integrika.mx · recepción</span>
+        <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", marginLeft: 8 }}>integrika.mx · recepción</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 5, alignItems: "center" }}>
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: GREEN, animation: "pr-pulse-teal 2s ease-in-out infinite" }} />
           <span style={{ fontSize: 10, color: GREEN, fontWeight: 600 }}>En vivo</span>
@@ -365,7 +365,7 @@ function DashboardMockup() {
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: 7 }}>Próximas citas</div>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#64748b", marginBottom: 7 }}>Próximas citas</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {mockAppointments.map((a, idx) => {
             const color = idx % 2 === 0 ? TEAL : GREEN;
@@ -374,7 +374,7 @@ function DashboardMockup() {
                 <div style={{ width: 26, height: 26, borderRadius: "50%", background: color + "20", border: `1px solid ${color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color, flexShrink: 0 }}>{a.initials}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 11, fontWeight: 500, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div>
-                  <div style={{ fontSize: 9, color: "#94a3b8" }}>{a.time}</div>
+                  <div style={{ fontSize: 9, color: "#64748b" }}>{a.time}</div>
                 </div>
                 <div style={{ fontSize: 9, fontWeight: 600, color: a.status === "Confirmada" ? GREEN : "#d97706", background: a.status === "Confirmada" ? "#d1fae5" : "#fef3c7", padding: "2px 7px", borderRadius: 100, flexShrink: 0 }}>{a.status}</div>
               </div>
@@ -387,7 +387,7 @@ function DashboardMockup() {
               <Bot size={10} color={TEAL} />
             </div>
             <span style={{ fontSize: 10, fontWeight: 600, color: TEAL }}>Bot IA</span>
-            <span style={{ fontSize: 9, color: "#94a3b8", marginLeft: "auto" }}>ahora · Telegram</span>
+            <span style={{ fontSize: 9, color: "#64748b", marginLeft: "auto" }}>ahora · Telegram</span>
           </div>
           <p style={{ fontSize: 10, color: "#475569", lineHeight: 1.5, margin: 0 }}>
             "Hola Laura, te recuerdo que mañana a las 9:00 tienes cita con el Dr. García. ¿Confirmas tu asistencia? 😊"
@@ -520,7 +520,7 @@ export default function Pitch() {
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <Logo size="sm" />
             <span className="pr-h" style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.03em", color: "#0f172a" }}>IntegriKa</span>
-            <span style={{ fontSize: 10, color: "#94a3b8", paddingLeft: 4, borderLeft: "1px solid #e2e8f0", marginLeft: 2, display: "none" }} className="pr-nav-links">Sistema Operativo de Clínica</span>
+            <span style={{ fontSize: 10, color: "#64748b", paddingLeft: 4, borderLeft: "1px solid #e2e8f0", marginLeft: 2, display: "none" }} className="pr-nav-links">Sistema Operativo de Clínica</span>
           </div>
           <nav className="pr-nav-links" style={{ display: "none", gap: 28 }}>
             {navLinks.map((l) => (
@@ -574,7 +574,7 @@ export default function Pitch() {
                 Bot IA que agenda a las 2am. Farmacia con control total. CFDI en 3 clics. Business Intelligence en tiempo real.{" "}
                 <strong style={{ color: "#0f172a" }}>9 módulos, un solo precio.</strong>
               </p>
-              <p style={{ fontSize: 14, color: "#94a3b8", marginBottom: 32, maxWidth: 440 }}>
+              <p style={{ fontSize: 14, color: "#64748b", marginBottom: 32, maxWidth: 440 }}>
                 Desde <strong style={{ color: TEAL }}>$2,499 MXN/mes</strong> — menos que el sueldo de una secretaria en CDMX.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 32 }}>
@@ -612,7 +612,7 @@ export default function Pitch() {
                     <AnimatedCounter value={s.value} suffix={s.suffix} />
                   </div>
                   <div style={{ fontWeight: 600, fontSize: 14, color: "#0f172a", marginBottom: 3 }}>{s.label}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{s.sub}</div>
+                  <div style={{ fontSize: 12, color: "#64748b" }}>{s.sub}</div>
                 </div>
               </motion.div>
             ))}
@@ -820,7 +820,7 @@ export default function Pitch() {
                     citas recuperadas/semana × ticket promedio × 4 semanas. Supone que el bot de WhatsApp captura reservas fuera de horario de atención que hoy se pierden.
                   </li>
                 </ul>
-                <p style={{ marginTop: 14, fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>
+                <p style={{ marginTop: 14, fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
                   Estos son estimados basados en los valores que ingresás arriba, no una garantía de resultados.
                 </p>
               </div>
@@ -1206,7 +1206,7 @@ export default function Pitch() {
             </div>
           </motion.div>
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ marginTop: 24, textAlign: "center" }}>
-            <p style={{ fontSize: 13, color: "#94a3b8" }}>
+            <p style={{ fontSize: 13, color: "#64748b" }}>
               ¿Necesitas migrar datos de otro sistema? ¿Integración con tu ERP? <a href="mailto:contacto@integrika.mx" style={{ color: TEAL, fontWeight: 500 }}>Escríbenos</a> y lo evaluamos sin costo.
             </p>
           </motion.div>
@@ -1234,7 +1234,7 @@ export default function Pitch() {
                   >
                     <span style={{ fontWeight: 600, fontSize: 14, color: "#0f172a", lineHeight: 1.5 }}>{faq.q}</span>
                     <span style={{ flexShrink: 0, display: "flex", transition: "transform 220ms cubic-bezier(0.77,0,0.175,1)", transform: faqOpen === i ? "rotate(180deg)" : "rotate(0deg)" }}>
-                      <ChevronDown size={16} color={faqOpen === i ? TEAL : "#94a3b8"} />
+                      <ChevronDown size={16} color={faqOpen === i ? TEAL : "#64748b"} />
                     </span>
                   </button>
                   <div style={{ display: "grid", gridTemplateRows: faqOpen === i ? "1fr" : "0fr", transition: "grid-template-rows 240ms cubic-bezier(0.77,0,0.175,1)" }}>
@@ -1292,7 +1292,7 @@ export default function Pitch() {
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <Logo size="xs" />
               <span className="pr-h" style={{ fontWeight: 800, fontSize: 15, color: "#0f172a", letterSpacing: "-0.03em" }}>IntegriKa</span>
-              <span style={{ fontSize: 12, color: "#94a3b8" }}>· Sistema Operativo de Clínica · México</span>
+              <span style={{ fontSize: 12, color: "#64748b" }}>· Sistema Operativo de Clínica · México</span>
             </div>
             <div style={{ display: "flex", gap: 20 }}>
               {[
@@ -1307,7 +1307,7 @@ export default function Pitch() {
               ))}
             </div>
           </div>
-          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 16, fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
+          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 16, fontSize: 12, color: "#64748b", textAlign: "center" }}>
             © 2026 IntegriKa · Todos los derechos reservados · Hecho con orgullo en México 🇲🇽
           </div>
         </div>
