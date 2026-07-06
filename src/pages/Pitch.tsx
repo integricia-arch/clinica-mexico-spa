@@ -408,7 +408,14 @@ export default function Pitch() {
   const [planSeleccionado, setPlanSeleccionado] = useState(2499);
 
   const formatCurrency = (n: number) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+
+  const formatNumberInput = (n: number) => n.toLocaleString("es-MX");
+  const parseNumberInput = (s: string) => {
+    const digits = s.replace(/[^\d]/g, "");
+    return digits === "" ? 0 : Number(digits);
+  };
+
 
   const noShowSavings = ticketPromedio * noShowsPorSemana * 4;
   const farmaciaSavings = inventarioFarmacia * 0.04;
