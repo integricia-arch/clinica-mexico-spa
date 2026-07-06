@@ -399,23 +399,81 @@ export default function Pitch() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
-  // ── ROI calculator state ───────────────────────────────────────────────────
-  const [ticketPromedio, setTicketPromedio] = useState(800);
-  const [noShowsPorSemana, setNoShowsPorSemana] = useState(1);
-  const [inventarioFarmacia, setInventarioFarmacia] = useState(80000);
-  const [citasRecuperadas, setCitasRecuperadas] = useState(3);
-  const [salarioSecretaria, setSalarioSecretaria] = useState(7500);
+  // ── ROI calculator config + state ──────────────────────────────────────────
+  const roiInputs = {
+    ticketPromedio:     { min: 200, max: 3000,   step: 50,   decimals: 2, default: 800 },
+    noShowsPorSemana:   { min: 0,   max: 20,     step: 1,    decimals: 0, default: 1 },
+    inventarioFarmacia: { min: 0,   max: 500000, step: 1000, decimals: 2, default: 80000 },
+    citasRecuperadas:   { min: 0,   max: 20,     step: 1,    decimals: 0, default: 3 },
+    salarioSecretaria:  { min: 0,   max: 30000,  step: 500,  decimals: 2, default: 7500 },
+  } as const;
+  type RoiKey = keyof typeof roiInputs;
+
+  const [ticketPromedio, setTicketPromedio] = useState(roiInputs.ticketPromedio.default);
+  const [noShowsPorSemana, setNoShowsPorSemana] = useState(roiInputs.noShowsPorSemana.default);
+  const [inventarioFarmacia, setInventarioFarmacia] = useState(roiInputs.inventarioFarmacia.default);
+  const [citasRecuperadas, setCitasRecuperadas] = useState(roiInputs.citasRecuperadas.default);
+  const [salarioSecretaria, setSalarioSecretaria] = useState(roiInputs.salarioSecretaria.default);
   const [planSeleccionado, setPlanSeleccionado] = useState(2499);
+
+  // Raw text mirror per input — lets the user type intermediate strings ("1,", "1.5")
+  // without React clobbering the caret. Committed to numeric state on blur/Enter.
+  const [roiDrafts, setRoiDrafts] = useState<Record<RoiKey, string | null>>({
+    ticketPromedio: null, noShowsPorSemana: null, inventarioFarmacia: null,
+    citasRecuperadas: null, salarioSecretaria: null,
+  });
 
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 
-  const formatNumberInput = (n: number) => n.toLocaleString("es-MX");
-  const parseNumberInput = (s: string) => {
-    const digits = s.replace(/[^\d]/g, "");
-    return digits === "" ? 0 : Number(digits);
+  const formatNumberInput = (n: number, decimals: number) =>
+    new Intl.NumberFormat("es-MX", { minimumFractionDigits: 0, maximumFractionDigits: decimals }).format(n);
+
+  // Accepts both es-MX ("1.234,56") and en-US ("1,234.56"): the last "," or "."
+  // is the decimal separator; the rest are stripped as thousands separators.
+  const parseLocalizedNumber = (raw: string): number | null => {
+    const cleaned = raw.replace(/[^\d.,-]/g, "").trim();
+    if (cleaned === "" || cleaned === "-" || cleaned === "," || cleaned === ".") return null;
+    const lastComma = cleaned.lastIndexOf(",");
+    const lastDot = cleaned.lastIndexOf(".");
+    const decIdx = Math.max(lastComma, lastDot);
+    let intPart = cleaned;
+    let decPart = "";
+    if (decIdx !== -1) {
+      intPart = cleaned.slice(0, decIdx);
+      decPart = cleaned.slice(decIdx + 1);
+    }
+    intPart = intPart.replace(/[.,]/g, "");
+    const normalized = decPart ? `${intPart}.${decPart}` : intPart;
+    const n = Number(normalized);
+    return Number.isFinite(n) ? n : null;
   };
 
+  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
+  const commitRoiInput = (key: RoiKey, setter: (n: number) => void, raw: string) => {
+    const cfg = roiInputs[key];
+    const parsed = parseLocalizedNumber(raw);
+    const safe = parsed === null || Number.isNaN(parsed) ? cfg.default : parsed;
+    const rounded = Number(safe.toFixed(cfg.decimals));
+    setter(clamp(rounded, cfg.min, cfg.max));
+    setRoiDrafts((d) => ({ ...d, [key]: null }));
+  };
+
+  const roiInputProps = (key: RoiKey, value: number, setter: (n: number) => void) => {
+    const cfg = roiInputs[key];
+    const draft = roiDrafts[key];
+    return {
+      value: draft ?? formatNumberInput(value, cfg.decimals),
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+        setRoiDrafts((d) => ({ ...d, [key]: e.target.value })),
+      onBlur: (e: React.FocusEvent<HTMLInputElement>) => commitRoiInput(key, setter, e.target.value),
+      onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      },
+      inputMode: "decimal" as const,
+    };
+  };
 
   const noShowSavings = ticketPromedio * noShowsPorSemana * 4;
   const farmaciaSavings = inventarioFarmacia * 0.04;
