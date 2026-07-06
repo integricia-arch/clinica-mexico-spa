@@ -781,7 +781,7 @@ export default function Pitch() {
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ marginTop: 24 }}>
             <div style={{ borderRadius: 16, background: TEAL, padding: "24px 28px", display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginBottom: 4 }}>ROI neto estimado vs. Plan {planName} ({formatCurrency(planSeleccionado)}/mes)</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginBottom: 4 }}>ROI neto estimado vs. Plan {planName} ({formatCurrency(planSeleccionado)} MXN/mes)</div>
                 <div className="pr-h" style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>+{formatCurrency(totalROI)} / mes</div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginTop: 4 }}>Solo con no-shows + farmacia + vs. secretaria extra</div>
               </div>
