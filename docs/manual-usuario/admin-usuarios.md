@@ -66,6 +66,20 @@ Un médico o enfermera registrado en el sistema **no puede iniciar sesión ni fi
 
 Si necesitas dar de baja a alguien que ya tiene citas o recetas asociadas, el sistema no te dejará eliminarlo — marca su casilla **"Activo"** en desmarcado en su lugar.
 
+### Cómo asignar los servicios que ofrece un médico
+
+1. En la pestaña **"Médicos del registro"**, da clic en el ícono de **lista** (junto al lápiz de editar).
+2. Marca o desmarca los servicios del catálogo que ese médico ofrece.
+3. Guarda — esto define qué servicios aparecen disponibles para ese médico al agendar una cita.
+
+Si el catálogo aparece vacío, agrega servicios primero desde Ajustes de la clínica.
+
+### Cómo conectar el Google Calendar de un médico
+
+En la pestaña **"Médicos del registro"**, columna **"Google Calendar"**: si el médico no tiene calendario conectado, da clic en **"Conectar"** para iniciar el proceso de autorización con su cuenta de Google. Una vez conectado, ves su correo de Google ahí mismo con un punto verde.
+
+_Esta opción solo aparece si la clínica tiene configurada la integración de Google Calendar._
+
 ### Cómo asignar una contraseña base a todos los usuarios
 
 1. Da clic en **"Contraseña base"** (arriba a la derecha).

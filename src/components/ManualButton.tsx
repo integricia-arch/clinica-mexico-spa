@@ -45,8 +45,10 @@ export default function ManualButton() {
         .eq("activo", true);
       if (error || !data || !active) return;
       const rows = data as ManualPaginaRow[];
+      // "/" solo matchea exacto — como prefijo, matchea CUALQUIER ruta y
+      // pisa el manual de toda página sin fila propia con el de Panel Principal.
       const candidates = rows
-        .filter((p) => location.pathname === p.ruta || location.pathname.startsWith(p.ruta))
+        .filter((p) => location.pathname === p.ruta || (p.ruta !== "/" && location.pathname.startsWith(p.ruta)))
         .sort((a, b) => b.ruta.length - a.ruta.length);
       setPagina(candidates[0] ?? null);
     };

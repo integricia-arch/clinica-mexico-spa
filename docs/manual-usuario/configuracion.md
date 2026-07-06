@@ -14,16 +14,27 @@ Las opciones que puedes ver dependen de tu rol. Si eres doctor, solo ves "Mi mac
 
 ### Qué encuentras en esta pantalla (solo administrador, salvo que se indique otro rol)
 
+- **Inteligencia BI** — reportes y análisis de citas, pacientes, ingresos y rendimiento de la clínica. Lleva a `/inteligencia`.
+- **Ayuda interna** — sesiones de soporte del personal: tickets escalados y base de conocimiento (FAQ). Lleva a `/ayuda-interna`.
+- **Usuarios y roles** — administrar las cuentas del personal (Administrador, Recepción, Médico, Enfermería, Farmacia, Caja/Facturación). Lleva a `/admin/usuarios`.
+- **Auditoría** — historial de accesos y cambios en agenda, expedientes, farmacia y caja; seguimientos y errores del punto de venta. Lleva a `/auditoria`.
+- **Configuración avanzada (demo)** — vista previa de un panel de control más amplio. Esta tarjeta es solo una maqueta visual; lo que cambies ahí no se guarda. Lleva a `/ajustes`.
 - **Configuración del Camino del Paciente** — plantillas y etapas del flujo de atención del paciente. Lleva a `/configuracion/camino-paciente`.
 - **Mi machote de receta** (doctor y administrador) — diseña el encabezado, logo, firma y cierre de tus recetas. Lleva a `/configuracion/recetas`.
 - **Configuración de cajas** (administrador y gerente) — registrar cajas registradoras, fondo de apertura y si son de caja general o farmacia. Lleva a `/configuracion/caja`.
-- **Usuarios y roles** — administrar las cuentas del personal (Administrador, Recepción, Médico, Enfermería, Farmacia, Caja/Facturación). Lleva a `/admin/usuarios`.
 - **Notificaciones por rol** — qué rol recibe cada aviso (asignación de enfermera, vencimientos, usuarios nuevos) y por qué canal (Telegram o email). Lleva a `/configuracion/notificaciones`.
 - **Facturación y CFDI** — datos del emisor, régimen fiscal y certificados para timbrar facturas. Lleva a `/configuracion/facturacion`.
 - **Cobros y pagos digitales** — configuración de Stripe, OXXO Pay, transferencia SPEI y terminal física. Lleva a `/configuracion/pagos`.
 - **Email y notificaciones** — remitente y nombre que verá el paciente en los correos del sistema (CFDI, recordatorios). Lleva a `/configuracion/email`.
-- **Configuración avanzada (demo)** — vista previa de un panel de control más amplio. Esta tarjeta es solo una maqueta visual; lo que cambies ahí no se guarda.
 - **Datos del consultorio**, **Permisos y seguridad**, **Localización** — tarjetas marcadas "Próximamente": todavía no hacen nada, son un adelanto de lo que viene.
+
+### Cómo configurar el horario de atención de la clínica (solo administrador)
+
+1. Debajo de la lista de consultorios, en la sección **"Horario de atención"**, marca los días laborales de la clínica (Lun a Dom).
+2. Define la hora de **Apertura** y de **Cierre**.
+3. Da clic en **"Guardar horario"**.
+
+El cierre debe ser posterior a la apertura y debes dejar marcado al menos un día — si no, el sistema no te deja guardar.
 
 ### Cómo administrar los consultorios (salas físicas de atención)
 
@@ -63,8 +74,8 @@ Las opciones que puedes ver dependen de tu rol. Si eres doctor, solo ves "Mi mac
 ## Implementación — para el siguiente dev/agente
 
 - **Archivo principal:** `src/pages/Configuracion.tsx` — hub con tarjetas de navegación (`secciones[]`) hacia sub-páginas, más gestión inline de `rooms` (consultorios).
-- **Sub-páginas enlazadas (cada una con su propio manual):** `/ajustes` (demo, sin persistencia), `/admin/usuarios`, `/configuracion/notificaciones`, `/configuracion/facturacion`, `/configuracion/pagos`, `/configuracion/email`, `/configuracion/camino-paciente`, `/configuracion/recetas`, `/configuracion/caja`.
-- **Tablas Supabase involucradas:** `rooms` (consultorios: `nombre`, `piso`, `capacidad`, `activo`).
+- **Sub-páginas enlazadas (cada una con su propio manual):** `/inteligencia`, `/ayuda-interna`, `/admin/usuarios`, `/auditoria`, `/ajustes` (demo, sin persistencia), `/configuracion/camino-paciente`, `/configuracion/recetas`, `/configuracion/caja`, `/configuracion/notificaciones`, `/configuracion/facturacion`, `/configuracion/pagos`, `/configuracion/email`.
+- **Tablas Supabase involucradas:** `rooms` (consultorios: `nombre`, `piso`, `capacidad`, `activo`), `clinic_settings` (fila `section = 'horario'`, JSON `data: {dias_laborales, hora_apertura, hora_cierre}`).
 - **RPCs/edge functions:** ninguna — el CRUD de `rooms` usa `supabase.from("rooms")` directo (select/insert/update).
 - **Control de visibilidad por rol:** array `secciones[]` tiene flag `adminOnly`; los bloques de "Camino del Paciente", "Mi machote de receta" y "Configuración de cajas" están condicionados inline con `isAdmin`/`isDoctor`/`hasRole("manager")`.
 - **Cómo agregar una tarjeta nueva al hub:** agregar un objeto a `secciones[]` (icon, titulo, descripcion, to opcional, adminOnly opcional). Si no lleva `to`, se renderiza como tarjeta no clickeable con etiqueta "Próximamente".

@@ -977,6 +977,35 @@ export default function Pitch() {
               </motion.div>
             ))}
           </div>
+          <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ marginTop: 32 }}>
+            <div style={{ borderRadius: 16, background: "linear-gradient(135deg,#f0fdff,#f0fdf4)", border: "1px solid #a5f3fc", padding: 28 }}>
+              <div className="pr-h" style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
+                Lo que cuesta un doctor más, en otros países
+              </div>
+              <p style={{ fontSize: 13, color: SLATE, marginBottom: 16, maxWidth: 560 }}>
+                El software médico en EE. UU. cobra por proveedor. IntegriKa Profesional cubre hasta 15 doctores dentro de un solo precio fijo.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+                {[
+                  { label: "DrChrono, por doctor/mes", price: "$3,500–$10,800" },
+                  { label: "Kareo, por doctor/mes", price: "$6,300–$6,700" },
+                  { label: "Aspel SAE, solo CFDI/usuario", price: "$1,108 + IVA" },
+                ].map(({ label, price }) => (
+                  <div key={label} style={{ padding: "8px 14px", borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0", fontSize: 13 }}>
+                    <span style={{ color: "#475569" }}>{label} </span>
+                    <span style={{ fontWeight: 700, color: "#dc2626" }}>{price} MXN</span>
+                  </div>
+                ))}
+                <div style={{ padding: "8px 14px", borderRadius: 10, background: "#fee2e2", border: "1px solid #fca5a5", fontSize: 13, fontWeight: 700, color: "#dc2626" }}>
+                  Multiplicado × 15 doctores: fácil pasa de $50,000 MXN/mes
+                </div>
+              </div>
+              <div style={{ padding: "12px 18px", borderRadius: 12, background: "#059669", color: "#fff", display: "inline-flex", gap: 10, alignItems: "center" }}>
+                <CheckCircle2 size={16} color="#fff" />
+                <span style={{ fontWeight: 700, fontSize: 14 }}>IntegriKa Profesional: $5,999/mes · hasta 15 doctores · CFDI incluido</span>
+              </div>
+            </div>
+          </motion.div>
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ marginTop: 24, textAlign: "center" }}>
             <p style={{ fontSize: 13, color: "#94a3b8" }}>
               ¿Necesitas migrar datos de otro sistema? ¿Integración con tu ERP? <a href="mailto:contacto@integrika.mx" style={{ color: TEAL, fontWeight: 500 }}>Escríbenos</a> y lo evaluamos sin costo.
