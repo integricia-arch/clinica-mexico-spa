@@ -399,6 +399,29 @@ export default function Pitch() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
+  // ── ROI calculator state ───────────────────────────────────────────────────
+  const [ticketPromedio, setTicketPromedio] = useState(800);
+  const [noShowsPorSemana, setNoShowsPorSemana] = useState(1);
+  const [inventarioFarmacia, setInventarioFarmacia] = useState(80000);
+  const [citasRecuperadas, setCitasRecuperadas] = useState(3);
+  const [salarioSecretaria, setSalarioSecretaria] = useState(7500);
+  const [planSeleccionado, setPlanSeleccionado] = useState(2499);
+
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
+
+  const noShowSavings = ticketPromedio * noShowsPorSemana * 4;
+  const farmaciaSavings = inventarioFarmacia * 0.04;
+  const secretariaSavings = salarioSecretaria - planSeleccionado;
+  const citasFueraHorario = citasRecuperadas * ticketPromedio * 4;
+  const totalROI = noShowSavings + farmaciaSavings + secretariaSavings + citasFueraHorario;
+  const planName = planSeleccionado === 2499 ? "Esencial" : "Profesional";
+
+  const whatsappRoiHref = `https://wa.me/5213324508776?text=${encodeURIComponent(
+    `Hola, calculé un ROI de ${formatCurrency(totalROI)} MXN/mes con IntegriKa, quiero más info`,
+  )}`;
+
+
   const faqs = [
     { q: "¿Cuánto tiempo tarda el onboarding?", a: "48 horas para la configuración básica. El plan Profesional incluye onboarding asistido con capacitación a tu equipo. La mayoría de las clínicas están operando en menos de una semana." },
     { q: "¿Mis datos están seguros en México?", a: "Sí. Usamos Supabase con servidores en la región de Norteamérica. Row-Level Security en cada tabla, backups automáticos diarios, y Cloudflare WAF con modo de reto para IPs fuera de México. Tus datos nunca salen de tu instancia." },
