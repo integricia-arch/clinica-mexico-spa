@@ -44,6 +44,8 @@ const PITCH_STYLES = `
   .pr-btn-o:hover{border-color:#0891b2;color:#0891b2;background:#f0fdff;}
 }
 .pr-btn:active{transform:scale(0.97);transition-duration:80ms;}
+.pr-btn:focus-visible,.pr-card:focus-visible,.pr-mob-btn:focus-visible{outline:2px solid #0891B2;outline-offset:2px;}
+a:focus-visible{outline:2px solid #0891B2;outline-offset:2px;border-radius:2px;}
 .pr-icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;border:1px solid;transition:all .3s;}
 .pr-featured{border:2px solid #0891b2;box-shadow:0 0 0 4px rgba(8,145,178,.08);}
 .pr-table td,.pr-table th{padding:12px 16px;text-align:left;font-size:13px;}
@@ -536,8 +538,10 @@ export default function Pitch() {
             <button className="pr-mob-btn"
               style={{ background: "transparent", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#0f172a" }}
               onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={mobileOpen}
             >
-              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+              {mobileOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
             </button>
           </div>
         </div>
@@ -829,46 +833,46 @@ export default function Pitch() {
                 <h3 className="pr-h" style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#0f172a" }}>Ajusta los valores de tu clínica</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 18 }}>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Ticket promedio por consulta</label>
+                    <label htmlFor="roi-ticket-text" style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Ticket promedio por consulta</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <input type="range" min={200} max={3000} step={50} value={ticketPromedio} onChange={(e) => setTicketPromedio(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="text" {...roiInputProps("ticketPromedio", ticketPromedio, setTicketPromedio)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input id="roi-ticket-range" aria-label="Ticket promedio por consulta (deslizador)" type="range" min={200} max={3000} step={50} value={ticketPromedio} onChange={(e) => setTicketPromedio(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input id="roi-ticket-text" type="text" {...roiInputProps("ticketPromedio", ticketPromedio, setTicketPromedio)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Pacientes que no llegan (no-shows) evitados por semana</label>
+                    <label htmlFor="roi-noshows-text" style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Pacientes que no llegan (no-shows) evitados por semana</label>
                     <div style={{ fontSize: 11, color: SLATE, marginBottom: 8, lineHeight: 1.4 }}>
                       No-show = paciente que reservó cita pero no asistió. IntegriKa los reduce con recordatorios automáticos y reagendamiento por WhatsApp.
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <input type="range" min={0} max={20} step={1} value={noShowsPorSemana} onChange={(e) => setNoShowsPorSemana(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="text" {...roiInputProps("noShowsPorSemana", noShowsPorSemana, setNoShowsPorSemana)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input id="roi-noshows-range" aria-label="No-shows evitados por semana (deslizador)" type="range" min={0} max={20} step={1} value={noShowsPorSemana} onChange={(e) => setNoShowsPorSemana(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input id="roi-noshows-text" type="text" {...roiInputProps("noShowsPorSemana", noShowsPorSemana, setNoShowsPorSemana)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Valor de inventario de farmacia</label>
+                    <label htmlFor="roi-inventario-text" style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Valor de inventario de farmacia</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <input type="range" min={0} max={500000} step={1000} value={inventarioFarmacia} onChange={(e) => setInventarioFarmacia(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="text" {...roiInputProps("inventarioFarmacia", inventarioFarmacia, setInventarioFarmacia)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input id="roi-inventario-range" aria-label="Valor de inventario de farmacia (deslizador)" type="range" min={0} max={500000} step={1000} value={inventarioFarmacia} onChange={(e) => setInventarioFarmacia(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input id="roi-inventario-text" type="text" {...roiInputProps("inventarioFarmacia", inventarioFarmacia, setInventarioFarmacia)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Citas recuperadas fuera de horario / semana</label>
+                    <label htmlFor="roi-citas-text" style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Citas recuperadas fuera de horario / semana</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <input type="range" min={0} max={20} step={1} value={citasRecuperadas} onChange={(e) => setCitasRecuperadas(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="text" {...roiInputProps("citasRecuperadas", citasRecuperadas, setCitasRecuperadas)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input id="roi-citas-range" aria-label="Citas recuperadas fuera de horario por semana (deslizador)" type="range" min={0} max={20} step={1} value={citasRecuperadas} onChange={(e) => setCitasRecuperadas(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input id="roi-citas-text" type="text" {...roiInputProps("citasRecuperadas", citasRecuperadas, setCitasRecuperadas)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Salario mensual de secretaria que se ahorra</label>
+                    <label htmlFor="roi-salario-text" style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Salario mensual de secretaria que se ahorra</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <input type="range" min={0} max={30000} step={500} value={salarioSecretaria} onChange={(e) => setSalarioSecretaria(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="text" {...roiInputProps("salarioSecretaria", salarioSecretaria, setSalarioSecretaria)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input id="roi-salario-range" aria-label="Salario mensual de secretaria (deslizador)" type="range" min={0} max={30000} step={500} value={salarioSecretaria} onChange={(e) => setSalarioSecretaria(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input id="roi-salario-text" type="text" {...roiInputProps("salarioSecretaria", salarioSecretaria, setSalarioSecretaria)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Plan a comparar</label>
-                    <select value={planSeleccionado} onChange={(e) => setPlanSeleccionado(Number(e.target.value))} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, color: "#0f172a", background: "#fff" }}>
+                    <label htmlFor="roi-plan-select" style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Plan a comparar</label>
+                    <select id="roi-plan-select" value={planSeleccionado} onChange={(e) => setPlanSeleccionado(Number(e.target.value))} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, color: "#0f172a", background: "#fff" }}>
                       <option value={2499}>Esencial — {formatCurrency(2499)} MXN/mes</option>
                       <option value={5999}>Profesional — {formatCurrency(5999)} MXN/mes</option>
                     </select>
