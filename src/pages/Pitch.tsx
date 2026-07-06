@@ -23,22 +23,27 @@ const PITCH_STYLES = `
 @keyframes pr-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes pr-pulse-teal{0%,100%{opacity:1}50%{opacity:.5}}
 .pr-progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#0891b2,#059669);z-index:200;transform-origin:left;pointer-events:none;transition:width .1s linear;}
-.pr-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;}
-.pr-card:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(8,145,178,.11);border-color:#a5f3fc;}
-.pr-card-g:hover{box-shadow:0 12px 36px rgba(5,150,105,.10);border-color:#6ee7b7;}
+.pr-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;transition:transform 220ms cubic-bezier(0.23,1,0.32,1),box-shadow 220ms ease,border-color 220ms ease;}
+@media (hover:hover) and (pointer:fine){
+  .pr-card:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(8,145,178,.11);border-color:#a5f3fc;}
+  .pr-card-g:hover{box-shadow:0 12px 36px rgba(5,150,105,.10);border-color:#6ee7b7;}
+}
 .pr-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;}
 .pr-badge-t{background:#cffafe;color:#0e7490;border:1px solid #a5f3fc;}
 .pr-badge-g{background:#d1fae5;color:#047857;border:1px solid #6ee7b7;}
 .pr-badge-r{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;}
 .pr-label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#0891b2;}
 .pr-label-g{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#059669;}
-.pr-btn{padding:14px 28px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:all .2s;text-decoration:none;letter-spacing:-.01em;line-height:1;}
+.pr-btn{padding:14px 28px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:transform 160ms cubic-bezier(0.23,1,0.32,1),background-color 160ms ease,box-shadow 160ms ease,color 160ms ease,border-color 160ms ease;text-decoration:none;letter-spacing:-.01em;line-height:1;}
 .pr-btn-p{background:#0891b2;color:#fff;box-shadow:0 4px 14px rgba(8,145,178,.28);}
-.pr-btn-p:hover{background:#0e7490;box-shadow:0 8px 24px rgba(8,145,178,.38);transform:translateY(-2px);}
 .pr-btn-g{background:#059669;color:#fff;box-shadow:0 4px 14px rgba(5,150,105,.28);}
-.pr-btn-g:hover{background:#047857;box-shadow:0 8px 24px rgba(5,150,105,.38);transform:translateY(-2px);}
 .pr-btn-o{background:#fff;color:#334155;border:1.5px solid #cbd5e1;}
-.pr-btn-o:hover{border-color:#0891b2;color:#0891b2;background:#f0fdff;}
+@media (hover:hover) and (pointer:fine){
+  .pr-btn-p:hover{background:#0e7490;box-shadow:0 8px 24px rgba(8,145,178,.38);transform:translateY(-2px);}
+  .pr-btn-g:hover{background:#047857;box-shadow:0 8px 24px rgba(5,150,105,.38);transform:translateY(-2px);}
+  .pr-btn-o:hover{border-color:#0891b2;color:#0891b2;background:#f0fdff;}
+}
+.pr-btn:active{transform:scale(0.97);transition-duration:80ms;}
 .pr-icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;border:1px solid;transition:all .3s;}
 .pr-featured{border:2px solid #0891b2;box-shadow:0 0 0 4px rgba(8,145,178,.08);}
 .pr-table td,.pr-table th{padding:12px 16px;text-align:left;font-size:13px;}
@@ -964,7 +969,10 @@ export default function Pitch() {
           .pr-360-dot {
             position: absolute; width: 14px; height: 14px; border-radius: 50%;
             background: #0891B2; box-shadow: 0 0 0 4px rgba(8,145,178,.20), 0 0 16px rgba(8,145,178,.55);
-            offset-path: path('M 620 340 A 500 300 0 1 1 619.99 340 Z');
+            /* Arranca en (cx, cy-ry) = tope de la elipse, mismo punto donde
+               cae el nodo i=0 (theta=-90°) — antes arrancaba en (cx,cy), el
+               CENTRO de la elipse, por eso el punto desincronizaba del anillo. */
+            offset-path: path('M 620 40 A 500 300 0 1 1 620 39.99 Z');
             offset-rotate: 0deg;
             animation: pr-orbit-dot 14s linear infinite;
             top: 0; left: 0;
@@ -1214,18 +1222,24 @@ export default function Pitch() {
             {faqs.map((faq, i) => (
               <motion.div key={i} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}>
                 <div
-                  style={{ borderRadius: 14, border: `1px solid ${faqOpen === i ? TEAL + "40" : "#e2e8f0"}`, background: faqOpen === i ? "#f0fdff" : "#fff", transition: "all .2s", overflow: "hidden" }}
+                  style={{ borderRadius: 14, border: `1px solid ${faqOpen === i ? TEAL + "40" : "#e2e8f0"}`, background: faqOpen === i ? "#f0fdff" : "#fff", transition: "border-color 200ms ease, background-color 200ms ease" }}
                 >
                   <button
                     onClick={() => setFaqOpen(faqOpen === i ? null : i)}
                     style={{ width: "100%", padding: "18px 20px", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, textAlign: "left" }}
                   >
                     <span style={{ fontWeight: 600, fontSize: 14, color: "#0f172a", lineHeight: 1.5 }}>{faq.q}</span>
-                    {faqOpen === i ? <ChevronUp size={16} color={TEAL} style={{ flexShrink: 0 }} /> : <ChevronDown size={16} color="#94a3b8" style={{ flexShrink: 0 }} />}
+                    <span style={{ flexShrink: 0, display: "flex", transition: "transform 220ms cubic-bezier(0.77,0,0.175,1)", transform: faqOpen === i ? "rotate(180deg)" : "rotate(0deg)" }}>
+                      <ChevronDown size={16} color={faqOpen === i ? TEAL : "#94a3b8"} />
+                    </span>
                   </button>
-                  {faqOpen === i && (
-                    <div style={{ padding: "0 20px 18px", fontSize: 14, color: SLATE, lineHeight: 1.75 }}>{faq.a}</div>
-                  )}
+                  <div style={{ display: "grid", gridTemplateRows: faqOpen === i ? "1fr" : "0fr", transition: "grid-template-rows 240ms cubic-bezier(0.77,0,0.175,1)" }}>
+                    <div style={{ overflow: "hidden" }}>
+                      <div style={{ padding: "0 20px 18px", fontSize: 14, color: SLATE, lineHeight: 1.75, opacity: faqOpen === i ? 1 : 0, transition: `opacity ${faqOpen === i ? "200ms 60ms" : "120ms"} ease` }}>
+                        {faq.a}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ))}
