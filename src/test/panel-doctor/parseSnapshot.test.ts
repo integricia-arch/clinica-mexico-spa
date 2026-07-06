@@ -55,7 +55,10 @@ describe("parseSnapshot", () => {
     });
 
     it("devuelve {} cuando la columna snapshot_json falta en la fila", () => {
-      const row = { id: "j-1", appointment_id: "appt-1" };
+      const row: { id: string; appointment_id: string; snapshot_json?: undefined } = {
+        id: "j-1",
+        appointment_id: "appt-1",
+      };
       expect(parseSnapshot(row.snapshot_json)).toEqual({});
     });
 
