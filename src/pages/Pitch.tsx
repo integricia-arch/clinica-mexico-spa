@@ -779,7 +779,10 @@ export default function Pitch() {
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>No-shows evitados por semana</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Pacientes que no llegan (no-shows) evitados por semana</label>
+                    <div style={{ fontSize: 11, color: SLATE, marginBottom: 8, lineHeight: 1.4 }}>
+                      No-show = paciente que reservó cita pero no asistió. IntegriKa los reduce con recordatorios automáticos y reagendamiento por WhatsApp.
+                    </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={0} max={20} step={1} value={noShowsPorSemana} onChange={(e) => setNoShowsPorSemana(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
                       <input type="text" {...roiInputProps("noShowsPorSemana", noShowsPorSemana, setNoShowsPorSemana)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
