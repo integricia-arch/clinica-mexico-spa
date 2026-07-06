@@ -416,6 +416,8 @@ export default function Pitch() {
   const [citasRecuperadas, setCitasRecuperadas] = useState<number>(roiInputs.citasRecuperadas.default);
   const [salarioSecretaria, setSalarioSecretaria] = useState<number>(roiInputs.salarioSecretaria.default);
   const [planSeleccionado, setPlanSeleccionado] = useState(2499);
+  const [roiInfoOpen, setRoiInfoOpen] = useState(false);
+
 
   // Raw text mirror per input — lets the user type intermediate strings ("1,", "1.5")
   // without React clobbering the caret. Committed to numeric state on blur/Enter.
