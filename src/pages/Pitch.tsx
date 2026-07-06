@@ -409,11 +409,11 @@ export default function Pitch() {
   } as const;
   type RoiKey = keyof typeof roiInputs;
 
-  const [ticketPromedio, setTicketPromedio] = useState(roiInputs.ticketPromedio.default);
-  const [noShowsPorSemana, setNoShowsPorSemana] = useState(roiInputs.noShowsPorSemana.default);
-  const [inventarioFarmacia, setInventarioFarmacia] = useState(roiInputs.inventarioFarmacia.default);
-  const [citasRecuperadas, setCitasRecuperadas] = useState(roiInputs.citasRecuperadas.default);
-  const [salarioSecretaria, setSalarioSecretaria] = useState(roiInputs.salarioSecretaria.default);
+  const [ticketPromedio, setTicketPromedio] = useState<number>(roiInputs.ticketPromedio.default);
+  const [noShowsPorSemana, setNoShowsPorSemana] = useState<number>(roiInputs.noShowsPorSemana.default);
+  const [inventarioFarmacia, setInventarioFarmacia] = useState<number>(roiInputs.inventarioFarmacia.default);
+  const [citasRecuperadas, setCitasRecuperadas] = useState<number>(roiInputs.citasRecuperadas.default);
+  const [salarioSecretaria, setSalarioSecretaria] = useState<number>(roiInputs.salarioSecretaria.default);
   const [planSeleccionado, setPlanSeleccionado] = useState(2499);
 
   // Raw text mirror per input — lets the user type intermediate strings ("1,", "1.5")
