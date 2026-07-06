@@ -408,7 +408,14 @@ export default function Pitch() {
   const [planSeleccionado, setPlanSeleccionado] = useState(2499);
 
   const formatCurrency = (n: number) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+
+  const formatNumberInput = (n: number) => n.toLocaleString("es-MX");
+  const parseNumberInput = (s: string) => {
+    const digits = s.replace(/[^\d]/g, "");
+    return digits === "" ? 0 : Number(digits);
+  };
+
 
   const noShowSavings = ticketPromedio * noShowsPorSemana * 4;
   const farmaciaSavings = inventarioFarmacia * 0.04;
@@ -710,44 +717,45 @@ export default function Pitch() {
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Ticket promedio por consulta</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={200} max={3000} step={50} value={ticketPromedio} onChange={(e) => setTicketPromedio(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="number" min={0} step={50} value={ticketPromedio} onChange={(e) => setTicketPromedio(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input type="text" inputMode="numeric" value={formatNumberInput(ticketPromedio)} onChange={(e) => setTicketPromedio(parseNumberInput(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>No-shows evitados por semana</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={0} max={20} step={1} value={noShowsPorSemana} onChange={(e) => setNoShowsPorSemana(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="number" min={0} step={1} value={noShowsPorSemana} onChange={(e) => setNoShowsPorSemana(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input type="text" inputMode="numeric" value={formatNumberInput(noShowsPorSemana)} onChange={(e) => setNoShowsPorSemana(parseNumberInput(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Valor de inventario de farmacia</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={0} max={500000} step={1000} value={inventarioFarmacia} onChange={(e) => setInventarioFarmacia(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="number" min={0} step={1000} value={inventarioFarmacia} onChange={(e) => setInventarioFarmacia(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input type="text" inputMode="numeric" value={formatNumberInput(inventarioFarmacia)} onChange={(e) => setInventarioFarmacia(parseNumberInput(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Citas recuperadas fuera de horario / semana</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={0} max={20} step={1} value={citasRecuperadas} onChange={(e) => setCitasRecuperadas(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="number" min={0} step={1} value={citasRecuperadas} onChange={(e) => setCitasRecuperadas(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input type="text" inputMode="numeric" value={formatNumberInput(citasRecuperadas)} onChange={(e) => setCitasRecuperadas(parseNumberInput(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Salario mensual de secretaria que se ahorra</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={0} max={30000} step={500} value={salarioSecretaria} onChange={(e) => setSalarioSecretaria(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="number" min={0} step={500} value={salarioSecretaria} onChange={(e) => setSalarioSecretaria(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input type="text" inputMode="numeric" value={formatNumberInput(salarioSecretaria)} onChange={(e) => setSalarioSecretaria(parseNumberInput(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Plan a comparar</label>
                     <select value={planSeleccionado} onChange={(e) => setPlanSeleccionado(Number(e.target.value))} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, color: "#0f172a", background: "#fff" }}>
-                      <option value={2499}>Esencial — $2,499 MXN/mes</option>
-                      <option value={5999}>Profesional — $5,999 MXN/mes</option>
+                      <option value={2499}>Esencial — {formatCurrency(2499)} MXN/mes</option>
+                      <option value={5999}>Profesional — {formatCurrency(5999)} MXN/mes</option>
                     </select>
                   </div>
+
                 </div>
               </div>
             </motion.div>
@@ -773,7 +781,7 @@ export default function Pitch() {
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ marginTop: 24 }}>
             <div style={{ borderRadius: 16, background: TEAL, padding: "24px 28px", display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginBottom: 4 }}>ROI neto estimado vs. Plan {planName} ({formatCurrency(planSeleccionado)}/mes)</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginBottom: 4 }}>ROI neto estimado vs. Plan {planName} ({formatCurrency(planSeleccionado)} MXN/mes)</div>
                 <div className="pr-h" style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>+{formatCurrency(totalROI)} / mes</div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginTop: 4 }}>Solo con no-shows + farmacia + vs. secretaria extra</div>
               </div>
