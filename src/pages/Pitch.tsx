@@ -796,7 +796,7 @@ export default function Pitch() {
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Citas recuperadas fuera de horario / semana</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={0} max={20} step={1} value={citasRecuperadas} onChange={(e) => setCitasRecuperadas(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="text" inputMode="numeric" value={formatNumberInput(citasRecuperadas)} onChange={(e) => setCitasRecuperadas(parseNumberInput(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input type="text" {...roiInputProps("citasRecuperadas", citasRecuperadas, setCitasRecuperadas)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
