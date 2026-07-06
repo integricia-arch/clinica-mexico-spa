@@ -153,12 +153,6 @@ const competitors = [
   { feature: "Hecho 100% para México", integrika: true, huli: "Parcial", miconsultorio: true, medesk: "No" },
 ];
 
-const roiItems = [
-  { label: "1 no-show evitado / semana", calc: "$800 ticket × 4 semanas", value: "$3,200", color: GREEN },
-  { label: "Reducción robo hormiga farmacia", calc: "4% de $80k inventario", value: "$3,200", color: TEAL },
-  { label: "Ahorro vs secretaria extra", calc: "$7,500 salario − $2,499 plan", value: "$5,001", color: GREEN },
-  { label: "Recuperación de citas fuera horario", calc: "3 citas/semana × $600", value: "$7,200", color: TEAL },
-];
 
 const flow = [
   { step: "01", icon: MessageCircle, title: "Paciente escribe", desc: "En Telegram a cualquier hora. El bot lo identifica o registra.", color: TEAL },
@@ -404,6 +398,29 @@ function DashboardMockup() {
 export default function Pitch() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+
+  // ── ROI calculator state ───────────────────────────────────────────────────
+  const [ticketPromedio, setTicketPromedio] = useState(800);
+  const [noShowsPorSemana, setNoShowsPorSemana] = useState(1);
+  const [inventarioFarmacia, setInventarioFarmacia] = useState(80000);
+  const [citasRecuperadas, setCitasRecuperadas] = useState(3);
+  const [salarioSecretaria, setSalarioSecretaria] = useState(7500);
+  const [planSeleccionado, setPlanSeleccionado] = useState(2499);
+
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
+
+  const noShowSavings = ticketPromedio * noShowsPorSemana * 4;
+  const farmaciaSavings = inventarioFarmacia * 0.04;
+  const secretariaSavings = salarioSecretaria - planSeleccionado;
+  const citasFueraHorario = citasRecuperadas * ticketPromedio * 4;
+  const totalROI = noShowSavings + farmaciaSavings + secretariaSavings + citasFueraHorario;
+  const planName = planSeleccionado === 2499 ? "Esencial" : "Profesional";
+
+  const whatsappRoiHref = `https://wa.me/5213324508776?text=${encodeURIComponent(
+    `Hola, calculé un ROI de ${formatCurrency(totalROI)} MXN/mes con IntegriKa, quiero más info`,
+  )}`;
+
 
   const faqs = [
     { q: "¿Cuánto tiempo tarda el onboarding?", a: "48 horas para la configuración básica. El plan Profesional incluye onboarding asistido con capacitación a tu equipo. La mayoría de las clínicas están operando en menos de una semana." },
@@ -680,39 +697,96 @@ export default function Pitch() {
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ textAlign: "center", maxWidth: 600, margin: "0 auto 52px" }}>
             <div className="pr-label" style={{ marginBottom: 14 }}>Retorno de inversión</div>
             <h2 className="pr-h" style={{ fontSize: "clamp(28px,4vw,44px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.08, marginBottom: 14, color: "#0f172a" }}>
-              El plan Profesional se paga solo en semana 1.
+              El plan se paga solo con los no-shows que evitas.
             </h2>
-            <p style={{ color: SLATE }}>Calcula cuánto recuperas solo con evitar no-shows y controlar tu farmacia.</p>
+            <p style={{ color: SLATE }}>Ajusta los valores de tu clínica y calcula tu ROI en vivo.</p>
           </motion.div>
           <div className="pr-roi-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
-            {roiItems.map((item, i) => (
-              <motion.div key={item.label} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}>
-                <div className="pr-card" style={{ padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+            <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }}>
+              <div className="pr-card" style={{ padding: 24, height: "100%" }}>
+                <h3 className="pr-h" style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: "#0f172a" }}>Ajusta los valores de tu clínica</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 18 }}>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: "#0f172a", marginBottom: 4 }}>{item.label}</div>
-                    <div style={{ fontSize: 12, color: SLATE }}>{item.calc}</div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Ticket promedio por consulta</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <input type="range" min={200} max={3000} step={50} value={ticketPromedio} onChange={(e) => setTicketPromedio(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input type="number" min={0} step={50} value={ticketPromedio} onChange={(e) => setTicketPromedio(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                    </div>
                   </div>
-                  <div className="pr-h" style={{ fontSize: 28, fontWeight: 800, color: item.color, flexShrink: 0, letterSpacing: "-0.03em" }}>{item.value}</div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>No-shows evitados por semana</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <input type="range" min={0} max={20} step={1} value={noShowsPorSemana} onChange={(e) => setNoShowsPorSemana(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input type="number" min={0} step={1} value={noShowsPorSemana} onChange={(e) => setNoShowsPorSemana(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Valor de inventario de farmacia</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <input type="range" min={0} max={500000} step={1000} value={inventarioFarmacia} onChange={(e) => setInventarioFarmacia(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input type="number" min={0} step={1000} value={inventarioFarmacia} onChange={(e) => setInventarioFarmacia(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Citas recuperadas fuera de horario / semana</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <input type="range" min={0} max={20} step={1} value={citasRecuperadas} onChange={(e) => setCitasRecuperadas(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input type="number" min={0} step={1} value={citasRecuperadas} onChange={(e) => setCitasRecuperadas(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Salario mensual de secretaria que se ahorra</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <input type="range" min={0} max={30000} step={500} value={salarioSecretaria} onChange={(e) => setSalarioSecretaria(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
+                      <input type="number" min={0} step={500} value={salarioSecretaria} onChange={(e) => setSalarioSecretaria(Number(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Plan a comparar</label>
+                    <select value={planSeleccionado} onChange={(e) => setPlanSeleccionado(Number(e.target.value))} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, color: "#0f172a", background: "#fff" }}>
+                      <option value={2499}>Esencial — $2,499 MXN/mes</option>
+                      <option value={5999}>Profesional — $5,999 MXN/mes</option>
+                    </select>
+                  </div>
                 </div>
-              </motion.div>
-            ))}
+              </div>
+            </motion.div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+              {[
+                { label: "No-shows evitados / mes", calc: `${noShowsPorSemana} × ${formatCurrency(ticketPromedio)} × 4 semanas`, value: formatCurrency(noShowSavings), color: GREEN },
+                { label: "Reducción robo hormiga farmacia", calc: `4% de ${formatCurrency(inventarioFarmacia)}`, value: formatCurrency(farmaciaSavings), color: TEAL },
+                { label: "Ahorro vs secretaria extra", calc: `${formatCurrency(salarioSecretaria)} − ${formatCurrency(planSeleccionado)} plan ${planName}`, value: formatCurrency(secretariaSavings), color: GREEN },
+                { label: "Recuperación de citas fuera horario", calc: `${citasRecuperadas} citas × ${formatCurrency(ticketPromedio)} × 4 semanas`, value: formatCurrency(citasFueraHorario), color: TEAL },
+              ].map((item, i) => (
+                <motion.div key={item.label} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}>
+                  <div className="pr-card" style={{ padding: 24, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 15, color: "#0f172a", marginBottom: 4 }}>{item.label}</div>
+                      <div style={{ fontSize: 12, color: SLATE }}>{item.calc}</div>
+                    </div>
+                    <div className="pr-h" style={{ fontSize: 28, fontWeight: 800, color: item.color, flexShrink: 0, letterSpacing: "-0.03em" }}>{item.value}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ marginTop: 24 }}>
             <div style={{ borderRadius: 16, background: TEAL, padding: "24px 28px", display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginBottom: 4 }}>ROI neto estimado vs. Plan Profesional ($5,999/mes)</div>
-                <div className="pr-h" style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>+$13,601 MXN / mes</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginBottom: 4 }}>ROI neto estimado vs. Plan {planName} ({formatCurrency(planSeleccionado)}/mes)</div>
+                <div className="pr-h" style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>+{formatCurrency(totalROI)} / mes</div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginTop: 4 }}>Solo con no-shows + farmacia + vs. secretaria extra</div>
               </div>
-              <a href="mailto:contacto@integrika.mx?subject=Demo%20IntegriKa">
+              <a href={whatsappRoiHref} target="_blank" rel="noopener noreferrer">
                 <button className="pr-btn" style={{ background: "#fff", color: TEAL, fontWeight: 700, padding: "14px 24px" }}>
-                  Calcular mi ROI real <ArrowRight size={16} />
+                  Hablar por WhatsApp sobre mi ROI <ArrowRight size={16} />
                 </button>
               </a>
             </div>
           </motion.div>
         </div>
       </section>
+
 
       {/* CÓMO FUNCIONA */}
       <section id="flujo" style={{ padding: "96px 0", background: "#fff", borderTop: "1px solid #e2e8f0" }}>
