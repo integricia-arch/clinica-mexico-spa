@@ -153,12 +153,6 @@ const competitors = [
   { feature: "Hecho 100% para México", integrika: true, huli: "Parcial", miconsultorio: true, medesk: "No" },
 ];
 
-const roiItems = [
-  { label: "1 no-show evitado / semana", calc: "$800 ticket × 4 semanas", value: "$3,200", color: GREEN },
-  { label: "Reducción robo hormiga farmacia", calc: "4% de $80k inventario", value: "$3,200", color: TEAL },
-  { label: "Ahorro vs secretaria extra", calc: "$7,500 salario − $2,499 plan", value: "$5,001", color: GREEN },
-  { label: "Recuperación de citas fuera horario", calc: "3 citas/semana × $600", value: "$7,200", color: TEAL },
-];
 
 const flow = [
   { step: "01", icon: MessageCircle, title: "Paciente escribe", desc: "En Telegram a cualquier hora. El bot lo identifica o registra.", color: TEAL },
