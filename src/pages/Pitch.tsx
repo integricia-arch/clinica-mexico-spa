@@ -9,8 +9,9 @@ import {
   TrendingUp, Database, Menu, X, UserCheck, Star,
   ShoppingCart, BarChart3, Package, FileText, CreditCard,
   Building2, ScanLine, AlertTriangle, ChevronDown, ChevronUp,
-  Banknote, Globe, FlaskConical,
+  Banknote, Globe, FlaskConical, Info,
 } from "lucide-react";
+
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 const PITCH_STYLES = `
