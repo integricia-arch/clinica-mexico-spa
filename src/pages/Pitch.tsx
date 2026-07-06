@@ -775,7 +775,7 @@ export default function Pitch() {
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" }}>Ticket promedio por consulta</label>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <input type="range" min={200} max={3000} step={50} value={ticketPromedio} onChange={(e) => setTicketPromedio(Number(e.target.value))} style={{ flex: 1, accentColor: TEAL }} />
-                      <input type="text" inputMode="numeric" value={formatNumberInput(ticketPromedio)} onChange={(e) => setTicketPromedio(parseNumberInput(e.target.value))} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
+                      <input type="text" {...roiInputProps("ticketPromedio", ticketPromedio, setTicketPromedio)} style={{ width: 100, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, fontWeight: 600, color: "#0f172a", textAlign: "right" }} />
                     </div>
                   </div>
                   <div>
