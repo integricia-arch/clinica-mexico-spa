@@ -970,12 +970,13 @@ export default function Pitch() {
       {/* CICLO 360 */}
       <section id="ciclo360" style={{ padding: "96px 0", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
         <style>{`
-          .pr-360-wrap { display: none; }
+          .pr-360-wrap { display: none; container-type: inline-size; }
           .pr-360-v { display: grid; grid-template-columns: 1fr; gap: 12px; }
-          @media (min-width: 900px) {
+          @media (min-width: 1024px) {
             .pr-360-wrap { display: block; }
             .pr-360-v { display: none; }
           }
+          .pr-360-node { width: clamp(140px, 15cqi, 200px); }
           .pr-360-dot {
             position: absolute; width: 14px; height: 14px; border-radius: 50%;
             background: #0891B2; box-shadow: 0 0 0 4px rgba(8,145,178,.20), 0 0 16px rgba(8,145,178,.55);
@@ -990,6 +991,7 @@ export default function Pitch() {
           .pr-360-node-pulse { animation: pr-360-pulse 14s ease-in-out infinite; }
           @media (prefers-reduced-motion: reduce) { .pr-360-dot, .pr-360-node-pulse { animation: none; } }
         `}</style>
+
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ textAlign: "center", maxWidth: 720, margin: "0 auto 52px" }}>
             <div className="pr-label-g" style={{ marginBottom: 14 }}>El ciclo completo</div>
@@ -1016,7 +1018,7 @@ export default function Pitch() {
               { icon: Building2, title: "Recepción", desc: "Mercancía entra a almacén, stock se repone" },
               { icon: ClipboardCheck, title: "Cierre", desc: "Caja concilia, todo queda auditado con usuario y timestamp" },
             ];
-            const W = 1240, H = 680, cx = W / 2, cy = H / 2, rx = 500, ry = 300;
+            const W = 1240, H = 760, cx = W / 2, cy = H / 2, rx = 500, ry = 300;
             const N = flow360.length;
             // Keyframes generados de la MISMA fórmula que posiciona cada tarjeta
             // (theta = -90° + i*360/N) — garantiza que el punto pase exacto por
@@ -1069,9 +1071,11 @@ export default function Pitch() {
                       <motion.div
                         key={i}
                         variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}
-                        style={{ position: "absolute", left: `${leftPct}%`, top: `${topPct}%`, transform: "translate(-50%,-50%)", width: 190 }}
+                        style={{ position: "absolute", left: `${leftPct}%`, top: `${topPct}%`, transform: "translate(-50%,-50%)" }}
+                        className="pr-360-node"
                       >
                         <div className="pr-card pr-360-node-pulse" style={{ padding: 12, borderColor: color + "33", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", animationDelay: `-${(i * 14) / N}s` }}>
+
                           <div className="pr-icon-box" style={{ color, background: color + "14", borderColor: color + "28", width: 38, height: 38 }}>
                             <s.icon size={16} />
                           </div>
