@@ -168,7 +168,7 @@ const flow = [
   { step: "03", icon: Bell, title: "Recordatorios creados", desc: "Cola T-24h y T-2h creada automáticamente.", color: TEAL },
   { step: "04", icon: Clock, title: "Cron despacha", desc: "pg_cron cada 5 min envía pendientes y reintenta fallidos.", color: GREEN },
   { step: "05", icon: UserCheck, title: "Escala si hace falta", desc: "Bot transfiere a recepción; responde desde el Inbox.", color: TEAL },
-  { step: "06", icon: ClipboardCheck, title: "Todo auditado", desc: "Cada cambio registrado con usuario y timestamp.", color: GREEN },
+  { step: "06", icon: ClipboardCheck, title: "Todo auditado", desc: "Cada cambio queda con usuario y fecha. El bot ya está listo para el siguiente mensaje.", color: GREEN },
 ];
 
 const pricing = [
@@ -941,6 +941,10 @@ export default function Pitch() {
                 {i < flow.length - 1 && <ArrowRight size={14} color="#cbd5e1" style={{ flexShrink: 0 }} />}
               </div>
             ))}
+            <ArrowRight size={14} color="#cbd5e1" style={{ flexShrink: 0, transform: "scaleY(-1)" }} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 14px", borderRadius: 12, border: `1.5px dashed ${TEAL}`, color: TEAL, fontWeight: 700, fontSize: 11, textAlign: "center", flexShrink: 0, width: 120 }}>
+              ↻ vuelve al paso 01
+            </div>
           </div>
           <div className="pr-flow-v" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
             {flow.map((s, i) => (
@@ -955,6 +959,10 @@ export default function Pitch() {
                 </div>
               </motion.div>
             ))}
+            <div style={{ marginTop: 8, padding: "14px 16px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${TEAL}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: TEAL, fontWeight: 700, fontSize: 13 }}>
+              <ArrowRight size={16} style={{ transform: "rotate(-90deg)" }} />
+              ↻ vuelve al paso 01 — el bot ya está listo para el siguiente mensaje
+            </div>
           </div>
         </div>
       </section>
