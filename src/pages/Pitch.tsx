@@ -1018,7 +1018,7 @@ export default function Pitch() {
               { icon: Building2, title: "Recepción", desc: "Mercancía entra a almacén, stock se repone" },
               { icon: ClipboardCheck, title: "Cierre", desc: "Caja concilia, todo queda auditado con usuario y timestamp" },
             ];
-            const W = 1240, H = 680, cx = W / 2, cy = H / 2, rx = 500, ry = 300;
+            const W = 1240, H = 760, cx = W / 2, cy = H / 2, rx = 500, ry = 300;
             const N = flow360.length;
             // Keyframes generados de la MISMA fórmula que posiciona cada tarjeta
             // (theta = -90° + i*360/N) — garantiza que el punto pase exacto por
