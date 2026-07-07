@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
       return json({ error: clinicErr?.message ?? "error creando clínica" }, 500);
     }
     const clinicId = clinic.id as string;
+    let stripeCustomerId: string | null = null;
 
     try {
       const stripeRes = await fetch("https://api.stripe.com/v1/customers", {
@@ -91,29 +92,54 @@ Deno.serve(async (req) => {
       if (!stripeRes.ok) {
         throw new Error(stripeCustomer?.error?.message ?? `Stripe error ${stripeRes.status}`);
       }
-      await admin.from("clinics").update({ stripe_customer_id: stripeCustomer.id }).eq("id", clinicId);
+      stripeCustomerId = stripeCustomer.id as string;
+      await admin.from("clinics").update({ stripe_customer_id: stripeCustomerId }).eq("id", clinicId);
     } catch (stripeErr) {
       console.error("[create-tenant] error Stripe, revirtiendo clinic:", stripeErr);
       await admin.from("clinics").delete().eq("id", clinicId);
       return json({ error: `Error creando cliente Stripe: ${(stripeErr as Error).message}` }, 500);
     }
 
+    const rollback = async () => {
+      await admin.from("clinics").delete().eq("id", clinicId);
+      if (stripeCustomerId) {
+        await fetch(`https://api.stripe.com/v1/customers/${stripeCustomerId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${STRIPE_KEY}` },
+        }).catch((e) => console.error("[create-tenant] no se pudo borrar customer Stripe huerfano:", e));
+      }
+    };
+
+    let adminUserId: string;
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(body.admin_email);
     if (inviteErr || !invited?.user) {
-      console.error("[create-tenant] error invitando admin, revirtiendo clinic:", inviteErr);
-      await admin.from("clinics").delete().eq("id", clinicId);
-      return json({ error: inviteErr?.message ?? "error invitando admin" }, 500);
+      const alreadyExists = /already.*registered|already.*exists/i.test(inviteErr?.message ?? "");
+      if (!alreadyExists) {
+        console.error("[create-tenant] error invitando admin, revirtiendo clinic:", inviteErr);
+        await rollback();
+        return json({ error: inviteErr?.message ?? "error invitando admin" }, 500);
+      }
+      const { data: existingUsers, error: listErr } = await admin.auth.admin.listUsers();
+      const existing = existingUsers?.users.find((u) => u.email === body.admin_email);
+      if (listErr || !existing) {
+        console.error("[create-tenant] email ya registrado pero no se pudo resolver user_id, revirtiendo clinic:", listErr);
+        await rollback();
+        return json({ error: "El email ya está registrado y no se pudo resolver el usuario" }, 500);
+      }
+      adminUserId = existing.id;
+    } else {
+      adminUserId = invited.user.id;
     }
 
     const { error: membershipErr } = await admin.from("clinic_memberships").insert({
-      user_id: invited.user.id,
+      user_id: adminUserId,
       clinic_id: clinicId,
       role: "admin",
       status: "active",
     });
     if (membershipErr) {
       console.error("[create-tenant] error creando membership, revirtiendo clinic:", membershipErr);
-      await admin.from("clinics").delete().eq("id", clinicId);
+      await rollback();
       return json({ error: membershipErr.message }, 500);
     }
 
