@@ -1071,9 +1071,11 @@ export default function Pitch() {
                       <motion.div
                         key={i}
                         variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}
-                        style={{ position: "absolute", left: `${leftPct}%`, top: `${topPct}%`, transform: "translate(-50%,-50%)", width: 190 }}
+                        style={{ position: "absolute", left: `${leftPct}%`, top: `${topPct}%`, transform: "translate(-50%,-50%)" }}
+                        className="pr-360-node"
                       >
                         <div className="pr-card pr-360-node-pulse" style={{ padding: 12, borderColor: color + "33", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", animationDelay: `-${(i * 14) / N}s` }}>
+
                           <div className="pr-icon-box" style={{ color, background: color + "14", borderColor: color + "28", width: 38, height: 38 }}>
                             <s.icon size={16} />
                           </div>
