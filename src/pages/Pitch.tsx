@@ -109,6 +109,7 @@ function AnimatedCounter({ value, suffix = "" }: { value: number; suffix?: strin
 // ── Constants ──────────────────────────────────────────────────────────────────
 const TEAL = "#0891B2";
 const GREEN = "#059669";
+const CICLO_360_DUR = 14 * 0.7; // 9.8s — esfera y resaltado de caja comparten esta duración, 30% más rápido que las 14s originales
 const SLATE = "#475569";
 
 const reveal = {
@@ -981,14 +982,14 @@ export default function Pitch() {
             position: absolute; width: 14px; height: 14px; border-radius: 50%;
             background: #0891B2; box-shadow: 0 0 0 4px rgba(8,145,178,.20), 0 0 16px rgba(8,145,178,.55);
             transform: translate(-50%,-50%);
-            animation: pr-orbit-dot 14s linear infinite;
+            animation: pr-orbit-dot ${CICLO_360_DUR}s linear infinite;
           }
           @keyframes pr-360-pulse {
             0% { box-shadow: 0 12px 28px rgba(8,145,178,.32); border-color: #0891B2; transform: translateY(-2px); }
             12% { box-shadow: none; border-color: inherit; transform: translateY(0); }
             100% { box-shadow: none; border-color: inherit; transform: translateY(0); }
           }
-          .pr-360-node-pulse { animation: pr-360-pulse 14s ease-in-out infinite; }
+          .pr-360-node-pulse { animation: pr-360-pulse ${CICLO_360_DUR}s ease-in-out infinite; }
           @media (prefers-reduced-motion: reduce) { .pr-360-dot, .pr-360-node-pulse { animation: none; } }
         `}</style>
 
@@ -1020,13 +1021,44 @@ export default function Pitch() {
             ];
             const W = 1240, H = 760, cx = W / 2, cy = H / 2, rx = 500, ry = 300;
             const N = flow360.length;
-            // Keyframes generados de la MISMA fórmula que posiciona cada tarjeta
-            // (theta = -90° + i*360/N) — garantiza que el punto pase exacto por
-            // cada nodo en su fracción de tiempo correspondiente (i/N), a
-            // diferencia de un offset-path elíptico (velocidad de arco constante
-            // ≠ velocidad angular constante en una elipse no circular).
-            const orbitStops = Array.from({ length: N + 1 }, (_, i) => {
-              const theta = -Math.PI / 2 + (i * 2 * Math.PI) / N;
+            // Ángulo uniforme (-90° + i*360/N) da nodos DESIGUALMENTE espaciados
+            // en una elipse con rx≠ry: la velocidad de arco varía con el ángulo,
+            // así que las cajas cerca de los polos izq/der quedaban más juntas
+            // que arriba/abajo (llegaban a traslaparse). Se reemplaza por
+            // muestreo de arco-longitud uniforme: mismo espacio real entre cajas
+            // sin importar el punto de la elipse.
+            const ARC_SAMPLES = 3600;
+            const arcThetas = (() => {
+              const dtheta = (2 * Math.PI) / ARC_SAMPLES;
+              const cumLen = [0];
+              let prevX = rx, prevY = 0; // theta=0
+              for (let s = 1; s <= ARC_SAMPLES; s++) {
+                const theta = s * dtheta;
+                const x = rx * Math.cos(theta), y = ry * Math.sin(theta);
+                cumLen.push(cumLen[s - 1] + Math.hypot(x - prevX, y - prevY));
+                prevX = x; prevY = y;
+              }
+              const total = cumLen[ARC_SAMPLES];
+              const thetaAt = (targetLen: number) => {
+                let lo = 0, hi = ARC_SAMPLES;
+                while (lo < hi) {
+                  const mid = (lo + hi) >> 1;
+                  if (cumLen[mid] < targetLen) lo = mid + 1; else hi = mid;
+                }
+                const idx = Math.max(lo, 1);
+                const l0 = cumLen[idx - 1], l1 = cumLen[idx];
+                const frac = l1 > l0 ? (targetLen - l0) / (l1 - l0) : 0;
+                return (idx - 1 + frac) * dtheta;
+              };
+              return Array.from({ length: N + 1 }, (_, i) => {
+                const startOffset = (total * 0.75) % total; // theta=0 → arranca en -90°
+                return thetaAt((startOffset + (i / N) * total) % total);
+              });
+            })();
+            // Keyframes generados con los mismos ángulos que posicionan cada
+            // tarjeta — el punto pasa exacto por cada nodo en su fracción de
+            // tiempo correspondiente (i/N).
+            const orbitStops = arcThetas.map((theta, i) => {
               const px = ((cx + rx * Math.cos(theta)) / W) * 100;
               const py = ((cy + ry * Math.sin(theta)) / H) * 100;
               return `${((i / N) * 100).toFixed(3)}% { left: ${px.toFixed(3)}%; top: ${py.toFixed(3)}%; }`;
@@ -1055,36 +1087,41 @@ export default function Pitch() {
                   <div className="pr-360-dot" />
 
                   {/* center label */}
-                  <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none", width: "100%" }}>
-                    <div className="pr-h" style={{ fontSize: "clamp(44px, 7vw, 96px)", fontWeight: 900, letterSpacing: "-0.06em", background: `linear-gradient(135deg, ${TEAL}, ${GREEN})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1.1, padding: "0 8px" }}>360°</div>
-                    <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#64748b" }}>y vuelve a empezar</div>
+                  <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <Logo size="xl" imgClassName="pr-360-logo" />
+                    <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#64748b" }}>360° · y vuelve a empezar</div>
                   </div>
 
                   {flow360.map((s, i) => {
-                    const theta = -Math.PI / 2 + (i * 2 * Math.PI) / flow360.length;
+                    const theta = arcThetas[i];
                     const x = cx + rx * Math.cos(theta);
                     const y = cy + ry * Math.sin(theta);
                     const color = i % 2 === 0 ? TEAL : GREEN;
                     const leftPct = (x / W) * 100;
                     const topPct = (y / H) * 100;
                     return (
-                      <motion.div
+                      // Positioning/centering vive en un div estático: Framer Motion
+                      // controla `transform` para animar `y` en variants={reveal}, y
+                      // pisaba el translate(-50%,-50%) puesto antes en el mismo
+                      // motion.div — las cajas quedaban corridas fuera de la curva.
+                      <div
                         key={i}
-                        variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}
                         style={{ position: "absolute", left: `${leftPct}%`, top: `${topPct}%`, transform: "translate(-50%,-50%)" }}
                         className="pr-360-node"
                       >
-                        <div className="pr-card pr-360-node-pulse" style={{ padding: 12, borderColor: color + "33", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", animationDelay: `${(i * 14) / N}s` }}>
-                          <div className="pr-icon-box" style={{ color, background: color + "14", borderColor: color + "28", width: 38, height: 38 }}>
-                            <s.icon size={16} />
+                        <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}>
+                          <div className="pr-card pr-360-node-pulse" style={{ padding: 12, borderColor: color + "33", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", animationDelay: `${(i * CICLO_360_DUR) / N}s` }}>
+                            <div className="pr-icon-box" style={{ color, background: color + "14", borderColor: color + "28", width: 38, height: 38 }}>
+                              <s.icon size={16} />
+                            </div>
+                            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color }}>
+                              PASO {String(i + 1).padStart(2, "0")}
+                            </div>
+                            <h3 className="pr-h" style={{ fontWeight: 700, fontSize: 12, color: "#0f172a", lineHeight: 1.25 }}>{s.title}</h3>
+                            <p style={{ fontSize: 10.5, color: "#64748b", lineHeight: 1.4 }}>{s.desc}</p>
                           </div>
-                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color }}>
-                            PASO {String(i + 1).padStart(2, "0")}
-                          </div>
-                          <h3 className="pr-h" style={{ fontWeight: 700, fontSize: 12, color: "#0f172a", lineHeight: 1.25 }}>{s.title}</h3>
-                          <p style={{ fontSize: 10.5, color: "#64748b", lineHeight: 1.4 }}>{s.desc}</p>
-                        </div>
-                      </motion.div>
+                        </motion.div>
+                      </div>
                     );
                   })}
                 </div>

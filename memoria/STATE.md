@@ -3,6 +3,120 @@
 ## Fase actual
 Producción activa — desarrollo iterativo de features de caja/farmacia
 
+## Completado (Jul 6, 2026 — sesión 20 — costeo/pricing + manuales 29 pantallas + RLS Fase 1 + pulido /pitch — sesión MUY cara, ~$993)
+
+Sesión larga y cara (~$993 acumulado, varias veces por encima de lo normal) —
+mezcla investigación de negocio + trabajo técnico real en `clinica-mexico-spa`.
+Todo commiteado y pusheado a `main` salvo lo marcado "NO aplicado" abajo.
+
+### 1. Investigación de costeo modular y estrategia de pricing — SOLO EN CHAT, no aplicado a código
+Research completo (WebSearch/WebFetch): costeo real estimado por módulo
+(Agenda/POS/Almacén/Compras/Facturación/IA), comparativa de 11 competidores
+MX+internacional (SaludTotal, Clinic Cloud, Doctoralia, DrChrono, Kareo,
+Aspel, etc.), diseño de esquema `catalogo_modulos`/`cliente_modulos`/
+`costos_reales_mensuales` (no implementado, solo diseñado), y 3 propuestas
+de estrategia de precio documentadas (à la carte / good-better-best /
+híbrido base+uso) con recomendación. 2 artifacts publicados (informe
+completo + resumen con gráficas) — **no persistidos en el repo**, solo en
+el historial de la conversación de esa sesión. Insight clave: infraestructura
+(Supabase+Telegram) es casi gratis por cliente; lo caro de verdad es soporte
+humano y cualquier feature de IA (transcripción) — si se agrega IA, cobrarla
+aparte, nunca incluida en plan fijo.
+**Pendiente si se retoma:** nada del diseño de costeo se implementó en DB
+real — es puramente análisis para decisión de negocio.
+
+### 2. Bug real en `ManualButton.tsx` — CERRADO ✅
+El botón "?" resolvía el manual por prefijo de ruta (`pathname.startsWith(ruta)`),
+y una fila con `ruta:'/'` (Panel principal) matcheaba CUALQUIER ruta como
+prefijo — toda pantalla sin fila propia mostraba por error el manual de
+Panel Principal en vez de no mostrar botón. Fix: `'/'` ahora solo matchea
+exacto (`src/components/ManualButton.tsx`).
+
+### 3. Auditoría completa de manuales — 29 rutas reales de la app — CERRADO ✅
+3 agentes en paralelo (Clínica/Operaciones/Admin) auditaron cada ruta contra
+el código real. **21 manuales nuevos** creados (almacen, compras, caja,
+caja-turno, enfermeria, nueva-cita, cita-detalle, expediente-detalle,
+receta-detalle, mis-recetas, camino-paciente-detalle, 6 sub-páginas de
+`/configuracion/*`, ajustes, admin-arco, admin-diagnostico-multiclinica,
+lealtad) + **4 corregidos a fondo** (farmacia.md tras el split de Almacén,
+admin-usuarios.md, configuracion.md, y el fix de ManualButton). Migración
+`manual_paginas_cobertura_29_pantallas` aplicada a prod (21 filas nuevas).
+
+### 4. RLS Fase 1 (`auth_rls_initplan`) — CERRADO ✅
+264 policies / 121 tablas envueltas en `(select auth.uid())` etc. (evita
+reevaluación por fila). Migración `20260706000001_rls_wrap_auth_uid_initplan.sql`
+aplicada a prod y guardada en el repo. Advisor performance: 264→1 (queda
+`loyalty_members`/`auth.email()`, función fuera del alcance original —
+pendiente para fase aparte). Advisor security: sin regresión, los 2
+`rls_policy_always_true` siguen siendo los intencionales ya documentados.
+
+### 5. `/pitch` — varios cambios acumulados, todos commiteados
+- Comparativa "precio por doctor" (DrChrono/Kareo/Aspel) en sección Precios.
+- Animaciones (Emil Kowalski): hover con gate `@media(hover:hover)`, botones
+  con `:active{scale(0.97)}` y transición explícita (no `all`), acordeón FAQ
+  con `grid-template-rows` (antes mount/unmount instantáneo).
+- Auditoría Web Interface Guidelines (Vercel): **5/7 corregidos** (aria-label
+  botón menú móvil, `:focus-visible` global, labels ROI con `htmlFor`/`id`,
+  contraste `#94a3b8`→`#64748b`). **2 pendientes** (baja prioridad): preconnect
+  de fuente Google Fonts, `aria-hidden` en íconos decorativos.
+- Fotos de testimonios reemplazadas por 3 fotos reales de Unsplash (2 mujeres
+  + 1 hombre, bata blanca, felices) vía extracción de URL con
+  `javascript_tool` (WebFetch/WebSearch no devuelven URLs reales de Unsplash,
+  hay que usar el navegador). Tamaño 40px→72px.
+- Quitadas 2 viñetas de puntos decorativos de fondo (hero + CTA final) a
+  pedido explícito.
+- Sección "Tecnología": de badges sin contexto a tarjetas con explicación en
+  lenguaje simple de por qué cada pieza da seguridad/confianza. "Facturama"
+  quitado del claim público (usuario no lo tiene confirmado) — queda nota
+  genérica "PAC certificado por el SAT, proveedor pendiente de confirmar".
+- Sección "Cómo funciona" (6 pasos): no cerraba el ciclo visualmente (a
+  diferencia de CICLO 360 que sí). Agregado indicador "↻ vuelve al paso 01"
+  en desktop y mobile + texto del paso 06 ligado al siguiente mensaje.
+- **CICLO 360 — el más iterado:**
+  - Bug real #1: `offset-path` del punto arrancaba en `M 620 340` = el
+    CENTRO de la elipse (no un punto de su borde) → desincronizado del
+    anillo. Fix inicial: arrancar en `M 620 40` (tope).
+  - Bug real #2 (más de fondo): un `offset-path` elíptico a velocidad de
+    arco constante NUNCA coincide en el tiempo con nodos a ángulos iguales,
+    salvo en los 4 puntos cardinales (una elipse no es un círculo). Fix
+    real: `@keyframes` generado dinámicamente en JS con la MISMA fórmula
+    que posiciona las tarjetas (`theta = -90° + i*360/N`), un stop exacto
+    por nodo en su fracción de tiempo `i/N` de los 14s — garantiza paso
+    exacto, no aproximado.
+  - Bug real #3: pulso de resaltado por tarjeta (`animation-delay`) tenía
+    el signo negado → el resaltado corría en sentido antihorario mientras
+    la esfera va en sentido horario. Fix: quitar el signo negativo.
+  - Fix "360°" recortado en viewports medios: `fontSize` fijo 96px →
+    `clamp(44px,7vw,96px)`.
+  - **Merge con Lovable ocurrió 2 veces en esta sesión** — la segunda vez
+    con conflicto real en `Pitch.tsx` (Lovable hizo "Corrigió círculo
+    módulos ROI" tocando el mismo bloque). Resuelto manteniendo el delay
+    positivo (correcto) sobre el negativo (bug viejo que Lovable reintrodujo
+    sin saberlo). Lovable también agregó `className="pr-360-node"` con
+    `width: clamp(140px, 15cqi, 200px)` + `container-type: inline-size` en
+    `.pr-360-wrap` (ya presente, confirmado).
+  - **PENDIENTE SIN RESOLVER:** usuario reporta que las tarjetas de los 12
+    módulos no se ven centradas/proporcionadas sobre la elipse que recorre
+    la esfera. Hipótesis de `cqi` sin `container-type` fue DESCARTADA
+    (container-type sí está declarado, línea ~973). Causa real aún no
+    identificada — **necesita revisión visual en navegador real** (Chrome,
+    desktop ≥900px donde se activa `.pr-360-wrap`) antes de tocar más CSS a
+    ciegas. Empezar ahí la próxima sesión.
+
+### Pendiente explícito, sin aplicar
+- **Fotos locales del usuario** (`C:\Users\pablo\OneDrive\Pictures\hospital\
+  pexels-gustavo-fring-4173251.jpg` y `pexels-mart-production-7088524.jpg`)
+  — usuario pidió agregarlas a testimonios/otra sección, tamaño de círculo
+  más grande. Archivos confirmados que existen (5.5MB y 3.8MB — **hay que
+  comprimir/redimensionar antes de usarlas en la web**, `convert`
+  (ImageMagick) confirmado disponible en el PATH). Usuario dijo "alto!" antes
+  de que se aplicara nada — **sin iniciar**.
+- Manual-site (Docusaurus, portal público `/manual`) NO actualizado con los
+  slugs nuevos de los 21 manuales — solo el botón "?" interno funciona.
+- Prompt de Lovable para "configurador de paquete modular con precio
+  sustentado" ya escrito y entregado al usuario (ver conversación) — no
+  aplicado, es texto para que el usuario lo pegue en Lovable cuando quiera.
+
 ## Completado (Jul 4, 2026 — sesión 18 — auditoría de seguridad Supabase)
 
 Revisión diaria reportó `recepcion_revertir()` sin authz (borraba recepciones
@@ -93,6 +207,48 @@ sesión — las 24 ya no aparecen en el advisor.
 `unindexed_foreign_keys` (148), `unused_index` (145),
 `multiple_permissive_policies` (73). Queda para sesión aparte — volumen grande,
 necesita su propia priorización.
+
+**Plan priorizado (análisis Jul 4, sesión 19 — solo lectura, nada aplicado):**
+
+1. **Fase 1 — `auth_rls_initplan` (184, 92 tablas).** Patrón mecánico: `auth.uid()`
+   crudo en policies → envolver en `(select auth.uid())` para que Postgres no
+   reevalúe por fila. Cero riesgo semántico (misma autorización, solo evita
+   re-evaluación). Top tablas: `profiles`, `movimientos`, `cortes`, `cajas`,
+   `post_consultation_followups`, `ordenes_compra_items`, `recepciones_items`.
+   Se resuelve en **una sola migración generada por script** sobre `pg_policies`.
+2. **Fase 2 — `unindexed_foreign_keys` (148, 72 tablas).** Aditivo puro,
+   `CREATE INDEX CONCURRENTLY IF NOT EXISTS`. Top: `prescriptions`(8),
+   `libro_control_movimientos`(6), `doctor_contact_attempts`(5),
+   `pharmacy_returns`(5). CONCURRENTLY no puede ir dentro de transacción de
+   migration — agrupar tablas chicas en una migración normal, tablas
+   grandes/calientes (`prescriptions`, `movimientos`) en migraciones aparte.
+3. **Fase 3 — `multiple_permissive_policies` (73, 24 tablas).** Riesgo medio —
+   fusionar policies con OR sin abrir huecos de seguridad. 9 tablas concentran
+   la mayoría: `cfdi_documentos`, `cfdi_receptores`, `chat_preguntas_pendientes`,
+   `doctor_bloqueos`, `faq_items`, `medicamento_proveedores`,
+   `payment_transactions`, `prescription_items`, `prescriptions`. No genérico —
+   3-4 migraciones por dominio (CFDI/facturación, chat/FAQ, catálogos doctor).
+4. **Fase 4 — `unused_index` (145, 82 tablas).** Mayor riesgo de las 4: advisor
+   solo ve ventana reciente de `pg_stat`, puede haber falsos negativos (job
+   mensual, reporte estacional). Antes de borrar: revisar `last_seq_scan`/
+   `idx_scan` en ventana más larga, excluir índices que respaldan constraints
+   UNIQUE/PK, empezar por tablas no críticas. Dejar `payment_transactions`,
+   `cfdi_documentos` (facturación fiscal) para el final. Top: `appointments`(6),
+   `fp_cfdi`(6), `notas_consulta`(4), `monitoring_alerts`(4).
+
+Próxima sesión: empezar Fase 1 (mecánico, bajo riesgo, alto impacto).
+
+**Nota técnica para Fase 1:** el conteo real vía regex sobre `pg_policies` da
+264 policies/121 tablas (no 184 — el advisor cuenta distinto, probablemente
+por ocurrencia individual vs. por policy). Se generó un DDL borrador
+(`DROP POLICY` + `CREATE POLICY` con `(select auth.uid())`) vía
+`regexp_replace` en SQL, pero tiene un bug: el regex de "ya está envuelto"
+solo detecta `(select auth.` en minúsculas — policies que ya tenían
+`(SELECT auth.uid() AS uid)` con mayúsculas quedaron doble-envueltas
+(`(SELECT (select auth.uid()) AS uid)`), que es inválido/redundante.
+Antes de regenerar: usar regex case-insensitive (`~*`) para la exclusión,
+y validar cada `CREATE POLICY` generado con un `EXPLAIN`/dry-run antes de
+aplicar a prod. Borrador descartado (no se guardó, tenía el bug).
 
 ## Completado (Jul 4, 2026 — sesión 17 — bugs reales de Cotizaciones tras smoke test del usuario)
 
