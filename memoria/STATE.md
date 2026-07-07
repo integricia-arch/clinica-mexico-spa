@@ -1,7 +1,51 @@
 # Estado del Proyecto — clinica-mexico-spa
 
 ## Fase actual
-Producción activa — desarrollo iterativo de features de caja/farmacia
+Producción activa — pivote SaaS multi-tenant en marcha (Fase A mergeada a main)
+
+## Completado (Jul 7, 2026 — sesión 21 — Fase A: panel de clientes SaaS — sesión cara, ~$654)
+
+Primera fase del pivote SaaS de integrika.mx (spec maestro:
+`docs/superpowers/specs/2026-07-06-saas-multitenant-whatsapp-design.md`,
+orden de fases acordado A→D→B→C). Trabajada en worktree aislado
+(`.claude/worktrees/fase-a-panel-clientes`, rama `worktree-fase-a-panel-clientes`)
+via subagent-driven-development. **Mergeada a `main` (fast-forward, 8 commits,
+`063b420..10867da`).**
+
+### Qué se implementó
+1. `platform_staff` (tabla nueva) + `is_global_admin()` redefinida para
+   checarla exclusivamente — cierra un leak real (antes cualquier
+   `user_roles.role='admin'` global tenía acceso cross-tenant).
+2. Columnas SaaS en `clinics` (stripe_customer_id, plan, whatsapp_*,
+   contacto_facturacion_email) + RPC `set_clinic_status` (solo staff).
+3. Edge function `create-tenant`: alta de hospital nuevo (clinic + Stripe
+   customer + invite admin + membership), con rollback completo si falla
+   un paso intermedio. Deployed.
+4. Panel `/admin/tenants`: lista hospitales, suspende/reactiva, wizard
+   "Nuevo cliente". Gateado por `is_global_admin(auth.uid())` real (RPC),
+   no por rol legacy.
+5. **Fix post-revisión (crítico):** suspender una clínica no bloqueaba
+   datos clínicos reales — `patients`, `prescriptions`, `patient_studies`
+   (+storage), `expediente_permissions`, `almacen_alertas`, `loyalty_*`,
+   ciclo de compras usaban rol global o `clinic_memberships` directo sin
+   chequear `clinics.status`. Se agregó policy `RESTRICTIVE` (mismo patrón
+   ya usado en `lotes_medicamento`/`movimientos_inventario`/`pharmacy_sales`)
+   sobre 16 tablas + storage, usando `user_has_clinic_access`. Verificado en
+   prod: clínica activa→acceso true, suspendida→false.
+
+### Staff sembrado
+`contacto@integrika.mx` (`35e8aa47-9a1f-48fc-9eca-7225f6c6f621`) es el
+primer `platform_staff` — `is_global_admin()` confirmado `true`. Panel
+`/admin/tenants` ya operable en producción.
+
+### Pendiente (no bloqueante, quedó documentado)
+- `create-tenant`: wizard no manda `plan`/`logo_url` (siempre default).
+- `set_clinic_status` setea `updated_at` redundante (ya hay trigger).
+- Fases B (Stripe billing), C (docs), D (WhatsApp multi-número + agentes)
+  del spec maestro: sin brainstormear todavía.
+
+Ledger completo de la ejecución: `.claude/worktrees/fase-a-panel-clientes/.superpowers/sdd/progress.md`
+(nota: ese archivo vive en el worktree, no en `main` — es scratch gitignored).
 
 ## Completado (Jul 6, 2026 — sesión 20 — costeo/pricing + manuales 29 pantallas + RLS Fase 1 + pulido /pitch — sesión MUY cara, ~$993)
 
