@@ -33,10 +33,18 @@ nuevo en `user_roles`. Fase A implementó esto de otra forma: tabla dedicada
    cobro) se hayan enviado, y alerta si no. No conversa con el paciente, no
    decide, no reintenta por su cuenta más allá de un retry simple en el
    momento del envío original.
-2. **Bot de WhatsApp reusa el flujo completo de Telegram** (agendar cita,
-   recordatorios, recetas, saludo) — no una versión reducida. Esto requiere
-   separar la lógica de negocio del bot (agnóstica de canal) del adaptador
-   de canal (Telegram vs WhatsApp Cloud API).
+2. **Revisado tras inspeccionar el código real:** `telegram-webhook/index.ts`
+   no es un bot simple — es un agente LLM (Claude) con tool-calling, triage
+   de salud mental, integración de Google Calendar y botones inline de
+   Telegram, ~2000 líneas entrelazadas. Separarlo en "núcleo agnóstico +
+   adaptador de canal" de una sola vez es una refactorización grande y
+   riesgosa sobre código de producción. **Fase D entrega un bot de WhatsApp
+   standalone y determinístico** (sin LLM, sin tool-calling): saludo +
+   flujo de agendar cita en 3 pasos fijos (servicio → fecha/hora libre →
+   confirmar), usando las mismas tablas que ya usa Telegram
+   (`appointments`, `servicios`, `doctors`, `bot_sesiones`). La extracción
+   de un núcleo compartido con el agente LLM de Telegram queda como
+   **Fase D.2**, posterior, fuera de alcance de este plan.
 3. **Alta de número: proceso manual staff-driven**, con paso de verificación
    activa antes de que el número reciba tráfico real de pacientes.
 
@@ -48,11 +56,11 @@ Migración nueva agrega:
   `'verified'`. Un número recién pegado en el panel arranca `pending`; el
   webhook ignora mensajes entrantes de un `phone_number_id` cuyo
   `whatsapp_status` no sea `'verified'`.
-- `identidades_canal.canal text NOT NULL DEFAULT 'telegram'` y
-  `conversaciones.canal text NOT NULL DEFAULT 'telegram'` — distingue de qué
-  canal vino cada identidad/conversación. Valores: `'telegram'` |
-  `'whatsapp'`. Backfill de filas existentes a `'telegram'` (todo el tráfico
-  histórico es de ese canal).
+- Sin columna nueva de canal: `identidades_canal.canal_id` (text, ya
+  existente, hoy solo tiene el valor `'telegram'`) ya cumple esa función —
+  las identidades de WhatsApp se crean con `canal_id='whatsapp'`.
+  `conversaciones` no tiene columna de canal propia; se resuelve vía join a
+  `identidades_canal.canal_id` cuando haga falta filtrar por canal.
 - Índice `idx_clinics_whatsapp_phone_number_id` sobre
   `clinics(whatsapp_phone_number_id)` para el lookup de ruteo del webhook
   (debe ser rápido, es la primera query de cada mensaje entrante).
@@ -67,37 +75,56 @@ todas formas por si algún cliente enterprise pide WABA dedicada a futuro —
 eso no se resuelve en esta fase, solo se deja la puerta abierta en el
 esquema.
 
-## 2. Refactor: separar lógica de negocio del adaptador de canal
+## 2. Bot de WhatsApp v1 — flujo determinístico standalone
 
-`supabase/functions/telegram-webhook/index.ts` hoy mezcla tres cosas: (a) la
-lógica de negocio del bot (wizard de citas, recordatorios, recetas), (b) el
-estado de la conversación (`bot_sesiones`, `conversaciones`), y (c) las
-llamadas a la API de Telegram para mandar/recibir mensajes, todo bajo un
-`CLINIC_ID` fijo de módulo.
+`supabase/functions/whatsapp-webhook/index.ts` es código nuevo,
+independiente de `telegram-webhook/index.ts` (no se toca ese archivo en
+esta fase). Sin LLM, sin tool-calling — un state machine simple guardado en
+`bot_sesiones` (misma tabla y patrón que ya usa Telegram para su wizard):
+columna `flow_step` (text) para el paso actual, `flow_data` (jsonb) para
+datos libres capturados durante el flujo, más las columnas ya tipadas
+`servicio_id`, `doctor_id`, `slot_propuesto` que la tabla ya tiene.
 
-Fase D extrae (a)+(b) a un módulo compartido
-`supabase/functions/_shared/bot-core.ts` (o carpeta `_shared/bot/` si crece
-mucho — se decide en el plan de implementación según tamaño real). Esa
-lógica deja de asumir `CLINIC_ID` fijo: recibe `clinic_id` como parámetro en
-cada punto de entrada.
+Estados del flujo (`bot_sesiones.flow_step`):
 
-Cada canal queda como un adaptador delgado:
+1. `saludo` (implícito, sin estado previo): cualquier mensaje entrante de
+   una `identidad_canal` sin sesión activa → responde saludo + menú de
+   texto ("Escribe *CITA* para agendar, o *HUMANO* para hablar con
+   alguien.").
+2. `CITA` → `esperando_servicio`: lista los `servicios` activos de la
+   clínica (`SELECT id, nombre FROM servicios WHERE clinic_id = $1 AND
+   activo = true`), pide que el paciente responda con el número.
+3. `esperando_servicio` + respuesta válida → `esperando_horario`: calcula
+   slots libres para los próximos 7 días hábiles usando la misma lógica de
+   disponibilidad que ya expone `getFreeBusy`/horario de clínica
+   (`clinic_settings` sección `horario`, ya usado por Telegram — se reusa
+   tal cual, sin Google Calendar por ahora: v1 solo agenda sin
+   sincronizar con calendario externo del doctor. Ver "Fuera de alcance").
+   Presenta hasta 5 opciones de fecha/hora como lista numerada.
+4. `esperando_horario` + respuesta válida → `esperando_confirmacion`: repite
+   los datos (servicio + fecha/hora) y pide "responde *SI* para confirmar".
+5. `esperando_confirmacion` + `SI` → inserta fila en `appointments`
+   (`clinic_id`, `patient_id` si ya está vinculado o `null` si es
+   identidad nueva sin `patient_id` — igual que hoy maneja Telegram),
+   `servicio_id`, `fecha_inicio`, `status='solicitada'` (valor real del enum
+   `appointment_status`, confirmado contra producción — no existe
+   `'pendiente'`), `origen='whatsapp'`
+   (columna `appointments.origen text` ya existe, confirmado contra
+   producción). Responde confirmación, limpia `bot_sesiones.flow_step` y
+   `flow_data` (vuelve a `NULL`).
+6. Respuesta no reconocida en cualquier estado → repite la pregunta actual
+   una vez; si vuelve a fallar, resetea a `saludo` y sugiere escribir
+   *HUMANO*.
+7. `HUMANO` en cualquier momento → limpia el flujo, responde "Un miembro
+   del equipo te va a contactar" y deja un registro para que el staff lo
+   vea (reusa el patrón de escalamiento a humano que ya existe para
+   Telegram si aplica; si no existe uno reusable, se define en el plan de
+   implementación con el mecanismo más simple: nota en `conversaciones`
+   visible al staff, sin canal de notificación push nuevo en esta fase).
 
-- `supabase/functions/telegram-webhook/index.ts` — parsea el payload de
-  Telegram, resuelve `clinic_id` (sigue siendo fijo por ahora — Telegram no
-  es multi-número en esta fase, solo WhatsApp lo es), llama al núcleo
-  compartido, traduce la respuesta del núcleo a llamadas de la API de
-  Telegram.
-- `supabase/functions/whatsapp-webhook/index.ts` (nuevo) — parsea el payload
-  de Meta Cloud API, resuelve `clinic_id` vía `phone_number_id` (ver sección
-  3), llama al mismo núcleo compartido, traduce la respuesta a llamadas de
-  Meta Cloud API (`POST /{phone_number_id}/messages`).
-
-El núcleo compartido devuelve una estructura de "acción a tomar" agnóstica
-de canal (ej. `{ type: "send_text", text: "..." }` /
-`{ type: "send_buttons", text, options }`), y cada adaptador la traduce al
-formato específico de su API. Esto evita que el núcleo tenga que conocer
-los detalles de Telegram ni de WhatsApp.
+`telegram-webhook/index.ts` no cambia. La extracción de un núcleo
+compartido con el agente LLM completo (recordatorios, recetas, memoria de
+paciente) es **Fase D.2**, no parte de este plan.
 
 ## 3. Webhook `whatsapp-webhook` — ruteo por `phone_number_id`
 
@@ -223,6 +250,16 @@ ve todas.
 
 - Migrar o deprecar el bot de Telegram — ambos canales quedan activos en
   paralelo indefinidamente, salvo decisión futura explícita.
+- Fase D.2: extraer un núcleo compartido entre el agente LLM de Telegram
+  (tool-calling, triage de salud mental, memoria de paciente, recordatorios
+  automáticos, recetas) y WhatsApp. Este plan entrega WhatsApp con un flujo
+  determinístico propio y más chico (saludo + agendar cita), no el bot
+  completo.
+- Sincronización con Google Calendar del doctor en el flujo de WhatsApp
+  (Telegram sí la tiene vía `google-calendar.ts`) — v1 de WhatsApp agenda
+  directo en `appointments` sin ese paso.
+- Recordatorios, recetas, memoria de paciente, triage de salud mental por
+  WhatsApp — quedan para Fase D.2 junto con el núcleo compartido.
 - WABA dedicada por hospital (columna preparada, pero se usa una sola WABA
   compartida en esta fase).
 - Cola de reintentos avanzada para envíos fallidos (un solo retry inmediato
@@ -239,10 +276,10 @@ ve todas.
 
 ## 9. Testing
 
-- Unit/integración del núcleo compartido (`bot-core.ts`): casos ya
-  cubiertos hoy por tests de `telegram-webhook` deben seguir pasando tras el
-  refactor de la sección 2 — es la señal de que la extracción no rompió
-  comportamiento existente.
+- Unit del state machine determinístico de la sección 2 (transiciones de
+  `bot_sesiones.flow_data.step`): cada transición válida e inválida cubierta
+  con un test, sin necesidad de mockear Meta ni LLM (la lógica de estado es
+  pura, separable de la I/O de red).
 - `whatsapp-webhook`: test de firma inválida (403), `phone_number_id` sin
   match (200 vacío, no procesa), `phone_number_id` con `status='pending'`
   (200 vacío, no procesa), flujo feliz con clínica verificada (procesa y
