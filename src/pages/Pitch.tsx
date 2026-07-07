@@ -970,7 +970,6 @@ export default function Pitch() {
       {/* CICLO 360 */}
       <section id="ciclo360" style={{ padding: "96px 0", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
         <style>{`
-          @keyframes pr-orbit-dot { from { offset-distance: 0%; } to { offset-distance: 100%; } }
           .pr-360-wrap { display: none; }
           .pr-360-v { display: grid; grid-template-columns: 1fr; gap: 12px; }
           @media (min-width: 900px) {
@@ -980,15 +979,16 @@ export default function Pitch() {
           .pr-360-dot {
             position: absolute; width: 14px; height: 14px; border-radius: 50%;
             background: #0891B2; box-shadow: 0 0 0 4px rgba(8,145,178,.20), 0 0 16px rgba(8,145,178,.55);
-            /* Arranca en (cx, cy-ry) = tope de la elipse, mismo punto donde
-               cae el nodo i=0 (theta=-90°) — antes arrancaba en (cx,cy), el
-               CENTRO de la elipse, por eso el punto desincronizaba del anillo. */
-            offset-path: path('M 620 40 A 500 300 0 1 1 620 39.99 Z');
-            offset-rotate: 0deg;
+            transform: translate(-50%,-50%);
             animation: pr-orbit-dot 14s linear infinite;
-            top: 0; left: 0;
           }
-          @media (prefers-reduced-motion: reduce) { .pr-360-dot { animation: none; } }
+          @keyframes pr-360-pulse {
+            0% { box-shadow: 0 12px 28px rgba(8,145,178,.32); border-color: #0891B2; transform: translateY(-2px); }
+            12% { box-shadow: none; border-color: inherit; transform: translateY(0); }
+            100% { box-shadow: none; border-color: inherit; transform: translateY(0); }
+          }
+          .pr-360-node-pulse { animation: pr-360-pulse 14s ease-in-out infinite; }
+          @media (prefers-reduced-motion: reduce) { .pr-360-dot, .pr-360-node-pulse { animation: none; } }
         `}</style>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ textAlign: "center", maxWidth: 720, margin: "0 auto 52px" }}>
@@ -1017,11 +1017,24 @@ export default function Pitch() {
               { icon: ClipboardCheck, title: "Cierre", desc: "Caja concilia, todo queda auditado con usuario y timestamp" },
             ];
             const W = 1240, H = 680, cx = W / 2, cy = H / 2, rx = 500, ry = 300;
+            const N = flow360.length;
+            // Keyframes generados de la MISMA fórmula que posiciona cada tarjeta
+            // (theta = -90° + i*360/N) — garantiza que el punto pase exacto por
+            // cada nodo en su fracción de tiempo correspondiente (i/N), a
+            // diferencia de un offset-path elíptico (velocidad de arco constante
+            // ≠ velocidad angular constante en una elipse no circular).
+            const orbitStops = Array.from({ length: N + 1 }, (_, i) => {
+              const theta = -Math.PI / 2 + (i * 2 * Math.PI) / N;
+              const px = ((cx + rx * Math.cos(theta)) / W) * 100;
+              const py = ((cy + ry * Math.sin(theta)) / H) * 100;
+              return `${((i / N) * 100).toFixed(3)}% { left: ${px.toFixed(3)}%; top: ${py.toFixed(3)}%; }`;
+            }).join(" ");
 
             return (
               <>
                 {/* Desktop: SVG ellipse with nodes */}
                 <div className="pr-360-wrap" style={{ position: "relative", width: "100%", maxWidth: W, margin: "0 auto", aspectRatio: `${W} / ${H}` }}>
+                  <style>{`@keyframes pr-orbit-dot { ${orbitStops} }`}</style>
                   <svg viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
                     <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#e2e8f0" strokeWidth={1.5} strokeDasharray="4 6" />
                     {/* arrow indicating "vuelve a empezar" near node 1 */}
@@ -1040,8 +1053,8 @@ export default function Pitch() {
                   <div className="pr-360-dot" />
 
                   {/* center label */}
-                  <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none" }}>
-                    <div className="pr-h" style={{ fontSize: 96, fontWeight: 900, letterSpacing: "-0.06em", background: `linear-gradient(135deg, ${TEAL}, ${GREEN})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1 }}>360°</div>
+                  <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none", width: "100%" }}>
+                    <div className="pr-h" style={{ fontSize: "clamp(44px, 7vw, 96px)", fontWeight: 900, letterSpacing: "-0.06em", background: `linear-gradient(135deg, ${TEAL}, ${GREEN})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1.1, padding: "0 8px" }}>360°</div>
                     <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#64748b" }}>y vuelve a empezar</div>
                   </div>
 
@@ -1058,7 +1071,7 @@ export default function Pitch() {
                         variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}
                         style={{ position: "absolute", left: `${leftPct}%`, top: `${topPct}%`, transform: "translate(-50%,-50%)", width: 190 }}
                       >
-                        <div className="pr-card" style={{ padding: 12, borderColor: color + "33", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center" }}>
+                        <div className="pr-card pr-360-node-pulse" style={{ padding: 12, borderColor: color + "33", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, textAlign: "center", animationDelay: `-${(i * 14) / N}s` }}>
                           <div className="pr-icon-box" style={{ color, background: color + "14", borderColor: color + "28", width: 38, height: 38 }}>
                             <s.icon size={16} />
                           </div>
