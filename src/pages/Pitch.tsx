@@ -246,19 +246,19 @@ const testimonials = [
     name: "Dra. María Rodríguez",
     role: "Directora Médica · Guadalajara",
     quote: "Antes perdíamos 8-10 citas a la semana por no-shows. Con los recordatorios automáticos bajamos a menos de 2. El bot funciona de noche y los domingos, eso no tiene precio.",
-    photo: "https://images.unsplash.com/photo-1638202993928-7267aad84c31?q=80&w=100&auto=format&fit=crop&crop=face",
+    photo: "https://images.unsplash.com/photo-1659353886868-753b0c5c5772?q=80&w=200&auto=format&fit=crop&crop=face",
   },
   {
     name: "Dr. Jorge Mendoza",
     role: "Médico General · CDMX",
     quote: "Lo que más me sorprendió fue que entiende RFC, CURP y CFDI desde el día uno. En 48 horas estábamos operando y el contador ya no nos cobra extra por facturar.",
-    photo: "https://images.unsplash.com/photo-1530497610245-94d3c16cda28?q=80&w=100&auto=format&fit=crop&crop=face",
+    photo: "https://images.unsplash.com/photo-1758691463384-771db2f192b3?q=80&w=200&auto=format&fit=crop&crop=face",
   },
   {
     name: "Lic. Ana Lozano",
     role: "Administradora · Monterrey",
     quote: "El corte de caja con conteo ciego detectó una diferencia de $3,200 el primer mes. El sistema se pagó solo. El módulo de compras con 3-Way Match es extraordinario.",
-    photo: "https://images.unsplash.com/photo-1511174511562-5f7f18b874f8?q=80&w=100&auto=format&fit=crop&crop=face",
+    photo: "https://images.unsplash.com/photo-1625134673337-519d4d10b313?q=80&w=200&auto=format&fit=crop&crop=face",
   },
 ];
 
@@ -556,7 +556,6 @@ export default function Pitch() {
 
       {/* HERO */}
       <section style={{ position: "relative", overflow: "hidden", paddingTop: 80, paddingBottom: 96, background: "linear-gradient(170deg,#f0fdff 0%,#f8fafc 60%,#fff 100%)" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, #bae6fd 1px, transparent 1px)", backgroundSize: "36px 36px", opacity: 0.25, pointerEvents: "none" }} />
         <div style={{ position: "relative", maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
           <div className="pr-hero-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 56, alignItems: "center" }}>
 
@@ -1116,7 +1115,7 @@ export default function Pitch() {
                   </div>
                   <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.75, fontStyle: "italic", flex: 1 }}>"{t.quote}"</p>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                    <img src={t.photo} alt={t.name} style={{ width: 40, height: 40, borderRadius: "50%", border: `2px solid ${TEAL}30`, flexShrink: 0, objectFit: "cover" }} loading="lazy" />
+                    <img src={t.photo} alt={t.name} style={{ width: 72, height: 72, borderRadius: "50%", border: `2px solid ${TEAL}30`, flexShrink: 0, objectFit: "cover" }} loading="lazy" />
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{t.name}</div>
                       <div style={{ fontSize: 11, color: SLATE }}>{t.role}</div>
@@ -1253,7 +1252,6 @@ export default function Pitch() {
 
       {/* CTA FINAL */}
       <section style={{ padding: "112px 0", background: TEAL, position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,.07) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,255,255,.07) 0%, transparent 70%)", pointerEvents: "none" }} />
         <div style={{ position: "relative", maxWidth: 700, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }}>
