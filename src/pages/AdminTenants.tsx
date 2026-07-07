@@ -52,9 +52,35 @@ export default function AdminTenants() {
     await load();
   };
 
+  const [showWizard, setShowWizard] = useState(false);
+  const [form, setForm] = useState({
+    code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const submitWizard = async () => {
+    setSubmitting(true);
+    setFormError(null);
+    const { data, error: fnErr } = await supabase.functions.invoke("create-tenant", {
+      body: form,
+    });
+    setSubmitting(false);
+    if (fnErr || (data as { error?: string })?.error) {
+      setFormError((data as { error?: string })?.error ?? fnErr?.message ?? "Error desconocido");
+      return;
+    }
+    setShowWizard(false);
+    setForm({ code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "" });
+    await load();
+  };
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Clientes (hospitales)</h1>
+      <button onClick={() => setShowWizard(true)} className="mb-4 bg-blue-600 text-white px-4 py-2 rounded">
+        Nuevo cliente
+      </button>
       {error && <p className="text-red-600 mb-4">{error}</p>}
       {loading ? (
         <p>Cargando...</p>
@@ -93,6 +119,62 @@ export default function AdminTenants() {
             ))}
           </tbody>
         </table>
+      )}
+      {showWizard && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-4">Nuevo cliente</h2>
+            {formError && <p className="text-red-600 mb-2">{formError}</p>}
+            <div className="space-y-2">
+              <input
+                placeholder="Código único (ej. hospital_norte)"
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+              <input
+                placeholder="Nombre del hospital"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+              <input
+                placeholder="RFC"
+                value={form.rfc}
+                onChange={(e) => setForm({ ...form, rfc: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+              <input
+                placeholder="Dirección"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+              <input
+                placeholder="Email facturación"
+                value={form.contacto_facturacion_email}
+                onChange={(e) => setForm({ ...form, contacto_facturacion_email: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+              <input
+                placeholder="Email admin del hospital"
+                value={form.admin_email}
+                onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setShowWizard(false)} className="px-4 py-2">Cancelar</button>
+              <button
+                onClick={submitWizard}
+                disabled={submitting || !form.code || !form.name || !form.admin_email}
+                className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+              >
+                {submitting ? "Creando..." : "Crear"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
