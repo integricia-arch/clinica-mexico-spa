@@ -1,81 +1,137 @@
 # Diseño — Fase A: Panel de clientes SaaS (onboarding + gestión de tenants)
 
-**Fecha:** 2026-07-07
+**Fecha:** 2026-07-07 (revisado — ver "Corrección tras auditoría de código existente")
 **Depende de:** `2026-07-06-saas-multitenant-whatsapp-design.md` (spec maestro)
 **Estado:** Listo para plan de implementación.
 
-## Contexto
+## Corrección tras auditoría de código existente
 
-Fase A es la base de la que dependen las fases B (pagos), C (docs) y D (WhatsApp+agentes) del spec maestro. Convierte `clinics` en la unidad de tenant SaaS, agrega un rol `super_admin` operado por el staff de integrika, y da un panel para dar de alta/gestionar hospitales clientes sin tocar SQL a mano.
+La primera versión de este spec asumía que el proyecto no tenía multi-tenant real. Falso: la migración `20260528150545` ya creó `clinics`, `clinic_memberships(user_id, clinic_id, role, status)`, y las funciones `is_global_admin()`, `user_has_clinic_access()`, `user_has_clinic_role()`, `current_user_clinic_ids()` — usadas en **18 archivos de migración** para RLS. El frontend (`src/hooks/useActiveClinic.tsx`) ya switch-ea entre clínicas y ya calcula `isGlobalAdmin`.
 
-Roles existentes (`admin`, `doctor`, `nurse`, `receptionist`, `patient` — enum `app_role`) siguen scoped a su propio `clinic_id` vía RLS ya existente (comparación directa de columna, sin cambios). `has_role()` verifica el rol de forma global por `user_id`; el scope por clínica lo hace cada policy por separado comparando `clinic_id`.
+Esta versión reemplaza la anterior: no se crea rol `super_admin`, no se crea `subscription_status`, no se tocan políticas tabla por tabla. Se reutiliza y se corrige la infraestructura existente.
+
+**Riesgo de seguridad encontrado (a cerrar en esta fase):** `is_global_admin()` hoy verifica `has_role(_user_id, 'admin')` contra la tabla vieja `user_roles` (global, sin `clinic_id`). El backfill de esa misma migración insertó a los admins actuales tanto en `user_roles` (global) como en `clinic_memberships` (scoped a la clínica default). Con una sola clínica en producción esto no se nota — pero en cuanto exista un segundo hospital, **cualquier usuario con `user_roles.role='admin'` heredado (los admins actuales del hospital único de hoy) vería y editaría clínicas de otros hospitales**, porque la policy `"Admin manage clinics"` usa `is_global_admin()` sin distinguir "staff de integrika" de "admin de un hospital cualquiera". Cerrar esto es parte obligatoria de Fase A, no opcional.
 
 ## Cambios de datos
 
-**Columnas nuevas en `clinics`:**
-- `subscription_status` (`trialing` | `active` | `past_due` | `canceled`, default `trialing`)
+**Tabla nueva `platform_staff`:**
+```sql
+CREATE TABLE public.platform_staff (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+```
+Sin RLS pública de lectura para usuarios normales (solo se consulta desde `is_global_admin()`, `SECURITY DEFINER`). Alta de un miembro de staff = INSERT manual por el equipo integrika (operación rara, no necesita UI en Fase A).
+
+**Redefinir `is_global_admin()`** (reemplaza la definición actual, mismo nombre — nada que la llama cambia de firma):
+```sql
+CREATE OR REPLACE FUNCTION public.is_global_admin(_user_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.platform_staff WHERE user_id = _user_id);
+$$;
+REVOKE EXECUTE ON FUNCTION public.is_global_admin(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_global_admin(uuid) TO authenticated;
+```
+Efecto inmediato: deja de importar `user_roles.role='admin'` para el acceso global — cierra el leak. Los 18 archivos que ya usan `is_global_admin()`/`user_has_clinic_access()`/`user_has_clinic_role()` heredan el fix sin tocarlos.
+
+**Extender `user_has_clinic_access()` y `user_has_clinic_role()`** para exigir que la clínica esté activa (bloqueo duro de suspensión, centralizado — no se toca ninguna policy individual de las 18):
+```sql
+CREATE OR REPLACE FUNCTION public.user_has_clinic_access(_user_id uuid, _clinic_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT
+    _clinic_id IS NULL
+    OR public.is_global_admin(_user_id)
+    OR EXISTS (
+      SELECT 1 FROM public.clinic_memberships cm
+      JOIN public.clinics c ON c.id = cm.clinic_id
+      WHERE cm.user_id = _user_id
+        AND cm.clinic_id = _clinic_id
+        AND cm.status = 'active'
+        AND c.status = 'active'
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION public.user_has_clinic_role(_user_id uuid, _clinic_id uuid, _role public.app_role)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT
+    public.is_global_admin(_user_id)
+    OR EXISTS (
+      SELECT 1 FROM public.clinic_memberships cm
+      JOIN public.clinics c ON c.id = cm.clinic_id
+      WHERE cm.user_id = _user_id
+        AND cm.clinic_id = _clinic_id
+        AND cm.role = _role
+        AND cm.status = 'active'
+        AND c.status = 'active'
+    );
+$$;
+```
+`is_global_admin` (ahora = staff integrika real) sigue viendo todo incluso si una clínica está suspendida — necesario para poder reactivarla desde el panel.
+
+**Columnas nuevas en `clinics`** (las demás — `rfc`, `logo_url`, `status` — ya existen, no se duplican):
 - `stripe_customer_id` (text, nullable)
 - `stripe_subscription_id` (text, nullable — se llena en Fase B)
-- `plan` (text libre, default `'estandar'` — informativo, no gatea módulos)
+- `plan` (text, default `'estandar'` — informativo, no gatea módulos)
 - `whatsapp_phone_number_id`, `whatsapp_business_account_id` (text, nullable — se llenan en Fase D)
-- `rfc`, `direccion_completa`, `logo_url`, `contacto_facturacion_email` (text, nullable)
+- `contacto_facturacion_email` (text, nullable)
 
-**Enum `app_role`:** agregar valor `super_admin`.
-
-**Función nueva `clinic_is_active(_clinic_id uuid) RETURNS boolean`:** `SELECT subscription_status = 'active' FROM clinics WHERE id = _clinic_id` (o `'trialing'` también cuenta como activo — trialing permite acceso normal, solo `past_due`/`canceled` bloquean). Se usa para el bloqueo duro (ver más abajo).
-
-## Rol `super_admin` y alcance de sus permisos
-
-`super_admin` NO obtiene acceso a datos clínicos (pacientes, citas, recetas, farmacia) de ningún hospital — su alcance es exclusivamente administrar tenants. Policies nuevas SOLO en tabla `clinics`:
-
-```sql
--- Ejemplo de policy nueva (nombres/sintaxis exactos se definen en el plan)
-CREATE POLICY "super_admin_full_access_clinics" ON public.clinics
-  FOR ALL
-  USING (has_role(auth.uid(), 'super_admin'))
-  WITH CHECK (has_role(auth.uid(), 'super_admin'));
-```
-
-Ninguna otra tabla del sistema se modifica para dar acceso a `super_admin` — si en el futuro se necesita soporte técnico viendo datos de un hospital específico, es una decisión aparte y explícita, no un efecto colateral de este rol.
-
-## Bloqueo duro por suspensión
-
-Las policies RLS existentes que ya filtran por `clinic_id` se extienden agregando `AND clinic_is_active(clinic_id)` a la condición `USING`. Esto se hace tabla por tabla en el plan de implementación (es un cambio mecánico repetido, no una decisión de diseño por tabla) — cubre todas las tablas operativas con columna `clinic_id` (citas, pacientes, farmacia, caja, etc.). Tablas de catálogo/configuración sin datos sensibles del hospital pueden excluirse si no aplica (a decidir caso por caso en el plan).
-
-Efecto: un hospital con `subscription_status IN ('past_due','canceled')` deja de poder leer/escribir sus propios datos operativos por completo. El panel debe mostrar un banner claro explicando el bloqueo (no solo un error de RLS crudo) — se resuelve con un check de `subscription_status` en el frontend antes de renderizar, adicional al bloqueo real en BD.
+`clinics.status` ya soporta `'active'|'inactive'|'suspended'` — se reutiliza tal cual como el estado de suspensión SaaS. No se agrega `subscription_status`.
 
 ## Panel `/admin/tenants`
 
-Ruta nueva, React, protegida con guard `has_role(super_admin)` en el router (patrón ya usado para otras rutas admin-only).
+Ruta nueva, React, guard: `isGlobalAdmin` de `useActiveClinic()` (ya expuesto por el contexto existente, ahora respaldado por `platform_staff` en vez del rol legacy).
 
-**Vista lista:** tabla con nombre clínica, `subscription_status` (badge de color), plan, fecha de alta, acciones (suspender/reactivar).
+**Vista lista:** tabla de `clinics` — nombre, `status` (badge), plan, fecha alta (`created_at`), acciones (suspender → `status='suspended'`, reactivar → `status='active'`).
 
-**Wizard "Nuevo cliente"** (form único, no multi-step separado por llamadas):
-- Campos: nombre clínica, RFC, dirección completa, logo (upload a Storage), contacto facturación (email), email del admin inicial del hospital, plan (select, default `estandar`).
-- Submit → una sola llamada a la edge function `create-tenant`.
+**Wizard "Nuevo cliente":** form único → una sola llamada a edge function `create-tenant`. Campos: nombre, `code` (slug único, requerido por `clinics.code UNIQUE NOT NULL`), RFC, dirección, logo, contacto facturación, email del admin inicial, plan.
 
-**Acción suspender/reactivar:** botón en la tabla → RPC `set_clinic_subscription_status(clinic_id uuid, new_status text)`, `SECURITY DEFINER`, solo ejecutable por `super_admin` (check interno `has_role`).
+**Acción suspender/reactivar:** RPC `SECURITY DEFINER` nueva `set_clinic_status(_clinic_id uuid, _status text)`:
+```sql
+CREATE OR REPLACE FUNCTION public.set_clinic_status(_clinic_id uuid, _status text)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_global_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'No autorizado';
+  END IF;
+  IF _status NOT IN ('active','inactive','suspended') THEN
+    RAISE EXCEPTION 'Estado inválido: %', _status;
+  END IF;
+  UPDATE public.clinics SET status = _status WHERE id = _clinic_id;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.set_clinic_status(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.set_clinic_status(uuid, text) TO authenticated;
+```
 
 ## Edge function `create-tenant`
 
-Nueva función (patrón similar a `admin-users` ya existente en `supabase/functions/`), pasos en orden con rollback manual si falla alguno:
+Nueva función (patrón similar a `admin-users` ya existente), pasos con rollback manual si falla alguno:
 
-1. `INSERT INTO clinics (...)` con `subscription_status = 'trialing'` → obtiene `clinic_id` nuevo.
-2. Crear Stripe customer (reusa cliente Stripe ya configurado en `stripe-checkout`/`stripe-webhook`) → `UPDATE clinics SET stripe_customer_id = ...`.
-3. `supabase.auth.admin.inviteUserByEmail(email_admin)` → el trigger existente de creación de `profiles` corre igual que hoy; después, `INSERT INTO user_roles (user_id, role, clinic_id)` con `role='admin'` y el `clinic_id` nuevo.
-4. Si paso 2 o 3 lanza error: `DELETE FROM clinics WHERE id = clinic_id` (limpieza del paso 1) y se retorna error descriptivo al wizard — no hay transacción real cross-servicio (Stripe + Supabase Auth + Postgres), por eso el rollback es manual y explícito en el código, no automático.
-
-Idempotencia no es requisito en Fase A (alta la hace el equipo integrika manualmente, volumen bajo — 2-10 clientes). Si el wizard falla a medias y se reintenta, el operador ve el mensaje de error y decide si reintentar desde cero.
+1. `INSERT INTO clinics (code, name, rfc, address, logo_url, contacto_facturacion_email, status) VALUES (..., 'active')` → obtiene `clinic_id`.
+2. Crear Stripe customer (reusa cliente Stripe ya configurado en `stripe-checkout`) → `UPDATE clinics SET stripe_customer_id = ...`.
+3. `supabase.auth.admin.inviteUserByEmail(email_admin)` → trigger existente crea `profiles`; luego `INSERT INTO clinic_memberships (user_id, clinic_id, role, status) VALUES (..., clinic_id, 'admin', 'active')`. **No se toca `user_roles`** — así el nuevo admin queda scoped únicamente a su hospital, sin el leak que tenían los admins legacy.
+4. Si paso 2 o 3 falla: `DELETE FROM clinics WHERE id = clinic_id` y error descriptivo al wizard.
 
 ## Testing
 
-- Unit/integration tests de `create-tenant` con mocks de Stripe y `supabase.auth.admin`: happy path completo, y un caso de rollback por cada punto de falla (2 y 3).
-- Test RLS: clínica con `subscription_status='canceled'` no puede leer/escribir en al menos una tabla operativa representativa (ej. `patients` o `citas`) — patrón ya usado en el proyecto para tests de RLS existentes.
-- Test manual: flujo completo wizard → login del admin invitado → banner de bloqueo al suspender.
+- Unit test de `is_global_admin()` redefinida: usuario en `platform_staff` → true; usuario con `user_roles.role='admin'` pero SIN fila en `platform_staff` → false (test de regresión del leak, el más importante de esta fase).
+- Test RLS: 2 clínicas ficticias, admin de clínica A no puede leer `clinics` de clínica B ni datos operativos de B.
+- Test RLS: clínica con `status='suspended'` bloquea lectura/escritura de un usuario con membership activa en ella (tabla operativa representativa, ej. `patients`).
+- Unit/integration test de `create-tenant`: happy path + rollback en fallo de paso 2 y de paso 3.
+- Test manual: wizard → login admin invitado → suspender clínica → confirmar bloqueo real (no solo visual).
 
 ## Fuera de alcance de Fase A
 
-- Self-service signup público (alta la hace integrika manualmente).
-- Feature-gating por plan (columna `plan` es informativa).
-- Cobro real de Stripe (customer se crea, pero sin subscription — eso es Fase B).
-- Número de WhatsApp (columnas quedan `null`, se llenan en Fase D).
+- Self-service signup público.
+- Feature-gating por plan.
+- Cobro real de Stripe (customer se crea, subscription es Fase B).
+- Número de WhatsApp (columnas quedan `null`, Fase D).
+- Migrar a `platform_staff` a los admins legacy actuales — es una decisión manual de negocio (a quién considerar "staff integrika" hoy), se documenta como paso operativo en el plan, no se automatiza.
