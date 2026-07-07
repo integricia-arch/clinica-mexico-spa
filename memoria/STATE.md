@@ -1,7 +1,44 @@
 # Estado del Proyecto — clinica-mexico-spa
 
 ## Fase actual
-Producción activa — pivote SaaS multi-tenant en marcha (Fase A mergeada a main)
+Producción activa — pivote SaaS multi-tenant en marcha (Fase A mergeada a
+main; Fase D diseñada y planeada, PAUSADA antes de ejecutar por costo)
+
+## Completado (Jul 7, 2026 — sesión 22 — Fase D: spec + plan, sin ejecutar — sesión carísima, ~$1052)
+
+Continuación misma sesión que Fase A (día 21 y 22 mismo día calendario).
+Brainstorm + spec + plan de Fase D (WhatsApp multi-número + agentes
+supervisores) del spec maestro. Todo en `main`, nada de código nuevo
+todavía — **PAUSADO antes de ejecutar el plan** por costo de sesión.
+
+- Spec: `docs/superpowers/specs/2026-07-07-fase-d-whatsapp-agentes-design.md`.
+  Alcance reducido a mitad de brainstorm tras inspeccionar
+  `telegram-webhook/index.ts` real (~2000 líneas, agente LLM con
+  tool-calling, triage salud mental, Google Calendar — no el bot simple que
+  asumía el spec maestro). Decisión: WhatsApp v1 es un bot determinístico
+  standalone (sin LLM), no toca `telegram-webhook.ts`. Extracción de núcleo
+  compartido queda como Fase D.2 futura.
+- Plan: `docs/superpowers/plans/2026-07-07-fase-d-whatsapp-agentes.md`.
+  6 tasks con código completo, columnas verificadas contra producción real
+  (`clinics.whatsapp_status`, `appointments.status/origen`,
+  `bot_sesiones.flow_step/flow_data`, `identidades_canal.canal_id`,
+  `doctor_servicios`). Durante el self-review se detectó y corrigió un bug
+  real: el plan asumía `patient_studies.notificado_at` sin verificar —
+  esa columna no existe, se descopeó el tipo de alerta
+  `resultado_laboratorio` del cron de auditoría (Task 5), queda solo
+  `recordatorio_cita` por ahora.
+- Nota aparte (no arreglada, fuera de alcance de Fase D): la policy UPDATE
+  de `clinics` usa `has_role(auth.uid(),'admin')` — rol GLOBAL sin scope de
+  clínica, mismo patrón de leak que Fase A cerró para `is_global_admin`.
+  El plan de Fase D lo esquiva usando RPCs dedicadas
+  (`set_clinic_whatsapp_number`/`set_clinic_whatsapp_verified`) en vez de
+  UPDATE directo, pero el leak en la policy general de `clinics` sigue ahí.
+
+**Pendiente:** ejecutar el plan (6 tasks) en sesión nueva. Usuario eligió
+pausar antes de ejecutar por costo (~$1052 acumulado en esta sesión, la más
+cara del proyecto hasta ahora — anterior récord ~$993).
+
+## Completado (Jul 7, 2026 — sesión 21 — Fase A: panel de clientes SaaS — sesión cara, ~$654)
 
 ## Completado (Jul 7, 2026 — sesión 21 — Fase A: panel de clientes SaaS — sesión cara, ~$654)
 
