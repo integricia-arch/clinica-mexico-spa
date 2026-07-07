@@ -1137,24 +1137,31 @@ export default function Pitch() {
               Stack moderno. Infraestructura empresarial. Hecho en México.
             </h2>
           </motion.div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+          <div className="pr-mod-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
             {[
-              { icon: Bot, label: "Claude Sonnet 4.6", color: "#7c3aed" },
-              { icon: Database, label: "PostgreSQL + Realtime", color: TEAL },
-              { icon: Lock, label: "Row-Level Security", color: GREEN },
-              { icon: Zap, label: "Edge Functions (Deno)", color: "#d97706" },
-              { icon: Globe, label: "Cloudflare Workers + WAF", color: TEAL },
-              { icon: Shield, label: "JWT + Supabase Vault", color: GREEN },
-              { icon: TrendingUp, label: "BetterStack Monitoring", color: "#7c3aed" },
-              { icon: ScanLine, label: "Stripe + Facturama", color: TEAL },
-            ].map(({ icon: Icon, label, color }) => (
+              { icon: Bot, label: "Claude Sonnet 4.6", color: "#7c3aed", desc: "El motor detrás del bot: entiende lenguaje natural real, no guiones fijos. Menos “no entendí tu mensaje”, más citas resueltas sin que tu equipo intervenga." },
+              { icon: Database, label: "PostgreSQL + Realtime", color: TEAL, desc: "La misma base de datos que usan bancos y gobiernos. “Realtime” significa que cada cambio se ve al instante en todas las pantallas de tu equipo, sin refrescar." },
+              { icon: Lock, label: "Row-Level Security", color: GREEN, desc: "Regla que vive dentro de la base de datos: cada consulta trae solo los datos de tu clínica, nunca los de otra. Tus datos de pacientes nunca se mezclan con los de otro cliente." },
+              { icon: Zap, label: "Edge Functions (Deno)", color: "#d97706", desc: "Donde vive la lógica de cobros y validaciones — corre en servidores aislados, nunca en el navegador. Nadie puede manipular un descuento o un cobro desde su computadora." },
+              { icon: Globe, label: "Cloudflare Workers + WAF", color: TEAL, desc: "La misma infraestructura que protege a bancos y tiendas grandes de internet. Filtra tráfico malicioso automáticamente, 24/7, antes de que llegue al sistema." },
+              { icon: Shield, label: "JWT + Supabase Vault", color: GREEN, desc: "Cada usuario recibe un “pase” firmado digitalmente para entrar, sin mandar su contraseña en cada clic. Las claves más sensibles viven cifradas aparte, nunca a la vista." },
+              { icon: TrendingUp, label: "BetterStack Monitoring", color: "#7c3aed", desc: "Un sistema externo vigila la plataforma 24/7 y avisa al equipo técnico en minutos si algo falla — antes de que tú o tus pacientes lo noten." },
+              { icon: ScanLine, label: "Stripe", color: TEAL, desc: "Los cobros los procesa la misma pasarela que usan Amazon y Shopify — tu clínica nunca guarda ni ve el número de tarjeta completo." },
+            ].map(({ icon: Icon, label, color, desc }) => (
               <motion.div key={label} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0", fontSize: 13, fontWeight: 500, color: "#0f172a" }}>
-                  <Icon size={14} color={color} />{label}
+                <div className="pr-card" style={{ padding: 20, height: "100%" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <Icon size={16} color={color} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{label}</span>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: SLATE, lineHeight: 1.6, margin: 0 }}>{desc}</p>
                 </div>
               </motion.div>
             ))}
           </div>
+          <p style={{ marginTop: 20, textAlign: "center", fontSize: 12, color: "#64748b" }}>
+            Facturación electrónica (CFDI) vía integración con PAC certificado por el SAT — detalle del proveedor pendiente de confirmar públicamente.
+          </p>
         </div>
       </section>
 
