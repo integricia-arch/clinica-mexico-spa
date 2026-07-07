@@ -95,13 +95,30 @@ pendiente para fase aparte). Advisor security: sin regresión, los 2
     sin saberlo). Lovable también agregó `className="pr-360-node"` con
     `width: clamp(140px, 15cqi, 200px)` + `container-type: inline-size` en
     `.pr-360-wrap` (ya presente, confirmado).
-  - **PENDIENTE SIN RESOLVER:** usuario reporta que las tarjetas de los 12
-    módulos no se ven centradas/proporcionadas sobre la elipse que recorre
-    la esfera. Hipótesis de `cqi` sin `container-type` fue DESCARTADA
-    (container-type sí está declarado, línea ~973). Causa real aún no
-    identificada — **necesita revisión visual en navegador real** (Chrome,
-    desktop ≥900px donde se activa `.pr-360-wrap`) antes de tocar más CSS a
-    ciegas. Empezar ahí la próxima sesión.
+  - **RESUELTO (sesión 21, Jul 6):** causa real de las tarjetas mal
+    alineadas eran DOS bugs, no uno solo `cqi`:
+    1. Ángulo uniforme (`-90°+i*360/N`) en elipse con `rx≠ry` reparte las
+       12 tarjetas por ángulo igual, no por arco igual → se amontonaban
+       cerca de los polos izq/der. Fix: muestreo numérico de arco-longitud
+       uniforme (3600 samples, tabla acumulada + búsqueda binaria) — mismo
+       espacio real entre tarjetas en cualquier punto de la elipse. Mismos
+       thetas reusados para generar los `@keyframes` de la esfera, así
+       sigue pasando exacto por cada nodo.
+    2. Bug de fondo real: el `motion.div` de cada tarjeta tenía a la vez
+       `variants={reveal}` (Framer Motion anima `y`) Y un `transform:
+       translate(-50%,-50%)` manual inline — Framer Motion pisa el
+       `transform` para animar sus propios valores, tirando el centrado
+       manual. Las tarjetas quedaban corridas fuera de la curva aunque el
+       cálculo de posición ya era correcto. Confirmado con
+       `getBoundingClientRect()` en DOM real (Chrome) antes y después. Fix:
+       separar en `<div>` estático (posición/centrado) que envuelve un
+       `<motion.div>` interno (solo la animación reveal, sin transform de
+       posición).
+    - Además: texto "360°" central reemplazado por `<Logo>` IntegriKa.
+    - Velocidad de esfera y resalte de tarjeta unificadas en constante
+      `CICLO_360_DUR = 14*0.7 = 9.8s` (antes hardcodeado 3 veces, ahora
+      un solo valor, 30% más rápido a pedido del usuario).
+    - Pusheado a `main` (commit `9f65c3d`). Sin cambios de schema/Supabase.
 
 ### Pendiente explícito, sin aplicar
 - **Fotos locales del usuario** (`C:\Users\pablo\OneDrive\Pictures\hospital\
