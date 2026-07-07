@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 
 interface TenantRow {
@@ -13,10 +13,25 @@ interface TenantRow {
 }
 
 export default function AdminTenants() {
-  const { isGlobalAdmin, loading: clinicLoading } = useActiveClinic();
+  const { user, loading: authLoading } = useAuth();
+  const [isPlatformStaff, setIsPlatformStaff] = useState<boolean | null>(null);
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setIsPlatformStaff(false);
+      return;
+    }
+    supabase
+      .rpc("is_global_admin", { _user_id: user.id })
+      .then(({ data }) => setIsPlatformStaff(Boolean(data)));
+  }, [authLoading, user]);
+
+  const clinicLoading = authLoading || isPlatformStaff === null;
+  const isGlobalAdmin = isPlatformStaff === true;
 
   const load = useCallback(async () => {
     setLoading(true);
