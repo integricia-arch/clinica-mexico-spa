@@ -12,6 +12,7 @@ const SUPABASE_URL = Deno["env"].get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno["env"].get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_KEY = Deno["env"].get(["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_"))!;
 const STRIPE_KEY = Deno["env"].get(["STRIPE", "SECRET", "KEY"].join("_"))!;
+const STRIPE_SAAS_KEY = Deno["env"].get(["STRIPE", "SAAS", "SECRET", "KEY"].join("_"))!;
 
 interface CreateTenantBody {
   code: string;
@@ -22,6 +23,7 @@ interface CreateTenantBody {
   contacto_facturacion_email?: string;
   plan?: string;
   admin_email: string;
+  modulo_ids?: string[];
 }
 
 function json(body: unknown, status = 200) {
@@ -141,6 +143,87 @@ Deno.serve(async (req) => {
       console.error("[create-tenant] error creando membership, revirtiendo clinic:", membershipErr);
       await rollback();
       return json({ error: membershipErr.message }, 500);
+    }
+
+    // Selección de módulos à la carte del wizard + suscripción en la cuenta Stripe SaaS
+    // (separada de STRIPE_KEY, que es la cuenta de cobros a pacientes).
+    const moduloIds: string[] = Array.isArray(body.modulo_ids) ? body.modulo_ids : [];
+    if (moduloIds.length === 0) {
+      await rollback();
+      return json({ error: "Selecciona al menos un módulo" }, 400);
+    }
+
+    const { data: modulos, error: modulosErr } = await admin
+      .from("catalogo_modulos")
+      .select("id, stripe_price_id")
+      .in("id", moduloIds)
+      .eq("activo", true);
+
+    if (modulosErr || !modulos?.length || modulos.some((m) => !m.stripe_price_id)) {
+      await rollback();
+      return json({ error: "Módulos inválidos o sin stripe_price_id configurado" }, 400);
+    }
+
+    // Customer en la cuenta Stripe SaaS (separada de la cuenta de pacientes)
+    const saasCustomerRes = await fetch("https://api.stripe.com/v1/customers", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${STRIPE_SAAS_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ name: body.name, email: body.contacto_facturacion_email ?? "" }),
+    });
+    if (!saasCustomerRes.ok) {
+      await rollback();
+      return json({ error: "No se pudo crear customer Stripe SaaS" }, 502);
+    }
+    const saasCustomer = await saasCustomerRes.json();
+
+    // Subscription con 1 Subscription Item por módulo elegido
+    const subParams = new URLSearchParams({ customer: saasCustomer.id });
+    modulos.forEach((m, i) => {
+      subParams.append(`items[${i}][price]`, m.stripe_price_id as string);
+    });
+    const subRes = await fetch("https://api.stripe.com/v1/subscriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${STRIPE_SAAS_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: subParams,
+    });
+    if (!subRes.ok) {
+      // Borra el customer SaaS huérfano además del rollback normal
+      await fetch(`https://api.stripe.com/v1/customers/${saasCustomer.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${STRIPE_SAAS_KEY}` },
+      }).catch((e) => console.error("[create-tenant] no se pudo borrar customer SaaS huerfano:", e));
+      await rollback();
+      return json({ error: "No se pudo crear la suscripción Stripe SaaS" }, 502);
+    }
+    const subscription = await subRes.json();
+
+    const { error: updateErr } = await admin
+      .from("clinics")
+      .update({
+        stripe_customer_id_saas: saasCustomer.id,
+        stripe_subscription_id_saas: subscription.id,
+        subscription_status: "trialing",
+      })
+      .eq("id", clinicId);
+
+    if (updateErr) {
+      await rollback();
+      return json({ error: "No se pudo guardar la suscripción en clinics" }, 500);
+    }
+
+    const { error: cmError } = await admin
+      .from("cliente_modulos")
+      .insert(moduloIds.map((modulo_id) => ({ clinic_id: clinicId, modulo_id })));
+
+    if (cmError) {
+      await rollback();
+      return json({ error: "No se pudieron guardar los módulos del cliente" }, 500);
     }
 
     return json({ clinic_id: clinicId });
