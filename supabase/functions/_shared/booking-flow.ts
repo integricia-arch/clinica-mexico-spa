@@ -11,20 +11,29 @@ export interface Servicio {
   nombre: string;
 }
 
-export type BookingStep = "esperando_servicio" | "esperando_horario" | "esperando_confirmacion";
+export type BookingStep =
+  | "esperando_nombre_paciente"
+  | "esperando_apellidos_paciente"
+  | "esperando_servicio"
+  | "esperando_horario"
+  | "esperando_confirmacion";
 
 export interface BookingState {
   step: BookingStep;
   servicioId?: string;
   slot?: BookingSlot;
+  nombrePaciente?: string;
 }
 
-export type BookingAction = "none" | "book" | "handoff_human" | "reset";
+export type BookingAction = "none" | "book" | "handoff_human" | "reset" | "crear_paciente_y_continuar";
 
 export interface BookingResult {
   state: BookingState | null;
   reply: string;
   action: BookingAction;
+  // Solo presente cuando action === "crear_paciente_y_continuar": datos capturados en el
+  // wizard de alta para que el caller (webhook) inserte la fila en `patients`.
+  pacienteNuevo?: { nombre: string; apellidos: string };
 }
 
 const MENU_SALUDO = "Escribe *CITA* para agendar, o *HUMANO* para hablar con alguien del equipo.";
@@ -45,6 +54,9 @@ export function nextBookingState(
   input: string,
   servicios: Servicio[],
   slots: BookingSlot[],
+  // Identidad WhatsApp nueva nace con patient_id = null (ver CLAUDE.md). Sin paciente
+  // vinculado, CITA entra primero al wizard de alta en vez de esperando_servicio.
+  tienePacienteVinculado = true,
 ): BookingResult {
   const texto = input.trim().toUpperCase();
 
@@ -54,6 +66,13 @@ export function nextBookingState(
 
   if (!current) {
     if (texto === "CITA") {
+      if (!tienePacienteVinculado) {
+        return {
+          state: { step: "esperando_nombre_paciente" },
+          reply: "Para agendar tu primera cita necesitamos algunos datos. ¿Cuál es tu nombre?",
+          action: "none",
+        };
+      }
       return {
         state: { step: "esperando_servicio" },
         reply: `¿Qué servicio necesitas?\n${listarServicios(servicios)}`,
@@ -61,6 +80,31 @@ export function nextBookingState(
       };
     }
     return { state: null, reply: MENU_SALUDO, action: "none" };
+  }
+
+  if (current.step === "esperando_nombre_paciente") {
+    const nombre = input.trim();
+    if (!nombre) {
+      return { state: current, reply: "No entendí. ¿Cuál es tu nombre?", action: "none" };
+    }
+    return {
+      state: { step: "esperando_apellidos_paciente", nombrePaciente: nombre },
+      reply: "¿Cuáles son tus apellidos?",
+      action: "none",
+    };
+  }
+
+  if (current.step === "esperando_apellidos_paciente") {
+    const apellidos = input.trim();
+    if (!apellidos) {
+      return { state: current, reply: "No entendí. ¿Cuáles son tus apellidos?", action: "none" };
+    }
+    return {
+      state: { step: "esperando_servicio" },
+      reply: `¿Qué servicio necesitas?\n${listarServicios(servicios)}`,
+      action: "crear_paciente_y_continuar",
+      pacienteNuevo: { nombre: current.nombrePaciente ?? "", apellidos },
+    };
   }
 
   if (current.step === "esperando_servicio") {

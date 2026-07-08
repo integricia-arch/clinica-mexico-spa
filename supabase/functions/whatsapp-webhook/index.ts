@@ -1,6 +1,6 @@
 // supabase/functions/whatsapp-webhook/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { nextBookingState, type BookingSlot, type Servicio } from "../_shared/booking-flow.ts";
+import { nextBookingState, type BookingSlot, type BookingStep, type Servicio } from "../_shared/booking-flow.ts";
 
 const SUPABASE_URL = Deno["env"].get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno["env"].get(["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_"))!;
@@ -155,11 +155,12 @@ Deno.serve(async (req) => {
 
     const current = sesion?.flow_step
       ? {
-          step: sesion.flow_step as "esperando_servicio" | "esperando_horario" | "esperando_confirmacion",
+          step: sesion.flow_step as BookingStep,
           servicioId: sesion.servicio_id ?? undefined,
           slot: sesion.slot_propuesto && sesion.doctor_id && sesion.servicio_id
             ? { doctorId: sesion.doctor_id, servicioId: sesion.servicio_id, start: sesion.slot_propuesto }
             : undefined,
+          nombrePaciente: (sesion.flow_data as { nombrePaciente?: string } | null)?.nombrePaciente ?? undefined,
         }
       : null;
 
@@ -195,13 +196,44 @@ Deno.serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
-    const slots = current?.step === "esperando_horario" || (!current && textoNorm === "CITA")
+    // CRITICO 1 (fix): "esperando_servicio" tambien necesita slots -- es el paso en el que el
+    // usuario ACABA de elegir servicio y nextBookingState calcula el horario disponible para
+    // ese servicio. Sin esta rama slots quedaba en [] y el flujo nunca pasaba de elegir servicio.
+    const slots = current?.step === "esperando_horario" || current?.step === "esperando_servicio" ||
+        (!current && textoNorm === "CITA")
       ? await calcularSlotsLibres(clinicId, servicios.map((s) => s.id))
       : current?.slot
       ? [current.slot]
       : [];
 
-    const result = nextBookingState(current, texto, servicios, slots);
+    const result = nextBookingState(current, texto, servicios, slots, !!identidad!.patient_id);
+
+    if (result.action === "crear_paciente_y_continuar" && result.pacienteNuevo) {
+      const { data: nuevoPaciente, error: pacienteError } = await admin
+        .from("patients")
+        .insert({
+          clinic_id: clinicId,
+          nombre: result.pacienteNuevo.nombre,
+          apellidos: result.pacienteNuevo.apellidos,
+          telefono: from,
+          activo: true,
+        })
+        .select("id")
+        .single();
+      if (pacienteError) {
+        console.error("[whatsapp-webhook] error creando patient:", pacienteError, "external_id:", from);
+      } else {
+        const { error: linkError } = await admin
+          .from("identidades_canal")
+          .update({ patient_id: nuevoPaciente.id })
+          .eq("id", identidad!.id);
+        if (linkError) {
+          console.error("[whatsapp-webhook] error vinculando patient_id a identidad_canal:", linkError);
+        } else {
+          identidad = { ...identidad!, patient_id: nuevoPaciente.id };
+        }
+      }
+    }
 
     if (result.action === "book" && current?.step === "esperando_confirmacion" && current.slot) {
       if (!identidad!.patient_id) {
@@ -227,6 +259,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // bot_sesiones.flow_data es NOT NULL DEFAULT '{}'::jsonb -- nunca pasar null.
+    const flowData = result.state?.nombrePaciente ? { nombrePaciente: result.state.nombrePaciente } : {};
+
     if (sesion) {
       await admin
         .from("bot_sesiones")
@@ -235,6 +270,7 @@ Deno.serve(async (req) => {
           servicio_id: result.state?.servicioId ?? null,
           doctor_id: result.state?.slot?.doctorId ?? null,
           slot_propuesto: result.state?.slot?.start ?? null,
+          flow_data: flowData,
         })
         .eq("id", sesion.id);
     } else if (result.state) {
@@ -243,6 +279,7 @@ Deno.serve(async (req) => {
         clinic_id: clinicId,
         flow_step: result.state.step,
         servicio_id: result.state.servicioId ?? null,
+        flow_data: flowData,
       });
     }
 
