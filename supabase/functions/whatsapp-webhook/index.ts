@@ -222,6 +222,8 @@ Deno.serve(async (req) => {
         .single();
       if (pacienteError) {
         console.error("[whatsapp-webhook] error creando patient:", pacienteError, "external_id:", from);
+        result.reply = "Tuvimos un problema registrando tus datos. Escribe *HUMANO* para que te ayudemos.";
+        result.state = null;
       } else {
         const { error: linkError } = await admin
           .from("identidades_canal")
