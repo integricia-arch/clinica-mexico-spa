@@ -60,6 +60,7 @@ import ARCOAdmin from "@/pages/ARCOAdmin";
 import ExpedienteElectronico from "@/pages/ExpedienteElectronico";
 import Lealtad from "@/pages/Lealtad";
 import AdminTenants from "@/pages/AdminTenants";
+import WhatsappAlertas from "@/pages/WhatsappAlertas";
 
 const LoyaltyApp = React.lazy(() =>
   import('@/pwa/LoyaltyApp').then(m => ({ default: m.LoyaltyApp }))
@@ -136,6 +137,7 @@ const App = () => (
                         <Route path="/admin/diagnostico-multiclinica" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDiagnosticoMulticlinica /></ProtectedRoute>} />
                         <Route path="/admin/arco" element={<ProtectedRoute allowedRoles={["admin"]}><ARCOAdmin /></ProtectedRoute>} />
                         <Route path="/admin/tenants" element={<ProtectedRoute><AdminTenants /></ProtectedRoute>} />
+                        <Route path="/admin/whatsapp-alertas" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsappAlertas /></ProtectedRoute>} />
                         <Route path="/inteligencia" element={<ProtectedRoute allowedRoles={["admin","manager"]}><BI /></ProtectedRoute>} />
                         <Route path="/ayuda-interna" element={<ProtectedRoute allowedRoles={["admin","manager","receptionist"]}><AyudaInterna /></ProtectedRoute>} />
                         <Route path="/lealtad" element={<ProtectedRoute allowedRoles={["admin","manager"]}><Lealtad /></ProtectedRoute>} />
