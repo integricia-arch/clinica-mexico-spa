@@ -42,3 +42,6 @@ verify_jwt = true
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.whatsapp-audit-mensajes]
+verify_jwt = false
