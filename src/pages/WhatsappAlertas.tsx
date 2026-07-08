@@ -14,31 +14,43 @@ export default function WhatsappAlertas() {
   const { user } = useAuth();
   const [alertas, setAlertas] = useState<AlertaRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    setError(null);
+    const { data, error: fetchErr } = await supabase
       .from("whatsapp_audit_alertas")
       .select("id, clinic_id, tipo, referencia_id, detectado_at")
       .eq("resuelto", false)
       .order("detectado_at", { ascending: false });
-    setAlertas((data ?? []) as AlertaRow[]);
+    if (fetchErr) {
+      setError(fetchErr.message);
+    } else {
+      setAlertas((data ?? []) as AlertaRow[]);
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const resolver = async (id: string) => {
-    await supabase
+    setError(null);
+    const { error: updateErr } = await supabase
       .from("whatsapp_audit_alertas")
       .update({ resuelto: true, resuelto_at: new Date().toISOString(), resuelto_por: user?.id })
       .eq("id", id);
-    await load();
+    if (updateErr) {
+      setError(updateErr.message);
+    } else {
+      await load();
+    }
   };
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Alertas de mensajes WhatsApp</h1>
+      {error && <p className="text-red-600 mb-4">{error}</p>}
       {loading ? <p>Cargando...</p> : (
         <table className="w-full border-collapse">
           <thead>
