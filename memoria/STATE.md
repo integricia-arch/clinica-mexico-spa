@@ -1,8 +1,78 @@
 # Estado del Proyecto — clinica-mexico-spa
 
 ## Fase actual
-Producción activa — pivote SaaS multi-tenant en marcha (Fase A mergeada a
-main; Fase D diseñada y planeada, PAUSADA antes de ejecutar por costo)
+Producción activa — pivote SaaS multi-tenant en marcha (Fase A y Fase D
+mergeadas a main; quedan Fases B y C sin brainstormear)
+
+## Completado (Jul 8, 2026 — sesión 23 — Fase D ejecutada completa: WhatsApp v1 + agentes — sesión carísima, ~$1465)
+
+Ejecución completa del plan de Fase D (`docs/superpowers/plans/2026-07-07-fase-d-whatsapp-agentes.md`)
+via subagent-driven-development, mismo worktree que Fase A. 11 commits
+mergeados a `main` (fast-forward, `0b41241..ec4aa41`).
+
+### Qué se implementó
+1. Schema: `clinics.whatsapp_status`, tabla `whatsapp_audit_alertas` (RLS
+   scoped por clínica + platform_staff), RPCs `set_clinic_whatsapp_number`/
+   `set_clinic_whatsapp_verified`.
+2. Módulo puro `_shared/booking-flow.ts`: state machine determinística
+   (sin LLM) para agendar cita por WhatsApp.
+3. Edge function `whatsapp-webhook`: recibe mensajes de Meta Cloud API,
+   verifica firma HMAC (tiempo constante), rutea por `phone_number_id` →
+   `clinic_id`, agenda cita. NO toca `telegram-webhook.ts` (decisión de
+   alcance: WhatsApp v1 standalone, sin el agente LLM completo de
+   Telegram — ver spec para el porqué).
+4. Edge function `whatsapp-test-send` + sección en `/admin/tenants` para
+   conectar/verificar número por hospital.
+5. Cron `whatsapp-audit-mensajes` (cada 15 min): detecta recordatorios de
+   cita vencidos sin mensaje enviado, genera alertas.
+6. Panel `/admin/whatsapp-alertas`: lista y resuelve alertas.
+
+### Bugs reales encontrados y cerrados durante la ejecución
+- Task 1: RPCs SECURITY DEFINER tenían `anon` con EXECUTE pese al REVOKE
+  FROM PUBLIC (default privileges del proyecto) — corregido.
+- Task 4: `set_clinic_whatsapp_verified` usaba `auth.uid()` pero se
+  llamaba desde contexto `service_role` (siempre NULL) — siempre fallaba
+  silenciosamente, el número nunca quedaba verificado. Corregido con
+  `_user_id` explícito.
+- Task 5: `upsert(onConflict:)` chocaba con el índice único PARCIAL de
+  `whatsapp_audit_alertas` — el cron corría pero nunca creaba alertas.
+  Corregido con select-then-insert idempotente.
+- **Whole-branch review final (opus) — 2 CRÍTICOS que dejaban el bot no
+  funcional de punta a punta:**
+  1. El webhook pasaba `slots=[]` al seleccionar servicio — el flujo
+     nunca avanzaba más allá de elegir servicio.
+  2. Contacto WhatsApp nuevo (patient_id=null, caso por defecto) recibía
+     confirmación falsa "¡Listo!" sin que existiera cita ni paciente
+     (`appointments.patient_id` es NOT NULL). Se decidió construir un
+     wizard corto de alta de paciente (nombre+apellidos, teléfono
+     autocompletado) en vez de solo escalar a humano.
+  Ambos corregidos + re-revisados. Un importante adicional (confirmación
+  falsa si el insert de paciente fallaba) también cerrado.
+
+### Incidente operativo (documentado para /aprende)
+Un subagente (Task 6, luego repetido conceptualmente en otro dispatch)
+no respetó el worktree pese a instrucción explícita de verificar `pwd` —
+commiteó en el checkout principal (`C:\Users\pablo\clinica-mexico-spa`)
+sobre un `main` local desactualizado. Nada se perdió (`origin/main` nunca
+se tocó sin push explícito), recuperado via cherry-pick con un conflicto
+trivial de 2 líneas. Lección: verificar `git log`/`branch` real tras cada
+dispatch, no solo confiar en el "status:DONE" reportado.
+
+### Pendiente (no bloqueante, documentado en el ledger)
+- `calcularSlotsLibres` no consulta citas existentes (posible doble
+  booking, mitigado por requerir confirmación humana vía status
+  'solicitada').
+- `fetch` a Graph API sin timeout.
+- `types.ts` desactualizado (columnas whatsapp_* no generadas).
+- Handshake GET de verificación de Meta no implementado.
+- Fase D.2 (extraer núcleo compartido con el agente LLM de Telegram —
+  recordatorios, recetas, memoria de paciente por WhatsApp): fuera de
+  alcance de esta fase, spec ya lo documenta como siguiente paso.
+
+### Pasos operativos pendientes (no automatizables)
+Dar de alta un número real de WhatsApp en Meta Business Suite, pegarlo en
+`/admin/tenants`, verificar con el botón de mensaje de prueba, smoke test
+real end-to-end.
 
 ## Completado (Jul 7, 2026 — sesión 22 — Fase D: spec + plan, sin ejecutar — sesión carísima, ~$1052)
 
