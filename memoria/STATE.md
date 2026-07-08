@@ -3,7 +3,109 @@
 ## Fase actual
 Producción activa — pivote SaaS multi-tenant en marcha (Fase A mergeada a
 main; Fase D diseñada y planeada, PAUSADA antes de ejecutar por costo; Fase B
-diseñada y planeada, PAUSADA antes de ejecutar por costo)
+**Tasks 1-8 completas y revisadas en el worktree `.claude/worktrees/fase-b-pagos-saas`
+(rama `worktree-fase-b-pagos-saas`), FALTA MERGE A MAIN + verificación manual en
+browser + carga de módulos reales al catálogo** — ver sesión 24 continuación abajo)
+
+## Completado (Jul 8, 2026 — sesión 24 continuación — Fase B: Tasks 3-8 ejecutadas y revisadas, código completo en worktree, sin merge a main)
+
+Continuación de la misma sesión 24 (mismo worktree, mismo día). Se retomó desde
+Task 3 (donde había quedado pausado por costo) y se ejecutaron Tasks 3-8 del
+plan `docs/superpowers/plans/2026-07-08-fase-b-pagos-saas.md` completas:
+
+- **Task 3** — edge function `stripe-webhook-saas` (billing SaaS separado del
+  de pagos-paciente, cuenta Stripe distinta).
+- **Task 4** — cron diario `lock-expired-grace-clinics` (bloqueo duro tras
+  vencer gracia) + tabla `saas_billing_alerts` nueva.
+- **Task 5** — `create-tenant` extendido: crea la suscripción Stripe SaaS
+  à la carte por módulos al dar de alta un cliente nuevo. **Nota: código
+  completo pero el deploy de la Edge Function actualizada NO fue confirmado
+  en esta sesión — verificar en sesión de merge.**
+- **Task 6** — selector de módulos à la carte en el wizard + columna de
+  suscripción en `/admin/tenants`.
+- **Task 7** — `SubscriptionGateBanner` (banner de gracia) +
+  `SubscriptionBlockedScreen` (bloqueo duro cuando la gracia venció).
+- **Task 8** — regenerar `types.ts` (confirmado: `clinics` con las 4 columnas
+  SaaS de Task 1, tipos nuevos para `catalogo_modulos`/`cliente_modulos`/
+  `costos_reales_mensuales`/`saas_billing_alerts`), `tsc --noEmit` 0 errores,
+  `npm run build` limpio, commit `64c46c6`. `get_advisors` final: sin
+  regresiones de seguridad nuevas atribuibles a Fase B (el único hallazgo real
+  — `anon` con `EXECUTE` directo sobre `user_has_clinic_access` — es
+  PRE-EXISTENTE a Fase B completa, confirmado vía `proacl`, no lo introdujo
+  ninguna task de esta fase). Sí hay hallazgos de PERFORMANCE nuevos
+  atribuibles a Tasks 2/4 (`auth_rls_initplan` en 5 policies de las tablas
+  nuevas + `unindexed_foreign_keys` en `cliente_modulos.modulo_id`) —
+  mecánico, bajo riesgo, mismo patrón que sesión 20 ya aplicó al resto del
+  proyecto, queda pendiente para sesión de limpieza de performance.
+  **Step 4 del plan (verificación manual en browser con sesión super_admin
+  real) NO se pudo ejecutar en este entorno** — sin browser real disponible.
+  Reporte completo con los pasos exactos pendientes:
+  `.claude/worktrees/fase-b-pagos-saas/.superpowers/sdd/task-8-report.md`.
+
+### Pendientes reales antes de considerar Fase B "en producción"
+1. **Merge de `worktree-fase-b-pagos-saas` a `main`** — no se hizo, todo el
+   código vive solo en el worktree todavía.
+2. **Verificación manual en browser** (Task 8 Step 4): dar de alta cliente de
+   prueba con 2 módulos vía wizard, confirmar Subscription en Stripe test-mode
+   y columna "Suscripción" en `/admin/tenants`, forzar `past_due` con gracia
+   vigente → confirmar banner + resto de la app accesible, forzar gracia
+   vencida → confirmar `SubscriptionBlockedScreen` + que las queries a datos
+   clínicos devuelven vacío por RLS, limpiar la clínica de prueba al terminar.
+3. **Catálogo de módulos sin datos reales** — `catalogo_modulos` tiene 0 filas;
+   nombre, precio y `stripe_price_id` de cada módulo son decisión de negocio
+   pendiente del usuario (nunca inventar precios).
+4. **Cuenta Stripe SaaS en test-mode** hasta que el usuario confirme go-live.
+5. **`create-tenant` con selección de módulos**: confirmar que el deploy de la
+   Edge Function actualizada (Task 5) ya está en producción, no solo el código
+   commiteado.
+6. **Seguridad pre-existente fuera de alcance de Fase B**: `anon` puede
+   ejecutar `user_has_clinic_access` directamente (grant individual antiguo,
+   ni PUBLIC-inherited) — recomendado `REVOKE EXECUTE ... FROM anon;` en
+   sesión de seguridad aparte.
+
+## Completado (Jul 8, 2026 — sesión 24 primera mitad — Fase B: Tasks 1-2 ejecutadas, PAUSADA de nuevo por costo, ~$54)
+
+Continuación de sesión 23 (mismo worktree `.claude/worktrees/fase-b-pagos-saas`,
+rama `worktree-fase-b-pagos-saas`). Ejecución del plan de 8 tasks vía
+`subagent-driven-development`.
+
+- **Task 1 — CERRADO ✅** (commits `8b906e5..908d12b`, review clean).
+  Migración `20260708120000_clinics_saas_billing_columns.sql`: columnas
+  `stripe_customer_id_saas`, `stripe_subscription_id_saas`,
+  `subscription_status` (default `trialing`), `grace_period_ends_at` en
+  `clinics`; `user_has_clinic_access()` extendida para bloquear por gracia
+  vencida (`SET search_path=public` + revoke/grant correctos, verificado en
+  prod: activa→true, past_due-en-gracia→true, gracia-vencida→false).
+  Nota: el implementer subagente cometió sin querer en un worktree aislado
+  distinto (`isolation:"worktree"` del Agent tool crea worktree nuevo pese a
+  path explícito en el prompt) — recuperado con `git cherry-pick` limpio, sin
+  perder trabajo ni re-aplicar la migración real. **Aprendizaje para
+  continuar:** al dispatchar subagentes de esta fase, NUNCA pasar
+  `isolation:"worktree"` al Agent tool — solo instrucción explícita en el
+  prompt de trabajar en el path exacto del worktree ya existente.
+- **Task 2 — código completo, REVIEW PENDIENTE** (commits `908d12b..64eeaae`).
+  Migración `20260708120100_catalogo_modulos_schema.sql`: tablas
+  `catalogo_modulos`/`cliente_modulos`/`costos_reales_mensuales` con RLS
+  (staff_all + authenticated_read en catálogo, staff_all + own_clinic_read en
+  cliente_modulos, staff_all-only en costos). Sin filas semilla (intencional
+  por plan). El reviewer subagente fue dispatchado 2 veces y ambas murió por
+  límite de sesión de la cuenta (no error de código) — el trabajo YA ESTÁ
+  COMMITEADO y correcto, solo falta el paso de revisión.
+- Sesión cerrada por costo (~$54) antes de Task 3. Ledger actualizado en
+  `.claude/worktrees/fase-b-pagos-saas/.superpowers/sdd/progress.md` con
+  instrucciones exactas para agente fresco: re-dispatchar reviewer de Task 2
+  (brief/report/diff ya generados y presentes en el repo), luego continuar
+  Tasks 3-8 del plan sin pausar.
+- Archivos sueltos `task-6-report.md` y contenido viejo de `task-1-report.md`
+  en esa misma carpeta `.superpowers/sdd/` son de una feature NO relacionada
+  (búsqueda tolerante/Almacén, rama distinta) — ignorar, no confundir con
+  Fase B.
+
+**Pendiente inmediato:** sesión nueva, mismo worktree ya listo. Retomar
+review de Task 2 → Tasks 3-8 (edge function stripe-webhook-saas, cron
+lock-expired-grace-clinics, extender create-tenant, frontend AdminTenants +
+banner/bloqueo de suscripción, regenerar tipos + e2e). Plan completo:
+`docs/superpowers/plans/2026-07-08-fase-b-pagos-saas.md`.
 
 ## Completado (Jul 8, 2026 — sesión 23 — Fase B: spec + plan, worktree listo, ejecución PAUSADA por costo, ~$55)
 
