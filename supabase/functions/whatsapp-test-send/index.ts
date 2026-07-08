@@ -62,6 +62,13 @@ Deno.serve(async (req) => {
     return json({ error: err?.error?.message ?? `Meta respondió ${metaRes.status}` }, 500);
   }
 
-  await admin.rpc("set_clinic_whatsapp_verified", { _clinic_id: body.clinic_id });
+  const { error: verifyErr } = await admin.rpc("set_clinic_whatsapp_verified", {
+    _clinic_id: body.clinic_id,
+    _user_id: userData.user.id,
+  });
+  if (verifyErr) {
+    console.error("[whatsapp-test-send] error marcando numero verificado:", verifyErr);
+    return json({ error: `Mensaje enviado pero no se pudo marcar como verificado: ${verifyErr.message}` }, 500);
+  }
   return json({ ok: true });
 });
