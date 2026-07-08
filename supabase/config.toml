@@ -48,3 +48,6 @@ verify_jwt = false
 
 [functions.whatsapp-audit-mensajes]
 verify_jwt = false
+
+[functions.lock-expired-grace-clinics]
+verify_jwt = false
