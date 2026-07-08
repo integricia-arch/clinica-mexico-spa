@@ -10,6 +10,8 @@ interface TenantRow {
   status: string;
   plan: string;
   created_at: string;
+  whatsapp_status: string | null;
+  whatsapp_phone_number_id: string | null;
 }
 
 export default function AdminTenants() {
@@ -37,7 +39,7 @@ export default function AdminTenants() {
     setLoading(true);
     const { data, error: fetchErr } = await supabase
       .from("clinics")
-      .select("id, code, name, status, plan, created_at")
+      .select("id, code, name, status, plan, created_at, whatsapp_status, whatsapp_phone_number_id")
       .order("created_at", { ascending: false });
     if (fetchErr) {
       setError(fetchErr.message);
@@ -62,6 +64,40 @@ export default function AdminTenants() {
     });
     if (rpcErr) {
       setError(rpcErr.message);
+      return;
+    }
+    await load();
+  };
+
+  const [waTarget, setWaTarget] = useState<TenantRow | null>(null);
+  const [waForm, setWaForm] = useState({ phone_number_id: "", waba_id: "", test_to: "" });
+  const [waSaving, setWaSaving] = useState(false);
+  const [waError, setWaError] = useState<string | null>(null);
+
+  const guardarNumero = async () => {
+    if (!waTarget) return;
+    setWaSaving(true);
+    setWaError(null);
+    const { error } = await supabase.rpc("set_clinic_whatsapp_number", {
+      _clinic_id: waTarget.id,
+      _phone_number_id: waForm.phone_number_id,
+      _waba_id: waForm.waba_id,
+    });
+    setWaSaving(false);
+    if (error) { setWaError(error.message); return; }
+    await load();
+  };
+
+  const enviarPrueba = async () => {
+    if (!waTarget) return;
+    setWaSaving(true);
+    setWaError(null);
+    const { data, error } = await supabase.functions.invoke("whatsapp-test-send", {
+      body: { clinic_id: waTarget.id, to: waForm.test_to },
+    });
+    setWaSaving(false);
+    if (error || (data as { error?: string })?.error) {
+      setWaError((data as { error?: string })?.error ?? error?.message ?? "Error desconocido");
       return;
     }
     await load();
@@ -129,6 +165,16 @@ export default function AdminTenants() {
                       Suspender
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      setWaTarget(t);
+                      setWaForm({ phone_number_id: t.whatsapp_phone_number_id ?? "", waba_id: "", test_to: "" });
+                      setWaError(null);
+                    }}
+                    className="text-blue-700 underline ml-3"
+                  >
+                    WhatsApp
+                  </button>
                 </td>
               </tr>
             ))}
@@ -186,6 +232,59 @@ export default function AdminTenants() {
                 className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
               >
                 {submitting ? "Creando..." : "Crear"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {waTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-1">WhatsApp — {waTarget.name}</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Estado: {waTarget.whatsapp_status ?? "no configurado"}
+            </p>
+            {waError && <p className="text-red-600 mb-2">{waError}</p>}
+            <div className="space-y-2">
+              <input
+                placeholder="Phone Number ID"
+                value={waForm.phone_number_id}
+                onChange={(e) => setWaForm({ ...waForm, phone_number_id: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+              <input
+                placeholder="WABA ID"
+                value={waForm.waba_id}
+                onChange={(e) => setWaForm({ ...waForm, waba_id: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button
+                onClick={guardarNumero}
+                disabled={waSaving || !waForm.phone_number_id || !waForm.waba_id}
+                className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+              >
+                {waSaving ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+            <hr className="my-4" />
+            <div className="space-y-2">
+              <input
+                placeholder="Número de prueba (ej. +5215512345678)"
+                value={waForm.test_to}
+                onChange={(e) => setWaForm({ ...waForm, test_to: e.target.value })}
+                className="w-full border p-2 rounded"
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button onClick={() => setWaTarget(null)} className="px-4 py-2">Cerrar</button>
+              <button
+                onClick={enviarPrueba}
+                disabled={waSaving || !waForm.test_to}
+                className="bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
+              >
+                {waSaving ? "Enviando..." : "Enviar mensaje de prueba"}
               </button>
             </div>
           </div>
