@@ -16,6 +16,9 @@ verify_jwt = true
 [functions.stripe-webhook]
 verify_jwt = false
 
+[functions.stripe-webhook-saas]
+verify_jwt = false
+
 [functions.stripe-checkout]
 verify_jwt = false
 
@@ -44,4 +47,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.whatsapp-audit-mensajes]
+verify_jwt = false
+
+[functions.lock-expired-grace-clinics]
 verify_jwt = false

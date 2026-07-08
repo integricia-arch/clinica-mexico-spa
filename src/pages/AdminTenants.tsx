@@ -12,6 +12,14 @@ interface TenantRow {
   created_at: string;
   whatsapp_status: string | null;
   whatsapp_phone_number_id: string | null;
+  subscription_status: string;
+  grace_period_ends_at: string | null;
+}
+
+interface Modulo {
+  id: string;
+  nombre: string;
+  precio_centavos: number;
 }
 
 export default function AdminTenants() {
@@ -20,6 +28,24 @@ export default function AdminTenants() {
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modulos, setModulos] = useState<Modulo[]>([]);
+
+  // ponytail: estados del wizard/modales declarados aquí (antes de cualquier
+  // return condicional) — moverlos abajo de un `if (...) return` viola las
+  // reglas de hooks de React y causaba "Rendered more hooks than during the
+  // previous render" en cuanto isPlatformStaff pasaba de null a un booleano.
+  const [waTarget, setWaTarget] = useState<TenantRow | null>(null);
+  const [waForm, setWaForm] = useState({ phone_number_id: "", waba_id: "", test_to: "" });
+  const [waSaving, setWaSaving] = useState(false);
+  const [waError, setWaError] = useState<string | null>(null);
+
+  const [showWizard, setShowWizard] = useState(false);
+  const [form, setForm] = useState({
+    code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "",
+  });
+  const [moduloIds, setModuloIds] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -39,7 +65,9 @@ export default function AdminTenants() {
     setLoading(true);
     const { data, error: fetchErr } = await supabase
       .from("clinics")
-      .select("id, code, name, status, plan, created_at, whatsapp_status, whatsapp_phone_number_id")
+      .select(
+        "id, code, name, status, plan, created_at, whatsapp_status, whatsapp_phone_number_id, subscription_status, grace_period_ends_at"
+      )
       .order("created_at", { ascending: false });
     if (fetchErr) {
       setError(fetchErr.message);
@@ -53,6 +81,19 @@ export default function AdminTenants() {
   useEffect(() => {
     if (!clinicLoading && isGlobalAdmin) load();
   }, [clinicLoading, isGlobalAdmin, load]);
+
+  useEffect(() => {
+    if (!clinicLoading && isGlobalAdmin) {
+      (async () => {
+        const result = await supabase
+          .from("catalogo_modulos")
+          .select("id, nombre, precio_centavos")
+          .eq("activo", true);
+        const data = (result as { data?: Modulo[] })?.data;
+        setModulos((data ?? []) as Modulo[]);
+      })();
+    }
+  }, [clinicLoading, isGlobalAdmin]);
 
   if (clinicLoading) return <div className="p-6">Cargando...</div>;
   if (!isGlobalAdmin) return <Navigate to="/" replace />;
@@ -68,11 +109,6 @@ export default function AdminTenants() {
     }
     await load();
   };
-
-  const [waTarget, setWaTarget] = useState<TenantRow | null>(null);
-  const [waForm, setWaForm] = useState({ phone_number_id: "", waba_id: "", test_to: "" });
-  const [waSaving, setWaSaving] = useState(false);
-  const [waError, setWaError] = useState<string | null>(null);
 
   const guardarNumero = async () => {
     if (!waTarget) return;
@@ -103,18 +139,11 @@ export default function AdminTenants() {
     await load();
   };
 
-  const [showWizard, setShowWizard] = useState(false);
-  const [form, setForm] = useState({
-    code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-
   const submitWizard = async () => {
     setSubmitting(true);
     setFormError(null);
     const { data, error: fnErr } = await supabase.functions.invoke("create-tenant", {
-      body: form,
+      body: { ...form, modulo_ids: moduloIds },
     });
     setSubmitting(false);
     if (fnErr || (data as { error?: string })?.error) {
@@ -123,6 +152,7 @@ export default function AdminTenants() {
     }
     setShowWizard(false);
     setForm({ code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "" });
+    setModuloIds([]);
     await load();
   };
 
@@ -143,6 +173,7 @@ export default function AdminTenants() {
               <th>Código</th>
               <th>Estado</th>
               <th>Plan</th>
+              <th>Suscripción</th>
               <th>Alta</th>
               <th>Acciones</th>
             </tr>
@@ -154,6 +185,12 @@ export default function AdminTenants() {
                 <td>{t.code}</td>
                 <td>{t.status}</td>
                 <td>{t.plan}</td>
+                <td>
+                  {t.subscription_status}
+                  {t.subscription_status === "past_due" && t.grace_period_ends_at
+                    ? ` (hasta ${new Date(t.grace_period_ends_at).toLocaleDateString("es-MX")})`
+                    : ""}
+                </td>
                 <td>{new Date(t.created_at).toLocaleDateString("es-MX")}</td>
                 <td>
                   {t.status === "suspended" ? (
@@ -223,12 +260,29 @@ export default function AdminTenants() {
                 onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
                 className="w-full border p-2 rounded"
               />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Módulos</p>
+                {modulos.map((m) => (
+                  <label key={m.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={moduloIds.includes(m.id)}
+                      onChange={(e) =>
+                        setModuloIds(
+                          e.target.checked ? [...moduloIds, m.id] : moduloIds.filter((id) => id !== m.id)
+                        )
+                      }
+                    />
+                    {m.nombre} — ${(m.precio_centavos / 100).toFixed(2)}
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setShowWizard(false)} className="px-4 py-2">Cancelar</button>
               <button
                 onClick={submitWizard}
-                disabled={submitting || !form.code || !form.name || !form.admin_email}
+                disabled={submitting || !form.code || !form.name || !form.admin_email || moduloIds.length === 0}
                 className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
               >
                 {submitting ? "Creando..." : "Crear"}
