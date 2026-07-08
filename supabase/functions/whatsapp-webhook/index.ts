@@ -20,7 +20,15 @@ async function verificarFirma(rawBody: string, signatureHeader: string | null): 
   );
   const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
   const hex = Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  return signatureHeader === `sha256=${hex}`;
+  const expected = `sha256=${hex}`;
+  // Comparacion de tiempo constante: primero longitud (early-return aceptable, no filtra
+  // el contenido de la firma), luego XOR acumulado sobre TODOS los caracteres sin cortar antes.
+  if (signatureHeader.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= signatureHeader.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 async function enviarTexto(phoneNumberId: string, to: string, body: string) {
@@ -73,161 +81,176 @@ Deno.serve(async (req) => {
   const firmaValida = await verificarFirma(rawBody, req.headers.get("X-Hub-Signature-256"));
   if (!firmaValida) return new Response("forbidden", { status: 403 });
 
-  const payload = JSON.parse(rawBody);
-  const change = payload?.entry?.[0]?.changes?.[0]?.value;
-  const phoneNumberId = change?.metadata?.phone_number_id;
-  const mensaje = change?.messages?.[0];
+  // Global Constraint del plan: Meta debe recibir SIEMPRE 200 tras la firma valida, aunque el
+  // procesamiento interno truene (insert duplicado por carrera de mensajes, fetch a Graph API
+  // caido, etc.) -- si no, Meta reintenta/deshabilita el webhook. El try/catch/finally cubre
+  // toda la logica de negocio; solo el 403 de firma invalida (arriba) queda fuera.
+  try {
+    const payload = JSON.parse(rawBody);
+    const change = payload?.entry?.[0]?.changes?.[0]?.value;
+    const phoneNumberId = change?.metadata?.phone_number_id;
+    const mensaje = change?.messages?.[0];
 
-  if (!phoneNumberId || !mensaje) return new Response("ok", { status: 200 });
+    if (!phoneNumberId || !mensaje) return new Response("ok", { status: 200 });
 
-  const { data: clinic } = await admin
-    .from("clinics")
-    .select("id, whatsapp_status")
-    .eq("whatsapp_phone_number_id", phoneNumberId)
-    .maybeSingle();
+    const { data: clinic } = await admin
+      .from("clinics")
+      .select("id, whatsapp_status")
+      .eq("whatsapp_phone_number_id", phoneNumberId)
+      .maybeSingle();
 
-  if (!clinic || clinic.whatsapp_status !== "verified") {
-    console.error("[whatsapp-webhook] phone_number_id sin clinica verificada:", phoneNumberId);
-    return new Response("ok", { status: 200 });
-  }
+    if (!clinic || clinic.whatsapp_status !== "verified") {
+      console.error("[whatsapp-webhook] phone_number_id sin clinica verificada:", phoneNumberId);
+      return new Response("ok", { status: 200 });
+    }
 
-  const clinicId = clinic.id as string;
-  const from = mensaje.from as string;
-  const texto = mensaje.text?.body ?? "";
+    const clinicId = clinic.id as string;
+    const from = mensaje.from as string;
+    const texto = mensaje.text?.body ?? "";
 
-  let { data: identidad } = await admin
-    .from("identidades_canal")
-    .select("id, patient_id")
-    .eq("clinic_id", clinicId)
-    .eq("canal_id", "whatsapp")
-    .eq("external_id", from)
-    .maybeSingle();
-
-  if (!identidad) {
-    const { data: nueva } = await admin
+    let { data: identidad } = await admin
       .from("identidades_canal")
-      .insert({ clinic_id: clinicId, canal_id: "whatsapp", external_id: from })
       .select("id, patient_id")
-      .single();
-    identidad = nueva;
-  }
+      .eq("clinic_id", clinicId)
+      .eq("canal_id", "whatsapp")
+      .eq("external_id", from)
+      .maybeSingle();
 
-  let { data: conv } = await admin
-    .from("conversaciones")
-    .select("id")
-    .eq("identidad_canal_id", identidad!.id)
-    .eq("status", "activa")
-    .maybeSingle();
-
-  if (!conv) {
-    const { data: nuevaConv } = await admin
-      .from("conversaciones")
-      .insert({ identidad_canal_id: identidad!.id, clinic_id: clinicId, status: "activa" })
-      .select("id")
-      .single();
-    conv = nuevaConv;
-  }
-
-  const { data: sesion } = await admin
-    .from("bot_sesiones")
-    .select("id, flow_step, flow_data, servicio_id, slot_propuesto, doctor_id")
-    .eq("conversacion_id", conv!.id)
-    .maybeSingle();
-
-  const current = sesion?.flow_step
-    ? {
-        step: sesion.flow_step as "esperando_servicio" | "esperando_horario" | "esperando_confirmacion",
-        servicioId: sesion.servicio_id ?? undefined,
-        slot: sesion.slot_propuesto && sesion.doctor_id && sesion.servicio_id
-          ? { doctorId: sesion.doctor_id, servicioId: sesion.servicio_id, start: sesion.slot_propuesto }
-          : undefined,
+    if (!identidad) {
+      const { data: nueva, error: identidadError } = await admin
+        .from("identidades_canal")
+        .insert({ clinic_id: clinicId, canal_id: "whatsapp", external_id: from })
+        .select("id, patient_id")
+        .single();
+      if (identidadError) {
+        console.error("[whatsapp-webhook] error creando identidad_canal:", identidadError, "external_id:", from);
       }
-    : null;
+      identidad = nueva;
+    }
 
-  // duracion_minutos se necesita para calcular fecha_fin al reservar; no forma parte del
-  // tipo Servicio del modulo puro (Task 2), pero la fila real de "servicios" lo trae.
-  const { data: serviciosData } = await admin
-    .from("servicios")
-    .select("id, nombre, duracion_minutos")
-    .eq("clinic_id", clinicId)
-    .eq("activo", true);
-  const servicios = (serviciosData ?? []) as (Servicio & { duracion_minutos: number })[];
+    let { data: conv } = await admin
+      .from("conversaciones")
+      .select("id")
+      .eq("identidad_canal_id", identidad!.id)
+      .eq("status", "activa")
+      .maybeSingle();
 
-  const textoNorm = texto.trim().toUpperCase();
+    if (!conv) {
+      const { data: nuevaConv, error: convError } = await admin
+        .from("conversaciones")
+        .insert({ identidad_canal_id: identidad!.id, clinic_id: clinicId, status: "activa" })
+        .select("id")
+        .single();
+      if (convError) {
+        console.error("[whatsapp-webhook] error creando conversacion:", convError, "identidad_canal_id:", identidad!.id);
+      }
+      conv = nuevaConv;
+    }
 
-  // ponytail: nextBookingState (Task 2, ya aprobado) no maneja servicios=[] dentro del flujo de
-  // agendar -> el usuario queda en loop sin salida (indice nunca matchea, siempre "No entendi").
-  // Cortamos aca antes de invocar el modulo puro si no hay servicios activos configurados,
-  // salvo que el usuario pida HUMANO (ese escape siempre debe funcionar).
-  const entraOEstaEnFlujo = current !== null || textoNorm === "CITA";
-  if (entraOEstaEnFlujo && textoNorm !== "HUMANO" && servicios.length === 0) {
-    console.error("[whatsapp-webhook] sin servicios activos para la clinica:", clinicId);
+    const { data: sesion } = await admin
+      .from("bot_sesiones")
+      .select("id, flow_step, flow_data, servicio_id, slot_propuesto, doctor_id")
+      .eq("conversacion_id", conv!.id)
+      .maybeSingle();
+
+    const current = sesion?.flow_step
+      ? {
+          step: sesion.flow_step as "esperando_servicio" | "esperando_horario" | "esperando_confirmacion",
+          servicioId: sesion.servicio_id ?? undefined,
+          slot: sesion.slot_propuesto && sesion.doctor_id && sesion.servicio_id
+            ? { doctorId: sesion.doctor_id, servicioId: sesion.servicio_id, start: sesion.slot_propuesto }
+            : undefined,
+        }
+      : null;
+
+    // duracion_minutos se necesita para calcular fecha_fin al reservar; no forma parte del
+    // tipo Servicio del modulo puro (Task 2), pero la fila real de "servicios" lo trae.
+    const { data: serviciosData } = await admin
+      .from("servicios")
+      .select("id, nombre, duracion_minutos")
+      .eq("clinic_id", clinicId)
+      .eq("activo", true);
+    const servicios = (serviciosData ?? []) as (Servicio & { duracion_minutos: number })[];
+
+    const textoNorm = texto.trim().toUpperCase();
+
+    // ponytail: nextBookingState (Task 2, ya aprobado) no maneja servicios=[] dentro del flujo de
+    // agendar -> el usuario queda en loop sin salida (indice nunca matchea, siempre "No entendi").
+    // Cortamos aca antes de invocar el modulo puro si no hay servicios activos configurados,
+    // salvo que el usuario pida HUMANO (ese escape siempre debe funcionar).
+    const entraOEstaEnFlujo = current !== null || textoNorm === "CITA";
+    if (entraOEstaEnFlujo && textoNorm !== "HUMANO" && servicios.length === 0) {
+      console.error("[whatsapp-webhook] sin servicios activos para la clinica:", clinicId);
+      if (sesion) {
+        await admin
+          .from("bot_sesiones")
+          .update({ flow_step: null, servicio_id: null, doctor_id: null, slot_propuesto: null })
+          .eq("id", sesion.id);
+      }
+      await enviarTexto(
+        phoneNumberId,
+        from,
+        "No hay servicios configurados en este momento, escribe HUMANO para que te ayudemos.",
+      );
+      return new Response("ok", { status: 200 });
+    }
+
+    const slots = current?.step === "esperando_horario" || (!current && textoNorm === "CITA")
+      ? await calcularSlotsLibres(clinicId, servicios.map((s) => s.id))
+      : current?.slot
+      ? [current.slot]
+      : [];
+
+    const result = nextBookingState(current, texto, servicios, slots);
+
+    if (result.action === "book" && current?.step === "esperando_confirmacion" && current.slot) {
+      if (!identidad!.patient_id) {
+        console.error("[whatsapp-webhook] intento de reservar sin patient_id vinculado, external_id:", from);
+      } else {
+        const servicioReservado = servicios.find((s) => s.id === current.slot!.servicioId);
+        const inicio = new Date(current.slot.start);
+        const fin = new Date(inicio.getTime() + (servicioReservado?.duracion_minutos ?? 30) * 60000);
+        const { error: insertError } = await admin.from("appointments").insert({
+          clinic_id: clinicId,
+          patient_id: identidad!.patient_id,
+          doctor_id: current.slot.doctorId,
+          servicio_id: current.slot.servicioId,
+          fecha_inicio: current.slot.start,
+          fecha_fin: fin.toISOString(),
+          status: "solicitada",
+          origen: "whatsapp",
+          conversacion_id: conv!.id,
+        });
+        if (insertError) {
+          console.error("[whatsapp-webhook] error creando appointment:", insertError);
+        }
+      }
+    }
+
     if (sesion) {
       await admin
         .from("bot_sesiones")
-        .update({ flow_step: null, servicio_id: null, doctor_id: null, slot_propuesto: null })
+        .update({
+          flow_step: result.state?.step ?? null,
+          servicio_id: result.state?.servicioId ?? null,
+          doctor_id: result.state?.slot?.doctorId ?? null,
+          slot_propuesto: result.state?.slot?.start ?? null,
+        })
         .eq("id", sesion.id);
+    } else if (result.state) {
+      await admin.from("bot_sesiones").insert({
+        conversacion_id: conv!.id,
+        clinic_id: clinicId,
+        flow_step: result.state.step,
+        servicio_id: result.state.servicioId ?? null,
+      });
     }
-    await enviarTexto(
-      phoneNumberId,
-      from,
-      "No hay servicios configurados en este momento, escribe HUMANO para que te ayudemos.",
-    );
+
+    await enviarTexto(phoneNumberId, from, result.reply);
+
+    return new Response("ok", { status: 200 });
+  } catch (e) {
+    console.error("[whatsapp-webhook] error procesando mensaje:", e);
     return new Response("ok", { status: 200 });
   }
-
-  const slots = current?.step === "esperando_horario" || (!current && textoNorm === "CITA")
-    ? await calcularSlotsLibres(clinicId, servicios.map((s) => s.id))
-    : current?.slot
-    ? [current.slot]
-    : [];
-
-  const result = nextBookingState(current, texto, servicios, slots);
-
-  if (result.action === "book" && current?.step === "esperando_confirmacion" && current.slot) {
-    if (!identidad!.patient_id) {
-      console.error("[whatsapp-webhook] intento de reservar sin patient_id vinculado, external_id:", from);
-    } else {
-      const servicioReservado = servicios.find((s) => s.id === current.slot!.servicioId);
-      const inicio = new Date(current.slot.start);
-      const fin = new Date(inicio.getTime() + (servicioReservado?.duracion_minutos ?? 30) * 60000);
-      const { error: insertError } = await admin.from("appointments").insert({
-        clinic_id: clinicId,
-        patient_id: identidad!.patient_id,
-        doctor_id: current.slot.doctorId,
-        servicio_id: current.slot.servicioId,
-        fecha_inicio: current.slot.start,
-        fecha_fin: fin.toISOString(),
-        status: "solicitada",
-        origen: "whatsapp",
-        conversacion_id: conv!.id,
-      });
-      if (insertError) {
-        console.error("[whatsapp-webhook] error creando appointment:", insertError);
-      }
-    }
-  }
-
-  if (sesion) {
-    await admin
-      .from("bot_sesiones")
-      .update({
-        flow_step: result.state?.step ?? null,
-        servicio_id: result.state?.servicioId ?? null,
-        doctor_id: result.state?.slot?.doctorId ?? null,
-        slot_propuesto: result.state?.slot?.start ?? null,
-      })
-      .eq("id", sesion.id);
-  } else if (result.state) {
-    await admin.from("bot_sesiones").insert({
-      conversacion_id: conv!.id,
-      clinic_id: clinicId,
-      flow_step: result.state.step,
-      servicio_id: result.state.servicioId ?? null,
-    });
-  }
-
-  await enviarTexto(phoneNumberId, from, result.reply);
-
-  return new Response("ok", { status: 200 });
 });
