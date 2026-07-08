@@ -39,3 +39,6 @@ verify_jwt = true
 
 [functions.loyalty-arco-request]
 verify_jwt = true
+
+[functions.whatsapp-webhook]
+verify_jwt = false
