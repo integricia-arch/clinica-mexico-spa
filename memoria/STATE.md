@@ -2,7 +2,55 @@
 
 ## Fase actual
 Producción activa — pivote SaaS multi-tenant en marcha (Fase A mergeada a
-main; Fase D diseñada y planeada, PAUSADA antes de ejecutar por costo)
+main; Fase D diseñada y planeada, PAUSADA antes de ejecutar por costo; Fase B
+diseñada y planeada, PAUSADA antes de ejecutar por costo)
+
+## Completado (Jul 8, 2026 — sesión 23 — Fase B: spec + plan, worktree listo, ejecución PAUSADA por costo, ~$55)
+
+Retomado el pivote SaaS siguiendo el orden acordado (A→D→B→C). Brainstorm +
+spec + plan de Fase B (control de pagos SaaS / suscripción recurrente).
+
+- Spec: `docs/superpowers/specs/2026-07-08-fase-b-pagos-saas-design.md`.
+  Decisiones clave del brainstorm: gate mixto por gracia (7 días,
+  `grace_period_ends_at`), cuenta Stripe **separada** de la de pagos-paciente
+  (aislamiento total de dinero), wizard "Nuevo cliente" (Fase A) extendido
+  para crear la suscripción SaaS al alta, modelo de precio **à la carte**
+  por módulo — implementa el esquema `catalogo_modulos`/`cliente_modulos`/
+  `costos_reales_mensuales` que sesión 20 había diseñado sin aplicar nunca.
+- Plan: `docs/superpowers/plans/2026-07-08-fase-b-pagos-saas.md`. 8 tasks
+  TDD con código completo. Insight de diseño: el gate de suscripción
+  **extiende la misma función `user_has_clinic_access()`** que ya usan las
+  16 policies `RESTRICTIVE` de Fase A — cero policies nuevas, el bloqueo
+  duro por gracia vencida es automático (comparación de fecha en cada
+  request), sin necesitar que un cron cambie estado.
+- Worktree creado: `.claude/worktrees/fase-b-pagos-saas`
+  (rama `worktree-fase-b-pagos-saas`), mergeado con los 2 commits de
+  spec+plan de `main`. Archivo de variables de entorno local copiado a mano
+  al worktree (gitignoreado, no viene solo al crear el worktree). Baseline
+  verificado: 13/13 archivos, 121/121 tests OK.
+- **Ejecución (subagent-driven-development) PAUSADA antes de aplicar nada**:
+  el primer subagente implementer (Task 1 — migración de columnas SaaS +
+  extensión del gate) se auto-pausó por costo sin tocar DB ni git (mismo
+  patrón que Fase D en sesión 22). Costo de sesión ~$55 al momento de
+  pausar. **Ningún cambio de schema real fue aplicado a producción todavía.**
+- Nota de seguridad de la sesión: al escribir el plan, el hook local
+  "Optimus Prime CarosIA" (`~/.claude/skills/mcp-sentinel`) bloqueó los
+  `Write`/`Edit` por falsos positivos — coincidencias de texto contra
+  nombres reales de variables de entorno de Supabase/Stripe que el hook
+  trata como indicador de compromiso, sin permitir excepción vía allowlist
+  para ese chequeo en particular. Se desactivó el hook temporalmente en
+  la config global (a pedido explícito del usuario) solo para escribir el
+  archivo de plan, y se restauró de inmediato — confirmado restaurado.
+  Pendiente si se repite: el chequeo de variables sensibles del hook
+  (`check_sensitive_env` en `optimus_preflight.py`) no respeta el
+  allowlist de usuario en absoluto (bug real del hook, no solo config
+  faltante) — arreglarlo requeriría tocar el script del hook mismo.
+
+**Pendiente:** ejecutar las 8 tasks del plan (Task 1 en adelante) en sesión
+nueva, dentro del worktree ya creado y listo (`.claude/worktrees/fase-b-pagos-saas`).
+Confirmado con el usuario: las migraciones de Fase B se aplican directo a
+producción (no hay ambiente de staging separado, mismo patrón ya usado en
+Fase A) — sin objeción pendiente para retomar.
 
 ## Completado (Jul 7, 2026 — sesión 22 — Fase D: spec + plan, sin ejecutar — sesión carísima, ~$1052)
 
