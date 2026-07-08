@@ -20,6 +20,8 @@ import {
 import LockScreen from "@/components/LockScreen";
 import ManualButton from "@/components/ManualButton";
 import HelpChatWidget from "@/components/HelpChatWidget";
+import { SubscriptionGateBanner } from "@/components/SubscriptionGateBanner";
+import { SubscriptionBlockedScreen } from "@/components/SubscriptionBlockedScreen";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -73,7 +75,7 @@ const FOCUS_ROUTES = ["/caja", "/farmacia"];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, roles, signOut } = useAuth();
-  const { activeClinicId, error: clinicError } = useActiveClinic();
+  const { activeClinicId, activeClinic, error: clinicError } = useActiveClinic();
   const { isOpen: sidebarOpen, isCollapsed, close: closeSidebar, openDrawer, toggle, isTablet } = useSidebarState();
   const [escaladasCount, setEscaladasCount] = useState(0);
   const [ayudaEscaladaCount, setAyudaEscaladaCount] = useState(0);
@@ -142,8 +144,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const sidebarWidth = isCollapsed ? "w-16" : "w-64";
   const contentMargin = isFocusRoute ? "" : isCollapsed ? "xl:ml-16" : "xl:ml-64";
 
+  // Bloqueo duro: suscripción cancelada, o gracia por pago pendiente ya vencida
+  // (RLS ya bloquea los datos reales; esta pantalla evita mostrar una UI rota
+  // con queries fallando en silencio — todos los hooks ya corrieron arriba).
+  const graceExpired =
+    activeClinic?.subscription_status === "past_due" &&
+    !!activeClinic.grace_period_ends_at &&
+    new Date(activeClinic.grace_period_ends_at) < new Date();
+
+  if (activeClinic && (activeClinic.subscription_status === "canceled" || graceExpired)) {
+    return <SubscriptionBlockedScreen clinic={activeClinic} />;
+  }
+
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
+      {activeClinic && <SubscriptionGateBanner clinic={activeClinic} />}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[200] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
