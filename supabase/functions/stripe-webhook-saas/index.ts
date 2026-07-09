@@ -13,7 +13,6 @@ const SUPABASE_URL = denoEnv.get("SUPABASE_URL")!;
 const SUPABASE_SVC = denoEnv.get(["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_"))!;
 const WEBHOOK_SECRET = denoEnv.get(["STRIPE", "SAAS", "WEBHOOK", "SECRET"].join("_"));
 const STRIPE_PACIENTES_KEY = denoEnv.get(["STRIPE", "SECRET", "KEY"].join("_"))!;
-const STRIPE_SAAS_KEY_PROV = denoEnv.get(["STRIPE", "SAAS", "SECRET", "KEY"].join("_"))!;
 
 const encoder = new TextEncoder();
 
@@ -144,6 +143,7 @@ Deno.serve(async (req: Request) => {
           headers: {
             Authorization: `Bearer ${STRIPE_PACIENTES_KEY}`,
             "Content-Type": "application/x-www-form-urlencoded",
+            "Idempotency-Key": `customer-pacientes-${clinicId}`,
           },
           body: new URLSearchParams({
             name: claimed.name as string,
