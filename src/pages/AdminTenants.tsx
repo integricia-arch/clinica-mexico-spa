@@ -162,38 +162,50 @@ export default function AdminTenants() {
   const submitWizard = async () => {
     setSubmitting(true);
     setFormError(null);
-    const { ok, status, data } = await callFn("create-tenant", {
-      ...form,
-      code: crypto.randomUUID(),
-      modulo_ids: moduloIds,
-    });
-    setSubmitting(false);
-    if (!ok || data?.error) {
-      setFormError(data?.error ?? `Error ${status}`);
-      return;
+    // ponytail: try/catch/finally para que una excepción (red, CORS, etc.)
+    // no deje el botón trabado en "Creando..." sin mensaje de error.
+    try {
+      const { ok, status, data } = await callFn("create-tenant", {
+        ...form,
+        code: crypto.randomUUID(),
+        modulo_ids: moduloIds,
+      });
+      if (!ok || data?.error) {
+        setFormError(data?.error ?? `Error ${status}`);
+        return;
+      }
+      setPendingClinicId(data?.clinic_id ?? null);
+    } catch (e) {
+      setFormError((e as Error).message ?? "Error de red inesperado");
+    } finally {
+      setSubmitting(false);
     }
-    setPendingClinicId(data?.clinic_id ?? null);
   };
 
   const submitVerifyCode = async () => {
     if (!pendingClinicId) return;
     setSubmitting(true);
     setFormError(null);
-    const { ok, status, data } = await callFn("verify-tenant-code", {
-      clinic_id: pendingClinicId,
-      code: verifyCode,
-    });
-    setSubmitting(false);
-    if (!ok || data?.error) {
-      setFormError(data?.error ?? `Error ${status}`);
-      return;
+    try {
+      const { ok, status, data } = await callFn("verify-tenant-code", {
+        clinic_id: pendingClinicId,
+        code: verifyCode,
+      });
+      if (!ok || data?.error) {
+        setFormError(data?.error ?? `Error ${status}`);
+        return;
+      }
+      setShowWizard(false);
+      setPendingClinicId(null);
+      setVerifyCode("");
+      setForm({ code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "" });
+      setModuloIds([]);
+      await load();
+    } catch (e) {
+      setFormError((e as Error).message ?? "Error de red inesperado");
+    } finally {
+      setSubmitting(false);
     }
-    setShowWizard(false);
-    setPendingClinicId(null);
-    setVerifyCode("");
-    setForm({ code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "" });
-    setModuloIds([]);
-    await load();
   };
 
   return (
