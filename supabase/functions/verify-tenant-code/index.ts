@@ -122,10 +122,12 @@ Deno.serve(async (req) => {
         { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } },
       );
       const lookupBody = await lookupRes.json().catch(() => null);
-      const existing = lookupBody?.users?.[0];
+      const existing = (lookupBody?.users ?? []).find((u: { email?: string }) => u.email === adminEmail);
       if (!lookupRes.ok || !existing) {
         console.error("[verify-tenant-code] email ya registrado pero no se pudo resolver user_id:", lookupBody);
-        return json({ error: "El email ya está registrado y no se pudo resolver el usuario" }, 500);
+        return json({
+          error: `El email ya está registrado y no se pudo resolver el usuario — lookup status ${lookupRes.status}, body: ${JSON.stringify(lookupBody)?.slice(0, 300)}`,
+        }, 500);
       }
       adminUserId = existing.id;
     } else {

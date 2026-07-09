@@ -1,11 +1,204 @@
 # Estado del Proyecto — clinica-mexico-spa
 
 ## Fase actual
-Producción activa — pivote SaaS multi-tenant en marcha (Fase A y Fase D
-mergeadas a main; Fase B **Tasks 1-8 completas y revisadas en el worktree
-`.claude/worktrees/fase-b-pagos-saas` (rama `worktree-fase-b-pagos-saas`),
-FALTA MERGE A MAIN + verificación manual en browser + carga de módulos reales
-al catálogo** — ver sesión 24 continuación abajo; Fase C sin brainstormear)
+Producción activa — pivote SaaS multi-tenant en marcha. Sesión 25 (Jul 9)
+resolvió el bug del 500 genérico y reescribió el alta de tenant como flujo
+de 2 pasos (verificación por email antes de cobrar), pero **el flujo NO
+está completo ni correcto todavía — ver sesión 25 abajo para el diseño real
+pendiente (Checkout de Stripe + webhook de provisioning) antes de
+considerar esto terminado.** Fase C sin brainstormear.
+
+## Completado (Jul 9, 2026 — sesión 25 — fix 500 genérico + flujo 2-pasos verificación, DISEÑO INCOMPLETO)
+
+Sesión cerrada por costo extremo (>$180). Resumen para continuar en sesión
+nueva — **no dar por resuelto el alta de tenant, falta la pieza de cobro
+real antes de dar acceso.**
+
+### Bugs reales encontrados y fixeados (desplegados a prod)
+1. **Causa real del 500 genérico original**: `AdminTenants.tsx` usaba
+   `supabase.functions.invoke()`, que en error NO expone el body de la
+   respuesta (solo el mensaje genérico "Edge Function returned a non-2xx
+   status code"). Fix: fetch crudo + lectura directa del body. **Learning
+   nuevo:** cualquier wizard/form que llame una Edge Function debe usar
+   fetch crudo si necesita mostrar el mensaje de error real al usuario —
+   `functions.invoke()` lo esconde.
+2. **Acceso dinámico por corchetes a las variables de entorno de Vite
+   rompe en build de producción** — "Cannot read properties of undefined".
+   Vite solo reemplaza estáticamente los accesos con notación de punto
+   literal a `import` + `meta` + `env` + `VITE_X`. Fix: exportar la
+   constante desde `client.ts` (que sí usa notación de punto literal) e
+   importarla, en vez de leer las env vars dinámicamente en cada archivo.
+3. **`admin.auth.admin.listUsers()` + `.find()` en memoria** para resolver
+   un usuario ya-registrado fallaba en silencio. Cambiado a fetch directo al
+   endpoint admin de GoTrue con filtro por email — expuso el bug real de
+   fondo (punto siguiente).
+4. **BUG DE INFRAESTRUCTURA SIN RESOLVER**: `GET /auth/v1/admin/users` de
+   Supabase Auth (GoTrue) devuelve `500 {"error_code":"unexpected_failure",
+   "msg":"Database error finding users"}` en este proyecto
+   (`kyfkvdyxpvpiacyymldc`) — no es bug de nuestro código, es error interno
+   de Supabase Auth. Rodeado por ahora evitando esa rama (usar `admin_email`
+   que no exista aún). **Pendiente investigar a fondo** (posible índice roto
+   en `auth.users`/`auth.identities`, o abrir ticket con Supabase) si se
+   necesita volver a resolver usuarios existentes por email.
+
+### Rediseño del alta de tenant — 2 pasos (incompleto)
+`create-tenant` ahora: valida RFC (regex MX)/emails/módulos, crea `clinics`
+en `pendiente_verificacion`, genera código 6 dígitos, lo manda por email
+(Resend, mismo patrón que `notify-new-user`). Nueva función
+`verify-tenant-code`: valida código+expiración (30min) y recién ahí — TODO
+en un solo paso — crea Stripe customer, invita admin, crea membership,
+crea Stripe SaaS customer+subscription, inscribe módulos. Columnas nuevas
+en `clinics`: `verification_code`, `verification_code_expires_at`,
+`pending_admin_email`, `pending_modulo_ids`. El `code` del cliente ya no se
+pide manual — se auto-genera con `crypto.randomUUID()`.
+
+### ⚠️ PROBLEMA DE FONDO SIN RESOLVER — se da acceso sin cobrar
+`verify-tenant-code` crea la Stripe subscription SIN pedir tarjeta nunca
+(customer sin payment method, sin `trial_period_days` real) y en el MISMO
+paso invita al admin + crea membership + inscribe módulos. **Hoy el admin
+obtiene acceso a la plataforma y a sus módulos sin que haya pasado ningún
+cobro real.** El `subscription_status: 'trialing'` guardado es inventado
+por nosotros, no viene de Stripe.
+
+**Propuesta de flujo correcto (discutida con el usuario, NO implementada):**
+1. `create-tenant` (ya existe, ok) — datos + código por email.
+2. `verify-tenant-code` (HAY QUE RECORTARLO) — valida código, pasa
+   `clinics.status` a `pendiente_pago` (estado nuevo), crea una **Stripe
+   Checkout Session** (modo subscription, price_ids de los módulos) y
+   devuelve la URL. Nada de invite/membership/módulos todavía.
+3. Admin paga en el Checkout de Stripe (tarjeta real, trial real si aplica).
+4. **Webhook** (`checkout.session.completed` o
+   `customer.subscription.created`) confirma el pago y RECIÉN AHÍ invita
+   admin, crea membership, inscribe módulos, marca `clinics.status =
+   'active'` con el `subscription_status` real de Stripe.
+   ⚠️ Ya existe `stripe-webhook-saas` en prod (creado sesión 24, eventos
+   `invoice.paid`/`invoice.payment_failed`/`customer.subscription.deleted`)
+   — **revisar su código antes de escribir el paso 4** para no duplicar
+   lógica de provisioning ahí vs en otro lado.
+5. Admin acepta invite → login → **sin confirmar si el frontend ya filtra
+   qué módulos mostrar según `cliente_modulos` del `clinic_id`** — revisar.
+
+### Limpieza hecha
+2 clínicas de prueba (`p`, status `pendiente_verificacion`) borradas de
+`clinics` a pedido del usuario, para cargar de cero.
+
+### Commits pendientes de verificar
+Último cambio (v3 de `verify-tenant-code`, el que agregó el detalle de
+diagnóstico del error de GoTrue) se deployó a prod pero **puede no estar
+commiteado a git** — confirmar con `git status` al retomar.
+
+### Costo de sesión
+>$180 — igual que sesión 24, otra vez cerrada por costo extremo antes de
+completar el rediseño. **Patrón repetido 2 sesiones seguidas.** Considerar
+usar Supabase CLI local (`supabase functions deploy`) en vez de MCP cuando
+se van a hacer varias iteraciones seguidas sobre la misma función — cada
+`deploy_edge_function` vía MCP manda el archivo completo cada vez.
+
+## Completado (Jul 8, 2026 — sesión 24 cierre — Fase B mergeada a prod + catálogo cargado + BUG PENDIENTE en create-tenant)
+
+Continuación de sesión 24 (mismo día). Costo de sesión se disparó a >$198 —
+sesión cerrada por costo extremo, sin diagnosticar el bug de abajo.
+
+### Hecho en esta parte de la sesión
+1. **Merge de Fase B a `main` + push a origin** — resuelta divergencia de
+   `main` local vs `origin/main` (4 commits propios + 1 remoto, conflicto
+   trivial solo en `STATE.md`, ambos lados aditivos). Deploy a Cloudflare
+   confirmado OK. CI "Quality checks" estaba roto por `@testing-library/dom`
+   faltante como devDependency explícito (era peerDependency, nunca se
+   instalaba) — fix commiteado y pusheado (`7beba33`), CI en verde.
+2. **Catálogo de módulos cargado en prod** (`catalogo_modulos`, 5 filas):
+   research de costeo de sesión 20 recuperado desde un Artifact viejo
+   (nunca persistido en el repo — ojo a futuro, guardar en `docs/` o
+   `memoria/` cualquier research de negocio importante). Precios: Opción C
+   del research (premium) ×3 +16% IVA (precios en México YA incluyen IVA,
+   ver `memoria/conceptos/iva-mexico.md`) — decisión explícita del usuario,
+   no arbitraria. Precios finales (MXN/mes, IVA-incluido):
+   Agenda $1,749 · POS/Farmacia $3,149 · Almacén $1,599 · Compras $1,499
+   (el usuario creó el Price en Stripe en $1,499, no $1,399 como se había
+   calculado — se ajustó `precio_centavos` en DB para matchear) ·
+   Facturación CFDI $2,449. Los 5 `stripe_price_id` (`price_1Tr4...`) ya
+   cargados, productos creados en la cuenta Stripe SaaS modo Test.
+3. **Secrets seteados**: `STRIPE_SAAS_SECRET_KEY`, `STRIPE_SAAS_WEBHOOK_SECRET`
+   (confirmado con `supabase secrets list`, nunca se vieron los valores).
+   Webhook endpoint Stripe creado apuntando a
+   `.../functions/v1/stripe-webhook-saas`, eventos `invoice.paid` /
+   `invoice.payment_failed` / `customer.subscription.deleted`.
+4. **`create-tenant` deployado** con la lógica de suscripción SaaS (Task 5).
+5. **`integric.ia@gmail.com` agregado a `platform_staff`** (es_global_admin
+   ahora true) — la ruta `/admin/tenants` **no tiene link en el sidebar**,
+   solo se accede escribiendo la URL directo (`AdminTenants.tsx` nunca se
+   linkeó desde el nav — pendiente si se quiere agregar).
+
+### BLOQUEANTE sin resolver — 500 en create-tenant al usar el wizard
+Usuario probó el wizard manualmente en `/admin/tenants` (código `a-0000000000000001`,
+nombre "San PAblo", rfc `rirp8110129ca`, admin_email `contacto@integrika.mx`,
+2+ módulos seleccionados) → error genérico del cliente Supabase-JS
+("Edge Function returned a non-2xx status code"). Confirmado por SQL: **no
+quedó ninguna fila huérfana en `clinics`** (el `rollback()` se ejecutó bien,
+o falló antes de crear la fila).
+
+**Diagnóstico intentado, sin resultado concluyente:**
+- `mcp__supabase__get_logs(service="edge-function")` solo devuelve logs de
+  acceso HTTP (método/status/tiempo) — **NO expone el `console.error` interno
+  de la función**, confirmando el learning ya documentado arriba
+  ("`console.log`/`console.error` internos NO aparecen en ningún log del
+  Dashboard"). Se confirmó 1 request `POST 500` a `create-tenant`, sin más
+  detalle recuperable por este medio.
+- Lectura completa de `supabase/functions/create-tenant/index.ts`: el
+  `rollback()` se invoca en TODOS los puntos de fallo post-creación de
+  `clinics` (módulos inválidos, Stripe SaaS customer/subscription, update de
+  `clinics`, insert de `cliente_modulos`), así que la ausencia de fila
+  huérfana no aísla en qué paso exacto falló — cualquiera de esos returns
+  produce el mismo 500 genérico visto por el usuario.
+
+**2 hipótesis sin confirmar, más probables:**
+1. `admin_email = contacto@integrika.mx` **ya existe** como usuario Supabase
+   (es la cuenta admin del usuario). El código intenta
+   `inviteUserByEmail()`, y si falla espera que el mensaje matchee el regex
+   `/already.*registered|already.*exists/i` para caer al fallback de
+   "buscar usuario existente" — si el mensaje real de Supabase no matchea
+   ese patrón exacto, cae directo al error 500 sin fallback.
+2. El campo `rfc` (`rirp8110129ca`, 13 caracteres, formato tipo persona
+   física) podría chocar contra un CHECK constraint en `clinics.rfc` no
+   revisado en esta sesión.
+
+**Próximo paso sugerido para sesión nueva (barato, hacer PRIMERO):**
+```sql
+SELECT id, email FROM auth.users WHERE email = 'contacto@integrika.mx';
+```
+Si existe → confirma hipótesis 1, revisar el mensaje real de error de
+`inviteUserByEmail` para ese caso (probablemente necesita ajustar el regex
+o usar un flujo distinto para admin ya-existente). Si no existe, revisar
+constraint de `rfc` en `clinics` (`\d clinics` o
+`information_schema.check_constraints`). Considerar probar el wizard de
+nuevo con un `admin_email` que NO exista aún como usuario, para descartar
+hipótesis 1 rápido y barato antes de tocar código.
+
+### Decisión arquitectónica pendiente de diseñar — separación de bases de datos (usuarios/staff vs pacientes)
+Usuario pidió (fin de sesión 24, sin ejecutar nada): separar por seguridad
+la base de datos de usuarios/clientes (staff, admins de hospital,
+platform_staff) de la de pacientes (datos clínicos). Hoy TODO vive en un
+solo proyecto Supabase/Postgres (`kyfkvdyxpvpiacyymldc`), separado solo por
+RLS + `clinic_id` (diseño completo de Fase A). Separar en bases reales
+distintas implica: sin FKs/joins cross-proyecto, rehacer como llamadas API o
+sync de datos, tocar Fase A y Fase B completas (`user_has_clinic_access`,
+`create-tenant`, `clinic_memberships`) — semanas de trabajo, NO un fix chico.
+**NO se inició nada** — decisión de no arrancar por costo de sesión ya
+extremo (>$228). **Próximo paso: sesión nueva, brainstorming/planning
+dedicado (no ad-hoc) antes de tocar código.** Pendiente entender el motivo
+específico (¿LFPDPPP? ¿auditoría? ¿requisito de cliente?) para diseñar la
+separación correcta — no se preguntó a fondo en esta sesión.
+
+### Pendientes reales (heredados, aún vigentes)
+- Verificación manual en browser completa (Task 8 paso 4) — bloqueada por
+  el bug de arriba.
+- Hallazgo de seguridad pre-existente: `anon` con `EXECUTE` directo sobre
+  `user_has_clinic_access` — revocar en sesión aparte.
+- Hallazgos de performance nuevos (Tasks 2/4): `auth_rls_initplan` en 5
+  policies + `unindexed_foreign_keys` en `cliente_modulos.modulo_id`.
+- Agregar link a `/admin/tenants` en el sidebar (nunca existió).
+- Cuenta Stripe SaaS sigue en modo Test — confirmar go-live a modo Live
+  cuando el wizard funcione sin errores.
 
 ## Completado (Jul 8, 2026 — sesión 24 continuación — Fase B: Tasks 3-8 ejecutadas y revisadas, código completo en worktree, sin merge a main)
 
