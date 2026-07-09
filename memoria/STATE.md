@@ -1,16 +1,64 @@
 # Estado del Proyecto — clinica-mexico-spa
 
 ## Fase actual
-Producción activa — pivote SaaS multi-tenant en marcha. Sesión 25 resolvió
-el bug del 500 genérico y reescribió el alta de tenant como flujo de 2 pasos
-(verificación por email antes de cobrar). Sesión 26 (Jul 8) cerró el diseño
-(spec) del Checkout de Stripe. Sesión 27 (Jul 8) implementó el plan completo
-con subagent-driven-development y mergeó a `main` (commit `019efc1`).
-Sesión 28 (Jul 9) corrió el **smoke test real contra Stripe test mode —
-EXITOSO**: código → Checkout → pago con tarjeta test → webhook →
-provisioning completo (clinic activa, membership, 5 módulos). **El flujo de
-Checkout de Stripe está completo, probado end-to-end y funcionando.** Fase C
-sin brainstormear.
+Producción activa — pivote SaaS multi-tenant en marcha. Sesión 27 (Jul 8)
+implementó Checkout de Stripe y mergeó a `main`. Sesión 28 (Jul 9) corrió
+smoke test real contra Stripe — exitoso. Sesión 29 (Jul 9) encontró y está
+resolviendo un bug real de fondo en `create-tenant`: **el dominio propio de
+Resend (`integrika.mx`) nunca fue agregado/verificado en Resend** — por eso
+cualquier alta con un email nuevo (no el del dueño de la cuenta) falla con
+"No se pudo enviar el correo de verificación". **NO RESUELTO TODAVÍA** —
+pendiente que el usuario agregue el dominio en resend.com/domains y
+verifique los registros DNS. Fase C sin brainstormear.
+
+## EN CURSO (Jul 9, 2026 — sesión 29 — bug de fondo: alta de clínica con email nuevo falla)
+
+### Diagnóstico confirmado
+`RESEND_FROM` había quedado en sandbox default (`onboarding@resend.dev`)
+desde el cleanup de sesión 28 — Resend sandbox solo entrega al email dueño
+de la cuenta Resend, cualquier otro destinatario falla en silencio con
+mensaje genérico. El usuario dijo tener el dominio verificado, se seteó
+`RESEND_FROM="Integriclinica <contacto@integrika.mx>"`, pero el alta siguió
+fallando con el mismo mensaje genérico.
+
+Causa raíz real (confirmada, no hipótesis): se modificó temporalmente
+`supabase/functions/create-tenant/index.ts` para exponer el error crudo de
+Resend en la respuesta (función solo accesible a `platform_staff`, seguro
+exponerlo) y se deployó (v16). El error real de Resend:
+```json
+{"statusCode":403,"message":"The integrika.mx domain is not verified. Please, add and verify your domain on https://resend.com/domains","name":"validation_error"}
+```
+Usuario confirmó en `resend.com/domains`: **`integrika.mx` no aparece en la
+lista** — nunca se agregó de verdad pese a la creencia previa de que estaba
+verificado.
+
+### Cambio en curso (deployado, v16 de create-tenant)
+`sendVerificationEmail()` en `create-tenant/index.ts` ahora incluye el texto
+crudo de la respuesta de Resend en el mensaje de error devuelto al cliente
+(antes era genérico "No se pudo enviar el correo de verificación"). Esto
+queda en el código como mejora permanente de diagnóstico (función
+staff-only) — no hace falta revertirlo.
+
+### Pendiente para cerrar (bloqueado en el usuario, pasos manuales fuera de Claude)
+1. `resend.com/domains` → **Add Domain** → `integrika.mx` (o subdominio
+   dedicado tipo `mail.integrika.mx`, más aislado para reputación de envío).
+2. Copiar los registros DNS que muestra Resend (TXT SPF, TXT DKIM,
+   opcionalmente MX) y pegarlos en el proveedor de DNS real del dominio.
+3. Volver a Resend y confirmar **Verified** (puede tardar de minutos a
+   horas en propagar).
+4. Retomar en sesión nueva: probar alta con email nuevo (no el del dueño de
+   la cuenta) y confirmar que el correo llega. Si llega, cerrar este
+   pendiente en STATE.md.
+5. `RESEND_FROM` ya quedó seteado a `Integriclinica <contacto@integrika.mx>`
+   — no hace falta volver a tocarlo, solo falta que el dominio verifique.
+
+### Costo de sesión
+Sesión 28 cerró en ~$1,018. Esta sesión (29, continuación) llegó a
+**>$1,103** solo con este diagnóstico — hook de costo crítico disparado
+varias veces. Mismo patrón que sesiones anteriores: debugging de
+infraestructura externa (Resend/Stripe) por chat es la parte más cara del
+proyecto, no el código. Confirmar con el usuario antes de seguir gastando
+en cualquier sesión futura que toque configuración externa.
 
 ## Completado (Jul 9, 2026 — sesión 28 — smoke test real Stripe, entorno test configurado)
 

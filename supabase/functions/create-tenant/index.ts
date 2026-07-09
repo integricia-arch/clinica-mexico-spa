@@ -62,7 +62,7 @@ async function sendVerificationEmail(to: string, clinicName: string, code: strin
   if (!res.ok) {
     const err = await res.text();
     console.error("[create-tenant] Resend error:", err);
-    throw new Error("No se pudo enviar el correo de verificación");
+    throw new Error(`No se pudo enviar el correo de verificación: ${err}`);
   }
 }
 
