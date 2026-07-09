@@ -10,7 +10,49 @@ smoke test real contra Stripe — exitoso. Sesión 29 (Jul 9) diagnosticó y
 real: alta de clínica "Santo Copo" con email nuevo (`karla_1723@hotmail.com`,
 no el del dueño de la cuenta) → Resend confirmó `Delivered` → **usuario
 confirmó que el correo llegó a la bandeja**. **BUG CERRADO, sin pendientes.**
+
+Misma sesión 29 (continuación): usuario reportó que "Santo Copo" (recién
+dada de alta) **no tiene forma de reactivarse** si se suspende — el botón
+actual de `/admin/tenants` solo cambia `clinics.status` en la DB, nunca
+toca Stripe. Se brainstormeó, diseñó y planeó (NO implementado todavía) un
+panel de control de suscripciones nuevo. Ver **PRÓXIMO PASO** abajo.
 Fase C sin brainstormear.
+
+## PRÓXIMO PASO — sesión nueva: ejecutar plan de panel de suscripciones
+
+**Spec aprobado**: `docs/superpowers/specs/2026-07-09-panel-suscripciones-design.md`
+**Plan listo para ejecutar**: `docs/superpowers/plans/2026-07-09-panel-suscripciones.md`
+(commits `89c142f` spec, `049c1ee` plan — ambos en `main`, sin código nuevo
+todavía, solo documentación).
+
+Resumen del plan (7 tasks TDD, código completo ya escrito en el plan, no
+hace falta re-diseñar nada):
+1. Edge Function `manage-subscription` — scaffold + acción `summary` (lee
+   Stripe: subscription, método de pago, historial de facturas).
+2. Acción `update_modules` — agrega/quita módulos con prorrateo automático
+   de Stripe (`proration_behavior: create_prorations`).
+3. Acción `reactivate` — reanuda subscription pausada en Stripe, o crea
+   Checkout Session nueva si ya está cancelada definitivamente.
+4. Acción `suspend` — pausa cobro en Stripe (`pause_collection`) antes de
+   marcar `clinics.status = 'suspended'`.
+5. Deploy de la función + smoke test con curl.
+6. Frontend: página nueva `AdminTenantDetail.tsx` en ruta `/admin/tenants/:id`
+   (muestra suscripción/módulos/facturas, botones editar/reactivar/suspender),
+   tabla de `/admin/tenants` se hace clickeable por fila.
+7. Smoke test manual end-to-end en Stripe test-mode (agregar/quitar módulo,
+   suspender, reactivar, forzar caso de checkout nuevo) + cerrar este
+   pendiente en STATE.md.
+
+**Al retomar**: usar `superpowers:subagent-driven-development` (recomendado
+por la skill de planning, mejor para código que toca Stripe/dinero) o
+`superpowers:executing-plans` para ejecución inline — decisión pendiente,
+preguntarle al usuario al arrancar la sesión nueva.
+
+**Aviso de costo**: sesión 29 completa (diagnóstico Resend + fix DNS + este
+diseño/plan) cerró en **~$94+** — mismo patrón de sesiones anteriores
+(28 cerró en $1,018). Considerar arrancar la sesión de ejecución con
+contexto mínimo (no releer todo STATE.md completo si no hace falta —
+`grep`/`Read` con `offset` a esta sección es suficiente para retomar).
 
 ## MAPA DE INFRAESTRUCTURA DNS — integrika.mx (confirmado sesión 29, Jul 9 2026)
 
