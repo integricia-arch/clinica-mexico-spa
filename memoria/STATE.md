@@ -14,45 +14,64 @@ confirmó que el correo llegó a la bandeja**. **BUG CERRADO, sin pendientes.**
 Misma sesión 29 (continuación): usuario reportó que "Santo Copo" (recién
 dada de alta) **no tiene forma de reactivarse** si se suspende — el botón
 actual de `/admin/tenants` solo cambia `clinics.status` en la DB, nunca
-toca Stripe. Se brainstormeó, diseñó y planeó (NO implementado todavía) un
-panel de control de suscripciones nuevo. Ver **PRÓXIMO PASO** abajo.
-Fase C sin brainstormear.
+toca Stripe. Se brainstormeó, diseñó y planeó un panel de control de
+suscripciones nuevo. Sesión 30 (Jul 9) ejecutó el plan vía
+`subagent-driven-development`: **Tasks 1-5 del plan COMPLETAS** (Edge
+Function `manage-subscription` con las 4 acciones + deploy + smoke test
+real verificado contra Stripe). **PAUSADO por costo antes de Task 6
+(frontend)** — ver **PRÓXIMO PASO** abajo. Fase C sin brainstormear.
 
-## PRÓXIMO PASO — sesión nueva: ejecutar plan de panel de suscripciones
+## PRÓXIMO PASO — sesión nueva: terminar Tasks 6-7 del panel de suscripciones
 
-**Spec aprobado**: `docs/superpowers/specs/2026-07-09-panel-suscripciones-design.md`
-**Plan listo para ejecutar**: `docs/superpowers/plans/2026-07-09-panel-suscripciones.md`
-(commits `89c142f` spec, `049c1ee` plan — ambos en `main`, sin código nuevo
-todavía, solo documentación).
+**Frase exacta para retomar:** "Retoma el panel de suscripciones — Tasks
+1-5 ya están commiteadas y deployadas en el worktree
+`.claude/worktrees/panel-suscripciones` (branch `worktree-panel-suscripciones`,
+HEAD `9f18ae0`). Sigue con Task 6 (frontend) y Task 7 (smoke test e2e) del
+plan `docs/superpowers/plans/2026-07-09-panel-suscripciones.md`."
 
-Resumen del plan (7 tasks TDD, código completo ya escrito en el plan, no
-hace falta re-diseñar nada):
-1. Edge Function `manage-subscription` — scaffold + acción `summary` (lee
-   Stripe: subscription, método de pago, historial de facturas).
-2. Acción `update_modules` — agrega/quita módulos con prorrateo automático
-   de Stripe (`proration_behavior: create_prorations`).
-3. Acción `reactivate` — reanuda subscription pausada en Stripe, o crea
-   Checkout Session nueva si ya está cancelada definitivamente.
-4. Acción `suspend` — pausa cobro en Stripe (`pause_collection`) antes de
-   marcar `clinics.status = 'suspended'`.
-5. Deploy de la función + smoke test con curl.
-6. Frontend: página nueva `AdminTenantDetail.tsx` en ruta `/admin/tenants/:id`
-   (muestra suscripción/módulos/facturas, botones editar/reactivar/suspender),
-   tabla de `/admin/tenants` se hace clickeable por fila.
-7. Smoke test manual end-to-end en Stripe test-mode (agregar/quitar módulo,
-   suspender, reactivar, forzar caso de checkout nuevo) + cerrar este
-   pendiente en STATE.md.
+**Estado real (verificado, no solo reportado por subagentes):**
+- Worktree ya existe y NO hace falta recrearlo: `C:\Users\pablo\clinica-mexico-spa\.claude\worktrees\panel-suscripciones`,
+  branch `worktree-panel-suscripciones`, fast-forwardeado desde `main` local
+  (incluye spec+plan+esta nota, no solo `origin/main`).
+- Ledger completo con detalle de cada task:
+  `.claude/worktrees/panel-suscripciones/.superpowers/sdd/progress.md`.
+- Commits en ese branch (todos con TDD real, tests corridos y confirmados
+  por el controller, no solo por el subagente que los reportó):
+  1. `0dc7f9c` — scaffold + `buildSummary` + acción `summary` (GET).
+  2. `5109bff` — acción `update_modules` (prorrateo automático Stripe).
+  3. `f8c1a0f` — acción `reactivate` (resume in-place o Checkout nuevo).
+  4. `9f18ae0` — acción `suspend` (pausa cobro antes de tocar DB).
+  8/8 tests Deno pasan (`deno test --allow-env --allow-net supabase/functions/manage-subscription/`).
+- **Deploy real hecho** (`supabase functions deploy manage-subscription --project-ref kyfkvdyxpvpiacyymldc`).
+  **Smoke test real corrido** vía Chrome logueado (browser automation, sin
+  exponer el JWT en chat) contra la clínica real "Santo Copo"
+  (`id = 3ecbd536-d582-4a40-b5f4-f3f61af87d4d` — OJO, no confundir con
+  otro UUID visible en la fila de la tabla que NO es el id de la clínica):
+  `GET .../manage-subscription?clinic_id=...` → 200 OK, JSON con
+  `clinic`/`modulos`/`subscription`/`invoices`, sin `error`.
 
-**Al retomar**: usar `superpowers:subagent-driven-development` (recomendado
-por la skill de planning, mejor para código que toca Stripe/dinero) o
-`superpowers:executing-plans` para ejecución inline — decisión pendiente,
-preguntarle al usuario al arrancar la sesión nueva.
+**Falta (Tasks 6-7 del plan, sin empezar):**
+6. Frontend: `src/pages/AdminTenantDetail.tsx` nuevo en ruta
+   `/admin/tenants/:id` (código completo ya escrito en el plan, sección
+   Task 6) + import/ruta en `App.tsx` + fila navegable en `AdminTenants.tsx`.
+   Es la task más grande/cara de las 7 (componente React completo).
+7. Smoke test manual end-to-end en Stripe test-mode desde la UI real
+   (agregar/quitar módulo, suspender, reactivar, forzar caso de checkout
+   nuevo con tarjeta `4242...`) + actualizar STATE.md al cerrar.
 
-**Aviso de costo**: sesión 29 completa (diagnóstico Resend + fix DNS + este
-diseño/plan) cerró en **~$94+** — mismo patrón de sesiones anteriores
-(28 cerró en $1,018). Considerar arrancar la sesión de ejecución con
-contexto mínimo (no releer todo STATE.md completo si no hace falta —
-`grep`/`Read` con `offset` a esta sección es suficiente para retomar).
+**Al retomar**: se usó `superpowers:subagent-driven-development` para
+Tasks 1-4 (implementer+review por subagente), pero Task 5 y la
+verificación de Task 2-4 se hicieron más barato con el controller
+verificando directo (tests/diff) en vez de un reviewer-subagente separado
+— seguir ese patrón mixto para Task 6/7 si el costo vuelve a ser un
+problema (preguntarle al usuario apenas se note el hook de costo alto).
+
+**Aviso de costo**: esta sesión (30) cerró Tasks 1-5 en **~$72+** (2
+subagentes por task para Tasks 1-2, luego review inline del controller
+para Tasks 3-4 para abaratar). Sesión 29 (diagnóstico Resend + diseño)
+cerró en ~$94+. Mismo patrón de sesiones anteriores — confirmar con el
+usuario el presupuesto antes de lanzar el subagente de Task 6 (la más
+cara, componente frontend completo).
 
 ## MAPA DE INFRAESTRUCTURA DNS — integrika.mx (confirmado sesión 29, Jul 9 2026)
 
