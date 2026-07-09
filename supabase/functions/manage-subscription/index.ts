@@ -86,6 +86,27 @@ export function needsNewCheckout(subscription: { status?: string; cancel_at_peri
   return false;
 }
 
+type StripeFetchFn = (path: string, method: "GET" | "POST" | "DELETE", params?: URLSearchParams) => Promise<any>;
+
+export async function suspendClinic(admin: SupabaseClient, doStripeFetch: StripeFetchFn, clinicId: string) {
+  const { data: clinic, error: clinicErr } = await admin
+    .from("clinics")
+    .select("id, stripe_subscription_id_saas")
+    .eq("id", clinicId)
+    .single();
+  if (clinicErr || !clinic) throw new Error(clinicErr?.message ?? "Clínica no encontrada");
+  if (!clinic.stripe_subscription_id_saas) throw new Error("Esta clínica no tiene una suscripción en Stripe");
+
+  await doStripeFetch(
+    `subscriptions/${clinic.stripe_subscription_id_saas}`,
+    "POST",
+    new URLSearchParams({ "pause_collection[behavior]": "void" }),
+  );
+
+  const { error: updateErr } = await admin.from("clinics").update({ status: "suspended" }).eq("id", clinicId);
+  if (updateErr) throw new Error(updateErr.message);
+}
+
 interface ActionBody {
   action: "update_modules" | "reactivate" | "suspend";
   clinic_id: string;
@@ -266,6 +287,16 @@ Deno.serve(async (req) => {
           .eq("id", body.clinic_id);
         if (updateErr) return json({ error: updateErr.message }, 500);
 
+        const summary = await buildSummary(admin, STRIPE_SAAS_KEY, body.clinic_id);
+        return json(summary);
+      }
+
+      if (body.action === "suspend") {
+        try {
+          await suspendClinic(admin, stripeFetch, body.clinic_id);
+        } catch (err) {
+          return json({ error: (err as Error).message }, 502);
+        }
         const summary = await buildSummary(admin, STRIPE_SAAS_KEY, body.clinic_id);
         return json(summary);
       }
