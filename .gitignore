@@ -54,3 +54,6 @@ skills-lock.json
 
 # Obsidian vault config (local only) — memoria/ SÍ se versiona (ver CLAUDE.md)
 .obsidian/
+
+# Git worktrees locales (subagent-driven-development)
+.worktrees/
