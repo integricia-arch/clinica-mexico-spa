@@ -71,6 +71,21 @@ export async function buildSummary(admin: SupabaseClient, _stripeKey: string, cl
   return { clinic, modulos: modulos ?? [], subscription, invoices };
 }
 
+export function diffModulos(current: string[], next: string[]): { toAdd: string[]; toRemove: string[] } {
+  const currentSet = new Set(current);
+  const nextSet = new Set(next);
+  return {
+    toAdd: next.filter((id) => !currentSet.has(id)),
+    toRemove: current.filter((id) => !nextSet.has(id)),
+  };
+}
+
+interface ActionBody {
+  action: "update_modules" | "reactivate" | "suspend";
+  clinic_id: string;
+  modulo_ids?: string[];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -97,7 +112,94 @@ Deno.serve(async (req) => {
       return json(summary);
     }
 
-    return json({ error: "acción no reconocida" }, 400);
+    if (req.method === "POST") {
+      const body = (await req.json()) as ActionBody;
+      if (!body.clinic_id) return json({ error: "clinic_id es requerido" }, 400);
+
+      if (body.action === "update_modules") {
+        const nextIds = Array.isArray(body.modulo_ids) ? body.modulo_ids : [];
+        if (nextIds.length === 0) return json({ error: "Selecciona al menos un módulo" }, 400);
+
+        const { data: nextModulos, error: modulosErr } = await admin
+          .from("catalogo_modulos")
+          .select("id, stripe_price_id")
+          .in("id", nextIds)
+          .eq("activo", true);
+        if (modulosErr || !nextModulos?.length || nextModulos.length !== nextIds.length) {
+          return json({ error: "Módulos inválidos" }, 400);
+        }
+        if (nextModulos.some((m) => !m.stripe_price_id)) {
+          return json({ error: "Un módulo no tiene stripe_price_id configurado" }, 400);
+        }
+
+        const { data: clinic, error: clinicErr } = await admin
+          .from("clinics")
+          .select("stripe_subscription_id_saas")
+          .eq("id", body.clinic_id)
+          .single();
+        if (clinicErr || !clinic?.stripe_subscription_id_saas) {
+          return json({ error: "Esta clínica no tiene una suscripción activa en Stripe" }, 400);
+        }
+
+        const { data: currentRows } = await admin
+          .from("cliente_modulos")
+          .select("modulo_id")
+          .eq("clinic_id", body.clinic_id);
+        const currentIds = (currentRows ?? []).map((r) => r.modulo_id as string);
+        const { toAdd, toRemove } = diffModulos(currentIds, nextIds);
+
+        const subscription = await stripeFetch(
+          `subscriptions/${clinic.stripe_subscription_id_saas}`,
+          "GET",
+        );
+        const items = (subscription.items?.data ?? []) as { id: string; price: { id: string } }[];
+
+        const { data: removedModulos } = await admin
+          .from("catalogo_modulos")
+          .select("id, stripe_price_id")
+          .in("id", toRemove.length ? toRemove : ["__none__"]);
+
+        try {
+          for (const priceId of toAdd.length
+            ? nextModulos.filter((m) => toAdd.includes(m.id as string)).map((m) => m.stripe_price_id as string)
+            : []) {
+            await stripeFetch(
+              "subscription_items",
+              "POST",
+              new URLSearchParams({
+                subscription: clinic.stripe_subscription_id_saas as string,
+                price: priceId,
+                proration_behavior: "create_prorations",
+              }),
+            );
+          }
+          for (const modulo of removedModulos ?? []) {
+            const item = items.find((it) => it.price.id === modulo.stripe_price_id);
+            if (!item) continue;
+            await stripeFetch(
+              `subscription_items/${item.id}?proration_behavior=create_prorations`,
+              "DELETE",
+            );
+          }
+        } catch (stripeErr) {
+          return json({ error: `Stripe: ${(stripeErr as Error).message}` }, 502);
+        }
+
+        const { error: deleteErr } = await admin.from("cliente_modulos").delete().eq("clinic_id", body.clinic_id);
+        if (deleteErr) return json({ error: deleteErr.message }, 500);
+        const { error: insertErr } = await admin
+          .from("cliente_modulos")
+          .insert(nextIds.map((modulo_id) => ({ clinic_id: body.clinic_id, modulo_id })));
+        if (insertErr) return json({ error: insertErr.message }, 500);
+
+        const summary = await buildSummary(admin, STRIPE_SAAS_KEY, body.clinic_id);
+        return json(summary);
+      }
+
+      return json({ error: "acción no reconocida" }, 400);
+    }
+
+    return json({ error: "método no soportado" }, 405);
   } catch (err) {
     console.error("[manage-subscription] unexpected error:", err);
     return json({ error: (err as Error).message ?? "error inesperado" }, 500);
