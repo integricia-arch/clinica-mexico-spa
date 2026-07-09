@@ -16,62 +16,107 @@ dada de alta) **no tiene forma de reactivarse** si se suspende — el botón
 actual de `/admin/tenants` solo cambia `clinics.status` en la DB, nunca
 toca Stripe. Se brainstormeó, diseñó y planeó un panel de control de
 suscripciones nuevo. Sesión 30 (Jul 9) ejecutó el plan vía
-`subagent-driven-development`: **Tasks 1-5 del plan COMPLETAS** (Edge
+`subagent-driven-development`: Tasks 1-5 del plan completas (Edge
 Function `manage-subscription` con las 4 acciones + deploy + smoke test
-real verificado contra Stripe). **PAUSADO por costo antes de Task 6
-(frontend)** — ver **PRÓXIMO PASO** abajo. Fase C sin brainstormear.
+real verificado contra Stripe).
 
-## PRÓXIMO PASO — sesión nueva: terminar Tasks 6-7 del panel de suscripciones
+**Sesión 31 (Jul 9) — Tasks 6-7 COMPLETAS. Panel de suscripciones
+TERMINADO end-to-end, con 3 bugs reales encontrados y 2 arreglados
+en producción durante el smoke test.** Detalle abajo.
 
-**Frase exacta para retomar:** "Retoma el panel de suscripciones — Tasks
-1-5 ya están commiteadas y deployadas en el worktree
-`.claude/worktrees/panel-suscripciones` (branch `worktree-panel-suscripciones`,
-HEAD `9f18ae0`). Sigue con Task 6 (frontend) y Task 7 (smoke test e2e) del
-plan `docs/superpowers/plans/2026-07-09-panel-suscripciones.md`."
+## Completado — Sesión 31: Panel de suscripciones Tasks 6-7 + 3 bugs de producción
 
-**Estado real (verificado, no solo reportado por subagentes):**
-- Worktree ya existe y NO hace falta recrearlo: `C:\Users\pablo\clinica-mexico-spa\.claude\worktrees\panel-suscripciones`,
-  branch `worktree-panel-suscripciones`, fast-forwardeado desde `main` local
-  (incluye spec+plan+esta nota, no solo `origin/main`).
-- Ledger completo con detalle de cada task:
-  `.claude/worktrees/panel-suscripciones/.superpowers/sdd/progress.md`.
-- Commits en ese branch (todos con TDD real, tests corridos y confirmados
-  por el controller, no solo por el subagente que los reportó):
-  1. `0dc7f9c` — scaffold + `buildSummary` + acción `summary` (GET).
-  2. `5109bff` — acción `update_modules` (prorrateo automático Stripe).
-  3. `f8c1a0f` — acción `reactivate` (resume in-place o Checkout nuevo).
-  4. `9f18ae0` — acción `suspend` (pausa cobro antes de tocar DB).
-  8/8 tests Deno pasan (`deno test --allow-env --allow-net supabase/functions/manage-subscription/`).
-- **Deploy real hecho** (`supabase functions deploy manage-subscription --project-ref kyfkvdyxpvpiacyymldc`).
-  **Smoke test real corrido** vía Chrome logueado (browser automation, sin
-  exponer el JWT en chat) contra la clínica real "Santo Copo"
-  (`id = 3ecbd536-d582-4a40-b5f4-f3f61af87d4d` — OJO, no confundir con
-  otro UUID visible en la fila de la tabla que NO es el id de la clínica):
-  `GET .../manage-subscription?clinic_id=...` → 200 OK, JSON con
-  `clinic`/`modulos`/`subscription`/`invoices`, sin `error`.
+**Task 6 (frontend)**: `src/pages/AdminTenantDetail.tsx` creado (código del
+plan aplicado tal cual, sin cambios), import+ruta en `App.tsx`, fila
+navegable en `AdminTenants.tsx` (`useNavigate` + `stopPropagation` en
+Acciones). `npx tsc --noEmit` limpio, `npm run build` limpio. Commit
+`ac322f2` en `worktree-panel-suscripciones`.
 
-**Falta (Tasks 6-7 del plan, sin empezar):**
-6. Frontend: `src/pages/AdminTenantDetail.tsx` nuevo en ruta
-   `/admin/tenants/:id` (código completo ya escrito en el plan, sección
-   Task 6) + import/ruta en `App.tsx` + fila navegable en `AdminTenants.tsx`.
-   Es la task más grande/cara de las 7 (componente React completo).
-7. Smoke test manual end-to-end en Stripe test-mode desde la UI real
-   (agregar/quitar módulo, suspender, reactivar, forzar caso de checkout
-   nuevo con tarjeta `4242...`) + actualizar STATE.md al cerrar.
+**Deploy real**: `npm run build:all` (vite + manual-site Docusaurus, cuyas
+deps no estaban instaladas en el worktree — se compiló en el repo
+principal y se copió `dist/manual` para no regresionar el portal `/manual`)
++ `wrangler deploy` a `clinica-mexico-spa` (integrika.mx). Rama de
+worktree deployada directo a prod para poder probar Task 7 con sesión real
+— **pendiente mergear `worktree-panel-suscripciones` a `main`** para que
+git vuelva a reflejar lo desplegado (regla del CLAUDE.md del proyecto).
 
-**Al retomar**: se usó `superpowers:subagent-driven-development` para
-Tasks 1-4 (implementer+review por subagente), pero Task 5 y la
-verificación de Task 2-4 se hicieron más barato con el controller
-verificando directo (tests/diff) en vez de un reviewer-subagente separado
-— seguir ese patrón mixto para Task 6/7 si el costo vuelve a ser un
-problema (preguntarle al usuario apenas se note el hook de costo alto).
+**Task 7 (smoke test e2e) — 3 bugs reales encontrados, 2 arreglados**:
 
-**Aviso de costo**: esta sesión (30) cerró Tasks 1-5 en **~$72+** (2
-subagentes por task para Tasks 1-2, luego review inline del controller
-para Tasks 3-4 para abaratar). Sesión 29 (diagnóstico Resend + diseño)
-cerró en ~$94+. Mismo patrón de sesiones anteriores — confirmar con el
-usuario el presupuesto antes de lanzar el subagente de Task 6 (la más
-cara, componente frontend completo).
+1. **BUG arreglado — `catalogo_modulos.stripe_price_id` en modo live con
+   key de test.** 4 de 5 módulos (Agenda, Compras, POS/Farmacia,
+   Facturación CFDI) tenían price_id de Stripe **live** mientras
+   `STRIPE_SAAS_SECRET_KEY` es de **test** → cualquier acción con esos
+   módulos fallaba "a similar object exists in live mode". Arreglado vía
+   SQL: se actualizaron los 4 a sus equivalentes test-mode reales
+   (verificados 1:1 por nombre y monto en `dashboard.stripe.com/test/products`).
+   **"Almacén" queda SIN arreglar a propósito** (decisión del usuario): su
+   price test-mode existente (`price_1TrJu6Gw6QdIxYi0NAZFMep6`) cobra
+   MXN 2,449 en vez de $1,599 — y ya tiene 2 suscripciones de prueba
+   activas usando ese monto. Pendiente: crear price test-mode correcto y
+   decidir qué hacer con esas 2 subs de prueba antes de tocarlo.
+
+2. **BUG arreglado — `stripe-webhook-saas` fallaba 500 en reactivaciones
+   reales.** Causa raíz real (no era el webhook): `GET /admin/users` de
+   GoTrue está roto en **todo el proyecto** (no solo este flujo) por
+   `unable to fetch records: sql: Scan error on column index 3, name
+   "confirmation_token": converting NULL to string is unsupported` — filas
+   viejas en `auth.users` con columnas de token en `NULL` en vez de `''`.
+   Se corrió el `UPDATE ... coalesce(..., '')` estándar de la comunidad
+   Supabase sobre las 8 columnas de token (`confirmation_token`,
+   `recovery_token`, `email_change_token_new`, `email_change`,
+   `phone_change`, `phone_change_token`, `email_change_token_current`,
+   `reauthentication_token`) — **arregla `listUsers()`/`admin.users` para
+   TODO el proyecto**, no solo suscripciones. Además se cambió
+   `stripe-webhook-saas/index.ts` para usar `svc.auth.admin.listUsers()`
+   paginado (oficial) en vez de `fetch` crudo a `/admin/users?email=`
+   (no es un filtro soportado). Commit `cad49b5`, función deployada v14.
+
+3. **BUG arreglado — reactivar in-place no limpiaba `pause_collection`.**
+   `manage-subscription`'s acción `reactivate` (rama in-place, sin
+   checkout nuevo) solo mandaba `cancel_at_period_end: false` a Stripe,
+   nunca `pause_collection: ""` — una clínica "suspendida" (pause) y
+   luego "reactivada" quedaba con `status: active` en la DB pero Stripe
+   seguía sin cobrarle (`pause_collection` seguía activo, confirmado en
+   Stripe dashboard: "Cobro interrumpido" no desaparecía). Fix: agregar
+   `pause_collection: ""` al mismo POST. Verificado en Stripe: ahora
+   muestra "Próxima factura" en vez de "Cobro interrumpido" tras
+   reactivar. Mismo commit `cad49b5`, función deployada v2.
+
+4. **BUG encontrado, SIN arreglar (documentado, no tocado)** — al cancelar
+   una suscripción directo en el dashboard de Stripe (fuera del panel,
+   simulando Step 5 del plan: "forzar checkout nuevo"), el evento
+   `customer.subscription.deleted` **nunca llegó** a `stripe-webhook-saas`
+   (sin registro nuevo en logs tras la cancelación) → `clinics.status`
+   quedó desactualizado (`active` en vez de reflejar la cancelación) → el
+   botón del panel mostró "Suspender" en vez de "Reactivar" (la condición
+   del frontend usa `clinic.status` de la DB, no `subscription.status` de
+   Stripe que ya está disponible en el mismo `summary`). Dos posibles
+   causas a investigar: (a) el endpoint de webhook en Stripe no tiene
+   suscrito el evento `customer.subscription.deleted`, o (b) delivery
+   falló silenciosamente. **Pendiente**: revisar
+   `dashboard.stripe.com/test/webhooks` → eventos suscritos + intentos de
+   entrega para ese webhook, y considerar que el frontend prefiera
+   `summary.subscription.status` sobre `summary.clinic.status` para
+   decidir qué botón mostrar.
+
+**Smoke test steps 1-4 del plan: PASARON completos** (carga sin error,
+checkout real con tarjeta 4242, agregar/quitar módulo, suspender,
+reactivar in-place con pause_collection limpio). Step 5 (forzar checkout
+cancelando en Stripe) reveló el bug #4 de arriba — no se completó el ciclo
+completo por eso, pero confirmó que `needsNewCheckout()` sí se dispara
+correctamente cuando `subscription.status === "canceled"` es detectado
+(el problema es que la DB nunca se entera de la cancelación real).
+
+**Pendiente antes de dar el panel por 100% cerrado**:
+- Mergear `worktree-panel-suscripciones` → `main` (ya deployado, falta
+  que git lo refleje — commits: `ac322f2` Task 6, `cad49b5` fixes Stripe).
+- Investigar bug #4 (webhook `customer.subscription.deleted` no
+  configurado o no entregado).
+- Decidir y arreglar el price_id de "Almacén" (bug #1, dejado pendiente
+  a propósito).
+- Limpiar clínica de prueba "Santo Copo" si se quiere dejarla en estado
+  limpio para el próximo smoke test (quedó con 4 módulos activos y
+  suscripción cancelada tras las pruebas de esta sesión).
 
 ## MAPA DE INFRAESTRUCTURA DNS — integrika.mx (confirmado sesión 29, Jul 9 2026)
 
