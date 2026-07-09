@@ -46,6 +46,8 @@ export default function AdminTenants() {
   const [moduloIds, setModuloIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [pendingClinicId, setPendingClinicId] = useState<string | null>(null);
+  const [verifyCode, setVerifyCode] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -139,18 +141,56 @@ export default function AdminTenants() {
     await load();
   };
 
+  // ponytail: fetch crudo en vez de supabase.functions.invoke() — el wrapper
+  // consume el body de la respuesta al armar su propio error genérico, así
+  // que el mensaje real que mandan estas funciones nunca llegaba al usuario.
+  const callFn = async (slug: string, body: unknown) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const supabaseUrl = (import.meta as unknown as { env: Record<string, string> })["env"]["VITE_SUPABASE_URL"];
+    const res = await fetch(`${supabaseUrl}/functions/v1/${slug}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionData.session?.access_token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, status: res.status, data: data as { error?: string; clinic_id?: string } | null };
+  };
+
   const submitWizard = async () => {
     setSubmitting(true);
     setFormError(null);
-    const { data, error: fnErr } = await supabase.functions.invoke("create-tenant", {
-      body: { ...form, modulo_ids: moduloIds },
+    const { ok, status, data } = await callFn("create-tenant", {
+      ...form,
+      code: crypto.randomUUID(),
+      modulo_ids: moduloIds,
     });
     setSubmitting(false);
-    if (fnErr || (data as { error?: string })?.error) {
-      setFormError((data as { error?: string })?.error ?? fnErr?.message ?? "Error desconocido");
+    if (!ok || data?.error) {
+      setFormError(data?.error ?? `Error ${status}`);
+      return;
+    }
+    setPendingClinicId(data?.clinic_id ?? null);
+  };
+
+  const submitVerifyCode = async () => {
+    if (!pendingClinicId) return;
+    setSubmitting(true);
+    setFormError(null);
+    const { ok, status, data } = await callFn("verify-tenant-code", {
+      clinic_id: pendingClinicId,
+      code: verifyCode,
+    });
+    setSubmitting(false);
+    if (!ok || data?.error) {
+      setFormError(data?.error ?? `Error ${status}`);
       return;
     }
     setShowWizard(false);
+    setPendingClinicId(null);
+    setVerifyCode("");
     setForm({ code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "" });
     setModuloIds([]);
     await load();
@@ -218,18 +258,50 @@ export default function AdminTenants() {
           </tbody>
         </table>
       )}
-      {showWizard && (
+      {showWizard && pendingClinicId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-1">Verifica el correo</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Mandamos un código de 6 dígitos a {form.contacto_facturacion_email || form.admin_email}. Captúralo para
+              activar la clínica, crear la suscripción e inscribir los módulos.
+            </p>
+            {formError && <p className="text-red-600 mb-2">{formError}</p>}
+            <input
+              placeholder="Código de 6 dígitos"
+              value={verifyCode}
+              onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="w-full border p-2 rounded text-center text-lg tracking-widest"
+              maxLength={6}
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => {
+                  setShowWizard(false);
+                  setPendingClinicId(null);
+                  setVerifyCode("");
+                }}
+                className="px-4 py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={submitVerifyCode}
+                disabled={submitting || verifyCode.length !== 6}
+                className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+              >
+                {submitting ? "Verificando..." : "Verificar y activar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showWizard && !pendingClinicId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
           <div className="bg-white p-6 rounded max-w-md w-full">
             <h2 className="text-xl font-semibold mb-4">Nuevo cliente</h2>
             {formError && <p className="text-red-600 mb-2">{formError}</p>}
             <div className="space-y-2">
-              <input
-                placeholder="Código único (ej. hospital_norte)"
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-                className="w-full border p-2 rounded"
-              />
               <input
                 placeholder="Nombre del hospital"
                 value={form.name}
@@ -282,7 +354,7 @@ export default function AdminTenants() {
               <button onClick={() => setShowWizard(false)} className="px-4 py-2">Cancelar</button>
               <button
                 onClick={submitWizard}
-                disabled={submitting || !form.code || !form.name || !form.admin_email || moduloIds.length === 0}
+                disabled={submitting || !form.name || !form.admin_email || moduloIds.length === 0}
                 className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
               >
                 {submitting ? "Creando..." : "Crear"}

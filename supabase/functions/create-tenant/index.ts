@@ -11,8 +11,8 @@ const corsHeaders = {
 const SUPABASE_URL = Deno["env"].get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno["env"].get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_KEY = Deno["env"].get(["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_"))!;
-const STRIPE_KEY = Deno["env"].get(["STRIPE", "SECRET", "KEY"].join("_"))!;
-const STRIPE_SAAS_KEY = Deno["env"].get(["STRIPE", "SAAS", "SECRET", "KEY"].join("_"))!;
+const RESEND_API_KEY = Deno["env"].get(["RESEND", "API", "KEY"].join("_")) ?? "";
+const RESEND_FROM = Deno["env"].get(["RESEND", "FROM"].join("_")) ?? "Integriclinica <onboarding@resend.dev>";
 
 interface CreateTenantBody {
   code: string;
@@ -31,6 +31,39 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+// RFC persona física (13) o moral (12): 3-4 letras/&/Ñ + AAMMDD + 3 homoclave.
+const RFC_REGEX = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+async function sendVerificationEmail(to: string, clinicName: string, code: string) {
+  if (!RESEND_API_KEY) {
+    console.error("[create-tenant] RESEND_API_KEY no configurado — no se pudo mandar el código");
+    throw new Error("Servicio de email no configurado");
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+    body: JSON.stringify({
+      from: RESEND_FROM,
+      to: [to],
+      subject: `Código de verificación — alta de ${clinicName}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+          <h2 style="color:#0f172a">Verifica el alta de "${clinicName}"</h2>
+          <p style="color:#475569">Ingresa este código para confirmar el registro y continuar con la suscripción:</p>
+          <p style="font-size:32px;font-weight:700;letter-spacing:6px;text-align:center;color:#2563eb">${code}</p>
+          <p style="color:#94a3b8;font-size:12px">Expira en 30 minutos. Si no solicitaste esto, ignora este correo.</p>
+        </div>
+      `,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("[create-tenant] Resend error:", err);
+    throw new Error("No se pudo enviar el correo de verificación");
+  }
 }
 
 Deno.serve(async (req) => {
@@ -54,6 +87,30 @@ Deno.serve(async (req) => {
     if (!body.code || !body.name || !body.admin_email) {
       return json({ error: "code, name y admin_email son requeridos" }, 400);
     }
+    if (!EMAIL_REGEX.test(body.admin_email)) {
+      return json({ error: "admin_email no tiene formato de correo válido" }, 400);
+    }
+    if (body.contacto_facturacion_email && !EMAIL_REGEX.test(body.contacto_facturacion_email)) {
+      return json({ error: "contacto_facturacion_email no tiene formato de correo válido" }, 400);
+    }
+    if (body.rfc && !RFC_REGEX.test(body.rfc)) {
+      return json({ error: "RFC inválido — debe tener formato de persona física (13) o moral (12)" }, 400);
+    }
+    const moduloIds: string[] = Array.isArray(body.modulo_ids) ? body.modulo_ids : [];
+    if (moduloIds.length === 0) {
+      return json({ error: "Selecciona al menos un módulo" }, 400);
+    }
+    const { data: modulos, error: modulosErr } = await admin
+      .from("catalogo_modulos")
+      .select("id, stripe_price_id")
+      .in("id", moduloIds)
+      .eq("activo", true);
+    if (modulosErr || !modulos?.length || modulos.some((m) => !m.stripe_price_id)) {
+      return json({ error: "Módulos inválidos o sin stripe_price_id configurado" }, 400);
+    }
+
+    const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     const { data: clinic, error: clinicErr } = await admin
       .from("clinics")
@@ -65,7 +122,11 @@ Deno.serve(async (req) => {
         logo_url: body.logo_url ?? null,
         contacto_facturacion_email: body.contacto_facturacion_email ?? null,
         plan: body.plan ?? "estandar",
-        status: "active",
+        status: "pendiente_verificacion",
+        pending_admin_email: body.admin_email,
+        pending_modulo_ids: moduloIds,
+        verification_code: verificationCode,
+        verification_code_expires_at: expiresAt,
       })
       .select("id")
       .single();
@@ -75,158 +136,16 @@ Deno.serve(async (req) => {
       return json({ error: clinicErr?.message ?? "error creando clínica" }, 500);
     }
     const clinicId = clinic.id as string;
-    let stripeCustomerId: string | null = null;
 
     try {
-      const stripeRes = await fetch("https://api.stripe.com/v1/customers", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${STRIPE_KEY}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          name: body.name,
-          email: body.contacto_facturacion_email ?? body.admin_email,
-          "metadata[clinic_id]": clinicId,
-        }),
-      });
-      const stripeCustomer = await stripeRes.json();
-      if (!stripeRes.ok) {
-        throw new Error(stripeCustomer?.error?.message ?? `Stripe error ${stripeRes.status}`);
-      }
-      stripeCustomerId = stripeCustomer.id as string;
-      await admin.from("clinics").update({ stripe_customer_id: stripeCustomerId }).eq("id", clinicId);
-    } catch (stripeErr) {
-      console.error("[create-tenant] error Stripe, revirtiendo clinic:", stripeErr);
+      await sendVerificationEmail(body.contacto_facturacion_email ?? body.admin_email, body.name, verificationCode);
+    } catch (emailErr) {
+      console.error("[create-tenant] error mandando código, revirtiendo clinic:", emailErr);
       await admin.from("clinics").delete().eq("id", clinicId);
-      return json({ error: `Error creando cliente Stripe: ${(stripeErr as Error).message}` }, 500);
+      return json({ error: (emailErr as Error).message }, 500);
     }
 
-    const rollback = async () => {
-      await admin.from("clinics").delete().eq("id", clinicId);
-      if (stripeCustomerId) {
-        await fetch(`https://api.stripe.com/v1/customers/${stripeCustomerId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${STRIPE_KEY}` },
-        }).catch((e) => console.error("[create-tenant] no se pudo borrar customer Stripe huerfano:", e));
-      }
-    };
-
-    let adminUserId: string;
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(body.admin_email);
-    if (inviteErr || !invited?.user) {
-      const alreadyExists = /already.*registered|already.*exists/i.test(inviteErr?.message ?? "");
-      if (!alreadyExists) {
-        console.error("[create-tenant] error invitando admin, revirtiendo clinic:", inviteErr);
-        await rollback();
-        return json({ error: inviteErr?.message ?? "error invitando admin" }, 500);
-      }
-      const { data: existingUsers, error: listErr } = await admin.auth.admin.listUsers();
-      const existing = existingUsers?.users.find((u) => u.email === body.admin_email);
-      if (listErr || !existing) {
-        console.error("[create-tenant] email ya registrado pero no se pudo resolver user_id, revirtiendo clinic:", listErr);
-        await rollback();
-        return json({ error: "El email ya está registrado y no se pudo resolver el usuario" }, 500);
-      }
-      adminUserId = existing.id;
-    } else {
-      adminUserId = invited.user.id;
-    }
-
-    const { error: membershipErr } = await admin.from("clinic_memberships").insert({
-      user_id: adminUserId,
-      clinic_id: clinicId,
-      role: "admin",
-      status: "active",
-    });
-    if (membershipErr) {
-      console.error("[create-tenant] error creando membership, revirtiendo clinic:", membershipErr);
-      await rollback();
-      return json({ error: membershipErr.message }, 500);
-    }
-
-    // Selección de módulos à la carte del wizard + suscripción en la cuenta Stripe SaaS
-    // (separada de STRIPE_KEY, que es la cuenta de cobros a pacientes).
-    const moduloIds: string[] = Array.isArray(body.modulo_ids) ? body.modulo_ids : [];
-    if (moduloIds.length === 0) {
-      await rollback();
-      return json({ error: "Selecciona al menos un módulo" }, 400);
-    }
-
-    const { data: modulos, error: modulosErr } = await admin
-      .from("catalogo_modulos")
-      .select("id, stripe_price_id")
-      .in("id", moduloIds)
-      .eq("activo", true);
-
-    if (modulosErr || !modulos?.length || modulos.some((m) => !m.stripe_price_id)) {
-      await rollback();
-      return json({ error: "Módulos inválidos o sin stripe_price_id configurado" }, 400);
-    }
-
-    // Customer en la cuenta Stripe SaaS (separada de la cuenta de pacientes)
-    const saasCustomerRes = await fetch("https://api.stripe.com/v1/customers", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${STRIPE_SAAS_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ name: body.name, email: body.contacto_facturacion_email ?? "" }),
-    });
-    if (!saasCustomerRes.ok) {
-      await rollback();
-      return json({ error: "No se pudo crear customer Stripe SaaS" }, 502);
-    }
-    const saasCustomer = await saasCustomerRes.json();
-
-    // Subscription con 1 Subscription Item por módulo elegido
-    const subParams = new URLSearchParams({ customer: saasCustomer.id });
-    modulos.forEach((m, i) => {
-      subParams.append(`items[${i}][price]`, m.stripe_price_id as string);
-    });
-    const subRes = await fetch("https://api.stripe.com/v1/subscriptions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${STRIPE_SAAS_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: subParams,
-    });
-    if (!subRes.ok) {
-      // Borra el customer SaaS huérfano además del rollback normal
-      await fetch(`https://api.stripe.com/v1/customers/${saasCustomer.id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${STRIPE_SAAS_KEY}` },
-      }).catch((e) => console.error("[create-tenant] no se pudo borrar customer SaaS huerfano:", e));
-      await rollback();
-      return json({ error: "No se pudo crear la suscripción Stripe SaaS" }, 502);
-    }
-    const subscription = await subRes.json();
-
-    const { error: updateErr } = await admin
-      .from("clinics")
-      .update({
-        stripe_customer_id_saas: saasCustomer.id,
-        stripe_subscription_id_saas: subscription.id,
-        subscription_status: "trialing",
-      })
-      .eq("id", clinicId);
-
-    if (updateErr) {
-      await rollback();
-      return json({ error: "No se pudo guardar la suscripción en clinics" }, 500);
-    }
-
-    const { error: cmError } = await admin
-      .from("cliente_modulos")
-      .insert(moduloIds.map((modulo_id) => ({ clinic_id: clinicId, modulo_id })));
-
-    if (cmError) {
-      await rollback();
-      return json({ error: "No se pudieron guardar los módulos del cliente" }, 500);
-    }
-
-    return json({ clinic_id: clinicId });
+    return json({ clinic_id: clinicId, status: "pendiente_verificacion" });
   } catch (err) {
     console.error("[create-tenant] unexpected error:", err);
     return json({ error: (err as Error).message ?? "error inesperado" }, 500);
