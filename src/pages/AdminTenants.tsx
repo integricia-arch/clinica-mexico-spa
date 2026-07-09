@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 
@@ -146,7 +146,6 @@ export default function AdminTenants() {
   // que el mensaje real que mandan estas funciones nunca llegaba al usuario.
   const callFn = async (slug: string, body: unknown) => {
     const { data: sessionData } = await supabase.auth.getSession();
-    const supabaseUrl = (import.meta as unknown as { env: Record<string, string> })["env"]["VITE_SUPABASE_URL"];
     const res = await fetch(`${supabaseUrl}/functions/v1/${slug}`, {
       method: "POST",
       headers: {
