@@ -171,10 +171,17 @@ Deno.serve(async (req: Request) => {
           adminUserId = invited.user.id;
         }
 
-        const { error: membershipErr } = await svc.from("clinic_memberships").insert({
-          user_id: adminUserId, clinic_id: clinicId, role: "admin", status: "active",
-        });
+        const { error: membershipErr } = await svc.from("clinic_memberships").upsert(
+          { user_id: adminUserId, clinic_id: clinicId, role: "admin", status: "active" },
+          { onConflict: "clinic_id,user_id", ignoreDuplicates: true },
+        );
         if (membershipErr) throw new Error(`membership: ${membershipErr.message}`);
+
+        const { error: deleteOldError } = await svc
+          .from("cliente_modulos")
+          .delete()
+          .eq("clinic_id", clinicId);
+        if (deleteOldError) throw new Error(`limpiar modulos previos: ${deleteOldError.message}`);
 
         const { error: cmError } = await svc.from("cliente_modulos")
           .insert(moduloIds.map((modulo_id) => ({ clinic_id: clinicId, modulo_id })));
