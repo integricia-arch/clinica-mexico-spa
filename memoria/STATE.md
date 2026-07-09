@@ -4,10 +4,69 @@
 Producción activa — pivote SaaS multi-tenant en marcha. Sesión 25 resolvió
 el bug del 500 genérico y reescribió el alta de tenant como flujo de 2 pasos
 (verificación por email antes de cobrar). Sesión 26 (Jul 8) cerró el diseño
-pendiente (Checkout de Stripe + webhook de provisioning) — spec completo y
-aprobado, commiteado. **Pendiente: `/plan` de implementación en sesión
-nueva** (no ejecutar todavía, solo el diseño está listo). Fase C sin
-brainstormear.
+(spec) del Checkout de Stripe. Sesión 27 (Jul 8, misma fecha, sesión
+separada) implementó el plan completo con subagent-driven-development y
+mergeó a `main` (commit `019efc1`). **Alta de tenant ahora SÍ cobra antes
+de dar acceso — el hueco de sesión 25 está cerrado.** Pendiente crítico
+antes de considerar esto probado en prod real: correr el smoke test manual
+contra Stripe test mode (nunca se ejecutó, todo fue verificación estática +
+schema). Fase C sin brainstormear.
+
+## Completado (Jul 8, 2026 — sesión 27 — implementación Stripe Checkout, merge a main)
+
+Plan ejecutado con `subagent-driven-development` en worktree aislada
+(`.worktrees/feat-stripe-checkout-tenant-onboarding`, branch
+`feat/stripe-checkout-tenant-onboarding`), mergeado a `main` en `019efc1`.
+Sesión de costo muy alto (~$500) — la mayoría por overhead de contexto de
+subagentes (implementer+reviewer por cada una de 4 tareas + fix loops + review
+final de rama completa). Para la próxima ejecución grande con
+subagent-driven-development: evaluar hacer los reviews de tareas de bajo
+riesgo (migraciones simples, frontend) inline en vez de vía subagente, y
+reservar el ciclo completo implementer+reviewer para el código que toca
+dinero/datos sensibles.
+
+### Qué se implementó (4 tareas del plan, 7 commits sobre main)
+1. Tabla `stripe_webhook_events` (idempotencia de eventos webhook), cerrada
+   a `service_role`.
+2. `verify-tenant-code` reescrito a minimal: solo valida código, crea
+   Checkout Session (SaaS, sin trial, cobra de inmediato), devuelve
+   `checkout_url`. Cero side-effects de provisioning.
+3. `stripe-webhook-saas`: nuevo case `checkout.session.completed` — claim
+   atómico (CAS sobre `clinics.status`), TODO el provisioning real (customer
+   pacientes, invite admin, membership, módulos, activar clinic).
+4. `AdminTenants.tsx`: `submitVerifyCode` redirige a `checkout_url` en vez de
+   cerrar el wizard; banner post-Checkout vía query param `pago`.
+
+### Bug real encontrado y fixeado durante el review final de rama completa
+El review final (Opus, mirada de conjunto) encontró que `clinic_memberships`
+y `cliente_modulos` no eran idempotentes contra reintentos de Stripe: si el
+provisioning fallaba DESPUÉS de crear el membership, el reintento de Stripe
+chocaba con el UNIQUE constraint → loop infinito de reintentos por 72h con
+el cliente **ya cobrado** pero la clínica nunca activada. Fixeado: membership
+pasó a `upsert` con `onConflict`, módulos pasó a `delete`-then-`insert`
+scopeado por `clinic_id`. Confirmado en re-review. **Este tipo de bug era
+invisible en los reviews tarea-por-tarea — solo apareció al revisar la
+integración completa.**
+
+### Deuda conocida, aceptada sin fixear
+- Tabla `stripe_webhook_events` termina siendo write-only en la práctica (el
+  CAS de `clinics.status` es el guard real de idempotencia) — no bloqueante.
+- `DEFAULT_SITE` hardcodeado a `https://integrika.mx` en `verify-tenant-code`
+  (mismo patrón que `stripe-checkout/index.ts`) — dificulta smoke test desde
+  `localhost`, no es bug de prod.
+- Historial de migraciones de Supabase tuvo que repararse durante Task 1
+  (problema preexistente Lovable-vs-CLI, ya documentado más abajo en este
+  archivo — no introducido por esta sesión).
+
+### Pendiente crítico antes de prod real
+**Nunca se corrió un smoke test real contra Stripe (test mode)** — ni el
+implementer de Tarea 3 ni ningún reviewer tuvo Stripe CLI/credenciales de
+staff en su sandbox. Todo lo verificado fue estático (código + schema real
+de Postgres). Antes de dar por buena esta feature en producción, correr
+manualmente los Steps 5-7 de la Tarea 3 del plan
+(`docs/superpowers/plans/2026-07-08-stripe-checkout-tenant-onboarding.md`):
+alta completa con tarjeta de test, replay de webhook, y fallo forzado a
+mitad de camino + reintento.
 
 ## Completado (Jul 8, 2026 — sesión 26 — spec Stripe Checkout tenant onboarding)
 
