@@ -1,7 +1,8 @@
 // verify-tenant-code: segundo paso del alta de tenant. Valida el código de
-// verificación mandado por create-tenant y recién ahí crea el customer/
-// subscription de Stripe (cuenta pacientes + cuenta SaaS), invita al admin
-// y activa los módulos elegidos. Solo accesible para platform_staff.
+// verificación mandado por create-tenant y crea una Checkout Session de
+// Stripe (suscripción SaaS) para los módulos elegidos. El aprovisionamiento
+// real (customer, membership, activación) ocurre en el webhook de Stripe al
+// confirmarse el pago. Solo accesible para platform_staff.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -13,7 +14,6 @@ const corsHeaders = {
 const SUPABASE_URL = Deno["env"].get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno["env"].get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_KEY = Deno["env"].get(["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_"))!;
-const STRIPE_KEY = Deno["env"].get(["STRIPE", "SECRET", "KEY"].join("_"))!;
 const STRIPE_SAAS_KEY = Deno["env"].get(["STRIPE", "SAAS", "SECRET", "KEY"].join("_"))!;
 
 interface VerifyBody {
@@ -80,130 +80,35 @@ Deno.serve(async (req) => {
       return json({ error: "Módulos inválidos o sin stripe_price_id configurado" }, 400);
     }
 
-    let stripeCustomerId: string | null = null;
-    try {
-      const stripeRes = await fetch("https://api.stripe.com/v1/customers", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${STRIPE_KEY}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          name: clinic.name as string,
-          email: (clinic.contacto_facturacion_email as string) ?? adminEmail,
-          "metadata[clinic_id]": clinicId,
-        }),
-      });
-      const stripeCustomer = await stripeRes.json();
-      if (!stripeRes.ok) {
-        throw new Error(stripeCustomer?.error?.message ?? `Stripe error ${stripeRes.status}`);
-      }
-      stripeCustomerId = stripeCustomer.id as string;
-      await admin.from("clinics").update({ stripe_customer_id: stripeCustomerId }).eq("id", clinicId);
-    } catch (stripeErr) {
-      console.error("[verify-tenant-code] error Stripe:", stripeErr);
-      return json({ error: `Error creando cliente Stripe: ${(stripeErr as Error).message}` }, 500);
-    }
-
-    let adminUserId: string;
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(adminEmail);
-    if (inviteErr || !invited?.user) {
-      const alreadyExists = /already.*registered|already.*exists/i.test(inviteErr?.message ?? "");
-      if (!alreadyExists) {
-        console.error("[verify-tenant-code] error invitando admin:", inviteErr);
-        return json({ error: inviteErr?.message ?? "error invitando admin" }, 500);
-      }
-      // ponytail: listUsers() + .find() no encontraba al usuario aunque
-      // existiera (fallaba silenciosamente sin log recuperable) — filtro
-      // directo por email contra la API admin de GoTrue en vez de traer
-      // todos los usuarios y buscar en memoria.
-      const lookupRes = await fetch(
-        `${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(adminEmail)}`,
-        { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } },
-      );
-      const lookupBody = await lookupRes.json().catch(() => null);
-      const existing = (lookupBody?.users ?? []).find((u: { email?: string }) => u.email === adminEmail);
-      if (!lookupRes.ok || !existing) {
-        console.error("[verify-tenant-code] email ya registrado pero no se pudo resolver user_id:", lookupBody);
-        return json({
-          error: `El email ya está registrado y no se pudo resolver el usuario — lookup status ${lookupRes.status}, body: ${JSON.stringify(lookupBody)?.slice(0, 300)}`,
-        }, 500);
-      }
-      adminUserId = existing.id;
-    } else {
-      adminUserId = invited.user.id;
-    }
-
-    const { error: membershipErr } = await admin.from("clinic_memberships").insert({
-      user_id: adminUserId,
-      clinic_id: clinicId,
-      role: "admin",
-      status: "active",
+    const DEFAULT_SITE = "https://integrika.mx";
+    const params = new URLSearchParams({
+      mode: "subscription",
+      success_url: `${DEFAULT_SITE}/admin/tenants?pago=procesando&clinic_id=${clinicId}`,
+      cancel_url: `${DEFAULT_SITE}/admin/tenants?pago=cancelado&clinic_id=${clinicId}`,
+      "metadata[clinic_id]": clinicId,
+      customer_email: (clinic.contacto_facturacion_email as string) ?? adminEmail,
+      locale: "es-419",
     });
-    if (membershipErr) {
-      console.error("[verify-tenant-code] error creando membership:", membershipErr);
-      return json({ error: membershipErr.message }, 500);
-    }
-
-    const saasCustomerRes = await fetch("https://api.stripe.com/v1/customers", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${STRIPE_SAAS_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ name: clinic.name as string, email: (clinic.contacto_facturacion_email as string) ?? "" }),
-    });
-    if (!saasCustomerRes.ok) {
-      return json({ error: "No se pudo crear customer Stripe SaaS" }, 502);
-    }
-    const saasCustomer = await saasCustomerRes.json();
-
-    const subParams = new URLSearchParams({ customer: saasCustomer.id });
     modulos.forEach((m, i) => {
-      subParams.append(`items[${i}][price]`, m.stripe_price_id as string);
+      params.append(`line_items[${i}][price]`, m.stripe_price_id as string);
+      params.append(`line_items[${i}][quantity]`, "1");
     });
-    const subRes = await fetch("https://api.stripe.com/v1/subscriptions", {
+
+    const sessionRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${STRIPE_SAAS_KEY}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: subParams,
+      body: params,
     });
-    if (!subRes.ok) {
-      await fetch(`https://api.stripe.com/v1/customers/${saasCustomer.id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${STRIPE_SAAS_KEY}` },
-      }).catch((e) => console.error("[verify-tenant-code] no se pudo borrar customer SaaS huerfano:", e));
-      return json({ error: "No se pudo crear la suscripción Stripe SaaS" }, 502);
-    }
-    const subscription = await subRes.json();
-
-    const { error: updateErr } = await admin
-      .from("clinics")
-      .update({
-        stripe_customer_id_saas: saasCustomer.id,
-        stripe_subscription_id_saas: subscription.id,
-        subscription_status: "trialing",
-        status: "active",
-        verification_code: null,
-        verification_code_expires_at: null,
-        pending_admin_email: null,
-        pending_modulo_ids: null,
-      })
-      .eq("id", clinicId);
-    if (updateErr) {
-      return json({ error: "No se pudo guardar la suscripción en clinics" }, 500);
+    const session = await sessionRes.json();
+    if (!sessionRes.ok) {
+      console.error("[verify-tenant-code] error creando Checkout Session:", session);
+      return json({ error: session?.error?.message ?? "Error creando sesión de pago" }, 502);
     }
 
-    const { error: cmError } = await admin
-      .from("cliente_modulos")
-      .insert(moduloIds.map((modulo_id) => ({ clinic_id: clinicId, modulo_id })));
-    if (cmError) {
-      return json({ error: "No se pudieron guardar los módulos del cliente" }, 500);
-    }
-
-    return json({ clinic_id: clinicId, status: "active" });
+    return json({ checkout_url: session.url });
   } catch (err) {
     console.error("[verify-tenant-code] unexpected error:", err);
     return json({ error: (err as Error).message ?? "error inesperado" }, 500);

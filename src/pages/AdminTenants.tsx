@@ -48,6 +48,18 @@ export default function AdminTenants() {
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingClinicId, setPendingClinicId] = useState<string | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
+  const [infoBanner, setInfoBanner] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pago = params.get("pago");
+    if (pago === "procesando") {
+      setInfoBanner("Pago recibido, activando la clínica... puede tardar unos segundos. Refresca la tabla si no la ves activa.");
+    } else if (pago === "cancelado") {
+      setInfoBanner("Pago cancelado. Puedes reintentar el alta desde 'Nuevo cliente'.");
+    }
+    if (pago) window.history.replaceState({}, "", "/admin/tenants");
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -194,12 +206,11 @@ export default function AdminTenants() {
         setFormError(data?.error ?? `Error ${status}`);
         return;
       }
-      setShowWizard(false);
-      setPendingClinicId(null);
-      setVerifyCode("");
-      setForm({ code: "", name: "", rfc: "", address: "", contacto_facturacion_email: "", admin_email: "" });
-      setModuloIds([]);
-      await load();
+      if (!data?.checkout_url) {
+        setFormError("El servidor no devolvió un link de pago");
+        return;
+      }
+      window.location.href = data.checkout_url;
     } catch (e) {
       setFormError((e as Error).message ?? "Error de red inesperado");
     } finally {
@@ -214,6 +225,7 @@ export default function AdminTenants() {
         Nuevo cliente
       </button>
       {error && <p className="text-red-600 mb-4">{error}</p>}
+      {infoBanner && <p className="text-blue-700 mb-4">{infoBanner}</p>}
       {loading ? (
         <p>Cargando...</p>
       ) : (

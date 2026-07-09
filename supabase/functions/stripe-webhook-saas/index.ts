@@ -12,6 +12,7 @@ const { env: denoEnv } = Deno;
 const SUPABASE_URL = denoEnv.get("SUPABASE_URL")!;
 const SUPABASE_SVC = denoEnv.get(["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_"))!;
 const WEBHOOK_SECRET = denoEnv.get(["STRIPE", "SAAS", "WEBHOOK", "SECRET"].join("_"));
+const STRIPE_PACIENTES_KEY = denoEnv.get(["STRIPE", "SECRET", "KEY"].join("_"))!;
 
 const encoder = new TextEncoder();
 
@@ -107,6 +108,111 @@ Deno.serve(async (req: Request) => {
         .eq("stripe_subscription_id_saas", subscriptionId);
       if (!count) console.warn("[stripe-webhook-saas] subscription.deleted: sin clinic para subscription:", subscriptionId);
       else console.log("[stripe-webhook-saas] subscription.deleted:", subscriptionId);
+      break;
+    }
+
+    case "checkout.session.completed": {
+      const session = obj;
+      const clinicId = session?.metadata?.clinic_id as string | undefined;
+      if (!clinicId) {
+        console.error("[stripe-webhook-saas] checkout.session.completed sin clinic_id:", session?.id);
+        break;
+      }
+
+      const { data: claimed, error: claimErr } = await svc
+        .from("clinics")
+        .update({ status: "provisionando" })
+        .eq("id", clinicId)
+        .eq("status", "pendiente_verificacion")
+        .select("id, name, contacto_facturacion_email, pending_admin_email, pending_modulo_ids")
+        .single();
+
+      if (claimErr || !claimed) {
+        console.log("[stripe-webhook-saas] clinic ya reclamada/activada, se ignora:", clinicId);
+        break;
+      }
+
+      try {
+        if (!session.subscription) throw new Error("checkout session sin subscription");
+
+        const adminEmail = claimed.pending_admin_email as string;
+        const moduloIds = (claimed.pending_modulo_ids ?? []) as string[];
+
+        const custRes = await fetch("https://api.stripe.com/v1/customers", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${STRIPE_PACIENTES_KEY}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Idempotency-Key": `customer-pacientes-${clinicId}`,
+          },
+          body: new URLSearchParams({
+            name: claimed.name as string,
+            email: (claimed.contacto_facturacion_email as string) ?? adminEmail,
+            "metadata[clinic_id]": clinicId,
+          }),
+        });
+        const customer = await custRes.json();
+        if (!custRes.ok) throw new Error(`customer pacientes: ${customer?.error?.message ?? custRes.status}`);
+
+        let adminUserId: string;
+        const { data: invited, error: inviteErr } = await svc.auth.admin.inviteUserByEmail(adminEmail);
+        if (inviteErr || !invited?.user) {
+          const alreadyExists = /already.*registered|already.*exists/i.test(inviteErr?.message ?? "");
+          if (!alreadyExists) throw new Error(`invite admin: ${inviteErr?.message}`);
+          const lookupRes = await fetch(
+            `${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(adminEmail)}`,
+            { headers: { apikey: SUPABASE_SVC, Authorization: `Bearer ${SUPABASE_SVC}` } },
+          );
+          const lookupBody = await lookupRes.json().catch(() => null);
+          const existing = (lookupBody?.users ?? []).find((u: { email?: string }) => u.email === adminEmail);
+          if (!lookupRes.ok || !existing) throw new Error(`resolve admin user: status ${lookupRes.status}`);
+          adminUserId = existing.id;
+        } else {
+          adminUserId = invited.user.id;
+        }
+
+        const { error: membershipErr } = await svc.from("clinic_memberships").upsert(
+          { user_id: adminUserId, clinic_id: clinicId, role: "admin", status: "active" },
+          { onConflict: "clinic_id,user_id", ignoreDuplicates: true },
+        );
+        if (membershipErr) throw new Error(`membership: ${membershipErr.message}`);
+
+        const { error: deleteOldError } = await svc
+          .from("cliente_modulos")
+          .delete()
+          .eq("clinic_id", clinicId);
+        if (deleteOldError) throw new Error(`limpiar modulos previos: ${deleteOldError.message}`);
+
+        const { error: cmError } = await svc.from("cliente_modulos")
+          .insert(moduloIds.map((modulo_id) => ({ clinic_id: clinicId, modulo_id })));
+        if (cmError) throw new Error(`modulos: ${cmError.message}`);
+
+        await svc.from("stripe_webhook_events")
+          .insert({ event_id: event.id, event_type: event.type })
+          .then(({ error }) => {
+            if (error) console.log("[stripe-webhook-saas] event_id ya registrado:", event.id);
+          });
+
+        const { error: updateErr } = await svc.from("clinics").update({
+          stripe_customer_id: customer.id,
+          stripe_customer_id_saas: session.customer,
+          stripe_subscription_id_saas: session.subscription,
+          subscription_status: "active",
+          status: "active",
+          verification_code: null,
+          verification_code_expires_at: null,
+          pending_admin_email: null,
+          pending_modulo_ids: null,
+        }).eq("id", clinicId);
+        if (updateErr) throw new Error(`activate clinic: ${updateErr.message}`);
+
+        console.log("[stripe-webhook-saas] clinic activada:", clinicId);
+      } catch (err) {
+        console.error("[stripe-webhook-saas] provisioning falló, revirtiendo claim:", clinicId, err);
+        await svc.from("clinics").update({ status: "pendiente_verificacion" }).eq("id", clinicId);
+        return new Response("provisioning failed", { status: 500 });
+      }
+
       break;
     }
 
