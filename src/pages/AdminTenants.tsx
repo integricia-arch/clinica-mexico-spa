@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 interface TenantRow {
   id: string;
@@ -24,6 +24,7 @@ interface Modulo {
 
 export default function AdminTenants() {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [isPlatformStaff, setIsPlatformStaff] = useState<boolean | null>(null);
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,7 +244,11 @@ export default function AdminTenants() {
           </thead>
           <tbody>
             {tenants.map((t) => (
-              <tr key={t.id} className="border-b">
+              <tr
+                key={t.id}
+                className="border-b cursor-pointer hover:bg-gray-50"
+                onClick={() => navigate(`/admin/tenants/${t.id}`)}
+              >
                 <td className="py-2">{t.name}</td>
                 <td>{t.code}</td>
                 <td>{t.status}</td>
@@ -255,7 +260,7 @@ export default function AdminTenants() {
                     : ""}
                 </td>
                 <td>{new Date(t.created_at).toLocaleDateString("es-MX")}</td>
-                <td>
+                <td onClick={(e) => e.stopPropagation()}>
                   {t.status === "suspended" ? (
                     <button onClick={() => setStatus(t.id, "active")} className="text-green-700 underline">
                       Reactivar
