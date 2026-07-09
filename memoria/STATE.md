@@ -1,12 +1,47 @@
 # Estado del Proyecto — clinica-mexico-spa
 
 ## Fase actual
-Producción activa — pivote SaaS multi-tenant en marcha. Sesión 25 (Jul 9)
-resolvió el bug del 500 genérico y reescribió el alta de tenant como flujo
-de 2 pasos (verificación por email antes de cobrar), pero **el flujo NO
-está completo ni correcto todavía — ver sesión 25 abajo para el diseño real
-pendiente (Checkout de Stripe + webhook de provisioning) antes de
-considerar esto terminado.** Fase C sin brainstormear.
+Producción activa — pivote SaaS multi-tenant en marcha. Sesión 25 resolvió
+el bug del 500 genérico y reescribió el alta de tenant como flujo de 2 pasos
+(verificación por email antes de cobrar). Sesión 26 (Jul 8) cerró el diseño
+pendiente (Checkout de Stripe + webhook de provisioning) — spec completo y
+aprobado, commiteado. **Pendiente: `/plan` de implementación en sesión
+nueva** (no ejecutar todavía, solo el diseño está listo). Fase C sin
+brainstormear.
+
+## Completado (Jul 8, 2026 — sesión 26 — spec Stripe Checkout tenant onboarding)
+
+Spec completo en `docs/superpowers/specs/2026-07-08-stripe-checkout-tenant-onboarding-design.md`
+(commit `d491b03`). Diseño validado con brainstorming skill + research en
+docs oficiales de Stripe y OWASP. Resumen del diseño:
+
+- **Problema cerrado**: `verify-tenant-code` daba acceso completo (invite +
+  membership + módulos + subscription) sin cobrar nada. Ahora Checkout Session
+  se inserta entre "verificar código" y "dar acceso".
+- **verify-tenant-code** queda minimal: valida código, crea Checkout Session
+  (cuenta SaaS, sin trial, cobra de inmediato), devuelve `checkout_url`. Cero
+  side-effects en DB/Stripe más allá de eso.
+- **stripe-webhook-saas** gana nuevo case `checkout.session.completed`: hace
+  TODO el provisioning (customer pacientes, invite admin, membership,
+  módulos, activar clinic). Única fuente de verdad — nunca fulfillment desde
+  el redirect del front (research confirma esto es best practice Stripe/OWASP).
+- **Idempotencia**: tabla nueva `stripe_webhook_events` (event_id UNIQUE),
+  insertada al FINAL del provisioning exitoso (no al inicio) — así un fallo
+  parcial se recupera vía reintento de Stripe en vez de quedar huérfano.
+- **Row lock**: CAS atómico (`UPDATE clinics SET status='provisionando'
+  WHERE status='pendiente_verificacion'`) en vez de `SELECT FOR UPDATE`
+  (Edge Functions/PostgREST no sostienen transacción entre fetch() separados).
+- **Fuera de alcance deliberado**: cron de limpieza de clinics huérfanas
+  (código expirado sin pagar) — reintento es repetir el alta desde cero.
+- **Pendiente de implementación** (no cubierto en el spec, resolver al
+  implementar): nombre exacto de las env vars de Stripe a agregar a
+  `stripe-webhook-saas`, si `clinics.status` tiene CHECK constraint (agregar
+  `'provisionando'`), y `SITE_URL` como env var nueva en `verify-tenant-code`.
+
+**Siguiente paso**: `/plan` (writing-plans skill) en sesión nueva para
+convertir el spec en plan de implementación ejecutable. NO implementar nada
+todavía sin ese plan — esta sesión fue puramente de diseño, cero código
+tocado.
 
 ## Completado (Jul 9, 2026 — sesión 25 — fix 500 genérico + flujo 2-pasos verificación, DISEÑO INCOMPLETO)
 
