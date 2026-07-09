@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
           await stripeFetch(
             `subscriptions/${clinic.stripe_subscription_id_saas}`,
             "POST",
-            new URLSearchParams({ cancel_at_period_end: "false" }),
+            new URLSearchParams({ cancel_at_period_end: "false", pause_collection: "" }),
           );
         } catch (stripeErr) {
           return json({ error: `Stripe: ${(stripeErr as Error).message}` }, 502);

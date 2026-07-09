@@ -159,13 +159,14 @@ Deno.serve(async (req: Request) => {
         if (inviteErr || !invited?.user) {
           const alreadyExists = /already.*registered|already.*exists/i.test(inviteErr?.message ?? "");
           if (!alreadyExists) throw new Error(`invite admin: ${inviteErr?.message}`);
-          const lookupRes = await fetch(
-            `${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(adminEmail)}`,
-            { headers: { apikey: SUPABASE_SVC, Authorization: `Bearer ${SUPABASE_SVC}` } },
-          );
-          const lookupBody = await lookupRes.json().catch(() => null);
-          const existing = (lookupBody?.users ?? []).find((u: { email?: string }) => u.email === adminEmail);
-          if (!lookupRes.ok || !existing) throw new Error(`resolve admin user: status ${lookupRes.status}`);
+          let existing: { id: string } | undefined;
+          for (let page = 1; page <= 20 && !existing; page++) {
+            const { data: pageData, error: listErr } = await svc.auth.admin.listUsers({ page, perPage: 1000 });
+            if (listErr) throw new Error(`resolve admin user: ${listErr.message}`);
+            existing = pageData.users.find((u) => u.email === adminEmail);
+            if (pageData.users.length < 1000) break;
+          }
+          if (!existing) throw new Error(`resolve admin user: no encontrado ${adminEmail}`);
           adminUserId = existing.id;
         } else {
           adminUserId = invited.user.id;
