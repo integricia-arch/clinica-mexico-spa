@@ -80,6 +80,12 @@ export function diffModulos(current: string[], next: string[]): { toAdd: string[
   };
 }
 
+export function needsNewCheckout(subscription: { status?: string; cancel_at_period_end?: boolean } | null): boolean {
+  if (!subscription) return true;
+  if (subscription.status === "canceled") return true;
+  return false;
+}
+
 interface ActionBody {
   action: "update_modules" | "reactivate" | "suspend";
   clinic_id: string;
@@ -191,6 +197,74 @@ Deno.serve(async (req) => {
           .from("cliente_modulos")
           .insert(nextIds.map((modulo_id) => ({ clinic_id: body.clinic_id, modulo_id })));
         if (insertErr) return json({ error: insertErr.message }, 500);
+
+        const summary = await buildSummary(admin, STRIPE_SAAS_KEY, body.clinic_id);
+        return json(summary);
+      }
+
+      if (body.action === "reactivate") {
+        const { data: clinic, error: clinicErr } = await admin
+          .from("clinics")
+          .select("id, name, contacto_facturacion_email, stripe_subscription_id_saas, stripe_customer_id_saas")
+          .eq("id", body.clinic_id)
+          .single();
+        if (clinicErr || !clinic) return json({ error: "Clínica no encontrada" }, 404);
+
+        let subscription: { status?: string; cancel_at_period_end?: boolean } | null = null;
+        if (clinic.stripe_subscription_id_saas) {
+          subscription = await stripeFetch(`subscriptions/${clinic.stripe_subscription_id_saas}`, "GET");
+        }
+
+        if (needsNewCheckout(subscription)) {
+          const { data: modulosRows } = await admin
+            .from("cliente_modulos")
+            .select("catalogo_modulos(stripe_price_id)")
+            .eq("clinic_id", body.clinic_id);
+          const priceIds = (modulosRows ?? [])
+            .map((r) => (r.catalogo_modulos as { stripe_price_id?: string })?.stripe_price_id)
+            .filter((id): id is string => Boolean(id));
+          if (priceIds.length === 0) {
+            return json({ error: "Esta clínica no tiene módulos para volver a suscribir" }, 400);
+          }
+
+          const DEFAULT_SITE = "https://integrika.mx";
+          const params = new URLSearchParams({
+            mode: "subscription",
+            success_url: `${DEFAULT_SITE}/admin/tenants/${clinic.id}?pago=procesando`,
+            cancel_url: `${DEFAULT_SITE}/admin/tenants/${clinic.id}?pago=cancelado`,
+            "metadata[clinic_id]": clinic.id as string,
+            customer_email: clinic.contacto_facturacion_email as string,
+            locale: "es-419",
+          });
+          priceIds.forEach((priceId, i) => {
+            params.append(`line_items[${i}][price]`, priceId);
+            params.append(`line_items[${i}][quantity]`, "1");
+          });
+
+          let session: { url?: string };
+          try {
+            session = await stripeFetch("checkout/sessions", "POST", params);
+          } catch (stripeErr) {
+            return json({ error: `Stripe: ${(stripeErr as Error).message}` }, 502);
+          }
+          return json({ checkout_url: session.url });
+        }
+
+        try {
+          await stripeFetch(
+            `subscriptions/${clinic.stripe_subscription_id_saas}`,
+            "POST",
+            new URLSearchParams({ cancel_at_period_end: "false" }),
+          );
+        } catch (stripeErr) {
+          return json({ error: `Stripe: ${(stripeErr as Error).message}` }, 502);
+        }
+
+        const { error: updateErr } = await admin
+          .from("clinics")
+          .update({ status: "active", subscription_status: "active" })
+          .eq("id", body.clinic_id);
+        if (updateErr) return json({ error: updateErr.message }, 500);
 
         const summary = await buildSummary(admin, STRIPE_SAAS_KEY, body.clinic_id);
         return json(summary);
