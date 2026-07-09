@@ -3,13 +3,43 @@
 ## Fase actual
 Producción activa — pivote SaaS multi-tenant en marcha. Sesión 27 (Jul 8)
 implementó Checkout de Stripe y mergeó a `main`. Sesión 28 (Jul 9) corrió
-smoke test real contra Stripe — exitoso. Sesión 29 (Jul 9) encontró y está
-resolviendo un bug real de fondo en `create-tenant`: **el dominio propio de
-Resend (`integrika.mx`) nunca fue agregado/verificado en Resend** — por eso
-cualquier alta con un email nuevo (no el del dueño de la cuenta) falla con
-"No se pudo enviar el correo de verificación". **NO RESUELTO TODAVÍA** —
-pendiente que el usuario agregue el dominio en resend.com/domains y
-verifique los registros DNS. Fase C sin brainstormear.
+smoke test real contra Stripe — exitoso. Sesión 29 (Jul 9) diagnosticó y
+**CERRÓ DEFINITIVAMENTE** el bug de fondo en `create-tenant`: dominio
+`integrika.mx` agregado a Resend + 3 registros DNS agregados en Cloudflare
+(vía browser automation) — `Verified` en Resend 8min después. Smoke test
+real: alta de clínica "Santo Copo" con email nuevo (`karla_1723@hotmail.com`,
+no el del dueño de la cuenta) → Resend confirmó `Delivered` → **usuario
+confirmó que el correo llegó a la bandeja**. **BUG CERRADO, sin pendientes.**
+Fase C sin brainstormear.
+
+## MAPA DE INFRAESTRUCTURA DNS — integrika.mx (confirmado sesión 29, Jul 9 2026)
+
+**Registrador**: GoDaddy (dueño del dominio).
+**DNS autoritativo real**: **Cloudflare** — la zona `integrika.mx` vive en
+Cloudflare (`dash.cloudflare.com`, cuenta `integric.ia@gmail.com`, zone free
+plan). GoDaddy es solo el registrador; **todos los registros DNS se
+gestionan en Cloudflare, nunca en el panel de GoDaddy.** Confirmado por el
+propio Resend (detectó "PROVIDER: Cloudflare" al agregar el dominio).
+
+**Correo real del dominio (`contacto@integrika.mx`, mailboxes de GoDaddy
+Email/Microsoft 365) vive en la raíz y NO debe tocarse**:
+- MX raíz: `mailstore1.secureserver.net` (prio 10), `smtp.secureserver.net` (prio 0)
+- SPF raíz: `integrika.mx TXT "v=spf1 include:secureserver.net -all"` (hard fail)
+- DKIM GoDaddy: `secureserver1._domainkey` / `secureserver2._domainkey` (CNAME)
+- DMARC: `_dmarc.integrika.mx TXT "v=DMARC1; p=reject; ..."`
+
+**Resend usa nombres separados — sin conflicto con lo de arriba** (agregados
+sesión 29, confirmados guardados en Cloudflare):
+- `resend._domainkey.integrika.mx` TXT → DKIM de Resend (clave RSA)
+- `send.integrika.mx` MX → `feedback-smtp.us-east-1.amazonses.com` (prio 10)
+- `send.integrika.mx` TXT → `v=spf1 include:amazonses.com ~all`
+- MX de **recepción** (`inbound-smtp.us-east-1.amazonaws.com` en `@`)
+  deliberadamente **NO agregado** — chocaría con el MX raíz de GoDaddy.
+  Solo se necesita envío (verificación de alta de tenant), no recepción.
+
+**Regla para el futuro**: cualquier cambio de DNS de este dominio se hace en
+Cloudflare (`dash.cloudflare.com` → zona `integrika.mx` → DNS → Records),
+NUNCA en GoDaddy. GoDaddy solo importa para renovación/registro del dominio.
 
 ## EN CURSO (Jul 9, 2026 — sesión 29 — bug de fondo: alta de clínica con email nuevo falla)
 
@@ -39,18 +69,23 @@ crudo de la respuesta de Resend en el mensaje de error devuelto al cliente
 queda en el código como mejora permanente de diagnóstico (función
 staff-only) — no hace falta revertirlo.
 
-### Pendiente para cerrar (bloqueado en el usuario, pasos manuales fuera de Claude)
-1. `resend.com/domains` → **Add Domain** → `integrika.mx` (o subdominio
-   dedicado tipo `mail.integrika.mx`, más aislado para reputación de envío).
-2. Copiar los registros DNS que muestra Resend (TXT SPF, TXT DKIM,
-   opcionalmente MX) y pegarlos en el proveedor de DNS real del dominio.
-3. Volver a Resend y confirmar **Verified** (puede tardar de minutos a
-   horas en propagar).
-4. Retomar en sesión nueva: probar alta con email nuevo (no el del dueño de
-   la cuenta) y confirmar que el correo llega. Si llega, cerrar este
-   pendiente en STATE.md.
-5. `RESEND_FROM` ya quedó seteado a `Integriclinica <contacto@integrika.mx>`
-   — no hace falta volver a tocarlo, solo falta que el dominio verifique.
+### Pendiente para cerrar — HECHO EN INFRA (sesión 29, vía browser automation), falta solo confirmar
+1. ✅ `resend.com/domains` → **Add Domain** → `integrika.mx` — hecho.
+2. ✅ 3 registros DNS agregados en Cloudflare (zona real del dominio, NO
+   GoDaddy — ver "MAPA DE INFRAESTRUCTURA DNS" arriba): DKIM
+   (`resend._domainkey`), MX+TXT SPF en `send.integrika.mx`. Verificado sin
+   conflicto con el correo real (`contacto@integrika.mx`) que sigue en
+   GoDaddy Email en la raíz.
+3. ✅ **VERIFIED** — confirmado en `resend.com/domains` a los 8 minutos de
+   agregar los registros (propagó rápido por ser Cloudflare). `STATUS:
+   Verified`, `DNS verified` y `Domain verified` ambos Jul 9 11:03-11:04 AM.
+4. ✅ **SMOKE TEST REAL OK** — alta de clínica "Santo Copo" con
+   `karla_1723@hotmail.com` (email nuevo, no el del dueño de la cuenta).
+   Resend logs (`resend.com/emails`) mostró `Delivered`. **Usuario confirmó
+   que el correo llegó a la bandeja real.** Bug cerrado sin pendientes —
+   no requiere ninguna acción más de código ni de infraestructura.
+5. `RESEND_FROM` ya está en `Integriclinica <contacto@integrika.mx>` — no
+   tocar, ya es correcto.
 
 ### Costo de sesión
 Sesión 28 cerró en ~$1,018. Esta sesión (29, continuación) llegó a
