@@ -13,6 +13,16 @@ const SUPABASE_URL = denoEnv.get("SUPABASE_URL")!;
 const SUPABASE_SVC = denoEnv.get(["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_"))!;
 const WEBHOOK_SECRET = denoEnv.get(["STRIPE", "SAAS", "WEBHOOK", "SECRET"].join("_"));
 const STRIPE_PACIENTES_KEY = denoEnv.get(["STRIPE", "SECRET", "KEY"].join("_"))!;
+const STRIPE_SAAS_KEY = denoEnv.get(["STRIPE", "SAAS", "SECRET", "KEY"].join("_"))!;
+
+async function stripeSaasFetch(path: string) {
+  const res = await fetch(`https://api.stripe.com/v1/${path}`, {
+    headers: { Authorization: `Bearer ${STRIPE_SAAS_KEY}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message ?? `Stripe error ${res.status}`);
+  return data;
+}
 
 const encoder = new TextEncoder();
 
@@ -136,7 +146,43 @@ Deno.serve(async (req: Request) => {
         if (!session.subscription) throw new Error("checkout session sin subscription");
 
         const adminEmail = claimed.pending_admin_email as string;
-        const moduloIds = (claimed.pending_modulo_ids ?? []) as string[];
+
+        // Fuente de verdad: los ítems reales de la suscripción en Stripe,
+        // nunca pending_modulo_ids solo. pending_modulo_ids queda stale en
+        // reactivaciones (el checkout se arma desde cliente_modulos actual,
+        // no desde este campo) — usarlo ciego desincroniza cliente_modulos
+        // de lo que Stripe realmente cobra (bug real, sesión 31: Santo Copo
+        // terminó con 4 módulos en DB cobrando solo 1 en Stripe).
+        const subscription = await stripeSaasFetch(
+          `subscriptions/${session.subscription}?expand[]=items.data.price`,
+        );
+        const subscriptionPriceIds = ((subscription.items?.data ?? []) as { price?: { id?: string } }[])
+          .map((item) => item.price?.id)
+          .filter((id): id is string => Boolean(id));
+
+        let moduloIds: string[];
+        if (subscriptionPriceIds.length > 0) {
+          const { data: matchedModulos, error: matchErr } = await svc
+            .from("catalogo_modulos")
+            .select("id, stripe_price_id")
+            .in("stripe_price_id", subscriptionPriceIds);
+          if (matchErr) throw new Error(`match modulos por price_id: ${matchErr.message}`);
+          moduloIds = (matchedModulos ?? []).map((m) => m.id as string);
+          if (moduloIds.length !== subscriptionPriceIds.length) {
+            console.warn(
+              "[stripe-webhook-saas] price_id de la subscription sin match en catalogo_modulos:",
+              clinicId,
+              subscriptionPriceIds,
+              moduloIds,
+            );
+          }
+        } else {
+          console.warn(
+            "[stripe-webhook-saas] subscription sin items, usando pending_modulo_ids como fallback:",
+            clinicId,
+          );
+          moduloIds = (claimed.pending_modulo_ids ?? []) as string[];
+        }
 
         const custRes = await fetch("https://api.stripe.com/v1/customers", {
           method: "POST",
