@@ -24,6 +24,38 @@ real verificado contra Stripe).
 TERMINADO end-to-end, con 3 bugs reales encontrados y 2 arreglados
 en producción durante el smoke test.** Detalle abajo.
 
+**Sesión 32 (Jul 9, cont.) — deploy bug #5, merge a main, diagnóstico bug #4:**
+1. **Deployado** el fix del bug #5 (commit `e3d4608`) —
+   `supabase functions deploy stripe-webhook-saas --project-ref kyfkvdyxpvpiacyymldc`
+   corrido con éxito. Webhook ahora deriva módulos de los items reales de
+   la subscription en Stripe, no de `pending_modulo_ids`.
+2. **Merge completo**: `worktree-panel-suscripciones` (9 commits, `0dc7f9c`
+   → `c4240ac`) mergeado fast-forward a `main` y pusheado a origin. Git ya
+   refleja todo lo deployado.
+3. **Bug #4 DIAGNOSTICADO — causa raíz encontrada**: NO es un problema de
+   evento no suscrito (`customer.subscription.deleted` SÍ está en la lista
+   de eventos del endpoint `playful-serenity`
+   `we_1TrKIkGw6QdIxYi0y7iZbCiv` → `stripe-webhook-saas`). El problema real:
+   **el signing secret configurado en Supabase (`STRIPE_SAAS_WEBHOOK_SECRET`)
+   no coincide con el `whsec_` real del endpoint en Stripe** — confirmado en
+   `dashboard.stripe.com/test/workbench/webhooks` → pestaña "Entregas de
+   eventos": **100% de las entregas fallan con `400 "Invalid signature"`**,
+   afecta a los 4 eventos suscritos por igual (`checkout.session.completed`,
+   `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`),
+   no solo cancelaciones. Esto también fue la causa silenciosa de por qué
+   `get_logs` mostraba varios `400` en `stripe-webhook-saas` durante el
+   smoke test de sesión 31 (se ignoraron como ruido en ese momento).
+   **Pendiente**: correr
+   `supabase secrets set STRIPE_SAAS_WEBHOOK_SECRET=whsec_<valor real> --project-ref kyfkvdyxpvpiacyymldc`
+   con el valor visible en el dashboard de Stripe (botón ojo, "Secreto de
+   firma" del endpoint `playful-serenity`) — no se copió el valor al chat
+   por regla de manejo de secretos. Tras el fix, reenviar el evento
+   `customer.subscription.deleted` fallido desde el dashboard ("Vuelve a
+   enviarlo") para confirmar 200 y que `clinics.status` se actualice.
+   Hay un segundo endpoint activo (`energetic-inspiration`, 1 evento, 60%
+   error) sin revisar — verificar si es duplicado/obsoleto o de otro flujo
+   (stripe-webhook de pagos-paciente, secret distinto).
+
 ## Completado — Sesión 31: Panel de suscripciones Tasks 6-7 + 3 bugs de producción
 
 **Task 6 (frontend)**: `src/pages/AdminTenantDetail.tsx` creado (código del
