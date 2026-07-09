@@ -4,13 +4,65 @@
 Producción activa — pivote SaaS multi-tenant en marcha. Sesión 25 resolvió
 el bug del 500 genérico y reescribió el alta de tenant como flujo de 2 pasos
 (verificación por email antes de cobrar). Sesión 26 (Jul 8) cerró el diseño
-(spec) del Checkout de Stripe. Sesión 27 (Jul 8, misma fecha, sesión
-separada) implementó el plan completo con subagent-driven-development y
-mergeó a `main` (commit `019efc1`). **Alta de tenant ahora SÍ cobra antes
-de dar acceso — el hueco de sesión 25 está cerrado.** Pendiente crítico
-antes de considerar esto probado en prod real: correr el smoke test manual
-contra Stripe test mode (nunca se ejecutó, todo fue verificación estática +
-schema). Fase C sin brainstormear.
+(spec) del Checkout de Stripe. Sesión 27 (Jul 8) implementó el plan completo
+con subagent-driven-development y mergeó a `main` (commit `019efc1`).
+Sesión 28 (Jul 9) corrió el **smoke test real contra Stripe test mode —
+EXITOSO**: código → Checkout → pago con tarjeta test → webhook →
+provisioning completo (clinic activa, membership, 5 módulos). **El flujo de
+Checkout de Stripe está completo, probado end-to-end y funcionando.** Fase C
+sin brainstormear.
+
+## Completado (Jul 9, 2026 — sesión 28 — smoke test real Stripe, entorno test configurado)
+
+Costo de sesión extremo (~$1,018) — casi todo consumido en debugging manual
+de configuración de infraestructura externa (Resend domain, Stripe API
+keys/webhook), no en trabajo de código. **Learning fuerte**: antes de un
+smoke test real contra servicios externos (Stripe, Resend), verificar en la
+MISMA sesión de implementación (no en una sesión posterior separada) que
+todos los secrets/webhooks estén configurados con valores reales de test —
+hubiera evitado ida-y-vuelta larga de debugging manual guiado por chat.
+
+### Bugs de configuración encontrados y resueltos (ninguno era bug de código)
+1. `RESEND_FROM` apuntaba a un dominio propio sin verificar en Resend →
+   revertido a sandbox default (`onboarding@resend.dev`) hasta que el
+   dominio (`Pending` en Resend) termine de verificar.
+2. `STRIPE_SAAS_SECRET_KEY` tenía un placeholder literal (`sk_test_xxx`) →
+   reemplazado por key real de test.
+3. `catalogo_modulos.stripe_price_id` (los 5 módulos) apuntaban a precios de
+   modo **live** de Stripe, incompatibles con la key de test → se crearon 5
+   productos/precios equivalentes en Stripe test mode, se hizo swap temporal
+   en la DB para el smoke test, y se revirtió a los IDs live al terminar.
+4. No existía ningún webhook endpoint configurado en Stripe (test mode)
+   apuntando a `stripe-webhook-saas` → creado en
+   `dashboard.stripe.com/test/workbench/webhooks`, evento
+   `checkout.session.completed`, `STRIPE_SAAS_WEBHOOK_SECRET` actualizado
+   con el signing secret real del nuevo endpoint.
+
+### Smoke test — resultado
+Alta completa de tenant ("Santa Daena miami") vía Stripe Checkout real
+(modo test, tarjeta `4242...`): `verify-tenant-code` creó la Checkout
+Session correctamente, el pago se completó, `stripe-webhook-saas` recibió
+`checkout.session.completed` y ejecutó el provisioning completo — clinic
+`status=active`, `subscription_status=active`, 3 IDs de Stripe poblados,
+1 `clinic_membership`, 5 filas en `cliente_modulos`. **Confirma que el
+diseño de claim atómico + idempotencia (sesión 27) funciona correctamente
+contra el flujo real de Stripe, no solo en verificación estática.**
+
+### Limpieza post-test
+- `catalogo_modulos.stripe_price_id` revertido a los 5 IDs live originales.
+- Las 6 clinics de prueba generadas durante el debugging (San Pablo x2,
+  San Pablo 1 x2, Santa ANY, Santa Daena miami) fueron borradas junto con
+  sus `clinic_memberships`/`cliente_modulos` asociados — DB queda limpia,
+  sin datos de prueba.
+- **No se limpió**: el usuario Supabase Auth invitado durante las pruebas
+  (`integric.ia@gmail.com`, vía `inviteUserByEmail`) sigue existiendo — es
+  el email del propio dueño de la cuenta, bajo riesgo, no se tocó.
+- **Pendiente de decisión del usuario**: el dominio propio en Resend sigue
+  en verificación (`Pending`). Cuando pase a `Verified`, volver a setear
+  `RESEND_FROM` al dominio propio (hoy sigue en sandbox default).
+- El endpoint de webhook en Stripe test mode y el `STRIPE_SAAS_WEBHOOK_SECRET`
+  quedaron configurados — no hace falta tocarlos de nuevo salvo que se
+  regenere el signing secret desde el dashboard de Stripe.
 
 ## Completado (Jul 8, 2026 — sesión 27 — implementación Stripe Checkout, merge a main)
 
