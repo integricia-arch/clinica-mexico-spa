@@ -113,10 +113,18 @@ Deno.serve(async (req) => {
         console.error("[verify-tenant-code] error invitando admin:", inviteErr);
         return json({ error: inviteErr?.message ?? "error invitando admin" }, 500);
       }
-      const { data: existingUsers, error: listErr } = await admin.auth.admin.listUsers();
-      const existing = existingUsers?.users.find((u) => u.email === adminEmail);
-      if (listErr || !existing) {
-        console.error("[verify-tenant-code] email ya registrado pero no se pudo resolver user_id:", listErr);
+      // ponytail: listUsers() + .find() no encontraba al usuario aunque
+      // existiera (fallaba silenciosamente sin log recuperable) — filtro
+      // directo por email contra la API admin de GoTrue en vez de traer
+      // todos los usuarios y buscar en memoria.
+      const lookupRes = await fetch(
+        `${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(adminEmail)}`,
+        { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } },
+      );
+      const lookupBody = await lookupRes.json().catch(() => null);
+      const existing = lookupBody?.users?.[0];
+      if (!lookupRes.ok || !existing) {
+        console.error("[verify-tenant-code] email ya registrado pero no se pudo resolver user_id:", lookupBody);
         return json({ error: "El email ya está registrado y no se pudo resolver el usuario" }, 500);
       }
       adminUserId = existing.id;
