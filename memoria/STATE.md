@@ -107,16 +107,45 @@ completo por eso, pero confirmó que `needsNewCheckout()` sí se dispara
 correctamente cuando `subscription.status === "canceled"` es detectado
 (el problema es que la DB nunca se entera de la cancelación real).
 
+5. **BUG arreglado en código, SIN DEPLOY todavía** — mismo origen que el
+   bug #4/inconsistencia reportada por el usuario: el webhook insertaba
+   `cliente_modulos` desde `pending_modulo_ids` (campo stale, seteado solo
+   en el alta original) en vez de leer los ítems reales de la suscripción
+   de Stripe. Por eso Santo Copo terminó con 4 módulos en DB
+   ($8,846.00/mes sumados) mientras Stripe solo cobraba 1 (Agenda,
+   $1,749.00, factura `EM2CU6RV-0001`). Fix commiteado (`e3d4608`):
+   agrega `STRIPE_SAAS_KEY` + `stripeSaasFetch`, y en
+   `checkout.session.completed` ahora hace GET a
+   `subscriptions/{id}?expand[]=items.data.price`, mapea cada `price.id`
+   a su `catalogo_modulos` vía `stripe_price_id`, y usa **eso** como
+   `moduloIds` (fuente de verdad = lo que Stripe realmente cobra).
+   `pending_modulo_ids` queda solo de fallback si la subscription no tiene
+   items. **FALTA: `supabase functions deploy stripe-webhook-saas` — el
+   fix está en el worktree pero NO está corriendo en producción.**
+
 **Pendiente antes de dar el panel por 100% cerrado**:
-- Mergear `worktree-panel-suscripciones` → `main` (ya deployado, falta
-  que git lo refleje — commits: `ac322f2` Task 6, `cad49b5` fixes Stripe).
+- **Deployar el fix del bug #5** (`supabase functions deploy stripe-webhook-saas
+  --project-ref kyfkvdyxpvpiacyymldc`) — commit `e3d4608` ya en el branch,
+  sin deploy.
+- Mergear `worktree-panel-suscripciones` → `main` (ya deployado el resto,
+  falta que git lo refleje — commits: `ac322f2` Task 6, `cad49b5` fixes
+  Stripe #2/#3, `e3d4608` fix #5).
 - Investigar bug #4 (webhook `customer.subscription.deleted` no
   configurado o no entregado).
 - Decidir y arreglar el price_id de "Almacén" (bug #1, dejado pendiente
   a propósito).
-- Limpiar clínica de prueba "Santo Copo" si se quiere dejarla en estado
-  limpio para el próximo smoke test (quedó con 4 módulos activos y
-  suscripción cancelada tras las pruebas de esta sesión).
+- Limpiar clínica de prueba "Santo Copo" (quedó con 4 módulos en DB,
+  $8,846.00/mes según DB pero $1,749.00 según Stripe, suscripción
+  cancelada tras las pruebas) — considerar re-sincronizar manualmente o
+  esperar a probar el fix #5 con un checkout nuevo real.
+
+## Aviso de costo — sesión 31
+
+Sesión larga: llegó a **~$233** (browser automation extensiva para
+smoke test + 3 rondas de debugging de bugs de producción en vivo). Si se
+retoma con más fixes de Stripe/webhooks, preferir diagnóstico vía
+`get_logs`/SQL directo antes de recurrir a browser automation completo
+cuando sea posible — abarata bastante.
 
 ## MAPA DE INFRAESTRUCTURA DNS — integrika.mx (confirmado sesión 29, Jul 9 2026)
 
