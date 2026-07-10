@@ -95,6 +95,20 @@ export function canManageOwnSubscription(
   return membership?.role === "admin" && membership?.clinic_id === targetClinicId;
 }
 
+// Gate real que corre para requests NO-staff. Solo deja pasar cuando la acción
+// es "cancel" Y el membership pertenece a la propia clínica — cualquier otra
+// acción (update_modules, suspend, reactivate) queda bloqueada sin importar el
+// membership. Este es el guard contra escalación de privilegios de un admin de
+// clínica. Regresión a vigilar: `||` volteado a `&&`, o que se quite la
+// comparación de `action`.
+export function isSelfServiceActionForbidden(
+  action: ActionBody["action"],
+  membership: { role?: string; clinic_id?: string } | null,
+  targetClinicId: string,
+): boolean {
+  return action !== "cancel" || !canManageOwnSubscription(membership, targetClinicId);
+}
+
 type StripeFetchFn = (path: string, method: "GET" | "POST" | "DELETE", params?: URLSearchParams) => Promise<any>;
 
 export async function suspendClinic(admin: SupabaseClient, doStripeFetch: StripeFetchFn, clinicId: string) {
@@ -181,7 +195,7 @@ Deno.serve(async (req) => {
         .eq("clinic_id", body.clinic_id)
         .maybeSingle();
 
-      if (body.action !== "cancel" || !canManageOwnSubscription(membership, body.clinic_id)) {
+      if (isSelfServiceActionForbidden(body.action, membership, body.clinic_id)) {
         return json({ error: "forbidden" }, 403);
       }
 
