@@ -61,6 +61,14 @@ en producción durante el smoke test.** Detalle abajo.
    (timestamp 18:33:38) y en `clinics.subscription_status = 'canceled'`
    para Santo Copo (sin duplicar el fix manual ya aplicado). Webhook de
    suscripciones SaaS funcionando end-to-end.
+   **PENDIENTE nuevo, sesión 33**: revisar segundo endpoint `energetic-inspiration`
+   (`we_1TrKR0Gw6QdIxYi0HKujCzfa`) en `dashboard.stripe.com/test/workbench/webhooks`
+   — 1 evento suscrito, 43% de error, URL truncada `stripe-webhook-...` (sin
+   confirmar si es `stripe-webhook-saas` duplicado/viejo o el `stripe-webhook`
+   de pagos-paciente, cuenta/secret distinto). No se abrió el detalle —
+   sesión cortada por costo ($86 acumulado). Abrir el endpoint y mirar URL
+   completa + eventos + pestaña "Entregas" antes de decidir si hay que
+   arreglar o es ruido histórico sin importancia.
 4. **Bug #1 (precio Almacén) ARREGLADO.** Causa real: `catalogo_modulos.stripe_price_id`
    apuntaba a `price_1Tr4d5Gw6QdIxYi03aBS3tWv` — **un price que no existe en
    Stripe test-mode** ("Precio no encontrado" al abrirlo). Por eso todo
