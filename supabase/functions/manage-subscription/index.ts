@@ -86,6 +86,15 @@ export function needsNewCheckout(subscription: { status?: string; cancel_at_peri
   return false;
 }
 
+// Self-service: el admin de una clínica puede cancelar SOLO su propia suscripción.
+// Cualquier otra acción (update_modules, suspend, reactivate) sigue exigiendo is_global_admin.
+export function canManageOwnSubscription(
+  membership: { role?: string; clinic_id?: string } | null,
+  targetClinicId: string,
+): boolean {
+  return membership?.role === "admin" && membership?.clinic_id === targetClinicId;
+}
+
 type StripeFetchFn = (path: string, method: "GET" | "POST" | "DELETE", params?: URLSearchParams) => Promise<any>;
 
 export async function suspendClinic(admin: SupabaseClient, doStripeFetch: StripeFetchFn, clinicId: string) {
@@ -107,8 +116,33 @@ export async function suspendClinic(admin: SupabaseClient, doStripeFetch: Stripe
   if (updateErr) throw new Error(updateErr.message);
 }
 
+export async function cancelClinicSubscription(admin: SupabaseClient, doStripeFetch: StripeFetchFn, clinicId: string) {
+  const { data: clinic, error: clinicErr } = await admin
+    .from("clinics")
+    .select("id, stripe_subscription_id_saas")
+    .eq("id", clinicId)
+    .single();
+  if (clinicErr || !clinic) throw new Error(clinicErr?.message ?? "Clínica no encontrada");
+  if (!clinic.stripe_subscription_id_saas) throw new Error("Esta clínica no tiene una suscripción activa en Stripe");
+
+  const sub = await doStripeFetch(
+    `subscriptions/${clinic.stripe_subscription_id_saas}`,
+    "POST",
+    new URLSearchParams({ cancel_at_period_end: "true" }),
+  );
+  const cancelAt = new Date(sub.current_period_end * 1000).toISOString();
+
+  const { error: updateErr } = await admin
+    .from("clinics")
+    .update({ subscription_status: "canceling", subscription_cancel_at: cancelAt })
+    .eq("id", clinic.id);
+  if (updateErr) throw new Error(updateErr.message);
+
+  return cancelAt;
+}
+
 interface ActionBody {
-  action: "update_modules" | "reactivate" | "suspend";
+  action: "update_modules" | "reactivate" | "suspend" | "cancel";
   clinic_id: string;
   modulo_ids?: string[];
 }
@@ -128,9 +162,37 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const { data: isStaff } = await admin.rpc("is_global_admin", { _user_id: userData.user.id });
-    if (!isStaff) return json({ error: "forbidden" }, 403);
 
     const url = new URL(req.url);
+
+    if (!isStaff) {
+      // No es platform_staff: el único camino permitido es que el admin de SU
+      // propia clínica llame action=cancel. GET y cualquier otra acción quedan
+      // igual de bloqueados que antes (403).
+      if (req.method !== "POST") return json({ error: "forbidden" }, 403);
+
+      const body = (await req.json()) as ActionBody;
+      if (!body.clinic_id) return json({ error: "clinic_id es requerido" }, 400);
+
+      const { data: membership } = await admin
+        .from("clinic_memberships")
+        .select("role, clinic_id")
+        .eq("user_id", userData.user.id)
+        .eq("clinic_id", body.clinic_id)
+        .maybeSingle();
+
+      if (body.action !== "cancel" || !canManageOwnSubscription(membership, body.clinic_id)) {
+        return json({ error: "forbidden" }, 403);
+      }
+
+      let cancelAt: string;
+      try {
+        cancelAt = await cancelClinicSubscription(admin, stripeFetch, body.clinic_id);
+      } catch (err) {
+        return json({ error: (err as Error).message }, 502);
+      }
+      return json({ subscription_cancel_at: cancelAt });
+    }
 
     if (req.method === "GET") {
       const clinicId = url.searchParams.get("clinic_id");
@@ -299,6 +361,16 @@ Deno.serve(async (req) => {
         }
         const summary = await buildSummary(admin, STRIPE_SAAS_KEY, body.clinic_id);
         return json(summary);
+      }
+
+      if (body.action === "cancel") {
+        let cancelAt: string;
+        try {
+          cancelAt = await cancelClinicSubscription(admin, stripeFetch, body.clinic_id);
+        } catch (err) {
+          return json({ error: (err as Error).message }, 502);
+        }
+        return json({ subscription_cancel_at: cancelAt });
       }
 
       return json({ error: "acción no reconocida" }, 400);
