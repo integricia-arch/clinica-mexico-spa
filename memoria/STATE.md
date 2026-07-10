@@ -180,6 +180,37 @@ nuevas, que son RESTRICTIVE). Migraciones commiteadas en el worktree
   nav/rutas, UI de cancelación, smoke test e2e Stripe) y mergear
   `feat/cancelacion-self-service-gating-modulos` a `main`.
 
+**Sesión 35 (cont.) — Tasks 6-8 COMPLETAS (con alcance ajustado en Task 8),
+rama mergeada a main.**
+- **Task 6**: `useModulosActivos` + `ProtectedRoute` con `requiredModulo` +
+  `ModuloNoContratadoScreen` + nav filtrado en `AppLayout`. Review UX
+  (web-interface-guidelines skill) encontró y arregló 3 problemas reales:
+  `min-h-screen` mal usado en componente anidado, heading sin
+  `text-wrap:balance`, parpadeo de nav al cargar. Commit `aebc646`.
+- **Task 7**: modal de cancelación + sección "Tu suscripción" en
+  `ConfiguracionPagos.tsx`. **Prerequisito descubierto**: la acción `cancel`
+  (Task 3) nunca se había deployado — `manage-subscription` seguía en v3 en
+  prod. Deployada v4. Commit `479e0da`.
+- **Task 8**: verificación acotada, no smoke test e2e completo con browser
+  (decisión explícita del usuario tras 2 bloqueos reales). **Prerequisito
+  adicional descubierto**: `stripe-webhook-saas` (Task 4) tampoco estaba
+  deployado — v16 sin `customer.subscription.updated`. Deployada v17.
+  Bloqueos para el ciclo completo con Stripe: (1) ninguna clínica tiene a
+  la vez suscripción activa test-mode + login controlado por el agente —
+  Santo Copo está `canceled` (admin sin password conocido), Salud Integral
+  MX nunca pasó por Stripe; (2) provisionar vía API requeriría una Edge
+  Function ad-hoc sin commitear, descartado por regla del proyecto; (3)
+  login por password vía API bloqueado por captcha Turnstile. Verificado sí
+  real: deploys confirmados en vivo, RLS de Task 5 con SQL directo,
+  15/15 tests unitarios del gate de autorización, build/typecheck limpios.
+  Detalle completo en `.superpowers/sdd/progress.md` del worktree.
+- **Merge**: `feat/cancelacion-self-service-gating-modulos` mergeada a
+  `main` (`--no-ff`) y pusheada a origin. Reviews formales
+  `security-reviewer`/`database-reviewer` (mandato del plan para Task 5)
+  no se dispatcharon como subagentes en ninguna task — verificación inline
+  por costo en todas (Tasks 2, 4, 5). Pendiente real: smoke test e2e con
+  browser (Task 8 completo) en sesión futura con presupuesto dedicado.
+
 4. **Bug #1 (precio Almacén) ARREGLADO.** Causa real: `catalogo_modulos.stripe_price_id`
    apuntaba a `price_1Tr4d5Gw6QdIxYi03aBS3tWv` — **un price que no existe en
    Stripe test-mode** ("Precio no encontrado" al abrirlo). Por eso todo

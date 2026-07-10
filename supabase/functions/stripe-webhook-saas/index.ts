@@ -57,6 +57,41 @@ async function verifyStripeSignature(
   return diff === 0;
 }
 
+// clinics.subscription_status tiene CHECK constraint: solo estos 5 valores
+// (ver supabase/migrations/20260709000001_subscription_cancel_at.sql).
+const ALLOWED_SUBSCRIPTION_STATUSES = new Set([
+  "trialing",
+  "active",
+  "past_due",
+  "canceling",
+  "canceled",
+]);
+
+// Deriva subscription_status / subscription_cancel_at para clinics a partir
+// de un subscription object de Stripe. Pura para poder testear sin red/DB.
+export function deriveSubscriptionStatus(
+  sub: { cancel_at_period_end?: boolean; status?: string; current_period_end?: number } | null | undefined,
+): { status: string | undefined; cancelAt: string | null } {
+  let status: string | undefined;
+  if (sub?.cancel_at_period_end) {
+    status = "canceling";
+  } else if (sub?.status === undefined) {
+    status = undefined;
+  } else if (ALLOWED_SUBSCRIPTION_STATUSES.has(sub.status)) {
+    status = sub.status;
+  } else {
+    // Stripe manda estados fuera del whitelist del CHECK (unpaid,
+    // incomplete, incomplete_expired, paused). Todos implican un problema
+    // de pago/acceso pendiente de revisión -> mapear a past_due en vez de
+    // escribir un valor que reviente el constraint.
+    status = "past_due";
+  }
+  const cancelAt = sub?.cancel_at_period_end && sub?.current_period_end
+    ? new Date(sub.current_period_end * 1000).toISOString()
+    : null;
+  return { status, cancelAt };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
@@ -112,12 +147,49 @@ Deno.serve(async (req: Request) => {
 
     case "customer.subscription.deleted": {
       const subscriptionId = obj?.id;
-      const { count } = await svc
+      const { data: updated, error: updateErr } = await svc
         .from("clinics")
-        .update({ subscription_status: "canceled" })
+        .update({ subscription_status: "canceled", subscription_cancel_at: null })
+        .eq("stripe_subscription_id_saas", subscriptionId)
+        .select("id");
+      if (updateErr) {
+        console.error("[stripe-webhook-saas] subscription.deleted: update clinics falló:", subscriptionId, updateErr);
+        break;
+      }
+      const clinicId: string | undefined = updated?.[0]?.id;
+      if (!clinicId) {
+        console.warn("[stripe-webhook-saas] subscription.deleted: sin clinic para subscription:", subscriptionId);
+        break;
+      }
+
+      const { error: cmError } = await svc
+        .from("cliente_modulos")
+        .update({ activo_hasta: new Date().toISOString() })
+        .eq("clinic_id", clinicId)
+        .is("activo_hasta", null);
+      if (cmError) {
+        console.error("[stripe-webhook-saas] subscription.deleted: limpiar cliente_modulos falló:", clinicId, cmError);
+      }
+
+      console.log("[stripe-webhook-saas] subscription.deleted:", subscriptionId, clinicId);
+      break;
+    }
+
+    case "customer.subscription.updated": {
+      const sub = obj;
+      const subscriptionId = sub?.id;
+      const { status, cancelAt } = deriveSubscriptionStatus(sub);
+      const { count, error: updateErr } = await svc
+        .from("clinics")
+        .update({ subscription_status: status, subscription_cancel_at: cancelAt })
         .eq("stripe_subscription_id_saas", subscriptionId);
-      if (!count) console.warn("[stripe-webhook-saas] subscription.deleted: sin clinic para subscription:", subscriptionId);
-      else console.log("[stripe-webhook-saas] subscription.deleted:", subscriptionId);
+      if (updateErr) {
+        console.error("[stripe-webhook-saas] subscription.updated: update clinics falló:", subscriptionId, updateErr);
+      } else if (!count) {
+        console.warn("[stripe-webhook-saas] subscription.updated: sin clinic para subscription:", subscriptionId);
+      } else {
+        console.log("[stripe-webhook-saas] subscription.updated:", subscriptionId, status);
+      }
       break;
     }
 

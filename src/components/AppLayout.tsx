@@ -13,6 +13,7 @@ import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { untypedTable } from "@/lib/untypedTable";
 import { useSidebarState } from "@/hooks/useSidebarState";
+import { useModulosActivos } from "@/hooks/useModulosActivos";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -32,6 +33,7 @@ interface NavItem {
   label: string;
   roles?: AppRole[];
   section?: string;
+  moduloSlug?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -46,12 +48,12 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/recetas", icon: FileText, label: "Recetas", roles: ["admin", "doctor", "nurse"] },
   { to: "/recordatorios", icon: BellRing, label: "Recordatorios", roles: ["admin", "receptionist", "doctor"] },
   // ── Operaciones ──
-  { section: "Operaciones", to: "/farmacia", icon: CreditCard, label: "Caja", roles: ["admin", "nurse", "receptionist", "cajero"] },
-  { to: "/compras", icon: ShoppingCart, label: "Compras", roles: ["admin", "nurse", "receptionist", "cajero"] },
-  { to: "/almacen", icon: Package, label: "Almacén", roles: ["admin", "nurse", "receptionist", "cajero"] },
+  { section: "Operaciones", to: "/farmacia", icon: CreditCard, label: "Caja", roles: ["admin", "nurse", "receptionist", "cajero"], moduloSlug: "pos_farmacia" },
+  { to: "/compras", icon: ShoppingCart, label: "Compras", roles: ["admin", "nurse", "receptionist", "cajero"], moduloSlug: "compras" },
+  { to: "/almacen", icon: Package, label: "Almacén", roles: ["admin", "nurse", "receptionist", "cajero"], moduloSlug: "almacen" },
   { to: "/enfermeria", icon: Stethoscope, label: "Enfermería", roles: ["admin", "manager", "nurse"] },
   { to: "/lealtad", icon: Gift, label: "Lealtad", roles: ["admin", "manager"] },
-  { to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"] },
+  { to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"], moduloSlug: "facturacion_cfdi" },
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
   // ── Admin ──
   { section: "Admin", to: "/configuracion", icon: Settings, label: "Configuración", roles: ["admin", "doctor"] },
@@ -97,9 +99,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLock = () => setIsLocked(true);
 
+  const { slugs: modulosActivos, loading: loadingModulos } = useModulosActivos(activeClinicId ?? undefined);
+
   const visibleNav = NAV_ITEMS.filter((item) => {
-    if (!item.roles) return true;
-    return item.roles.some((r) => roles.includes(r as any));
+    if (item.roles && !item.roles.some((r) => roles.includes(r as any))) return false;
+    // Mientras carga, no ocultar items por módulo (evita parpadeo: la mayoría
+    // de las clínicas sí tienen el módulo contratado, es peor verlo
+    // desaparecer y reaparecer que mostrarlo un instante de más).
+    if (!loadingModulos && item.moduloSlug && !modulosActivos.includes(item.moduloSlug)) return false;
+    return true;
   });
 
   const primaryRole = roles[0] as AppRole | undefined;
