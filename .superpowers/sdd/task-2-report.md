@@ -119,3 +119,103 @@ Ningún finding nuevo sin explicación.
 3. El fix de `anon` no estaba en el brief original; lo añadí porque el checklist del proyecto
    (`CLAUDE.md`, sección SECURITY DEFINER) exige que el REVOKE/GRANT sea efectivo, no solo
    sintácticamente presente.
+
+---
+
+## Addendum: fix del hallazgo Important (cross-tenant disclosure oracle)
+
+### Estado: DONE_WITH_CONCERNS
+
+### El hallazgo
+
+`security-reviewer` marcó `clinic_has_modulo_access` como Important: `SECURITY DEFINER` +
+`GRANT EXECUTE TO authenticated`, pero sin ningún check de que el usuario que llama
+(`auth.uid()`) pertenece a `p_clinic_id`. Cualquier usuario autenticado, de cualquier clínica,
+podía invocar la función vía `/rest/v1/rpc/clinic_has_modulo_access` con un `p_clinic_id`
+arbitrario y aprender el estado de módulos/suscripción de otro tenant — violación directa del
+checklist obligatorio de `CLAUDE.md`, item 3 ("check de `clinic_memberships`/`auth.uid()` como
+PRIMERA operación del body").
+
+### Qué se cambió
+
+Nueva migración (no se edita la ya aplicada, por convención del proyecto):
+`supabase/migrations/20260709200000_clinic_has_modulo_access_tenant_check.sql`.
+
+`CREATE OR REPLACE FUNCTION clinic_has_modulo_access(p_clinic_id uuid, p_modulo_slug text)`
+ahora evalúa **primero** `public.user_has_clinic_access(auth.uid(), p_clinic_id)` con `AND`
+antes del `EXISTS` de módulos/suscripción — si el usuario no pertenece a la clínica, la
+expresión completa corto-circuita a `false` sin evaluar (ni filtrar) el estado de esa clínica.
+
+### Por qué se reutilizó `user_has_clinic_access` en vez de un check inline
+
+Se encontró el helper ya establecido (`public.user_has_clinic_access(_user_id uuid, _clinic_id uuid)`,
+`SECURITY DEFINER`, `SET search_path = public`), definido originalmente en
+`20260528150545_...sql` y reemplazado más recientemente en
+`20260707120000_platform_staff_and_admin_leak_fix.sql` y
+`20260708120000_clinics_saas_billing_columns.sql` (versión vigente, usada aquí). Es el patrón
+establecido del proyecto para exactamente este check — usado en decenas de policies RLS
+clinic-scoped (`checklists`, `proveedores`, `insumos`, `kits`, `kit_items`, `clinics`, etc. en
+`20260606200000_inventory_rls_clinic_scoping.sql` y otras). Reutilizarlo es DRY y evita
+reimplementar semántica de membresía que ya tiene su propia lógica de `is_global_admin` +
+`clinic_memberships.status = 'active'` + `clinics.status = 'active'` +
+`subscription_status <> 'canceled'` con grace period para `past_due`.
+
+Nota: `user_has_clinic_access` es ligeramente más estricto que el check de suscripción propio
+de `clinic_has_modulo_access` en un aspecto (exige también `clinics.status = 'active'`, columna
+que `clinic_has_modulo_access` no miraba), pero los estados de `subscription_status` que
+permite (`active`, `past_due` con grace, cualquier otro no-`canceled`) son un superset
+compatible con `('active','past_due','canceling')` — no se detectó ningún caso legítimo que
+antes retornara `true` y ahora retorne `false` por esta razón adicional; se señala igual como
+posible endurecimiento marginal de comportamiento, no solo de seguridad.
+
+### Verificación
+
+No hay sesión de usuario autenticado real disponible desde el SQL editor (`auth.uid()` es
+`NULL` fuera de un request context), así que se verificó la lógica de membresía llamando
+`user_has_clinic_access` con pares `(user_id, clinic_id)` reales explícitos, vía `execute_sql`
+de solo lectura (sin `BEGIN/ROLLBACK`, sin mutación):
+
+1. Con un usuario `is_global_admin = true`: `access_own_clinic = true`,
+   `access_foreign_clinic = true` — correcto (los admins globales ven cualquier clínica, por
+   diseño de `user_has_clinic_access`, no es un bypass del fix).
+2. Repetido excluyendo admins globales (`NOT is_global_admin`), con un miembro real
+   `user_id = 6a987836-...` de la clínica `a63a7f60-...` (`clinic_memberships.status='active'`):
+   `access_own_clinic = true`, `access_foreign_clinic` (clínica `607f2a33-...`, sin membresía)
+   `= false`. **Esto confirma el fix**: un usuario no-admin sin membresía en una clínica ajena
+   obtiene `false` — antes de este fix, `clinic_has_modulo_access` habría evaluado
+   módulos/suscripción de esa clínica ajena sin ningún gate.
+
+Limitación explícita: no se probó `clinic_has_modulo_access` completa con un JWT real de
+usuario autenticado (requeriría una sesión de app, fuera del alcance de este fix vía MCP/SQL
+editor). La verificación anterior aísla y confirma la pieza nueva (el gate de membresía) contra
+datos reales; la lógica de módulos/suscripción no se tocó (es exactamente la misma `EXISTS` de
+la migración original, ya verificada en el reporte principal de este task).
+
+### `get_advisors(type="security")` — delta
+
+Idéntico al estado anterior: sigue apareciendo exactamente el mismo hallazgo esperado,
+`authenticated_security_definer_function_executable` para `clinic_has_modulo_access`
+(`public.clinic_has_modulo_access(p_clinic_id uuid, p_modulo_slug text)` ejecutable por
+`authenticated` vía `/rest/v1/rpc/clinic_has_modulo_access`). Este linter es ciego al cuerpo de
+la función — solo detecta "SECURITY DEFINER + authenticated puede ejecutar", que sigue siendo
+intencional (Task 5 necesita invocarla vía RPC/RLS). No aparece ningún hallazgo nuevo
+introducido por este fix; el hallazgo Important original no es detectable por este linter (es
+lógica de negocio dentro del body, no un problema de grants).
+
+### Commit
+
+Ver commit siguiente en el log de git de esta rama (mensaje: `fix: cross-tenant disclosure en
+clinic_has_modulo_access — gate de membresía como primera operación`).
+
+### Concerns (addendum)
+
+1. Endurecimiento marginal de comportamiento señalado arriba (`clinics.status='active'`
+   adicional vía `user_has_clinic_access`) — no se corrigió porque reusar el helper tal cual es
+   el patrón correcto del proyecto (DRY, checklist `CLAUDE.md`); si se considera indeseado,
+   la alternativa es un check inline solo de `clinic_memberships` sin pasar por
+   `user_has_clinic_access`, pero eso reintroduce duplicación de lógica de membresía.
+2. No se probó con una sesión JWT real de usuario autenticado vía RPC HTTP (`/rest/v1/rpc/...`)
+   — solo se aisló y verificó la lógica SQL subyacente contra datos reales, como permite el
+   brief cuando no hay sesión autenticada disponible.
+3. `ecc:security-reviewer` no se re-ejecutó tras este fix puntual (fue el reviewer quien generó
+   el hallazgo original); recomendable una pasada de confirmación antes de mergear a main.
