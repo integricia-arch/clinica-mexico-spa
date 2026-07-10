@@ -61,14 +61,125 @@ en producción durante el smoke test.** Detalle abajo.
    (timestamp 18:33:38) y en `clinics.subscription_status = 'canceled'`
    para Santo Copo (sin duplicar el fix manual ya aplicado). Webhook de
    suscripciones SaaS funcionando end-to-end.
-   **PENDIENTE nuevo, sesión 33**: revisar segundo endpoint `energetic-inspiration`
-   (`we_1TrKR0Gw6QdIxYi0HKujCzfa`) en `dashboard.stripe.com/test/workbench/webhooks`
-   — 1 evento suscrito, 43% de error, URL truncada `stripe-webhook-...` (sin
-   confirmar si es `stripe-webhook-saas` duplicado/viejo o el `stripe-webhook`
-   de pagos-paciente, cuenta/secret distinto). No se abrió el detalle —
-   sesión cortada por costo ($86 acumulado). Abrir el endpoint y mirar URL
-   completa + eventos + pestaña "Entregas" antes de decidir si hay que
-   arreglar o es ruido histórico sin importancia.
+   **CERRADO, sesión 33**: segundo endpoint `energetic-inspiration`
+   (`we_1TrKR0Gw6QdIxYi0HKujCzfa`) revisado completo en
+   `dashboard.stripe.com/test/workbench/webhooks`. URL completa:
+   `https://kyfkvdyxpvpiacyymldc.supabase.co/functions/v1/stripe-webhook-saas`
+   — **NO es duplicado ni endpoint viejo**, es el endpoint real y activo del
+   panel de suscripciones (mismo proyecto Supabase de siempre). 1 evento
+   suscrito: `checkout.session.completed`. Los 2 fallos (43% error histórico,
+   hoy 16:46) devolvieron `500 "provisioning failed"` — Stripe reintentó
+   automático y entregó OK a las 17:54:56 ("Entrega recuperada").
+   **Causa investigada (systematic-debugging)**: en
+   `stripe-webhook-saas/index.ts`, el case `checkout.session.completed` envuelve
+   TODO el provisioning (fetch subscription a Stripe, crear customer
+   pacientes, invite admin, membership, módulos, activar clinic) en un solo
+   try/catch; cualquier falla transitoria en esas llamadas externas dispara
+   el 500 genérico. El código YA revierte el claim (`status →
+   pendiente_verificacion`) en el catch antes de responder, así que reintentar
+   es seguro — que es justo lo que pasó. No se pudo aislar la llamada externa
+   exacta que falló porque los logs de esa ventana (16:46) ya rotaron (tráfico
+   alto de `telegram-webhook`/`cfdi-email` en el mismo proyecto). **Veredicto:
+   no es un bug de código, es una falla transitoria externa ya manejada
+   correctamente (claim revertido + retry automático de Stripe). Sin acción
+   pendiente.**
+
+**Sesión 33 (cont.) — plan nuevo: cancelación self-service + gating real de módulos, Tasks 1-2 ejecutadas, PAUSADO por costo ($173.70).**
+Usuario pidió: botón de cancelar suscripción para el cliente (no solo staff) +
+que cada clínica solo vea los módulos que tiene pagados (validando fecha de
+pago activo). Se investigó cómo lo manejan Amazon/Spotify/Anthropic (patrón
+único: cancelar es self-service inmediato, pero el acceso sigue hasta fin del
+período ya pagado, nunca corte instantáneo, sin reembolso parcial) y se
+auditó el código actual: **hoy no existe NINGÚN gating por módulo** (ni
+frontend ni backend, confirmado por agente Explore) y la cancelación solo la
+puede hacer `platform_staff` vía `manage-subscription`. Plan completo de 8
+tasks guardado en
+`docs/superpowers/plans/2026-07-09-cancelacion-self-service-y-gating-modulos.md`.
+Ejecutado con `superpowers:subagent-driven-development` en worktree
+`.worktrees/cancelacion-self-service-gating` (branch
+`feat/cancelacion-self-service-gating-modulos`):
+- **Task 1 completa**: columna `clinics.subscription_cancel_at` + estado
+  `'canceling'` agregado al CHECK constraint. Commit `c201222`, deployado en
+  vivo, review clean (Approved).
+- **Task 2 completa**: función `clinic_has_modulo_access(clinic_id, modulo_slug)`
+  SECURITY DEFINER. Bloqueó a mitad de camino porque `catalogo_modulos` no
+  tenía columna `slug` — se agregó en la misma task (5 módulos reales
+  mapeados). Security review encontró un hallazgo **Important**: la función
+  no verificaba que el usuario llamante perteneciera a la clínica
+  (`p_clinic_id` como parámetro libre + `GRANT TO authenticated` = cualquier
+  usuario autenticado podía aprender por RPC directo el estado de
+  módulos/suscripción de OTRA clínica — oráculo de disclosure cross-tenant).
+  **Arreglado**: nueva migración reutiliza el helper ya existente del
+  proyecto `user_has_clinic_access(auth.uid(), p_clinic_id)` como primera
+  condición del `AND`. Commits `b9227c4`→`549749a`, verificado manualmente
+  (sin re-dispatch de reviewer, por costo). En prod, funcionando.
+- **Task 3 completa** (sesión 33/34, cont.): acción `cancel` self-service en
+  `manage-subscription` — solo el admin de la propia clínica puede cancelar
+  su suscripción (no solo `platform_staff`), llama Stripe con
+  `cancel_at_period_end: true` (nunca corte inmediato). Security review
+  encontró **Important**: el gate de autorización compuesto
+  (`action !== "cancel" || !canManageOwnSubscription(...)`) no tenía test
+  propio, solo la función pura. **Arreglado**: extraído a
+  `isSelfServiceActionForbidden()` + `self-service-gate.test.ts` (4 casos),
+  sanity-check con `||`→`&&` confirmó que el test agarra la regresión.
+  Commits `a1179fb`→`c2015ac`, 15/15 tests pasando.
+- **PAUSADO a propósito** (decisión explícita del usuario, sesión llegó a
+  $398.89 — mismo patrón de costo alto ya documentado en sesiones previas de
+  este proyecto con Stripe/webhooks; cada task con implementer+security-review
+  +fix corrió entre $50-90). **Pendiente**: Tasks 4-8 del plan (webhook
+  actualiza `cancel_at_period_end` y limpia `cliente_modulos.activo_hasta` al
+  cancelar de verdad, RLS real por módulo en tablas funcionales — la task de
+  mayor riesgo, security+database-reviewer obligatorio ambos —, frontend
+  oculta nav/rutas, UI de cancelación con términos, smoke test e2e contra
+  Stripe test-mode). Ledger de progreso en
+  `.worktrees/cancelacion-self-service-gating/.superpowers/sdd/progress.md`
+  — retomar desde ahí con `superpowers:subagent-driven-development`, NO
+  re-derivar de memoria. El worktree y la rama
+  `feat/cancelacion-self-service-gating-modulos` existen con el trabajo real
+  (Tasks 1-3 completas y en prod), sin mergear a `main` todavía. Nota:
+  `deno.lock` quedó sin trackear en el worktree — decidir aparte si se
+  commitea o se agrega a `.gitignore`, no bloquea nada.
+
+**Sesión 35 — Task 5 COMPLETA (RLS gating real por módulo).** Retomado desde
+el diseño ya resuelto (sesión 34, 4 agentes: Opción A+C). Las 2 verificaciones
+pendientes se cerraron primero: `lotes_medicamento` tiene `clinic_id` propio
+(no solo FK), y ninguna Edge Function con `service_role` escribe
+`medicamentos`/`lotes_medicamento`/`ordenes_compra` (auto-reorder y
+notify-cxp-vencimiento sí usan service_role pero no chocan con las policies
+nuevas, que son RESTRICTIVE). Migraciones commiteadas en el worktree
+(`21ad09d`), aplicadas en vivo:
+- `20260710120000_rls_modulo_gating.sql`: 25 tablas de
+  compras/almacen/pos_farmacia/facturacion_cfdi con policies **RESTRICTIVE**
+  (no permissive — el patrón literal del plan original habría sido
+  inefectivo, estas tablas ya tenían PERMISSIVE de clinic_membership que
+  Postgres OR-ea; RESTRICTIVE se ANDea, mismo patrón que
+  `multiclinic_access_restrictive` ya usado en el proyecto). `agenda` quedó
+  fuera de esta ronda — no tiene tablas exclusivas gateables sin romper
+  Recepción/BI/PanelDoctor/bot Telegram.
+- `20260710130000_rls_medicamentos_write_gate.sql`: `medicamentos`/
+  `lotes_medicamento` con SELECT sin gate (Recetas/Enfermería siguen
+  leyendo libre) e INSERT/UPDATE/DELETE gateados por `almacen`.
+- **Hotfix crítico encontrado en vivo**: `clinic_has_modulo_access()`
+  (Task 2) no incluía `'trialing'` en los status permitidos — con la RLS
+  recién aplicada esto bloqueaba a TODAS las clínicas trialing en
+  producción (ninguna está `'active'` hoy). Corregido en
+  `20260710121000_fix_clinic_has_modulo_access_trialing.sql`.
+- **Backfill**: la clínica legacy pre-pivote ("Clínica Salud Integral MX",
+  nunca pasó por Stripe, sin filas en `cliente_modulos`) se hubiera quedado
+  sin acceso a sus 4 módulos — se insertaron con `activo_hasta = NULL`.
+- Verificado con negativo real (Santo Copo, `canceled` → `false`) y positivo
+  real (Salud Integral MX tras backfill → `true`). `get_advisors` sin
+  hallazgos nuevos atribuibles a esta migración.
+- **Pendiente, no bloqueante**: Guard C (mensaje de negocio en Edge
+  Functions para error 42501) no implementado — es solo capa UX, puede
+  hacerse en Task 6. Reviews formales `security-reviewer`/`database-reviewer`
+  del plan no se dispatcharon como subagentes — verificación inline por
+  costo, mismo patrón que Tasks 2 y 4. Detalle completo en el ledger del
+  worktree (`.superpowers/sdd/progress.md`, no trackeado por git,
+  intencional). **Siguen pendientes: Tasks 6-8** (frontend oculta
+  nav/rutas, UI de cancelación, smoke test e2e Stripe) y mergear
+  `feat/cancelacion-self-service-gating-modulos` a `main`.
+
 4. **Bug #1 (precio Almacén) ARREGLADO.** Causa real: `catalogo_modulos.stripe_price_id`
    apuntaba a `price_1Tr4d5Gw6QdIxYi03aBS3tWv` — **un price que no existe en
    Stripe test-mode** ("Precio no encontrado" al abrirlo). Por eso todo
