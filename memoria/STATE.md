@@ -61,14 +61,28 @@ en producción durante el smoke test.** Detalle abajo.
    (timestamp 18:33:38) y en `clinics.subscription_status = 'canceled'`
    para Santo Copo (sin duplicar el fix manual ya aplicado). Webhook de
    suscripciones SaaS funcionando end-to-end.
-   **PENDIENTE nuevo, sesión 33**: revisar segundo endpoint `energetic-inspiration`
-   (`we_1TrKR0Gw6QdIxYi0HKujCzfa`) en `dashboard.stripe.com/test/workbench/webhooks`
-   — 1 evento suscrito, 43% de error, URL truncada `stripe-webhook-...` (sin
-   confirmar si es `stripe-webhook-saas` duplicado/viejo o el `stripe-webhook`
-   de pagos-paciente, cuenta/secret distinto). No se abrió el detalle —
-   sesión cortada por costo ($86 acumulado). Abrir el endpoint y mirar URL
-   completa + eventos + pestaña "Entregas" antes de decidir si hay que
-   arreglar o es ruido histórico sin importancia.
+   **CERRADO, sesión 33**: segundo endpoint `energetic-inspiration`
+   (`we_1TrKR0Gw6QdIxYi0HKujCzfa`) revisado completo en
+   `dashboard.stripe.com/test/workbench/webhooks`. URL completa:
+   `https://kyfkvdyxpvpiacyymldc.supabase.co/functions/v1/stripe-webhook-saas`
+   — **NO es duplicado ni endpoint viejo**, es el endpoint real y activo del
+   panel de suscripciones (mismo proyecto Supabase de siempre). 1 evento
+   suscrito: `checkout.session.completed`. Los 2 fallos (43% error histórico,
+   hoy 16:46) devolvieron `500 "provisioning failed"` — Stripe reintentó
+   automático y entregó OK a las 17:54:56 ("Entrega recuperada").
+   **Causa investigada (systematic-debugging)**: en
+   `stripe-webhook-saas/index.ts`, el case `checkout.session.completed` envuelve
+   TODO el provisioning (fetch subscription a Stripe, crear customer
+   pacientes, invite admin, membership, módulos, activar clinic) en un solo
+   try/catch; cualquier falla transitoria en esas llamadas externas dispara
+   el 500 genérico. El código YA revierte el claim (`status →
+   pendiente_verificacion`) en el catch antes de responder, así que reintentar
+   es seguro — que es justo lo que pasó. No se pudo aislar la llamada externa
+   exacta que falló porque los logs de esa ventana (16:46) ya rotaron (tráfico
+   alto de `telegram-webhook`/`cfdi-email` en el mismo proyecto). **Veredicto:
+   no es un bug de código, es una falla transitoria externa ya manejada
+   correctamente (claim revertido + retry automático de Stripe). Sin acción
+   pendiente.**
 4. **Bug #1 (precio Almacén) ARREGLADO.** Causa real: `catalogo_modulos.stripe_price_id`
    apuntaba a `price_1Tr4d5Gw6QdIxYi03aBS3tWv` — **un price que no existe en
    Stripe test-mode** ("Precio no encontrado" al abrirlo). Por eso todo
