@@ -55,6 +55,24 @@ en producción durante el smoke test.** Detalle abajo.
    Hay un segundo endpoint activo (`energetic-inspiration`, 1 evento, 60%
    error) sin revisar — verificar si es duplicado/obsoleto o de otro flujo
    (stripe-webhook de pagos-paciente, secret distinto).
+4. **Bug #1 (precio Almacén) ARREGLADO.** Causa real: `catalogo_modulos.stripe_price_id`
+   apuntaba a `price_1Tr4d5Gw6QdIxYi03aBS3tWv` — **un price que no existe en
+   Stripe test-mode** ("Precio no encontrado" al abrirlo). Por eso todo
+   checkout de Almacén caía al único price real del producto,
+   `price_1TrJu6Gw6QdIxYi0NAZFMep6` ($2,449). Fix: creado price nuevo
+   `price_1TrRpGGw6QdIxYi0j6CF32kL` ($1,599/mes, MXN, IVA incluido) sobre
+   el producto `prod_Ur1yDHOMozPqbj` en Stripe test-mode; `catalogo_modulos`
+   actualizado con el price_id nuevo; las 2 subscripciones de prueba
+   (`sub_1TrKkgGw6QdIxYi0lQNmPCIJ` "KArla", `sub_1TrK5jGw6QdIxYi0RaJ38YAz`
+   "pablo rios") migradas al price correcto sin prorrateo (son de prueba).
+5. **Bug de "Santo Copo" desincronizada RESUELTO.** La subscription real
+   (`sub_1TrQvQGw6QdIxYi0TmJ7ajhZ`) está **Cancelada** en Stripe desde el
+   9 jul (mismo evento que reveló el bug #4 — canceló durante el smoke
+   test de sesión 31 y el webhook nunca lo reflejó por el signing secret
+   roto). Se sincronizó manualmente lo que el webhook habría hecho:
+   `clinics.subscription_status` → `canceled`, y los 4 registros de
+   `cliente_modulos` (Agenda, POS/Farmacia, Compras, Facturación CFDI)
+   con `activo_hasta = now()`. DB ya no reporta $8,846/mes fantasma.
 
 ## Completado — Sesión 31: Panel de suscripciones Tasks 6-7 + 3 bugs de producción
 
