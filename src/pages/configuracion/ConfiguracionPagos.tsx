@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CreditCard, Save, Loader2, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft, CreditCard, Save, Loader2, CheckCircle2, AlertCircle, ExternalLink, XCircle } from "lucide-react";
+import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { CancelarSuscripcionModal } from "@/components/configuracion/CancelarSuscripcionModal";
 
 const METODOS = [
   { value: "card", label: "Tarjeta de crédito / débito" },
@@ -39,6 +40,72 @@ export default function ConfiguracionPagos() {
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
   const [testando, setTestando] = useState(false);
+
+  const [subStatus, setSubStatus] = useState<string | null>(null);
+  const [subCancelAt, setSubCancelAt] = useState<string | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [subActionLoading, setSubActionLoading] = useState(false);
+
+  const loadSubscription = async () => {
+    if (!activeClinicId) return;
+    const { data } = await supabase
+      .from("clinics")
+      .select("subscription_status, subscription_cancel_at")
+      .eq("id", activeClinicId)
+      .maybeSingle();
+    setSubStatus(data?.subscription_status ?? null);
+    setSubCancelAt(data?.subscription_cancel_at ?? null);
+  };
+
+  useEffect(() => {
+    loadSubscription();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeClinicId]);
+
+  const callManageSubscription = async (action: "cancel" | "reactivate") => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const res = await fetch(`${supabaseUrl}/functions/v1/manage-subscription`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionData.session?.access_token}`,
+      },
+      body: JSON.stringify({ action, clinic_id: activeClinicId }),
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(body?.error ?? "No se pudo completar la operación");
+    return body;
+  };
+
+  const handleConfirmCancel = async () => {
+    setSubActionLoading(true);
+    try {
+      const body = await callManageSubscription("cancel");
+      setSubStatus("canceling");
+      setSubCancelAt(body?.subscription_cancel_at ?? null);
+      setCancelModalOpen(false);
+      toast.success("Suscripción cancelada — acceso vigente hasta el fin del período pagado");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+    setSubActionLoading(false);
+  };
+
+  const handleReactivate = async () => {
+    setSubActionLoading(true);
+    try {
+      await callManageSubscription("reactivate");
+      await loadSubscription();
+      toast.success("Suscripción reactivada");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+    setSubActionLoading(false);
+  };
+
+  const fechaCorte = subCancelAt
+    ? new Date(subCancelAt).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })
+    : "";
 
   useEffect(() => {
     if (!activeClinicId) return;
@@ -148,6 +215,42 @@ export default function ConfiguracionPagos() {
           <p className="text-sm text-muted-foreground">Configura la pasarela de pago para cobros con tarjeta, OXXO y SPEI</p>
         </div>
       </div>
+
+      {/* Suscripción */}
+      {(subStatus === "canceling" || subStatus === "active" || subStatus === "trialing" || subStatus === "past_due") && (
+        <section className="rounded-xl border border-border bg-card p-5 shadow-card space-y-3">
+          <h2 className="font-semibold text-card-foreground">Tu suscripción</h2>
+          {subStatus === "canceling" ? (
+            <div className="rounded-lg bg-warning/10 border border-warning/30 px-4 py-3 text-sm text-warning-foreground space-y-3">
+              <p>
+                Tu suscripción está programada para cancelarse. Tienes acceso completo a
+                todos tus módulos hasta el <strong>{fechaCorte}</strong>.
+              </p>
+              <Button type="button" size="sm" onClick={handleReactivate} disabled={subActionLoading} className="gap-2">
+                {subActionLoading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : null}
+                Reactivar suscripción
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Puedes cancelar en cualquier momento. Seguirás teniendo acceso hasta el
+                fin del período ya pagado.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCancelModalOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive"
+              >
+                <XCircle className="h-4 w-4" />
+                Cancelar suscripción
+              </Button>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Pasarela */}
       <section className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
@@ -303,6 +406,14 @@ export default function ConfiguracionPagos() {
           Guardar configuración de pagos
         </Button>
       </div>
+
+      <CancelarSuscripcionModal
+        open={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        onConfirm={handleConfirmCancel}
+        fechaCorte={fechaCorte || "el fin de tu período de facturación actual"}
+        loading={subActionLoading}
+      />
     </div>
   );
 }
