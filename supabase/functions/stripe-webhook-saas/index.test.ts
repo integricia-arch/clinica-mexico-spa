@@ -41,6 +41,23 @@ Deno.test("cancel_at_period_end=true sin current_period_end deja cancelAt null",
   assertEquals(result.cancelAt, null);
 });
 
+Deno.test("status de Stripe fuera del whitelist del CHECK cae a past_due (ej. unpaid)", () => {
+  const result = deriveSubscriptionStatus({
+    cancel_at_period_end: false,
+    status: "unpaid",
+    current_period_end: 1735689600,
+  });
+  assertEquals(result.status, "past_due");
+  assertEquals(result.cancelAt, null);
+});
+
+Deno.test("status incomplete/paused también caen a past_due, nunca pasan crudos", () => {
+  for (const raw of ["incomplete", "incomplete_expired", "paused"]) {
+    const result = deriveSubscriptionStatus({ cancel_at_period_end: false, status: raw });
+    assertEquals(result.status, "past_due");
+  }
+});
+
 Deno.test("subscription null/undefined no revienta", () => {
   assertEquals(deriveSubscriptionStatus(null), { status: undefined, cancelAt: null });
   assertEquals(deriveSubscriptionStatus(undefined), { status: undefined, cancelAt: null });
