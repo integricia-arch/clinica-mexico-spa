@@ -57,6 +57,20 @@ async function verifyStripeSignature(
   return diff === 0;
 }
 
+// Deriva subscription_status / subscription_cancel_at para clinics a partir
+// de un subscription object de Stripe. Pura para poder testear sin red/DB.
+export function deriveSubscriptionStatus(
+  sub: { cancel_at_period_end?: boolean; status?: string; current_period_end?: number } | null | undefined,
+): { status: string | undefined; cancelAt: string | null } {
+  const status = sub?.cancel_at_period_end
+    ? "canceling"
+    : (sub?.status === "active" ? "active" : sub?.status);
+  const cancelAt = sub?.cancel_at_period_end && sub?.current_period_end
+    ? new Date(sub.current_period_end * 1000).toISOString()
+    : null;
+  return { status, cancelAt };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
@@ -112,12 +126,44 @@ Deno.serve(async (req: Request) => {
 
     case "customer.subscription.deleted": {
       const subscriptionId = obj?.id;
+      const { data: updated, error: updateErr } = await svc
+        .from("clinics")
+        .update({ subscription_status: "canceled", subscription_cancel_at: null })
+        .eq("stripe_subscription_id_saas", subscriptionId)
+        .select("id");
+      if (updateErr) {
+        console.error("[stripe-webhook-saas] subscription.deleted: update clinics falló:", subscriptionId, updateErr);
+        break;
+      }
+      const clinicId = updated?.[0]?.id as string | undefined;
+      if (!clinicId) {
+        console.warn("[stripe-webhook-saas] subscription.deleted: sin clinic para subscription:", subscriptionId);
+        break;
+      }
+
+      const { error: cmError } = await svc
+        .from("cliente_modulos")
+        .update({ activo_hasta: new Date().toISOString() })
+        .eq("clinic_id", clinicId)
+        .is("activo_hasta", null);
+      if (cmError) {
+        console.error("[stripe-webhook-saas] subscription.deleted: limpiar cliente_modulos falló:", clinicId, cmError);
+      }
+
+      console.log("[stripe-webhook-saas] subscription.deleted:", subscriptionId, clinicId);
+      break;
+    }
+
+    case "customer.subscription.updated": {
+      const sub = obj;
+      const subscriptionId = sub?.id;
+      const { status, cancelAt } = deriveSubscriptionStatus(sub);
       const { count } = await svc
         .from("clinics")
-        .update({ subscription_status: "canceled" })
+        .update({ subscription_status: status, subscription_cancel_at: cancelAt })
         .eq("stripe_subscription_id_saas", subscriptionId);
-      if (!count) console.warn("[stripe-webhook-saas] subscription.deleted: sin clinic para subscription:", subscriptionId);
-      else console.log("[stripe-webhook-saas] subscription.deleted:", subscriptionId);
+      if (!count) console.warn("[stripe-webhook-saas] subscription.updated: sin clinic para subscription:", subscriptionId);
+      else console.log("[stripe-webhook-saas] subscription.updated:", subscriptionId, status);
       break;
     }
 
