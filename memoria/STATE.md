@@ -55,6 +55,12 @@ en producción durante el smoke test.** Detalle abajo.
    Hay un segundo endpoint activo (`energetic-inspiration`, 1 evento, 60%
    error) sin revisar — verificar si es duplicado/obsoleto o de otro flujo
    (stripe-webhook de pagos-paciente, secret distinto).
+   **CERRADO**: usuario corrió `supabase secrets set STRIPE_SAAS_WEBHOOK_SECRET=...`
+   con el valor real del dashboard, reenvió el evento fallido
+   (`evt_1TrR4TGw6QdIxYi0c2x2Iuk2`) → `200`, confirmado en `get_logs`
+   (timestamp 18:33:38) y en `clinics.subscription_status = 'canceled'`
+   para Santo Copo (sin duplicar el fix manual ya aplicado). Webhook de
+   suscripciones SaaS funcionando end-to-end.
 4. **Bug #1 (precio Almacén) ARREGLADO.** Causa real: `catalogo_modulos.stripe_price_id`
    apuntaba a `price_1Tr4d5Gw6QdIxYi03aBS3tWv` — **un price que no existe en
    Stripe test-mode** ("Precio no encontrado" al abrirlo). Por eso todo
