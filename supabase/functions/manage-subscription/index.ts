@@ -95,18 +95,19 @@ export function canManageOwnSubscription(
   return membership?.role === "admin" && membership?.clinic_id === targetClinicId;
 }
 
-// Gate real que corre para requests NO-staff. Solo deja pasar cuando la acción
-// es "cancel" Y el membership pertenece a la propia clínica — cualquier otra
-// acción (update_modules, suspend, reactivate) queda bloqueada sin importar el
-// membership. Este es el guard contra escalación de privilegios de un admin de
-// clínica. Regresión a vigilar: `||` volteado a `&&`, o que se quite la
-// comparación de `action`.
+const SELF_SERVICE_ACTIONS = new Set(["cancel", "update_modules", "create_portal_session"]);
+
+// Gate real que corre para requests NO-staff. Deja pasar cancel/update_modules/
+// create_portal_session cuando el membership pertenece a la propia clínica —
+// suspend/reactivate quedan SIEMPRE exclusivas de platform_staff. Regresión a
+// vigilar: agregar "suspend"/"reactivate" a SELF_SERVICE_ACTIONS, o que se
+// quite la comparación de `targetClinicId`.
 export function isSelfServiceActionForbidden(
   action: ActionBody["action"],
   membership: { role?: string; clinic_id?: string } | null,
   targetClinicId: string,
 ): boolean {
-  return action !== "cancel" || !canManageOwnSubscription(membership, targetClinicId);
+  return !SELF_SERVICE_ACTIONS.has(action) || !canManageOwnSubscription(membership, targetClinicId);
 }
 
 type StripeFetchFn = (path: string, method: "GET" | "POST" | "DELETE", params?: URLSearchParams) => Promise<any>;
@@ -156,7 +157,7 @@ export async function cancelClinicSubscription(admin: SupabaseClient, doStripeFe
 }
 
 interface ActionBody {
-  action: "update_modules" | "reactivate" | "suspend" | "cancel";
+  action: "update_modules" | "reactivate" | "suspend" | "cancel" | "create_portal_session";
   clinic_id: string;
   modulo_ids?: string[];
 }
@@ -174,43 +175,35 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await supaUser.auth.getUser();
     if (userErr || !userData?.user) return json({ error: "no user" }, 401);
 
+    const userId = userData.user.id;
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const { data: isStaff } = await admin.rpc("is_global_admin", { _user_id: userData.user.id });
+    const { data: isStaff } = await admin.rpc("is_global_admin", { _user_id: userId });
 
     const url = new URL(req.url);
 
-    if (!isStaff) {
-      // No es platform_staff: el único camino permitido es que el admin de SU
-      // propia clínica llame action=cancel. GET y cualquier otra acción quedan
-      // igual de bloqueados que antes (403).
-      if (req.method !== "POST") return json({ error: "forbidden" }, 403);
-
-      const body = (await req.json()) as ActionBody;
-      if (!body.clinic_id) return json({ error: "clinic_id es requerido" }, 400);
-
+    // Devuelve una Response de error si el acceso está prohibido, o null si puede continuar.
+    // action=undefined se usa para GET (solo valida que sea la propia clínica, sin gate de acción).
+    async function assertClinicAccess(clinicId: string, action?: ActionBody["action"]): Promise<Response | null> {
+      if (isStaff) return null;
       const { data: membership } = await admin
         .from("clinic_memberships")
         .select("role, clinic_id")
-        .eq("user_id", userData.user.id)
-        .eq("clinic_id", body.clinic_id)
+        .eq("user_id", userId)
+        .eq("clinic_id", clinicId)
         .maybeSingle();
-
-      if (isSelfServiceActionForbidden(body.action, membership, body.clinic_id)) {
-        return json({ error: "forbidden" }, 403);
+      if (action) {
+        if (isSelfServiceActionForbidden(action, membership, clinicId)) return json({ error: "forbidden" }, 403);
+        return null;
       }
-
-      let cancelAt: string;
-      try {
-        cancelAt = await cancelClinicSubscription(admin, stripeFetch, body.clinic_id);
-      } catch (err) {
-        return json({ error: (err as Error).message }, 502);
-      }
-      return json({ subscription_cancel_at: cancelAt });
+      if (!canManageOwnSubscription(membership, clinicId)) return json({ error: "forbidden" }, 403);
+      return null;
     }
 
     if (req.method === "GET") {
       const clinicId = url.searchParams.get("clinic_id");
       if (!clinicId) return json({ error: "clinic_id es requerido" }, 400);
+      const forbidden = await assertClinicAccess(clinicId);
+      if (forbidden) return forbidden;
       const summary = await buildSummary(admin, STRIPE_SAAS_KEY, clinicId);
       return json(summary);
     }
@@ -218,6 +211,9 @@ Deno.serve(async (req) => {
     if (req.method === "POST") {
       const body = (await req.json()) as ActionBody;
       if (!body.clinic_id) return json({ error: "clinic_id es requerido" }, 400);
+
+      const forbidden = await assertClinicAccess(body.clinic_id, body.action);
+      if (forbidden) return forbidden;
 
       if (body.action === "update_modules") {
         const nextIds = Array.isArray(body.modulo_ids) ? body.modulo_ids : [];
