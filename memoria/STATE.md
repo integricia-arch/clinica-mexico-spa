@@ -62,12 +62,21 @@ verificación e2e real y fix de bugs encontrados en el camino, no solo hasta el 
    JWT de usuario, no como webhook servidor-servidor — un shared secret quedaría expuesto en el
    bundle del cliente; se aplicó el mismo patrón de membresía que las otras 3 en su lugar. Ver
    `docs/edge-functions-service-role-audit.md`.
-2. Confirmar que un paciente sigue viendo sus propias notas tras la gate RESTRICTIVE nueva de
-   `notas_consulta` (riesgo bajo, señalado por el reviewer final, no verificado explícitamente).
-3. Considerar un job de limpieza para factores TOTP `unverified` abandonados en
-   `auth.mfa_factors` (housekeeping, no seguridad).
-4. Ampliar cobertura de `phi_access_log` a rutas server-side si se requiere para cumplimiento
-   (hoy solo loguea desde el frontend al abrir el historial de paciente).
+2. ~~Confirmar que un paciente sigue viendo sus propias notas~~ — **verificado (2026-07-11),
+   no-issue**. No existe ninguna ruta patient-facing que lea `notas_consulta`: los únicos lectores
+   en el codebase son staff (`ExpedienteElectronico.tsx`, `NotaConsultaModal.tsx`,
+   `PacientesLista.tsx`), cubiertos por la policy `Staff read notas` (admin/doctor/nurse/
+   receptionist). `camino-paciente` es el módulo de consulta del doctor (staff-side), no un
+   portal de paciente. Pacientes nunca tuvieron acceso directo de lectura a esta tabla.
+3. ~~Job de limpieza para factores TOTP `unverified`~~ — **cerrado (2026-07-11)**. Cron
+   `cleanup-unverified-mfa-factors` aplicado directo vía migración (sin edge function — es un
+   `DELETE` puro): borra `auth.mfa_factors` con `status='unverified'` y `created_at` > 7 días.
+4. ~~Ampliar `phi_access_log` a rutas server-side~~ — **evaluado (2026-07-11), no se amplía por
+   ahora**. Los edge functions que leen `patients` (`notify-nurse-assignment`,
+   `create-appointment`, `whatsapp-webhook`, `telegram-webhook`, `seed-demo-data`) solo tocan
+   campos de identidad (nombre) para notificar/crear cita — ninguno lee `notas_consulta` ni
+   expediente clínico completo. El riesgo real que cubre `phi_access_log` (staff navegando
+   historial completo) ya está cubierto por el logging frontend existente.
 
 ## Histórico — sesión 40, ejecución de Tasks 4-7 y cierre de bloqueantes (detalle completo)
 
