@@ -15,6 +15,16 @@ const SUPABASE_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SVC  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_KEY    = Deno.env.get("STRIPE_SECRET_KEY");
 
+// El check de rol (admin/receptionist) era global — no se cruzaba contra la
+// clinica del cobro. Cualquier admin/receptionist podia generar un
+// PaymentIntent atribuido a otra clinica solo cambiando clinic_id en el body.
+export function isClinicAccessForbidden(
+  memberships: Array<{ clinic_id: string }> | null,
+  clinicId: string,
+): boolean {
+  return !(memberships ?? []).some((m) => m.clinic_id === clinicId);
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -64,6 +74,15 @@ Deno.serve(async (req: Request) => {
     }
     if (amount_cents > 50_000_000) {
       return json({ error: "Monto excede el límite permitido (500,000 MXN)" }, 400);
+    }
+
+    // Verificar que el caller pertenece a la clínica que quiere cobrar
+    const { data: memberships } = await svc
+      .from("clinic_memberships")
+      .select("clinic_id")
+      .eq("user_id", userData.user.id);
+    if (isClinicAccessForbidden(memberships, clinic_id)) {
+      return json({ error: "Forbidden" }, 403);
     }
 
     // Cargar config Stripe de la clínica para verificar ambiente
