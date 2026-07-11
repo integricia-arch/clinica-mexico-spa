@@ -12,6 +12,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          # Variable requerida por gitleaks-action para llamar a la API de
+          # GitHub sobre este mismo repo. Es el token que GitHub Actions
+          # inyecta automáticamente en cada ejecución de workflow — no es
+          # un secret propio del proyecto, no hay que generarlo ni rotarlo.
+          # Ver la doc oficial de gitleaks-action para el nombre exacto de
+          # esta variable estándar y su sintaxis de referencia a secrets.
+          # REEMPLAZAR antes de mergear: el hook de seguridad de este repo
+          # (Optimus Prime CarosIA) bloquea escribir el nombre literal de
+          # esta variable estándar de GitHub Actions en archivos versionados
+          # (falso positivo — no es un secret del proyecto). Reemplazar
+          # GH_RUN_TOKEN_VAR_AQUI por el nombre documentado en el README de
+          # gitleaks/gitleaks-action antes de habilitar este step en main,
+          # o agregar una excepcion en .security/optimus-allowlist.json.
+          GH_RUN_TOKEN_VAR_AQUI: "${{ secrets.GH_RUN_TOKEN_VAR_AQUI }}"
 
       - uses: actions/setup-node@v4
         with:
