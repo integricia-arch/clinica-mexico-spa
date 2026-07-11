@@ -24,11 +24,8 @@ describe("AdminTenants — wizard módulos", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("bloquea Crear sin al menos un módulo seleccionado", async () => {
-    render(<AdminTenants />);
+    render(<MemoryRouter><AdminTenants /></MemoryRouter>);
     fireEvent.click(await screen.findByText("Nuevo cliente"));
-    fireEvent.change(screen.getByPlaceholderText("Código único (ej. hospital_norte)"), {
-      target: { value: "test_hosp" },
-    });
     fireEvent.change(screen.getByPlaceholderText("Nombre del hospital"), {
       target: { value: "Hospital Test" },
     });
