@@ -215,6 +215,30 @@ Deno.serve(async (req) => {
       const forbidden = await assertClinicAccess(body.clinic_id, body.action);
       if (forbidden) return forbidden;
 
+      if (body.action === "create_portal_session") {
+        const { data: clinic, error: clinicErr } = await admin
+          .from("clinics")
+          .select("stripe_customer_id_saas")
+          .eq("id", body.clinic_id)
+          .single();
+        if (clinicErr || !clinic?.stripe_customer_id_saas) {
+          return json({ error: "Esta clínica no tiene cliente de Stripe configurado" }, 400);
+        }
+        try {
+          const session = await stripeFetch(
+            "billing_portal/sessions",
+            "POST",
+            new URLSearchParams({
+              customer: clinic.stripe_customer_id_saas as string,
+              return_url: "https://integrika.mx/configuracion/pagos",
+            }),
+          );
+          return json({ url: session.url });
+        } catch (stripeErr) {
+          return json({ error: `Stripe: ${(stripeErr as Error).message}` }, 502);
+        }
+      }
+
       if (body.action === "update_modules") {
         const nextIds = Array.isArray(body.modulo_ids) ? body.modulo_ids : [];
         if (nextIds.length === 0) return json({ error: "Selecciona al menos un módulo" }, 400);
