@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Headset, Users, CalendarDays, ClipboardList, Stethoscope, FileText,
   BellRing, CreditCard, Receipt, MessageCircle, BarChart2,
   UserCog, ShieldCheck, Settings, LifeBuoy,
+  ShoppingCart, Package, Wallet, Gift, FileSearch, Network, Wrench,
 } from 'lucide-react';
 
 type ModuleItem = {
@@ -36,6 +37,11 @@ const SECTIONS: { label: string; items: ModuleItem[] }[] = [
     label: 'Operaciones',
     items: [
       { slug: 'farmacia', label: 'Farmacia / Caja', Icon: CreditCard, ready: true },
+      { slug: 'caja', label: 'Caja', Icon: Wallet, ready: true },
+      { slug: 'compras', label: 'Compras', Icon: ShoppingCart, ready: true },
+      { slug: 'almacen', label: 'Almacén', Icon: Package, ready: true },
+      { slug: 'enfermeria', label: 'Enfermería', Icon: Stethoscope, ready: true },
+      { slug: 'lealtad', label: 'Lealtad', Icon: Gift, ready: true },
       { slug: 'facturacion', label: 'Facturación', Icon: Receipt, ready: true },
       { slug: 'conversaciones', label: 'Conversaciones', Icon: MessageCircle, ready: true },
     ],
@@ -45,9 +51,12 @@ const SECTIONS: { label: string; items: ModuleItem[] }[] = [
     items: [
       { slug: 'inteligencia-bi', label: 'Inteligencia BI', Icon: BarChart2, ready: true },
       { slug: 'admin-usuarios', label: 'Usuarios', Icon: UserCog, ready: true },
+      { slug: 'admin-arco', label: 'Solicitudes ARCO', Icon: FileSearch, ready: true },
+      { slug: 'admin-diagnostico-multiclinica', label: 'Diagnóstico multi-clínica', Icon: Network, ready: true },
       { slug: 'auditoria', label: 'Auditoría', Icon: ShieldCheck, ready: true },
       { slug: 'configuracion', label: 'Configuración', Icon: Settings, ready: true },
       { slug: 'configuracion-notificaciones', label: 'Reglas de notificaciones', Icon: BellRing, ready: true },
+      { slug: 'ajustes', label: 'Catálogo y ajustes', Icon: Wrench, ready: true },
       { slug: 'ayuda-interna', label: 'Ayuda interna', Icon: LifeBuoy, ready: true },
     ],
   },
