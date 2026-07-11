@@ -1,13 +1,110 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PENDIENTE — sesión 36 (Jul 10): panel de suscripción del cliente + limpieza clínicas prueba
+## PENDIENTE — sesión 36 (Jul 10, cont. 2): panel de suscripción self-service + archivado — Tasks 1-7 DONE, falta review final + merge
 
-Brainstorming EN CURSO (superpowers:brainstorming), PAUSADO por costo (sesión
-llegó a $307.64 acumulado incluyendo el trabajo de Tasks 1-8 del plan
-cancelación-self-service-gating-modulos del mismo día). NO se escribió spec
-todavía — no hay `docs/superpowers/specs/*.md` de esto, retomar el
-brainstorming desde cero de preguntas, pero SIN re-preguntar lo ya decidido
-abajo.
+**Spec y plan ya escritos y aprobados** (a diferencia de lo que decía esta
+sección antes — brainstorming SÍ se completó esta sesión):
+- Spec: `docs/superpowers/specs/2026-07-10-panel-suscripcion-cliente-y-limpieza-clinicas.md`
+- Plan: `docs/superpowers/plans/2026-07-10-panel-suscripcion-cliente-y-limpieza-clinicas.md`
+  (7 tasks, ejecutado con `superpowers:subagent-driven-development`)
+
+**Worktree**: `.claude\worktrees\panel-suscripcion-cliente-y-limpieza-clinicas`
+(rama `worktree-panel-suscripcion-cliente-y-limpieza-clinicas`, creada con
+`EnterWorktree`, NO `git worktree add` manual). Ledger completo en
+`.superpowers/sdd/progress.md` dentro de ese worktree — leerlo con
+`superpowers:subagent-driven-development` al retomar, no re-derivar de acá.
+
+**Tasks 1-6 completas, revisadas (spec ✅ + quality Approved en todas) y
+commiteadas**:
+1. Migración `clinics.archived_at` + RPC `set_clinic_archived` (commit `ce39f5a`).
+2. Tipos compartidos `src/types/subscription.ts` + componente
+   `InvoicesTable.tsx` extraído, `AdminTenantDetail.tsx` refactorizado para
+   usarlos (commit `4d6dda2`).
+3. Self-service en GET y `update_modules` de `manage-subscription`
+   (`assertClinicAccess` unificado, `SELF_SERVICE_ACTIONS` incluye
+   `cancel|update_modules|create_portal_session`, NUNCA `suspend|reactivate`)
+   (commit `b189897`, 18/18 tests, security review sin hallazgos).
+4. Acción `create_portal_session` en `manage-subscription` (Stripe Customer
+   Portal, sin formulario de tarjeta propio) (commit `69e2021`, 20/20 tests).
+5. Panel self-service completo en `ConfiguracionPagos.tsx` (módulos con
+   precio, facturas, botón portal, guardar cambios con gate de 0 módulos)
+   + fix post-review de manejo de error/loader en `loadSummary`
+   (commits `d9e75f3` + `d67edcc`, 2/2 tests).
+6. Tabs Activas/Canceladas/Archivadas + Archivar/Desarchivar en
+   `AdminTenants.tsx`, filtro 100% client-side (commit `da23d9a`).
+
+**Deploy hecho**: `manage-subscription` v5 desplegado a producción
+(`kyfkvdyxpvpiacyymldc`) con el código de Tasks 3+4 — confirmado `ACTIVE`.
+La migración de Task 1 también ya está aplicada en producción (vía
+`mcp__supabase__apply_migration`, no solo en el worktree).
+
+**Task 7 (smoke test e2e manual) — EJECUTADA (Jul 10, cont. 2), resultado parcial**:
+
+Corrida contra el worktree local (`npm run dev`, puerto 8085) — la app en
+producción (`integrika.mx`) todavía sirve el código viejo de main, el
+frontend de Tasks 5-6 solo existe en la rama sin mergear. Login se hizo con
+la cuenta QA permanente (`qa.pruebas@clinica-mexico-spa.test`), habilitada
+temporalmente y con 3 filas agregadas y luego BORRADAS al terminar
+(`platform_staff`, `user_roles` role=admin, `clinic_memberships` role=admin) —
+la cuenta QA no tenía ninguna de las tres antes de esta sesión, así que no
+sirve as-is para futuros smoke tests sin repetir este setup. Cuenta
+re-deshabilitada (`banned_until` a 2126) al final, como manda el protocolo.
+
+Hallazgo de infraestructura de datos (no es bug de esta feature): **ninguna
+clínica activa en prod tiene `stripe_customer_id_saas`/`stripe_subscription_id_saas`
+de test-mode**. Solo "Santo Copo" los tiene, pero está `subscription_status:
+canceled` y la app la bloquea enteramente ("Acceso suspendido") antes de
+llegar a `/configuracion/pagos` — gate preexistente, no de esta feature.
+Por eso Pasos 2-3 del checklist (redirect real a `billing.stripe.com`,
+prorrateo visible en Stripe Dashboard) NO se pudieron verificar end-to-end.
+
+Resultado por paso:
+1. ✅ Módulos con precio, facturas (vacío, `InvoicesTable` renderiza bien),
+   botón método de pago — todo visible en Clínica Salud Integral MX.
+2. ⚠️ Parcial: sin cliente Stripe configurado → toast de error correcto
+   ("Esta clínica no tiene cliente de Stripe configurado"), pero NO se pudo
+   confirmar el redirect real a Stripe test-mode (ninguna clínica activa
+   tiene `stripe_customer_id_saas`).
+3. ⚠️ Parcial: gate de 0 módulos confirmado (botón se deshabilita). El save
+   con módulos >0 también devuelve error controlado ("Esta clínica no tiene
+   una suscripción activa en Stripe") en vez de prorratear — mismo motivo,
+   sin `stripe_subscription_id_saas` en ninguna clínica activa.
+4. ✅ Archivar desde tab Activas → clínica desaparece y aparece en Archivadas.
+5. ✅ Desarchivar → clínica regresa a Activas.
+6. ✅ Tab Canceladas muestra "Santo Copo" sin tocarla.
+7. ✅ Esta nota + STATE.md actualizados.
+
+**Nota técnica para quien retome**: el botón "Archivar" de `AdminTenants.tsx`
+usa `window.confirm()` nativo — bloquea automatización de browser (Claude in
+Chrome no puede clickear diálogos nativos). Se sorteó con
+`window.confirm = () => true` vía `javascript_tool` antes del click. Si se
+automatiza este flujo de nuevo, mismo truco.
+
+**Pendiente real al retomar**:
+1. **Verificación real de Stripe test-mode** (Pasos 2-3 completos) sigue
+   pendiente — requiere que alguna clínica activa tenga
+   `stripe_customer_id_saas`/`stripe_subscription_id_saas` de un cliente y
+   suscripción de prueba reales en el dashboard de Stripe (crear uno nuevo,
+   o reactivar Santo Copo con IDs frescos). Decisión del usuario: aceptar el
+   riesgo (el código del error path ya se probó y es correcto) o crear ese
+   fixture antes de mergear.
+2. **Review final de rama completa** (`superpowers:requesting-code-review`,
+   whole-branch) — NO se corrió todavía.
+3. **Merge** de la rama `worktree-panel-suscripcion-cliente-y-limpieza-clinicas`
+   a `main` (usar `superpowers:finishing-a-development-branch` tras el review
+   final) — NO se hizo.
+4. Nota de Task 2: el reporte `.superpowers/sdd/task-2-report.md` del
+   worktree tenía contenido de otra sesión no relacionada
+   (`clinic_has_modulo_access`) que se sobrescribió sin querer — sin impacto
+   real (esa migración SQL sigue intacta en `supabase/migrations/`, solo se
+   perdió el reporte narrativo viejo), mencionado por si aparece confusión.
+
+**Costo de esta sesión**: la fase de ejecución (subagent-driven-development,
+6 tasks) llegó a ~$294; esta continuación (Task 7 + debugging de acceso QA)
+sumó otros ~$22+. Mismo patrón de costo alto ya documentado en sesiones
+anteriores — considerar presupuesto fresco para el review final de rama.
+
+## Histórico — sesión 36, primera mitad (brainstorming + spec + plan, ya completados, referencia solamente)
 
 **Pedido del usuario** (verbatim, importante para no perder intención):
 "has esa ventana para el cliente como esta el spotyfi amazon etc y ten las
