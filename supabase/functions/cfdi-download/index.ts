@@ -14,6 +14,19 @@ const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SVC  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// admin es rol global (bypassa el check de clinica, igual que en el resto de
+// las funciones cfdi-star). Cualquier otro rol permitido (receptionist) debe
+// pertenecer a la clinica del documento, sin excepcion por lista vacia.
+export function isCfdiDownloadForbidden(
+  userRoles: string[],
+  userClinicIds: string[],
+  docClinicId: string | null,
+): boolean {
+  if (userRoles.includes("admin")) return false;
+  if (!docClinicId) return true;
+  return !userClinicIds.includes(docClinicId);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -33,11 +46,12 @@ Deno.serve(async (req: Request) => {
   const svc = createClient(SUPABASE_URL, SUPABASE_SVC);
 
   // Verificar rol permitido
-  const { data: roles } = await svc
+  const { data: roleRows } = await svc
     .from("user_roles")
     .select("role")
     .eq("user_id", userData.user.id);
-  const allowed = (roles ?? []).some((r: { role: string }) => ["admin", "receptionist"].includes(r.role));
+  const userRoles = (roleRows ?? []).map((r: { role: string }) => r.role);
+  const allowed = userRoles.some((r: string) => ["admin", "receptionist"].includes(r));
   if (!allowed) {
     return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
   }
@@ -67,12 +81,17 @@ Deno.serve(async (req: Request) => {
     .eq("id", cfdiId)
     .single();
 
-  if (doc && userClinicIds.length > 0 && !userClinicIds.includes(doc.clinic_id)) {
-    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
-  }
-
   if (!doc) {
     return new Response(JSON.stringify({ error: "CFDI no encontrado" }), { status: 404, headers: corsHeaders });
+  }
+
+  // admin es rol global (igual que en cfdi-acuse/cfdi-cancelar/etc.) — bypassa el
+  // check de pertenencia. Cualquier otro rol (ej. receptionist) SIEMPRE debe
+  // pertenecer a la clínica del CFDI, incluso si userClinicIds quedó vacío
+  // (ej. membresía revocada pero rol legado en user_roles) — bug previo: el
+  // check se saltaba por completo cuando userClinicIds.length === 0.
+  if (isCfdiDownloadForbidden(userRoles, userClinicIds, doc.clinic_id)) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
   }
 
   // XML — servir desde BD si está cacheado y parece XML real

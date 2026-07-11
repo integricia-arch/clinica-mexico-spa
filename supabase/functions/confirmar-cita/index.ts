@@ -4,6 +4,7 @@
 // nuevo_status default = "confirmada"; también acepta "cancelada" | "liberada"
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isApptClinicAccessForbidden } from "./clinic-access.ts";
 
 const TELEGRAM_BOT_TOKEN   = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
@@ -69,6 +70,19 @@ Deno.serve(async (req) => {
   const VALID_STATUSES = ["confirmada", "cancelada", "liberada", "recordatorio_enviado", "confirmada_paciente", "confirmada_medico"];
   if (!apptId) return json({ error: "appointment_id requerido" }, 400);
   if (!VALID_STATUSES.includes(nuevoStatus)) return json({ error: "status inválido" }, 400);
+
+  // Verificar que la cita pertenece a una clínica donde el caller tiene rol permitido
+  // (antes solo se validaba que el usuario tuviera el rol EN ALGUNA clínica, sin
+  // cruzarlo contra la clínica dueña de la cita — permitía confirmar/cancelar
+  // citas de cualquier clínica conociendo el appointment_id).
+  const { data: apptClinic } = await supabase
+    .from("appointments")
+    .select("clinic_id")
+    .eq("id", apptId)
+    .maybeSingle();
+  if (isApptClinicAccessForbidden(memberships, allowedRoles, apptClinic?.clinic_id ?? null)) {
+    return json({ error: "permiso denegado" }, 403);
+  }
 
   // Update appointment status
   const { error: updateErr } = await supabase

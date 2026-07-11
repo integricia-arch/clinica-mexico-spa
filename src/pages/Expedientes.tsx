@@ -798,6 +798,7 @@ export default function Expedientes() {
         onClose={() => setNotaModal(false)}
         expedienteId={currentExpId}
         doctorId={currentDoctorId}
+        clinicId={activeClinicId}
         nota={notaSelected}
         onSaved={handleNotaSaved}
       />

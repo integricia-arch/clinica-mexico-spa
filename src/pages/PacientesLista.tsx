@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { logPhiAccess } from "@/hooks/usePhiAccessLog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, Phone, Mail, Pencil, CalendarDays, FileText, ShoppingCart, ClipboardList, ExternalLink } from "lucide-react";
@@ -103,6 +105,7 @@ function PacienteHistorialDrawer({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const { activeClinicId } = useActiveClinic();
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [rxs, setRxs] = useState<Prescription[]>([]);
   const [sales, setSales] = useState<PharmacySale[]>([]);
@@ -160,6 +163,13 @@ function PacienteHistorialDrawer({
         setNotas((notasData as NotaConsulta[]) ?? []);
       } else {
         setNotas([]);
+      }
+
+      if (activeClinicId && patient) {
+        void logPhiAccess(activeClinicId, patient.id, "patients");
+        if (expIds.length > 0) {
+          void logPhiAccess(activeClinicId, patient.id, "notas_consulta");
+        }
       }
       setLoadingAll(false);
     });

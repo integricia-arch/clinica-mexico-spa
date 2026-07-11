@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useModulosActivos } from "@/hooks/useModulosActivos";
 import { ModuloNoContratadoScreen } from "@/components/ModuloNoContratadoScreen";
+import MfaEnrollmentGate from "@/components/MfaEnrollmentGate";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -53,5 +54,5 @@ export default function ProtectedRoute({ children, allowedRoles, requiredModulo 
     return <ModuloNoContratadoScreen moduloSlug={requiredModulo} />;
   }
 
-  return <>{children}</>;
+  return <MfaEnrollmentGate>{children}</MfaEnrollmentGate>;
 }

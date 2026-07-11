@@ -19,6 +19,16 @@ interface AppointmentRequest {
   recursos?: { tipo_recurso: string; descripcion?: string }[];
 }
 
+// Staff (admin/receptionist) debe tener membresía activa en la clínica del
+// doctor que está agendando — evita crear citas cross-clínica.
+export function isStaffClinicAccessForbidden(
+  staffMemberships: Array<{ clinic_id: string }> | null,
+  doctorClinicId: string | null,
+): boolean {
+  if (!doctorClinicId) return true;
+  return !(staffMemberships ?? []).some((m) => m.clinic_id === doctorClinicId);
+}
+
 async function enviarTelegram(chatId: string, text: string) {
   if (!TELEGRAM_BOT_TOKEN) return;
   const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -177,7 +187,7 @@ Deno.serve(async (req: Request) => {
     // 3. Check doctor schedule bounds
     const { data: doctor } = await supabase
       .from("doctors")
-      .select("horario_inicio, horario_fin, activo")
+      .select("horario_inicio, horario_fin, activo, clinic_id")
       .eq("id", body.doctor_id)
       .single();
 
@@ -188,12 +198,29 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // 3b. Staff solo puede agendar dentro de una clínica donde tiene membresía
+    // (antes se aceptaba cualquier doctor_id/clinic combo — un receptionist de
+    // la Clínica A podía crear citas para un doctor de la Clínica B).
+    if (isStaff) {
+      const { data: staffMemberships } = await supabase
+        .from("clinic_memberships")
+        .select("clinic_id")
+        .eq("user_id", user.id);
+      if (isStaffClinicAccessForbidden(staffMemberships, doctor.clinic_id)) {
+        return new Response(
+          JSON.stringify({ error: "No tienes acceso a la clínica de este médico" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // 4. Create appointment
     const { data: appointment, error: insertError } = await supabase
       .from("appointments")
       .insert({
         patient_id: body.patient_id,
         doctor_id: body.doctor_id,
+        clinic_id: doctor.clinic_id,
         assigned_nurse_id: body.assigned_nurse_id || null,
         room_id: body.room_id || null,
         fecha_inicio: body.fecha_inicio,
