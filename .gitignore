@@ -48,7 +48,10 @@ _build_*.cmd
 dist_integrika.zip
 
 # Config local de herramientas
-.claude/
+# .claude/ se ignora completo SALVO las skills del proyecto (.claude/skills/),
+# que sí se versionan. project-context.md (credenciales) sigue ignorado.
+.claude/*
+!.claude/skills/
 .agents/
 skills-lock.json
 
