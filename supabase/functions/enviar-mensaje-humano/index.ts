@@ -10,6 +10,7 @@
 // =================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isConversationClinicAccessForbidden } from "./clinic-access.ts";
 
 const TELEGRAM_BOT_TOKEN   = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
@@ -62,10 +63,21 @@ Deno.serve(async (req) => {
   // 1. Cargar conversación + identidad para obtener chat_id de Telegram
   const { data: conv, error: ec } = await supabase
     .from("conversaciones")
-    .select("id, identidad_canal_id, status, identidades_canal:identidad_canal_id(canal_id, external_id)")
+    .select("id, identidad_canal_id, status, clinic_id, identidades_canal:identidad_canal_id(canal_id, external_id)")
     .eq("id", conversacion_id)
     .single();
   if (ec || !conv) return json({ error: "conversación no encontrada" }, 404);
+
+  // El check de isStaff arriba solo confirma un rol global — hay que cruzarlo
+  // contra la clínica dueña de la conversación (antes cualquier staff podía
+  // enviar mensajes a pacientes de cualquier clínica conociendo el id).
+  const { data: staffMemberships } = await supabase
+    .from("clinic_memberships")
+    .select("clinic_id")
+    .eq("user_id", userData.user.id);
+  if (isConversationClinicAccessForbidden(staffMemberships, (conv as any).clinic_id ?? null)) {
+    return json({ error: "permiso denegado" }, 403);
+  }
 
   const ident: any = (conv as any).identidades_canal;
   if (ident?.canal_id !== "telegram") {
