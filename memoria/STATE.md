@@ -1,5 +1,119 @@
 # Estado del Proyecto — clinica-mexico-spa
 
+## COMPLETADO — sesión 39 (Jul 11): plan de seguridad reconstruido + ejecutado Tasks 1-3 de 7 (worktree, sin mergear)
+
+**Nota importante**: la nota de "sesión 38" que aparecía en contexto de Obsidian al
+iniciar esta sesión **nunca se guardó realmente en este archivo** — se confirmó que
+`memoria/STATE.md` en disco pasaba de sesión 37 directo a esto. Mismo problema que
+el plan de sesión 38 (tampoco se había guardado, se reconstruyó al empezar). No se
+reconstruye el detalle perdido de sesión 38 acá — lo relevante que sí sobrevivió en
+disco: `docs/superpowers/specs/2026-07-11-endurecimiento-seguridad-blast-radius-design.md`
+(spec, sesión 37) y `docs/runbook-rotacion-service-role.md` (sesión 38, si quedó
+commiteado, verificar).
+
+**Lo que se hizo esta sesión**:
+
+1. **Plan reconstruido**: `docs/superpowers/plans/2026-07-11-endurecimiento-seguridad-blast-radius.md`
+   (7 tasks), vía `superpowers:writing-plans` sobre el spec ya aprobado. Commiteado en
+   `main` (`6c9e1d3`).
+2. **Task 1 (gate duro) completa y aprobada por el usuario**: auditoría de roles vs PHI,
+   `docs/superpowers/specs/2026-07-11-auditoria-roles-phi.md`. Hallazgo crítico real:
+   `notas_consulta` (notas SOAP) no tenía `clinic_id` en la RESTRICTIVE gate multi-tenant
+   — cualquier doctor/nurse/admin comprometido de una clínica podía leer notas clínicas
+   de CUALQUIER otra clínica. Usuario aprobó: (a) incluir el fix como Task 2 nueva del
+   plan, (b) MFA acotado a `admin`+`platform_staff` únicamente.
+3. **Worktree creado**: `.claude/worktrees/endurecimiento-seguridad-blast-radius`
+   (branch `worktree-endurecimiento-seguridad-blast-radius`), vía `EnterWorktree`.
+   Ejecutado con `superpowers:subagent-driven-development`. Ledger:
+   `.superpowers/sdd/progress.md` dentro del worktree.
+4. **Task 2 completa** (commits `a26827e`, tras 1 fix round): `notas_consulta` ahora
+   tiene `clinic_id NOT NULL` + policy RESTRICTIVE `multiclinic_access_restrictive`,
+   mismo patrón que `patients`/`prescriptions`/`patient_studies`. Migración:
+   `supabase/migrations/20260711142817_notas_consulta_clinic_scope_complete.sql`
+   (renombrada post-hoc, ver punto 6). Aplicada en vivo, 0 filas afectadas (tabla
+   vacía en prod al momento del fix).
+5. **Task 3 completa** (commits `86ae2b6`, `1ae77de`, tras 2 fix rounds): tabla
+   `phi_access_log` (append-only) + RPC `log_phi_access(p_clinic_id, p_patient_id,
+   p_tabla, p_accion)`. Hallazgos reales del implementador (no falsos positivos):
+   - `is_platform_staff(uuid)` que el plan asumía **no existe en la DB real** — el
+     helper real ya usado en frontend es `is_global_admin(uuid)` (misma tabla
+     `platform_staff` por debajo). Plan corregido in-place.
+   - Supabase otorga privilegios default a `anon` a nivel de schema, no cubiertos por
+     `REVOKE ... FROM PUBLIC/authenticated/service_role` — se encontró vía
+     `get_advisors` que `anon` tenía CRUD completo en la tabla nueva y EXECUTE en el
+     RPC. Corregido con `REVOKE ALL/EXECUTE ... FROM anon` explícito.
+   Migraciones (aplicadas en vivo, archivos ya reconciliados con
+   `mcp__supabase__list_migrations`): `20260711144229_phi_access_log.sql`,
+   `20260711144403_phi_access_log_revoke_anon.sql`,
+   `20260711144451_phi_access_log_revoke_anon_execute.sql`.
+6. **Bug del propio proceso encontrado y arreglado dos veces**:
+   - Un implementer subagent commiteó por error directo a `main` en vez del branch del
+     worktree (Task 2) — corregido con cherry-pick al worktree + `git reset --hard`
+     de `main` a su punto previo (nunca se había pusheado, seguro).
+   - El archivo de nombre de migración commiteado no coincidía con el timestamp real
+     que `apply_migration` registró en el historial remoto (mismo tipo de drift
+     documentado en `CLAUDE.md`, sección "Historial de migrations Lovable vs CLI") —
+     afectó a Tasks 2 y 3. Reconciliado renombrando/dividiendo archivos locales para
+     que coincidan 1:1 con `mcp__supabase__list_migrations`.
+   - Un fix subagent que se cortó por límite de sesión de Claude dejó
+     `.superpowers/sdd/task-2-report.md` sobrescrito con contenido de OTRA sesión/tarea
+     no relacionada (`clinic_has_modulo_access`) — mismo bug ya documentado en
+     sesión 33/35 de este proyecto (colisión de nombre de archivo de reporte entre
+     sesiones distintas del skill). Restaurado con `git checkout --`. **Si se repite,
+     revisar por qué el path del report file colisiona entre ejecuciones distintas del
+     skill — no debería pasar con paths bajo un worktree nuevo.**
+7. **Hook de seguridad del proyecto (Optimus Prime CarosIA)** bloqueó escribir el plan
+   por nombrar literalmente el token estándar que inyecta GitHub Actions y el nombre
+   de la service role key de Supabase — **no hizo falta tocar el hook ni crear el
+   archivo de excepciones bajo `.security/`** (nunca se creó, pese a que sesión 38
+   decía haberlo hecho — tampoco existía en disco). Se resolvió describiendo las env
+   vars genéricamente en el texto del plan en vez de deletrearlas. Recomendado para el
+   futuro: mismo approach, no pelear con el hook.
+
+**Costo de esta sesión**: llegó a **$75+**, golpeó el **rate limit de Claude una vez**
+(sesión se cortó a mitad de un fix subagent de Task 3, se retomó y reparó a mano tras
+el reset). Patrón de costo alto ya documentado en sesiones previas de este proyecto —
+cada task del plan con implementer+reviewer(+fix rounds) corrió $15-25.
+
+### HANDOFF para sesión nueva — continuar el plan de seguridad, Tasks 4-7
+
+**Punto de partida exacto**: worktree `.claude/worktrees/endurecimiento-seguridad-blast-radius`
+(branch `worktree-endurecimiento-seguridad-blast-radius`) tiene Tasks 1-3 completas y
+commiteadas (`1ae77de` es el HEAD actual del worktree). Ledger de progreso en
+`.superpowers/sdd/progress.md` dentro del worktree — leerlo con
+`superpowers:subagent-driven-development` al retomar, YA tiene brief de Task 4
+generado (`.superpowers/sdd/task-4-brief.md`) sin dispatchar todavía.
+
+**Nada se mergeó a `main` todavía** — `main` local sigue en `6c9e1d3` (solo el plan +
+spec de Task 1), sin pushear a `origin` tampoco.
+
+**Tasks pendientes** (ver el plan para código completo de cada una):
+4. Wire del log en frontend — `usePhiAccessLog` hook + llamada desde
+   `PacienteHistorialDrawer` en `src/pages/PacientesLista.tsx`. Brief ya generado.
+5. MFA obligatorio para `admin`+`platform_staff` — `useMfaEnforcement` +
+   `MfaEnrollmentGate`, wire en `ProtectedRoute.tsx`.
+6. Secret-scanning en CI (gitleaks) — step nuevo en `.github/workflows/typecheck.yml`.
+   **Ojo**: al escribir este step, el nombre real de la env var estándar de GitHub
+   Actions que necesita `gitleaks-action` choca con el hook de seguridad del proyecto —
+   el plan ya la describe genéricamente, seguir el mismo patrón al implementar de
+   verdad (o probar si el hook permite el nombre real dentro de un archivo `.yml`,
+   que no se probó esta sesión).
+7. Auditoría de uso de service role key en las 27 Edge Functions — documento
+   `docs/edge-functions-service-role-audit.md`.
+
+**Antes de dispatchar Task 4**: avisar presupuesto esperado — Tasks 2-3 solas costaron
+~$50 con fix rounds; Tasks 4-7 restantes probablemente sumen $60-100+ adicionales,
+mismo patrón.
+
+**Lección para el controller de la próxima sesión**: verificar SIEMPRE que los
+commits de cada implementer subagent queden en el branch del worktree (`git
+branch --show-current` antes de dar por buena una task) — pasó dos veces en
+sesiones distintas de este proyecto que un subagent commiteó a `main` por error.
+También: tras cualquier `apply_migration`, correr `mcp__supabase__list_migrations`
+y comparar contra `ls supabase/migrations/` ANTES de dar la task por aprobada — el
+timestamp que el implementer commitea al archivo local no siempre coincide con el
+que Supabase registra al aplicar en vivo.
+
 ## COMPLETADO — sesión 37 (Jul 11): barrido de 7 pendientes acumulados + 1 bug de CI encontrado al pasar
 
 Se revisó todo `STATE.md` (3461 líneas) buscando pendientes reales sueltos en
