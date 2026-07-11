@@ -2,6 +2,18 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { XMLParser } from "https://esm.sh/fast-xml-parser@4.4.1";
 
+// cfdi-parse aceptaba cualquier clinic_id del body/formData sin cruzarlo
+// contra la membresia real del caller: un usuario autenticado de la Clinica A
+// podia leer medicamentos y escribir fp_cfdi/facturas_proveedor de la
+// Clinica B con solo cambiar el clinic_id enviado. Este check replica el
+// patron de assertClinicAccess en manage-subscription/index.ts.
+export function isClinicMembershipMissing(
+  memberships: Array<{ clinic_id: string }> | null,
+  clinicId: string,
+): boolean {
+  return !(memberships ?? []).some((m) => m.clinic_id === clinicId);
+}
+
 // =========================================================
 // TIPOS
 // =========================================================
@@ -394,6 +406,33 @@ serve(async (req: Request) => {
     }
     if (!facturaProveedorId) throw new Error("factura_proveedor_id requerido");
     if (!clinicId) throw new Error("clinic_id requerido");
+
+    // Verificar que el usuario pertenece a la clinica que dice representar
+    const { data: memberships } = await supabase
+      .from("clinic_memberships")
+      .select("clinic_id")
+      .eq("user_id", user.id)
+      .eq("status", "active");
+    if (isClinicMembershipMissing(memberships, clinicId)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "No perteneces a esta clínica" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verificar que la factura de proveedor pertenece a esa misma clinica
+    // (evita usar un clinic_id valido del caller para tocar la factura de otra clinica)
+    const { data: facturaProveedor } = await supabase
+      .from("facturas_proveedor")
+      .select("id, clinic_id")
+      .eq("id", facturaProveedorId)
+      .maybeSingle();
+    if (!facturaProveedor || facturaProveedor.clinic_id !== clinicId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "factura_proveedor_id no pertenece a esta clínica" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     // 1. Parsear XML
     const cfdi = parseCFDIXML(xmlContent);
