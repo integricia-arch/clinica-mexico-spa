@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "motion/react";
 import Logo from "@/components/Logo";
+import testimonioMariaPhoto from "@/assets/testimonios/testimonio-1.jpg";
 import {
   MessageCircle, Calendar, Bell, Shield, Users, Stethoscope,
   Pill, Receipt, Inbox as InboxIcon, ClipboardCheck, Bot, Clock,
@@ -247,7 +248,7 @@ const testimonials = [
     name: "Dra. María Rodríguez",
     role: "Directora Médica · Guadalajara",
     quote: "Antes perdíamos 8-10 citas a la semana por no-shows. Con los recordatorios automáticos bajamos a menos de 2. El bot funciona de noche y los domingos, eso no tiene precio.",
-    photo: "https://images.unsplash.com/photo-1659353886868-753b0c5c5772?q=80&w=200&auto=format&fit=crop&crop=face",
+    photo: testimonioMariaPhoto,
   },
   {
     name: "Dr. Jorge Mendoza",
@@ -1176,7 +1177,7 @@ export default function Pitch() {
                   </div>
                   <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.75, fontStyle: "italic", flex: 1 }}>"{t.quote}"</p>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                    <img src={t.photo} alt={t.name} style={{ width: 72, height: 72, borderRadius: "50%", border: `2px solid ${TEAL}30`, flexShrink: 0, objectFit: "cover" }} loading="lazy" />
+                    <img src={t.photo} alt={t.name} style={{ width: 96, height: 96, borderRadius: "50%", border: `2px solid ${TEAL}30`, flexShrink: 0, objectFit: "cover" }} loading="lazy" />
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{t.name}</div>
                       <div style={{ fontSize: 11, color: SLATE }}>{t.role}</div>

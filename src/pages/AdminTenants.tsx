@@ -189,7 +189,7 @@ export default function AdminTenants() {
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => null);
-    return { ok: res.ok, status: res.status, data: data as { error?: string; clinic_id?: string } | null };
+    return { ok: res.ok, status: res.status, data: data as { error?: string; clinic_id?: string; checkout_url?: string } | null };
   };
 
   const submitWizard = async () => {
