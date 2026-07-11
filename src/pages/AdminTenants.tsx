@@ -14,6 +14,7 @@ interface TenantRow {
   whatsapp_phone_number_id: string | null;
   subscription_status: string;
   grace_period_ends_at: string | null;
+  archived_at: string | null;
 }
 
 interface Modulo {
@@ -30,6 +31,7 @@ export default function AdminTenants() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modulos, setModulos] = useState<Modulo[]>([]);
+  const [tab, setTab] = useState<"activas" | "canceladas" | "archivadas">("activas");
 
   // ponytail: estados del wizard/modales declarados aquí (antes de cualquier
   // return condicional) — moverlos abajo de un `if (...) return` viola las
@@ -81,7 +83,7 @@ export default function AdminTenants() {
     const { data, error: fetchErr } = await supabase
       .from("clinics")
       .select(
-        "id, code, name, status, plan, created_at, whatsapp_status, whatsapp_phone_number_id, subscription_status, grace_period_ends_at"
+        "id, code, name, status, plan, created_at, whatsapp_status, whatsapp_phone_number_id, subscription_status, grace_period_ends_at, archived_at"
       )
       .order("created_at", { ascending: false });
     if (fetchErr) {
@@ -124,6 +126,25 @@ export default function AdminTenants() {
     }
     await load();
   };
+
+  const setArchived = async (clinicId: string, archived: boolean) => {
+    const { error: rpcErr } = await supabase.rpc("set_clinic_archived", {
+      _clinic_id: clinicId,
+      _archived: archived,
+    });
+    if (rpcErr) {
+      setError(rpcErr.message);
+      return;
+    }
+    await load();
+  };
+
+  const filteredTenants = tenants.filter((t) => {
+    if (tab === "archivadas") return t.archived_at !== null;
+    if (t.archived_at !== null) return false;
+    const isCanceled = t.subscription_status === "canceling" || t.subscription_status === "canceled";
+    return tab === "canceladas" ? isCanceled : !isCanceled;
+  });
 
   const guardarNumero = async () => {
     if (!waTarget) return;
@@ -227,6 +248,17 @@ export default function AdminTenants() {
       </button>
       {error && <p className="text-red-600 mb-4">{error}</p>}
       {infoBanner && <p className="text-blue-700 mb-4">{infoBanner}</p>}
+      <div className="flex gap-2 mb-4">
+        {(["activas", "canceladas", "archivadas"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1.5 rounded text-sm ${tab === t ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+          >
+            {t === "activas" ? "Activas" : t === "canceladas" ? "Canceladas" : "Archivadas"}
+          </button>
+        ))}
+      </div>
       {loading ? (
         <p>Cargando...</p>
       ) : (
@@ -243,7 +275,7 @@ export default function AdminTenants() {
             </tr>
           </thead>
           <tbody>
-            {tenants.map((t) => (
+            {filteredTenants.map((t) => (
               <tr
                 key={t.id}
                 className="border-b cursor-pointer hover:bg-gray-50"
@@ -261,25 +293,43 @@ export default function AdminTenants() {
                 </td>
                 <td>{new Date(t.created_at).toLocaleDateString("es-MX")}</td>
                 <td onClick={(e) => e.stopPropagation()}>
-                  {t.status === "suspended" ? (
-                    <button onClick={() => setStatus(t.id, "active")} className="text-green-700 underline">
-                      Reactivar
+                  {tab === "archivadas" ? (
+                    <button onClick={() => setArchived(t.id, false)} className="text-green-700 underline">
+                      Desarchivar
                     </button>
                   ) : (
-                    <button onClick={() => setStatus(t.id, "suspended")} className="text-red-700 underline">
-                      Suspender
-                    </button>
+                    <>
+                      {t.status === "suspended" ? (
+                        <button onClick={() => setStatus(t.id, "active")} className="text-green-700 underline">
+                          Reactivar
+                        </button>
+                      ) : (
+                        <button onClick={() => setStatus(t.id, "suspended")} className="text-red-700 underline">
+                          Suspender
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (confirm(`¿Archivar ${t.name}? Se puede desarchivar después, no se borran datos.`)) {
+                            setArchived(t.id, true);
+                          }
+                        }}
+                        className="text-orange-700 underline ml-3"
+                      >
+                        Archivar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setWaTarget(t);
+                          setWaForm({ phone_number_id: t.whatsapp_phone_number_id ?? "", waba_id: "", test_to: "" });
+                          setWaError(null);
+                        }}
+                        className="text-blue-700 underline ml-3"
+                      >
+                        WhatsApp
+                      </button>
+                    </>
                   )}
-                  <button
-                    onClick={() => {
-                      setWaTarget(t);
-                      setWaForm({ phone_number_id: t.whatsapp_phone_number_id ?? "", waba_id: "", test_to: "" });
-                      setWaError(null);
-                    }}
-                    className="text-blue-700 underline ml-3"
-                  >
-                    WhatsApp
-                  </button>
                 </td>
               </tr>
             ))}

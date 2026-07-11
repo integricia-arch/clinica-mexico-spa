@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CancelarSuscripcionModal } from "@/components/configuracion/CancelarSuscripcionModal";
+import type { SubscriptionSummary, CatalogoModulo } from "@/types/subscription";
+import { InvoicesTable } from "@/components/configuracion/InvoicesTable";
 
 const METODOS = [
   { value: "card", label: "Tarjeta de crédito / débito" },
@@ -41,28 +43,17 @@ export default function ConfiguracionPagos() {
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
   const [testando, setTestando] = useState(false);
 
-  const [subStatus, setSubStatus] = useState<string | null>(null);
-  const [subCancelAt, setSubCancelAt] = useState<string | null>(null);
+  const [summary, setSummary] = useState<SubscriptionSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [catalogo, setCatalogo] = useState<CatalogoModulo[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [savingModules, setSavingModules] = useState(false);
+  const [modulesError, setModulesError] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [subActionLoading, setSubActionLoading] = useState(false);
 
-  const loadSubscription = async () => {
-    if (!activeClinicId) return;
-    const { data } = await supabase
-      .from("clinics")
-      .select("subscription_status, subscription_cancel_at")
-      .eq("id", activeClinicId)
-      .maybeSingle();
-    setSubStatus(data?.subscription_status ?? null);
-    setSubCancelAt(data?.subscription_cancel_at ?? null);
-  };
-
-  useEffect(() => {
-    loadSubscription();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeClinicId]);
-
-  const callManageSubscription = async (action: "cancel" | "reactivate") => {
+  const callManageSubscription = async (action: string, extra?: Record<string, unknown>) => {
     const { data: sessionData } = await supabase.auth.getSession();
     const res = await fetch(`${supabaseUrl}/functions/v1/manage-subscription`, {
       method: "POST",
@@ -70,19 +61,50 @@ export default function ConfiguracionPagos() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${sessionData.session?.access_token}`,
       },
-      body: JSON.stringify({ action, clinic_id: activeClinicId }),
+      body: JSON.stringify({ action, clinic_id: activeClinicId, ...extra }),
     });
     const body = await res.json().catch(() => null);
     if (!res.ok) throw new Error(body?.error ?? "No se pudo completar la operación");
     return body;
   };
 
+  const loadSummary = async () => {
+    if (!activeClinicId) {
+      setSummaryLoading(false);
+      return;
+    }
+    setSummaryLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${supabaseUrl}/functions/v1/manage-subscription?clinic_id=${activeClinicId}`, {
+        headers: { Authorization: `Bearer ${sessionData.session?.access_token}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && !data.error) {
+        const s = data as SubscriptionSummary;
+        setSummary(s);
+        setSelectedIds(s.modulos.map((m) => m.modulo_id));
+      }
+    } catch {
+      toast.error("No se pudo cargar tu suscripción");
+    }
+    setSummaryLoading(false);
+  };
+
+  useEffect(() => {
+    loadSummary();
+    if (activeClinicId) {
+      supabase.from("catalogo_modulos").select("id, nombre, precio_centavos").eq("activo", true)
+        .then((res) => setCatalogo(((res as { data?: CatalogoModulo[] }).data ?? [])));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeClinicId]);
+
   const handleConfirmCancel = async () => {
     setSubActionLoading(true);
     try {
-      const body = await callManageSubscription("cancel");
-      setSubStatus("canceling");
-      setSubCancelAt(body?.subscription_cancel_at ?? null);
+      await callManageSubscription("cancel");
+      await loadSummary();
       setCancelModalOpen(false);
       toast.success("Suscripción cancelada — acceso vigente hasta el fin del período pagado");
     } catch (err) {
@@ -95,7 +117,7 @@ export default function ConfiguracionPagos() {
     setSubActionLoading(true);
     try {
       await callManageSubscription("reactivate");
-      await loadSubscription();
+      await loadSummary();
       toast.success("Suscripción reactivada");
     } catch (err) {
       toast.error((err as Error).message);
@@ -103,8 +125,37 @@ export default function ConfiguracionPagos() {
     setSubActionLoading(false);
   };
 
-  const fechaCorte = subCancelAt
-    ? new Date(subCancelAt).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })
+  const handleOpenPortal = async () => {
+    setPortalLoading(true);
+    try {
+      const body = await callManageSubscription("create_portal_session");
+      if (body?.url) window.location.href = body.url;
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+    setPortalLoading(false);
+  };
+
+  const currentModuleIds = summary?.modulos.map((m) => m.modulo_id) ?? [];
+  const hasModuleChanges =
+    selectedIds.length !== currentModuleIds.length || selectedIds.some((id) => !currentModuleIds.includes(id));
+
+  const handleSaveModules = async () => {
+    setSavingModules(true);
+    setModulesError(null);
+    try {
+      await callManageSubscription("update_modules", { modulo_ids: selectedIds });
+      await loadSummary();
+      toast.success("Módulos actualizados");
+    } catch (err) {
+      setModulesError((err as Error).message);
+    }
+    setSavingModules(false);
+  };
+
+  const subStatus = summary?.clinic.subscription_status ?? null;
+  const fechaCorte = summary?.subscription?.current_period_end
+    ? new Date(summary.subscription.current_period_end * 1000).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })
     : "";
 
   useEffect(() => {
@@ -217,9 +268,15 @@ export default function ConfiguracionPagos() {
       </div>
 
       {/* Suscripción */}
-      {(subStatus === "canceling" || subStatus === "active" || subStatus === "trialing" || subStatus === "past_due") && (
-        <section className="rounded-xl border border-border bg-card p-5 shadow-card space-y-3">
+      {summaryLoading && !summary && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
+      {summary && (
+        <section className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
           <h2 className="font-semibold text-card-foreground">Tu suscripción</h2>
+
           {subStatus === "canceling" ? (
             <div className="rounded-lg bg-warning/10 border border-warning/30 px-4 py-3 text-sm text-warning-foreground space-y-3">
               <p>
@@ -232,22 +289,69 @@ export default function ConfiguracionPagos() {
               </Button>
             </div>
           ) : (
-            <div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Puedes cancelar en cualquier momento. Seguirás teniendo acceso hasta el
-                fin del período ya pagado.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setCancelModalOpen(true)}
-                className="gap-2 text-destructive hover:text-destructive"
-              >
-                <XCircle className="h-4 w-4" />
-                Cancelar suscripción
-              </Button>
+            <p className="text-sm text-muted-foreground">
+              Plan {summary.clinic.plan}. Próximo cobro: {fechaCorte || "sin fecha disponible"}.
+            </p>
+          )}
+
+          <div>
+            <h3 className="text-sm font-semibold text-card-foreground mb-2">Módulos contratados</h3>
+            <div className="space-y-2">
+              {catalogo.map((m) => (
+                <label key={m.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(m.id)}
+                    onChange={(e) =>
+                      setSelectedIds(e.target.checked ? [...selectedIds, m.id] : selectedIds.filter((id) => id !== m.id))
+                    }
+                  />
+                  {m.nombre} — ${(m.precio_centavos / 100).toFixed(2)}
+                </label>
+              ))}
             </div>
+            {modulesError && <p className="text-sm text-destructive mt-2">{modulesError}</p>}
+            <Button
+              type="button"
+              size="sm"
+              className="mt-3"
+              onClick={handleSaveModules}
+              disabled={savingModules || !hasModuleChanges || selectedIds.length === 0}
+            >
+              {savingModules ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Guardar cambios
+            </Button>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-card-foreground mb-2">Método de pago</h3>
+            {summary.subscription?.default_payment_method?.card ? (
+              <p className="text-sm text-muted-foreground mb-2">
+                {summary.subscription.default_payment_method.card.brand} ···· {summary.subscription.default_payment_method.card.last4}
+              </p>
+            ) : null}
+            <Button type="button" variant="outline" size="sm" onClick={handleOpenPortal} disabled={portalLoading} className="gap-2">
+              {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+              Actualizar método de pago
+            </Button>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-card-foreground mb-2">Facturas</h3>
+            <InvoicesTable invoices={summary.invoices} />
+          </div>
+
+          {subStatus !== "canceling" && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCancelModalOpen(true)}
+              className="gap-2 text-destructive hover:text-destructive"
+            >
+              <XCircle className="h-4 w-4" />
+              Cancelar suscripción
+            </Button>
           )}
         </section>
       )}
