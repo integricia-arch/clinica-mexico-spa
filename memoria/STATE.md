@@ -1,5 +1,84 @@
 # Estado del Proyecto — clinica-mexico-spa
 
+## PENDIENTE — sesión 36 (Jul 10): panel de suscripción del cliente + limpieza clínicas prueba
+
+Brainstorming EN CURSO (superpowers:brainstorming), PAUSADO por costo (sesión
+llegó a $307.64 acumulado incluyendo el trabajo de Tasks 1-8 del plan
+cancelación-self-service-gating-modulos del mismo día). NO se escribió spec
+todavía — no hay `docs/superpowers/specs/*.md` de esto, retomar el
+brainstorming desde cero de preguntas, pero SIN re-preguntar lo ya decidido
+abajo.
+
+**Pedido del usuario** (verbatim, importante para no perder intención):
+"has esa ventana para el cliente como esta el spotyfi amazon etc y ten las
+opciones que dan estas plataformas y aplicala por cliente y tambien has un
+boton para limpiar y eliminar clientes ahorita que es prueba o quien cancele
+pasarlo a otra ventana estatus de cancelado revisa como es el mejor control
+de todos los casos posibles he implementalo"
+
+**3 piezas, un solo spec (ya confirmado con el usuario), implementación en
+tasks separadas**:
+
+**A. Vista de suscripción del cliente** (extiende `/configuracion/pagos`,
+sección "Tu suscripción" ya existente de Task 7 del plan anterior):
+- Plan/módulos contratados + precio de cada uno.
+- Método de pago: **usar Stripe Customer Portal** (billing portal ya armado
+  por Stripe, no construir formulario de tarjeta custom) — botón "Actualizar
+  método de pago" redirige ahí. Requiere crear la sesión del portal vía
+  Stripe API (`billing_portal/sessions`) desde una Edge Function, probable
+  extensión de `manage-subscription` o una nueva acción.
+- Historial de facturas: ya existe `invoices` en el `summary` que devuelve
+  `manage-subscription` GET (usado hoy en `AdminTenantDetail.tsx`) — exponer
+  eso mismo al cliente vía self-service.
+- Agregar/quitar módulos self-service: la acción `update_modules` ya existe
+  en `manage-subscription` pero **hoy exige `is_global_admin`** (staff-only,
+  ver `supabase/functions/manage-subscription/index.ts`). Falta extender el
+  gate self-service (mismo patrón que `cancel` en Task 3 del plan anterior:
+  `isSelfServiceActionForbidden`) para permitir `update_modules` al admin de
+  la propia clínica también — **decidir si esto necesita su propio research
+  de seguridad** (el precedente de `cancel` tuvo un hallazgo Important en
+  review, `update_modules` toca dinero/proration, probablemente amerita
+  el mismo cuidado o más).
+
+**B. Archivar (NO borrar) clínicas de prueba**:
+- Decisión ya tomada: **archivar, no DELETE**. Nuevo status o flag
+  (`archivada` / `es_prueba`) en `clinics` — desaparece de `/admin/tenants`
+  normal y dashboards, pero los datos quedan (auditoría/debug), reversible.
+  Sin riesgo de pérdida de datos por error de cascada.
+- Candidatas ya identificadas en sesión 35: Santo Copo (clínica de prueba
+  real, ya usada para smoke tests de Stripe), y 2 clínicas sin nombre real
+  (`name: "p"`, `subscription_status: "trialing"`, 0 filas en
+  `cliente_modulos"`) — probablemente registros abandonados a medio hacer,
+  no confirmado con el usuario todavía cuáles archivar exactamente.
+
+**C. Vista separada de clínicas canceladas (admin)**:
+- Pedido: "quien cancele pasarlo a otra ventana estatus de cancelado".
+  Interpretación pendiente de confirmar con el usuario: ¿una nueva ruta
+  `/admin/tenants/canceladas` o un filtro/tab dentro de `/admin/tenants`
+  existente? No se preguntó todavía — **siguiente pregunta pendiente al
+  retomar**.
+
+**Preguntas de brainstorming YA HECHAS (no repetir)**:
+1. Orden de trabajo → las 3 piezas en un solo spec. ✅
+2. Contenido vista cliente → todo: plan+precio, método pago, facturas,
+   upgrade/downgrade self-service. ✅
+3. Método de pago → Stripe Customer Portal, no custom. ✅
+4. Tipo de "borrado" clínicas prueba → archivar, no DELETE. ✅
+
+**Preguntas pendientes al retomar** (siguiente paso inmediato, NO re-derivar):
+- Piece C: ¿ruta nueva vs. tab/filtro en `/admin/tenants` existente?
+- Piece B: confirmar exactamente qué clínicas archivar (lista concreta).
+- Piece A: alcance de seguridad de exponer `update_modules` self-service
+  (¿requiere el mismo nivel de review que `cancel`? ¿límites, ej. no permitir
+  quitar TODOS los módulos, mínimo 1?).
+- Luego: proponer 2-3 approaches de arquitectura, presentar diseño completo,
+  escribir spec a `docs/superpowers/specs/2026-07-10-panel-suscripcion-cliente-y-limpieza-clinicas.md`,
+  self-review, y solo entonces `superpowers:writing-plans`.
+
+**NO implementar nada de esto sin terminar el brainstorming y aprobar el
+spec** — es el hard-gate de la skill `superpowers:brainstorming`, no saltarlo
+aunque parezca simple.
+
 ## Fase actual
 Producción activa — pivote SaaS multi-tenant en marcha. Sesión 27 (Jul 8)
 implementó Checkout de Stripe y mergeó a `main`. Sesión 28 (Jul 9) corrió
