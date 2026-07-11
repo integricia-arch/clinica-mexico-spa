@@ -71,15 +71,19 @@ export default function ConfiguracionPagos() {
   const loadSummary = async () => {
     if (!activeClinicId) return;
     setSummaryLoading(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const res = await fetch(`${supabaseUrl}/functions/v1/manage-subscription?clinic_id=${activeClinicId}`, {
-      headers: { Authorization: `Bearer ${sessionData.session?.access_token}` },
-    });
-    const data = await res.json().catch(() => null);
-    if (res.ok && data && !data.error) {
-      const s = data as SubscriptionSummary;
-      setSummary(s);
-      setSelectedIds(s.modulos.map((m) => m.modulo_id));
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${supabaseUrl}/functions/v1/manage-subscription?clinic_id=${activeClinicId}`, {
+        headers: { Authorization: `Bearer ${sessionData.session?.access_token}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && !data.error) {
+        const s = data as SubscriptionSummary;
+        setSummary(s);
+        setSelectedIds(s.modulos.map((m) => m.modulo_id));
+      }
+    } catch {
+      toast.error("No se pudo cargar tu suscripción");
     }
     setSummaryLoading(false);
   };
@@ -261,6 +265,11 @@ export default function ConfiguracionPagos() {
       </div>
 
       {/* Suscripción */}
+      {summaryLoading && !summary && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
       {summary && (
         <section className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
           <h2 className="font-semibold text-card-foreground">Tu suscripción</h2>
