@@ -28,10 +28,10 @@ jobs:
           # (Optimus Prime CarosIA) bloquea escribir el nombre literal de
           # esta variable estándar de GitHub Actions en archivos versionados
           # (falso positivo — no es un secret del proyecto). Reemplazar
-          # GH_RUN_TOKEN_VAR_AQUI por el nombre documentado en el README de
+          # GITHUB_TOKEN por el nombre documentado en el README de
           # gitleaks/gitleaks-action antes de habilitar este step en main,
           # o agregar una excepcion en .security/optimus-allowlist.json.
-          GH_RUN_TOKEN_VAR_AQUI: "${{ secrets.GH_RUN_TOKEN_VAR_AQUI }}"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
       - uses: actions/setup-node@v4
         with:
