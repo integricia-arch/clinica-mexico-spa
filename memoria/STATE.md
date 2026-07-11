@@ -1,6 +1,92 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PENDIENTE — sesión 36 (Jul 10, cont. 2): panel de suscripción self-service + archivado — Tasks 1-7 DONE, falta review final + merge
+## COMPLETADO — sesión 37 (Jul 11): barrido de 7 pendientes acumulados + 1 bug de CI encontrado al pasar
+
+Se revisó todo `STATE.md` (3461 líneas) buscando pendientes reales sueltos en
+el historial. Se armó lista de 7 y se cerraron los 7, uno por uno:
+
+1. **Bug Almacén price_id** — falsa alarma: ya estaba arreglado desde sesión 32
+   (`price_1TrRpGGw6QdIxYi0j6CF32kL`, $1,599, confirmado en DB). La nota de
+   sesión 31 que decía "sin arreglar" había quedado obsoleta.
+2. **Verificación Stripe test-mode** — creado fixture real: clínica
+   "QA Fixture Stripe Test" (`05129ae7-4821-4fed-8f55-aab621b201fd`) con
+   checkout real vía tarjeta 4242 en test-mode, `subscription_status=active`,
+   `stripe_subscription_id_saas=sub_1Ts0FMGw6QdIxYi0apNZJ1Qp`. Esto resuelve
+   el blocker de fondo (antes NINGUNA clínica activa tenía IDs de test-mode
+   reales). **No completado**: probar el self-service (portal Stripe +
+   prorrateo) logueado como admin de esa clínica — el link de invite se
+   corrompió al reconstruirlo desde el email (encoding), quedó pendiente para
+   cuando se quiera retomar (reenviar invite desde `/admin/tenants`).
+3. **Fotos testimonios /pitch** — de las 2 fotos que el usuario tenía en
+   `OneDrive\Pictures\hospital\`, solo 1 servía (`pexels-gustavo-fring...`,
+   doctora con cara visible). La otra (`pexels-mart-production...`) es
+   alguien de espaldas frente a un resonador, sin cara — no se usó. Comprimida
+   con `sharp` (5.5MB→21KB) a `src/assets/testimonios/testimonio-1.jpg`,
+   reemplaza la foto de Unsplash de "Dra. María Rodríguez" en `Pitch.tsx`.
+   Círculo de foto agrandado 72px→96px (pedido original de sesión 20).
+4. **Manual-site desincronizado** — Docusaurus ya servía los 21 manuales
+   nuevos de sesión 20 por URL directa (sidebar autogenerado desde
+   `docs/manual-usuario/`), pero 15 no aparecían en el grid de la home
+   (`HomepageFeatures/index.tsx`): Caja, Compras, Almacén, Enfermería,
+   Lealtad, Solicitudes ARCO, Diagnóstico multi-clínica, Catálogo y ajustes.
+   Agregados, build verificado limpio.
+5. **Pricing medicamentos** — el research de sesión 16 nunca se había
+   guardado a archivo (solo quedó en el historial de esa conversación, ya
+   perdido). Re-investigado de cero con un subagente (WebSearch, sin
+   inventar precios/registros COFEPRIS): `docs/medicamentos-pricing-research.md`,
+   50 medicamentos (46 confianza media, 3 baja, 1 sin dato: Vitamina B12) +
+   7 distribuidores/laboratorios. **No cargado a DB** — decisión de negocio
+   pendiente del usuario.
+6. **Separación DB usuarios/pacientes** — brainstorming completo. El pedido
+   original de sesión 24 nunca preguntó el motivo real; resultó ser reducir
+   blast radius de un breach (staff comprometido o `service_role` filtrada),
+   NO cumplimiento LFPDPPP ni auditoría externa. Usuario eligió la opción más
+   liviana (endurecer lo que ya existe, NO separación física ni por schemas).
+   Spec escrito:
+   `docs/superpowers/specs/2026-07-11-endurecimiento-seguridad-blast-radius-design.md`
+   — auditoría de roles vs. PHI, MFA obligatorio para `platform_staff`/`admin`,
+   log de auditoría append-only de acceso a PHI, secret-scanning en CI,
+   runbook de rotación de `service_role`. **Sin implementar** — siguiente
+   paso normal sería `superpowers:writing-plans` cuando el usuario lo pida.
+7. **Leaked password protection** — usuario confirmó que activó el toggle en
+   el dashboard de Supabase. `get_advisors(security)` todavía lo reporta como
+   `Disabled` al momento de cerrar la sesión — probablemente cache del
+   advisor sin refrescar, pendiente re-verificar en sesión futura si el
+   warning persiste.
+
+**Bug de CI encontrado y arreglado al pasar (no pedido, no relacionado a los
+7 puntos)**: `src/integrations/supabase/types.ts` estaba commiteado roto
+desde el merge de sesión 36 (`a2197cd`) — el regenerado guardó la respuesta
+cruda del tool `{"types": "..."}` en vez de extraer el campo, dejando el
+archivo sin ningún export real. El build de Vite no se vio afectado (los
+imports de tipos se eliminan en transpile), pero `Quality checks` en CI
+venía en rojo sin que nadie lo notara. Arreglado + destapó un error real
+menor en `AdminTenants.tsx` (`checkout_url` faltante en un tipo inline).
+CI confirmado en verde tras el fix (`f5bdf5a`).
+
+**Costo de esta sesión**: alto (~$84+) — mismo patrón de siempre: browser
+automation contra Stripe/dashboards reales y un `get_advisors` completo
+(384K caracteres) para verificar un solo toggle fueron las partes caras.
+El research de pricing (subagente en background) y el trabajo de código
+local (manual-site, fotos, types.ts) fueron baratos en comparación.
+
+## COMPLETADO — sesión 36 (Jul 10-11): panel de suscripción self-service + archivado — mergeado y pusheado a main
+
+Verificado en sesión 37 (Jul 11): la rama `worktree-panel-suscripcion-cliente-y-limpieza-clinicas`
+ya estaba mergeada a `main` (commit `79ac943`) — el review final y el merge que esta
+sección daba como pendientes ya habían ocurrido. Lo único que faltaba era el `push`:
+`main` estaba 13 commits adelante de `origin/main` (todo el trabajo de esta feature,
+`21b55e5`→`79ac943`). Se corrió `git push origin main` (`d867145..79ac943`) — repo
+remoto sincronizado, sin pendientes de esta feature. El worktree ya no existe (limpiado).
+
+Pendiente real que sí sigue abierto, heredado del smoke test (Task 7, no resuelto por
+el push): **verificación real de Stripe test-mode** — ninguna clínica activa en prod
+tiene `stripe_customer_id_saas`/`stripe_subscription_id_saas` de test-mode, así que el
+redirect a Stripe Customer Portal y el prorrateo de módulos nunca se probaron end-to-end
+contra Stripe real (solo el error path, que sí quedó verificado). Detalle completo abajo,
+sección histórica de sesión 36.
+
+## Histórico — sesión 36 (Jul 10, cont. 2): detalle de ejecución (Tasks 1-7, ya mergeado — ver arriba)
 
 **Spec y plan ya escritos y aprobados** (a diferencia de lo que decía esta
 sección antes — brainstorming SÍ se completó esta sesión):
