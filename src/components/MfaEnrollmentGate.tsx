@@ -23,7 +23,10 @@ export default function MfaEnrollmentGate({ children }: { children: React.ReactN
   if (status === "ok") return <>{children}</>;
 
   async function startEnroll() {
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: "totp",
+      friendlyName: `totp-${Date.now()}`,
+    });
     if (error || !data) { setErrorMsg(error?.message ?? "Error al enrolar"); return; }
     setFactorId(data.id);
     setQr(data.totp.qr_code);
