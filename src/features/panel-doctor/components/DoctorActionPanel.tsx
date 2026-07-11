@@ -141,6 +141,7 @@ export default function DoctorActionPanel({ item, doctorId, snapshot }: Props) {
           onClose={() => setNotaOpen(false)}
           expedienteId={expId}
           doctorId={doctorId}
+          clinicId={activeClinicId}
           nota={latestNota}
           onSaved={async (saved) => {
             if (journeyId) {

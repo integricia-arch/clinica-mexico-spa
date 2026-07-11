@@ -13,6 +13,7 @@ interface Props {
   onClose: () => void;
   expedienteId: string;
   doctorId: string;
+  clinicId: string | null;
   nota?: any | null;
   onSaved: (n: any) => void;
 }
@@ -22,7 +23,7 @@ const EMPTY = {
   diagnostico_principal: "", fecha_consulta: new Date().toISOString().slice(0, 16),
 };
 
-export default function NotaConsultaModal({ open, onClose, expedienteId, doctorId, nota, onSaved }: Props) {
+export default function NotaConsultaModal({ open, onClose, expedienteId, doctorId, clinicId, nota, onSaved }: Props) {
   const { toast } = useToast();
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
@@ -52,10 +53,15 @@ export default function NotaConsultaModal({ open, onClose, expedienteId, doctorI
       toast({ variant: "destructive", title: "Error", description: "Agrega al menos motivo u objetivo" });
       return;
     }
+    if (!clinicId) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo determinar la clínica activa" });
+      return;
+    }
     setLoading(true);
     const payload = {
       expediente_id: expedienteId,
       doctor_id: doctorId,
+      clinic_id: clinicId,
       fecha_consulta: form.fecha_consulta,
       subjetivo: form.subjetivo || null,
       objetivo: form.objetivo || null,
