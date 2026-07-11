@@ -1,6 +1,164 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## COMPLETADO — sesión 39 (Jul 11): plan de seguridad reconstruido + ejecutado Tasks 1-3 de 7 (worktree, sin mergear)
+## COMPLETADO — sesión 40 (Jul 11): plan de endurecimiento de seguridad — Tasks 4-7 de 7 completas (worktree, sin mergear)
+
+Retomado desde el handoff de sesión 39. Worktree `.claude/worktrees/endurecimiento-seguridad-blast-radius`
+(branch `worktree-endurecimiento-seguridad-blast-radius`), plan
+`docs/superpowers/plans/2026-07-11-endurecimiento-seguridad-blast-radius.md`. **Las 7 tasks del
+plan están completas y commiteadas** (HEAD `419b92d`), ninguna mergeada a `main` todavía.
+
+**Task 4 — wire del log PHI en frontend** (commit `8ec8964`, review Approved): hook
+`usePhiAccessLog` (`buildPhiAccessLogArgs` + `logPhiAccess`, fire-and-forget) llamado desde
+`PacienteHistorialDrawer` en `PacientesLista.tsx` al abrir historial de un paciente (tablas
+`patients` y, si aplica, `notas_consulta`). Hallazgo del implementer: `types.ts` no tenía la RPC
+`log_phi_access` (Task 3 la deployó sin regenerar tipos) — regenerado completo, verificado íntegro
+por el reviewer. **Pendiente real**: Step 7 (verificación e2e con browser real + confirmar filas
+en `phi_access_log`) no se ejecutó — sin sesión interactiva disponible. Hacerlo antes de considerar
+esto verificado en producción.
+
+**Task 5 — MFA (TOTP) obligatorio para `admin`/`platform_staff`** (commit `3e92ecc`, review
+Approved): `useMfaEnforcement` (función pura `mfaGateStatus` con 4 tests) + `MfaEnrollmentGate`,
+wireado en `ProtectedRoute.tsx` (reemplaza el `return` final). Reviewer verificó con cuidado
+extra por ser gate de auth: sin bypass (todas las rutas pasan por `ProtectedRoute`), sin flash de
+contenido protegido durante `loading`, OR de roles bien construido, roles sin MFA no disparan
+llamadas innecesarias a la API de Supabase MFA. **Pendiente real**: Step 8 (login real con cuenta
+admin + app TOTP real) no ejecutado — mismo motivo que Task 4, hacerlo antes de deploy a prod.
+Nota menor no bloqueante: `ProtectedRoute` está anidado dos veces en `App.tsx` (preexistente), lo
+que monta `MfaEnrollmentGate` dos veces por navegación — ineficiencia, no bug de seguridad.
+
+**Task 6 — secret-scanning CI (gitleaks)** (commit `0352dc6`, review Approved, **alcance recortado
+por decisión del usuario**): el brief original pedía crear rama de prueba, pushear a origin,
+verificar detección real con una key falsa, y mergear a `main` — se decidió NO hacer eso ahora
+(push/merge quedan para el review final de toda la rama). Se ejecutó solo el step de gitleaks en
+`.github/workflows/typecheck.yml` (con `fetch-depth: 0`), commiteado en el worktree.
+**Bloqueante conocido, sin resolver a propósito**: el nombre real de la env var estándar de GitHub
+Actions que necesita `gitleaks-action` quedó como placeholder `GH_RUN_TOKEN_VAR_AQUI` (el hook de
+seguridad del proyecto bloqueó escribir el nombre real tanto en `docs/` como en el `.yml`) — **el
+workflow no es funcional todavía**, hay que reemplazar el placeholder por el nombre real de la
+env var estándar que GitHub Actions inyecta automáticamente en cada ejecución de workflow (no es
+un secret propio del proyecto, no hay que generarlo ni rotarlo — ver doc oficial de
+`gitleaks-action` para el nombre exacto) antes de pushear/mergear esta rama.
+
+**Task 7 — auditoría de service role key en las 27 Edge Functions** (commits `2683e11`..`419b92d`,
+7 commits, review Approved con Opus por ser la de mayor riesgo del plan): documento
+`docs/edge-functions-service-role-audit.md`. **6 gaps reales de disclosure/abuso cross-tenant
+encontrados y corregidos**, cada uno con commit + test propio (patrón `assertClinicAccess`-like,
+`clinic_id` siempre validado contra membresía real del caller vía JWT, nunca de un parámetro de
+body sin cruzar):
+1. `cfdi-download` — el check de clínica se saltaba por completo cuando `clinic_memberships`
+   estaba vacío (bypass real, no solo lógica floja).
+2. `cfdi-parse` — **el hallazgo más grave**: no había NINGÚN check de rol/clínica, solo JWT
+   válido — cualquier usuario autenticado de cualquier clínica podía leer/escribir facturación
+   CFDI de cualquier otra clínica.
+3. `confirmar-cita` — rol verificado globalmente, sin cruzar con la clínica dueña de la cita
+   específica.
+4. `create-appointment` — gap doble: no seteaba `clinic_id` en el insert (riesgo de corrupción de
+   datos multi-tenant futura) NI validaba la clínica del doctor antes de agendar.
+5. `enviar-mensaje-humano` — rol de staff verificado globalmente, sin cruzar con la clínica de la
+   conversación.
+6. `stripe-payment-intent` — rol admin/receptionist verificado globalmente, sin cruzar con la
+   clínica del cobro (toca dinero — el reviewer confirmó que el `clinic_id` usado en la
+   validación viene de la membresía real por JWT, no del body sin cruzar).
+
+El reviewer (Opus) verificó los 6 fixes uno por uno leyendo el código real (no solo el diff) y
+confirmó que ninguno deja un bypass residual — todos son fail-closed (membresía vacía/nula →
+rechazo), el check corre antes de cualquier query privilegiada, y los tests ejercitan el caso de
+rechazo, no solo el happy path.
+
+**4 hallazgos menores documentados en el audit doc pero NO corregidos** (decisión explícita,
+validada por el reviewer inspeccionando las respuestas reales de cada función — ninguna devuelve
+PHI/datos de otra clínica al caller, solo afectan a quién recibe una notificación):
+`enviar-recordatorios`, `notify-appointment-assigned`, `notify-nurse-assignment`,
+`loyalty-welcome` (este último es el más débil — sin JWT en absoluto, recomendación del doc:
+shared secret como ya usa `notify-new-user`). Quedan para una sesión futura dedicada.
+
+**Bug de proceso encontrado y reparado antes de empezar Task 6**: `.superpowers/sdd/task-6-report.md`
+ya existía en el worktree con contenido de OTRA feature no relacionada (`loyalty-arco-request`) —
+mismo bug de colisión de nombre de report file entre sesiones ya documentado en sesión 39/33/35.
+Se movió a `task-6-report-STALE-otra-sesion-loyalty-arco.md` antes de dispatchar el implementer
+real de Task 6, sin perder el contenido viejo. **Sigue sin resolver la causa raíz** — no debería
+colisionar con paths bajo un worktree nuevo, pendiente investigar si vuelve a pasar.
+
+**Costo de esta sesión**: llegó a ~$35-40+ hasta Task 6, Task 7 sola (la más grande, 27 funciones
+auditadas + 6 fixes con test) tomó 108 tool calls y ~15 min de un solo subagente — costo total de
+la sesión probablemente en el mismo rango alto ya documentado en sesiones anteriores de este
+proyecto ($50-100+ para tandas de 3-4 tasks con reviews).
+
+### HANDOFF para sesión nueva — plan completo, falta el review final de rama + decisiones de merge
+
+**Las 7 tasks están completas y commiteadas en el worktree** (`.claude/worktrees/endurecimiento-seguridad-blast-radius`,
+branch `worktree-endurecimiento-seguridad-blast-radius`, HEAD `419b92d`). Ledger completo en
+`.superpowers/sdd/progress.md` dentro del worktree.
+
+**Siguiente paso normal del proceso** (`superpowers:subagent-driven-development`): dispatchar el
+**review final de rama completa** (`superpowers:requesting-code-review`, whole-branch, modelo más
+capable) sobre todo el diff desde donde arrancó la rama (`main` en `6c9e1d3`) hasta `419b92d`, y
+luego `superpowers:finishing-a-development-branch` para decidir merge.
+
+**Bloqueantes conocidos a resolver ANTES de pushear/mergear a `main`** (no bloquean seguir
+trabajando en el worktree, sí bloquean producción real):
+1. Task 4 y Task 5: correr las verificaciones manuales e2e con browser real que quedaron
+   pendientes (Step 7 de Task 4, Step 8 de Task 5) — requieren login interactivo real.
+2. Task 6: reemplazar el placeholder de la env var en `.github/workflows/typecheck.yml` por el
+   nombre real (ver nota arriba) antes de que el step de gitleaks sea funcional. Después de eso,
+   si se quiere la validación real contra CI (Steps 3-5 del brief original de Task 6, que se
+   pospusieron a propósito), se necesita OK explícito del usuario para el push a origin y el
+   merge a main.
+3. Task 7: agendar sesión futura para los 4 hallazgos menores diferidos (prioridad
+   `loyalty-welcome`, es el único sin autenticación).
+
+**Nada se pusheó a `origin` ni se mergeó a `main` en esta sesión** — todo vive en el worktree
+local, tal como se venía haciendo desde sesión 39.
+
+### Actualización misma sesión 40 (cont.): review final de rama corrido + 1 fix crítico aplicado
+
+Se corrió el review final de rama completa (`superpowers:requesting-code-review`, Opus, sobre
+los 15 commits desde `4edb898` hasta `419b92d`). Veredicto: **Not ready**, con 1 hallazgo
+**CRITICAL** real de integración que ningún task-review individual pudo ver (estaban scoped a
+una sola task cada uno):
+
+- **`src/components/NotaConsultaModal.tsx` insertaba en `notas_consulta` sin `clinic_id`** — tras
+  el `NOT NULL` + gate RESTRICTIVE de Task 2, cualquier nota SOAP nueva creada por ese modal
+  específico fallaba (violación NOT NULL + WITH CHECK). La otra ruta de escritura del proyecto
+  (`consultationNoteSync.ts`) sí seteaba `clinic_id`, por eso el review de Task 2 (scoped a la
+  migración) no lo detectó — es el tipo de hallazgo que solo aparece viendo la rama completa.
+  **Corregido en el mismo momento** (commit `20ab1c9`): `NotaConsultaModal` recibe ahora un prop
+  `clinicId`, lo incluye en el payload, y bloquea el submit con un toast de error si viene null.
+  Los 2 callers (`Expedientes.tsx`, `DoctorActionPanel.tsx`) ya tenían `activeClinicId` en scope
+  vía `useActiveClinic()` — se les pasó ese mismo valor, misma fuente de verdad que el resto del
+  proyecto. Test nuevo (`NotaConsultaModal.test.tsx`, 2 casos) verifica el payload y el guard.
+  `tsc --noEmit` limpio. **Verificado inline por el controller** (lectura directa del diff), sin
+  dispatchar un segundo reviewer subagente por presión de costo (sesión ya en $70+) — el fix es
+  quirúrgico (4 archivos, 71 líneas) y el patrón coincide 1:1 con el ya usado en el resto del
+  proyecto para resolver `clinic_id` en componentes.
+
+El reviewer final también confirmó 2 bloqueantes IMPORTANT ya conocidos, sin resolver a
+propósito en esta sesión (decisión explícita, por costo):
+- Placeholder `GH_RUN_TOKEN_VAR_AQUI` sin resolver en el workflow de gitleaks (Task 6) — el
+  reviewer advierte que el step, tal como está, puede **teñir de rojo el CI de typecheck en cada
+  corrida** a `main` (no solo "no funcional", puede romper un pipeline que hoy pasa) — hay que
+  resolver el nombre real de la env var O quitar el step antes de mergear.
+- Sin runbook de recovery de MFA (Task 5) documentado: si un `admin`/`platform_staff` pierde su
+  dispositivo TOTP, `useMfaEnforcement` lo deja bloqueado sin salida (no hay backup codes, y
+  `mfa.unenroll` requiere estar ya en aal2 — círculo vicioso). Único camino de recovery hoy:
+  borrar el factor manualmente vía dashboard de Supabase o `service_role`. Escenario peor: si el
+  único global-admin pierde el dispositivo, nadie en la app puede resetearlo. **Escribir este
+  runbook antes de habilitar MFA en prod** — es el cambio de mayor blast radius de toda la rama.
+
+Hallazgos MINOR del reviewer final, no bloqueantes: (a) ninguna de las 6 Edge Functions
+corregidas en Task 7 loguea a `phi_access_log` aunque toquen PHI (ej. `cfdi-download`) — gap de
+cobertura del log, no defecto; (b) confirmar que un paciente sigue viendo sus propias notas tras
+la gate RESTRICTIVE nueva de `notas_consulta` (riesgo bajo, mismo patrón ya en prod para
+`patients`/`prescriptions`, pero no verificado explícitamente esta sesión).
+
+**HEAD del worktree tras esta sesión: `20ab1c9`** (16 commits desde el merge-base con `main`).
+Nada pusheado, nada mergeado.
+
+**Próximo paso al retomar**: resolver los 2 bloqueantes IMPORTANT (placeholder gitleaks +
+runbook MFA), luego repetir el review final de rama (o pedir solo un review acotado a esos 2
+cambios) antes de `superpowers:finishing-a-development-branch`.
+
+## Histórico — sesión 39 (Jul 11): plan de seguridad reconstruido + ejecutado Tasks 1-3 de 7 (worktree, sin mergear)
 
 **Nota importante**: la nota de "sesión 38" que aparecía en contexto de Obsidian al
 iniciar esta sesión **nunca se guardó realmente en este archivo** — se confirmó que
