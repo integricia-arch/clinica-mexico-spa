@@ -1,4 +1,4 @@
-ALTER TABLE public.notas_consulta ADD COLUMN clinic_id uuid REFERENCES public.clinics(id);
+ALTER TABLE public.notas_consulta ADD COLUMN IF NOT EXISTS clinic_id uuid REFERENCES public.clinics(id);
 
 -- Backfill: preferir appointments.clinic_id (via appointment_id), fallback
 -- a patients.clinic_id (via expediente_id -> expedientes.patient_id) para
@@ -28,7 +28,7 @@ BEGIN
 END $$;
 
 ALTER TABLE public.notas_consulta ALTER COLUMN clinic_id SET NOT NULL;
-CREATE INDEX idx_notas_consulta_clinic ON public.notas_consulta(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_notas_consulta_clinic ON public.notas_consulta(clinic_id);
 
 DROP POLICY IF EXISTS multiclinic_access_restrictive ON public.notas_consulta;
 CREATE POLICY multiclinic_access_restrictive ON public.notas_consulta
