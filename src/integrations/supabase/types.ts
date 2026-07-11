@@ -6201,7 +6201,7 @@ export type Database = {
         Row: {
           analisis: string | null
           appointment_id: string | null
-          clinic_id: string | null
+          clinic_id: string
           created_at: string
           diagnostico_principal: string | null
           doctor_id: string
@@ -6216,7 +6216,7 @@ export type Database = {
         Insert: {
           analisis?: string | null
           appointment_id?: string | null
-          clinic_id?: string | null
+          clinic_id?: string
           created_at?: string
           diagnostico_principal?: string | null
           doctor_id: string
@@ -6231,7 +6231,7 @@ export type Database = {
         Update: {
           analisis?: string | null
           appointment_id?: string | null
-          clinic_id?: string | null
+          clinic_id?: string
           created_at?: string
           diagnostico_principal?: string | null
           doctor_id?: string
@@ -7514,6 +7514,51 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phi_access_log: {
+        Row: {
+          accion: string
+          clinic_id: string
+          created_at: string
+          id: string
+          patient_id: string
+          tabla: string
+          user_id: string
+        }
+        Insert: {
+          accion: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          patient_id: string
+          tabla: string
+          user_id: string
+        }
+        Update: {
+          accion?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          patient_id?: string
+          tabla?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phi_access_log_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phi_access_log_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -9311,6 +9356,15 @@ export type Database = {
           _datos_nuevos?: Json
           _registro_id: string
           _tabla: string
+        }
+        Returns: undefined
+      }
+      log_phi_access: {
+        Args: {
+          p_accion: string
+          p_clinic_id: string
+          p_patient_id: string
+          p_tabla: string
         }
         Returns: undefined
       }
