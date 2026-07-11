@@ -69,7 +69,10 @@ export default function ConfiguracionPagos() {
   };
 
   const loadSummary = async () => {
-    if (!activeClinicId) return;
+    if (!activeClinicId) {
+      setSummaryLoading(false);
+      return;
+    }
     setSummaryLoading(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
