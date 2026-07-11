@@ -3,41 +3,14 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-
-interface ModuloRow {
-  modulo_id: string;
-  catalogo_modulos: { id: string; nombre: string; precio_centavos: number; stripe_price_id: string | null } | null;
-}
-
-interface Summary {
-  clinic: {
-    id: string;
-    name: string;
-    status: string;
-    plan: string;
-    subscription_status: string;
-    grace_period_ends_at: string | null;
-  };
-  modulos: ModuloRow[];
-  subscription: {
-    status?: string;
-    current_period_end?: number;
-    default_payment_method?: { card?: { brand: string; last4: string } } | null;
-  } | null;
-  invoices: { id: string; amount_paid: number; status: string; created: number; hosted_invoice_url: string }[];
-}
-
-interface CatalogoModulo {
-  id: string;
-  nombre: string;
-  precio_centavos: number;
-}
+import type { SubscriptionSummary, CatalogoModulo } from "@/types/subscription";
+import { InvoicesTable } from "@/components/configuracion/InvoicesTable";
 
 export default function AdminTenantDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
   const [isPlatformStaff, setIsPlatformStaff] = useState<boolean | null>(null);
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [summary, setSummary] = useState<SubscriptionSummary | null>(null);
   const [catalogo, setCatalogo] = useState<CatalogoModulo[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +40,7 @@ export default function AdminTenantDetail() {
       body: method === "POST" ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => null);
-    return { ok: res.ok, data: data as (Summary & { error?: string }) | { error?: string; checkout_url?: string } | null };
+    return { ok: res.ok, data: data as (SubscriptionSummary & { error?: string }) | { error?: string; checkout_url?: string } | null };
   }, [id]);
 
   const load = useCallback(async () => {
@@ -78,7 +51,7 @@ export default function AdminTenantDetail() {
       setLoading(false);
       return;
     }
-    const s = data as Summary;
+    const s = data as SubscriptionSummary;
     setSummary(s);
     setSelectedIds(s.modulos.map((m) => m.modulo_id));
     setError(null);
@@ -212,34 +185,7 @@ export default function AdminTenantDetail() {
 
           <section className="border rounded p-4">
             <h2 className="font-semibold mb-2">Historial de facturas</h2>
-            {summary.invoices.length === 0 ? (
-              <p className="text-sm text-gray-500">Sin facturas todavía.</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left border-b">
-                    <th className="py-1">Fecha</th>
-                    <th>Monto</th>
-                    <th>Estado</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.invoices.map((inv) => (
-                    <tr key={inv.id} className="border-b">
-                      <td className="py-1">{new Date(inv.created * 1000).toLocaleDateString("es-MX")}</td>
-                      <td>${(inv.amount_paid / 100).toFixed(2)}</td>
-                      <td>{inv.status}</td>
-                      <td>
-                        <a href={inv.hosted_invoice_url} target="_blank" rel="noreferrer" className="text-blue-600 underline">
-                          Ver
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+            <InvoicesTable invoices={summary.invoices} />
           </section>
         </>
       )}
