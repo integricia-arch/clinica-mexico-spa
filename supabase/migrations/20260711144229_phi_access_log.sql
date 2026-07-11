@@ -1,4 +1,4 @@
--- supabase/migrations/20260711140000_phi_access_log.sql
+-- supabase/migrations/20260711144229_phi_access_log.sql
 
 CREATE TABLE public.phi_access_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,12 +22,6 @@ ALTER TABLE public.phi_access_log ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.phi_access_log FROM PUBLIC;
 REVOKE ALL ON public.phi_access_log FROM authenticated;
 REVOKE ALL ON public.phi_access_log FROM service_role;
--- Supabase otorga privilegios por defecto a "anon" a nivel de schema
--- (ALTER DEFAULT PRIVILEGES). El brief original solo revocaba PUBLIC,
--- authenticated y service_role — se detecto en la verificacion manual que
--- "anon" (usuarios sin sesion) tenia INSERT/SELECT/UPDATE/DELETE/TRUNCATE
--- de fabrica. Se revoca explicitamente tambien de anon.
-REVOKE ALL ON public.phi_access_log FROM anon;
 
 -- Solo SELECT para revisión, gateado por RLS (platform_staff o admin de
 -- la propia clínica). INSERT nunca se otorga directo a ningún rol externo
@@ -75,10 +69,4 @@ END;
 $$;
 
 REVOKE EXECUTE ON FUNCTION public.log_phi_access(uuid, uuid, text, text) FROM PUBLIC;
--- Igual que con la tabla: Supabase otorga EXECUTE por defecto a "anon" a
--- nivel de schema, y REVOKE ... FROM PUBLIC no lo alcanza porque el grant
--- a "anon" es explicito, no heredado de PUBLIC. Se detecto via
--- get_advisors (anon_security_definer_function_executable) y se revoca
--- explicitamente.
-REVOKE EXECUTE ON FUNCTION public.log_phi_access(uuid, uuid, text, text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.log_phi_access(uuid, uuid, text, text) TO authenticated;
