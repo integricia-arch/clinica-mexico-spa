@@ -9,6 +9,7 @@
 // =================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isClinicAccessForbidden } from "./clinic-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,16 +39,19 @@ Deno.serve(async (req) => {
     });
   }
 
+  const isServiceKey = bearer === SUPABASE_SERVICE_KEY;
+  let callerUserId: string | undefined;
   let authorized = false;
-  if (bearer === SUPABASE_SERVICE_KEY) {
+  if (isServiceKey) {
     authorized = true;
   } else {
     const { data: userData } = await supabase.auth.getUser(bearer);
     if (userData?.user) {
+      callerUserId = userData.user.id;
       const { data: rolesRows } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", userData.user.id);
+        .eq("user_id", callerUserId);
       const roles = (rolesRows ?? []).map((r: any) => r.role);
       authorized = roles.some((r: string) => ["admin", "receptionist"].includes(r));
     }
@@ -65,6 +69,29 @@ Deno.serve(async (req) => {
       const body = await req.json();
       recordatorioId = body?.recordatorio_id;
     } catch { /* sin body, modo cron */ }
+
+    // Un admin/receptionist con rol global podia disparar el reenvio de un
+    // recordatorio_id de una clinica ajena solo conociendo el id (no expone
+    // datos, pero dispara una notificacion no autorizada). Se exige
+    // membresia del caller en la clinica dueña de la cita del recordatorio.
+    if (!isServiceKey && recordatorioId) {
+      const { data: recordatorio } = await supabase
+        .from("recordatorios_cita")
+        .select("appointments!appointment_id(clinic_id)")
+        .eq("id", recordatorioId)
+        .maybeSingle();
+      const clinicId = (recordatorio as any)?.appointments?.clinic_id ?? null;
+      const { data: memberships } = await supabase
+        .from("clinic_memberships")
+        .select("clinic_id")
+        .eq("user_id", callerUserId);
+      if (isClinicAccessForbidden(memberships, clinicId)) {
+        return new Response(JSON.stringify({ ok: false, error: "permiso denegado" }), {
+          status: 403,
+          headers: { ...corsHeaders, "content-type": "application/json" },
+        });
+      }
+    }
 
     const procesados = await procesarRecordatorios(recordatorioId);
     return new Response(JSON.stringify({ ok: true, procesados }), {

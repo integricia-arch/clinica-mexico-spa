@@ -54,8 +54,13 @@ verificación e2e real y fix de bugs encontrados en el camino, no solo hasta el 
 
 ### Pendientes reales que quedan abiertos (no bloqueantes, para sesión futura)
 
-1. Los 4 hallazgos menores de Task 7 (`enviar-recordatorios`, `notify-appointment-assigned`,
-   `notify-nurse-assignment`, `loyalty-welcome`) — impacto bajo, documentados en
+1. ~~Los 4 hallazgos menores de Task 7~~ — **cerrado en sesión de seguimiento (2026-07-11)**.
+   `enviar-recordatorios`, `notify-appointment-assigned`, `notify-nurse-assignment`,
+   `loyalty-welcome` corregidos con el mismo patrón `clinic_memberships` (módulo
+   `clinic-access.ts` testeable por función, 16 tests deno pasando). `loyalty-welcome` se desvió
+   de la recomendación original del audit (shared secret) porque se invoca desde el browser con
+   JWT de usuario, no como webhook servidor-servidor — un shared secret quedaría expuesto en el
+   bundle del cliente; se aplicó el mismo patrón de membresía que las otras 3 en su lugar. Ver
    `docs/edge-functions-service-role-audit.md`.
 2. Confirmar que un paciente sigue viendo sus propias notas tras la gate RESTRICTIVE nueva de
    `notas_consulta` (riesgo bajo, señalado por el reviewer final, no verificado explícitamente).

@@ -5,6 +5,7 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isClinicAccessForbidden } from './clinic-access.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
@@ -33,6 +34,26 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    // El handler original no validaba ningun JWT propio (dependia solo del
+    // gateway verify_jwt=true) ni cruzaba member_id/clinic_id contra la
+    // membresia del caller -- cualquier usuario autenticado podia forzar
+    // el reenvio del email de bienvenida a un miembro/clinica ajenos.
+    const auth = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+    if (!auth) {
+      return new Response(JSON.stringify({ error: 'no autorizado' }), { status: 401 })
+    }
+    const { data: userData, error: userErr } = await supabase.auth.getUser(auth)
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: 'token invalido' }), { status: 401 })
+    }
+    const { data: memberships } = await supabase
+      .from('clinic_memberships')
+      .select('clinic_id')
+      .eq('user_id', userData.user.id)
+    if (isClinicAccessForbidden(memberships, clinic_id)) {
+      return new Response(JSON.stringify({ error: 'permiso denegado' }), { status: 403 })
+    }
 
     // Paralleliza queries de miembro y config
     const [{ data: member }, { data: cfg }] = await Promise.all([

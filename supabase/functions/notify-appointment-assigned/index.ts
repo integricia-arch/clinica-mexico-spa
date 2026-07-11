@@ -9,6 +9,7 @@
 // =================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isClinicAccessForbidden } from "./clinic-access.ts";
 
 const TELEGRAM_BOT_TOKEN   = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
@@ -66,6 +67,17 @@ Deno.serve(async (req) => {
     .eq("id", appointmentId)
     .maybeSingle();
   if (ea || !appt) return json({ error: "cita no encontrada" }, 404);
+
+  // El rol admin/receptionist se validaba a nivel global -- se cruza contra
+  // la clinica dueña de la cita para evitar disparar notificaciones de otra
+  // clinica conociendo solo el appointment_id.
+  const { data: memberships } = await supabase
+    .from("clinic_memberships")
+    .select("clinic_id")
+    .eq("user_id", userData.user.id);
+  if (isClinicAccessForbidden(memberships, appt.clinic_id)) {
+    return json({ error: "permiso denegado" }, 403);
+  }
 
   const fechaLocal = new Date(appt.fecha_inicio).toLocaleString("es-MX", {
     timeZone: "America/Mexico_City",

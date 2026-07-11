@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { isClinicAccessForbidden } from "./clinic-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,7 +59,28 @@ Deno.serve(async (req: Request) => {
       .eq("id", appointment_id)
       .maybeSingle();
 
-    if (!appointment?.assigned_nurse_id) {
+    if (!appointment) {
+      return new Response(JSON.stringify({ ok: true, skipped: "cita no encontrada" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // El handler original solo exigia un JWT valido (de cualquier usuario
+    // autenticado, sin verificar rol ni clinica) -- se exige membresia del
+    // caller en la clinica dueña de la cita.
+    const { data: memberships } = await supabase
+      .from("clinic_memberships")
+      .select("clinic_id")
+      .eq("user_id", user.id);
+    if (isClinicAccessForbidden(memberships, appointment.clinic_id)) {
+      return new Response(JSON.stringify({ error: "Permiso denegado" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!appointment.assigned_nurse_id) {
       return new Response(JSON.stringify({ ok: true, skipped: "sin enfermera asignada" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
