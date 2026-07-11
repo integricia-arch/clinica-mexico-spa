@@ -1,6 +1,70 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## COMPLETADO — sesión 40 (Jul 11): plan de endurecimiento de seguridad — Tasks 4-7 de 7 completas (worktree, sin mergear)
+## COMPLETADO Y CERRADO — sesión 40 (Jul 11): plan de endurecimiento de seguridad — 7 tasks + review final + 4 fixes, mergeado y pusheado a main, verificado en producción real
+
+**Estado final: 100% cerrado.** Plan `docs/superpowers/plans/2026-07-11-endurecimiento-seguridad-blast-radius.md`
+mergeado a `main` (`e974d5f`) y pusheado a `origin/main`. Deploy a Cloudflare confirmado
+`success`. CI (`Quality checks`, incluido el step de gitleaks) confirmado `success` en el push real.
+
+**Verificación e2e con browser real, hecha por el usuario en producción (`integrika.mx`) con su
+propia cuenta admin (`integric.ia@gmail.com`)**:
+- **MFA (Task 5, Step 8)**: enroll TOTP real + verify real + gate desbloqueado — confirmado
+  funcionando end-to-end. En el camino se encontró y arregló un bug real (ver abajo).
+- **Log PHI (Task 4, Step 7)**: confirmado con `SELECT` directo a `phi_access_log` — 3 filas
+  reales nuevas (`tabla=patients`, `tabla=notas_consulta`) con `user_id`/`clinic_id`/`patient_id`
+  correctos, timestamps de segundos antes de la verificación. Log funcionando en producción real.
+
+**Bug real encontrado en producción durante la verificación de MFA (no estaba en ningún review,
+solo aparece con uso real)**: el usuario quedó bloqueado del gate de MFA en su propia cuenta con
+el error `422 mfa_factor_name_conflict` / "A factor with the friendly name '' for this user
+already exists". Causa raíz: un intento anterior de enrolamiento había dejado un factor TOTP
+`unverified` con `friendly_name` vacío en `auth.mfa_factors` (el usuario abrió el QR pero no
+llegó a verificar). GoTrue rechaza cualquier enroll posterior con el mismo `friendly_name` vacío
+sin importar que el factor viejo nunca se haya verificado — y no hay ninguna forma de limpiarlo
+desde la UI ni desde `supabase.auth.mfa.listFactors()` (esa función del SDK solo devuelve
+factores `status: "verified"`, tipado así — los `unverified` son invisibles para el cliente).
+
+**Desbloqueo inmediato** (para no dejar al usuario bloqueado de su propia cuenta): se borró el
+factor `unverified` colgado directo por SQL (`DELETE FROM auth.mfa_factors WHERE id = '...' AND
+status = 'unverified'`, seguro — nunca se había verificado, cero downgrade de seguridad).
+
+**Fix de raíz aplicado y pusheado** (commit `7329526`, directo a `main`, sin worktree/review
+formal por ser un fix de 4 líneas post-cierre y por presión de costo — sesión ya en $300+):
+`MfaEnrollmentGate.tsx` (`startEnroll`) ahora pasa `friendlyName: \`totp-${Date.now()}\`` en cada
+llamada a `enroll()`, en vez de dejar el default vacío — así ningún intento nuevo colisiona con
+uno abandonado, verificado o no. `tsc --noEmit` limpio, suite completa 135/136 (mismo test
+preexistente no relacionado, sin cambios). **Nota para el futuro**: los factores `unverified`
+abandonados con nombre único ya no bloquean nada, pero se van a ir acumulando en
+`auth.mfa_factors` sin limpieza automática — no es un problema de seguridad (nunca se verifican,
+invisibles para el usuario), pero si en algún momento se quiere higiene, hace falta un cron/job
+que los borre después de cierto tiempo (Supabase no lo hace solo, contra lo que se asumió en un
+momento de esta sesión).
+
+**Protocolo de cuenta QA respetado**: se habilitó (`banned_until = null`) para las pruebas de
+sesión pero terminó sin usarse (el usuario probó con su propia cuenta real en su lugar) — se
+deshabilitó de nuevo (`banned_until = 2126`) al final, como manda `.claude/project-context.md`.
+
+**Costo total de la sesión: ~$310+**, el más alto documentado de este proyecto hasta ahora —
+disparado sobre todo por: el review final de rama con Opus (~$65), el fix crítico post-review
+(~$20), el re-review acotado (~$15), y la investigación + fix del bug de MFA en producción real
+(varias rondas de SQL + lectura de logs + edición manual, sin subagentes por decisión explícita
+de ahorrar costo en la fase final). Recomendación para sesiones futuras de este tipo (plan de 7
+tasks + review final + verificación e2e real): presupuestar $300-400 si se quiere llegar hasta
+verificación e2e real y fix de bugs encontrados en el camino, no solo hasta el merge.
+
+### Pendientes reales que quedan abiertos (no bloqueantes, para sesión futura)
+
+1. Los 4 hallazgos menores de Task 7 (`enviar-recordatorios`, `notify-appointment-assigned`,
+   `notify-nurse-assignment`, `loyalty-welcome`) — impacto bajo, documentados en
+   `docs/edge-functions-service-role-audit.md`.
+2. Confirmar que un paciente sigue viendo sus propias notas tras la gate RESTRICTIVE nueva de
+   `notas_consulta` (riesgo bajo, señalado por el reviewer final, no verificado explícitamente).
+3. Considerar un job de limpieza para factores TOTP `unverified` abandonados en
+   `auth.mfa_factors` (housekeeping, no seguridad).
+4. Ampliar cobertura de `phi_access_log` a rutas server-side si se requiere para cumplimiento
+   (hoy solo loguea desde el frontend al abrir el historial de paciente).
+
+## Histórico — sesión 40, ejecución de Tasks 4-7 y cierre de bloqueantes (detalle completo)
 
 Retomado desde el handoff de sesión 39. Worktree `.claude/worktrees/endurecimiento-seguridad-blast-radius`
 (branch `worktree-endurecimiento-seguridad-blast-radius`), plan
