@@ -1,0 +1,15 @@
+# graphify-specific excludes (on top of .gitignore, which graphify also reads)
+
+node_modules
+.next
+dist
+build
+.venv
+
+# Workaround for a graphify bug: .superpowers/sdd/.gitignore contains a bare
+# "*" pattern. graphify's non-anchored pattern matching applies "*" against
+# every path segment repo-wide (not just inside .superpowers/sdd), which was
+# silently wiping out src/components, src/assets, src/context, etc. from the
+# whole corpus. Excluding the directory outright keeps that nested .gitignore
+# from ever being loaded.
+.superpowers/

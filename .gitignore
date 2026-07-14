@@ -62,3 +62,6 @@ skills-lock.json
 
 # Git worktrees locales (subagent-driven-development)
 .worktrees/
+
+# graphify cache (regenerable, no versionar)
+graphify-out/cache/
