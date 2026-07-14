@@ -221,15 +221,7 @@ El archivo está gitignoreado (`.claude/` en `.gitignore`).
 
 Esta carpeta ES el vault de Obsidian. Toda la memoria persistente del proyecto vive en `memoria/`.
 
-### Al iniciar sesión — SIEMPRE hacer esto primero
-1. Leer `memoria/STATE.md` — estado actual, pendientes, archivos clave
-2. Leer nota más reciente en `memoria/diario/` — contexto de la última sesión
-
-**PROHIBIDO** usar `mem-search`, `get_observations` u otras herramientas de memoria externa al iniciar. Solo 2 `Read` calls. Toda la verdad del proyecto está en `memoria/`.
-
-### Al terminar sesión — SIEMPRE hacer esto (y también tras CUALQUIER cambio significativo)
-1. Actualizar `memoria/STATE.md`: mover completados a "Completado", actualizar "Pendiente"
-2. Crear/actualizar nota en `memoria/diario/YYYY-MM-DD.md` con resumen de la sesión
+**Usar la skill `session-sync`** (`.claude/skills/session-sync/SKILL.md`) para el checklist completo de inicio/cierre de sesión — evita que STATE.md, git y graphify-out se desincronicen y evita gastar tokens de más explorando lo que STATE.md ya dice.
 
 **NO cerrar sesión ni hacer commit sin actualizar STATE.md primero.**
 

@@ -54,6 +54,7 @@ dist_integrika.zip
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/fixer/
+!.claude/skills/session-sync/
 .agents/
 skills-lock.json
 
