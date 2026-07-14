@@ -1,5 +1,47 @@
 # Estado del Proyecto — clinica-mexico-spa
 
+## COMPLETADO Y CERRADO — sesión 41 (Jul 11-14): skill fixer + skill consultoría automatizaciones + MCP n8n
+
+**No es trabajo de clinica-mexico-spa en sí** — sesión mixta: skill de proyecto (`fixer`) +
+skill GLOBAL nueva (`consultoria-automatizaciones`, en `~/.claude/skills/`, sirve para
+cualquier cliente) + registro de MCP n8n. Se documenta aquí porque tocó este repo.
+
+**Hecho, con evidencia:**
+1. `.claude/skills/fixer/SKILL.md` creada y versionada (excepción en `.gitignore`:
+   `.claude/skills/*` ignorado salvo `fixer/`). Probada RED/GREEN con subagentes reales —
+   sin skill un agente confirmó "bug arreglado" sin evidencia; con skill exigió
+   `build:all`+preview+consola antes de responder.
+2. Bug real encontrado y arreglado con la skill: `src/pages/AdminTenants.test.tsx` fallaba
+   por falta de `<MemoryRouter>` y un placeholder de campo ya eliminado del wizard. Fix
+   commiteado, suite 136/136 verde, `tsc` limpio.
+3. 3 commits pusheados a `main` (`da14892..0baf071`): `39d9b22` (fix test), `13c3de6`
+   (skill fixer versionada), `0baf071` (gitignore + runbook rotación service role).
+   Deploy a Cloudflare disparado.
+4. Skill global `~/.claude/skills/consultoria-automatizaciones/SKILL.md`: método de Pablo
+   para propuestas de automatización a clientes nuevos (caso real: laboratorio de células
+   madre — pipeline WhatsApp multi-cuenta, seguimiento 24/7, n8n+Supabase+Claude,
+   integración a sistema de farmacias existente). Incluye prompt de Lovable listo para
+   copiar/pegar.
+5. MCP `n8n` registrado en scope user (`cmd /c npx -y n8n-mcp`, confirmado `✔ Connected`
+   con `claude mcp list`) — pendiente probarlo en sesión NUEVA (herramientas MCP solo
+   cargan al arrancar, no en la sesión que lo registró).
+
+**Cerrado en esta sesión (Jul 14):**
+- [x] Push de los 3 commits a `main` — hecho, deploy a Cloudflare disparado.
+- [x] MCP n8n probado: `mcp__n8n__search_nodes("whatsapp")` responde OK — nodo core
+      `n8n-nodes-base.whatsApp` ("WhatsApp Business Cloud") + `whatsAppTrigger`, más
+      alternativas community (Baileys, Green-API, Z-API).
+- [x] `docs/app/api-reference/file-conventions/not-found.md` — confirmado vacío/accidental
+      (ruta de docs Next.js en proyecto Vite, no trackeado). Carpeta `docs/app/` borrada.
+
+**Pendiente para la próxima sesión:**
+- [ ] Cuando haya instancia n8n real: re-registrar el MCP con `N8N_API_URL`+`N8N_API_KEY`
+      (comando ya documentado en la skill `consultoria-automatizaciones`, sección 5).
+- [ ] Proyecto del laboratorio de células madre: falta precio/tiempos/formato de entrega
+      antes de mandar la propuesta — la skill prohíbe inventarlos.
+
+---
+
 ## COMPLETADO Y CERRADO — sesión 40 (Jul 11): plan de endurecimiento de seguridad — 7 tasks + review final + 4 fixes, mergeado y pusheado a main, verificado en producción real
 
 **Estado final: 100% cerrado.** Plan `docs/superpowers/plans/2026-07-11-endurecimiento-seguridad-blast-radius.md`
