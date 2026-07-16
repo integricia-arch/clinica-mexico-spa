@@ -597,9 +597,184 @@ END $$;
 RESET role;
 
 -- =====================================================================
+-- 8. log_phi_access — cada rol autenticado registra en audit_logs
+--     y solo staff (admin/receptionist) puede LEER esos logs
+-- =====================================================================
+
+-- Baseline: rows previas de audit_logs para el paciente pat_self
+DO $$
+DECLARE v_before int;
+BEGIN
+  SELECT count(*) INTO v_before FROM public.audit_logs
+   WHERE registro_id = '20000000-0000-0000-0000-000000000003'
+     AND datos_nuevos->>'event' = 'phi_access';
+  PERFORM set_config('rls_test.phi_baseline', v_before::text, true);
+END $$;
+
+-- Cada uno de los 5 roles llama log_phi_access. La función es SECURITY DEFINER
+-- y solo exige auth.uid() no nulo → todas deben succeed e insertar audit_log.
+DO $$
+DECLARE
+  v_uids uuid[] := ARRAY[
+    '10000000-0000-0000-0000-000000000001',  -- global admin
+    '10000000-0000-0000-0000-000000000002',  -- clinic admin A
+    '10000000-0000-0000-0000-000000000003',  -- doctor
+    '10000000-0000-0000-0000-000000000004',  -- nurse/farmacia
+    '10000000-0000-0000-0000-000000000005'   -- paciente
+  ];
+  v_uid uuid;
+BEGIN
+  FOREACH v_uid IN ARRAY v_uids LOOP
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_uid, 'role', 'authenticated')::text, true);
+    EXECUTE 'SET LOCAL role authenticated';
+    PERFORM public.log_phi_access(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      '20000000-0000-0000-0000-000000000003'::uuid,
+      'patients', 'select'
+    );
+    EXECUTE 'RESET role';
+  END LOOP;
+END $$;
+
+-- Verificar que se registraron los 5 eventos (leyendo como service_role, sin RLS)
+DO $$
+DECLARE
+  v_before int := current_setting('rls_test.phi_baseline')::int;
+  v_after int;
+BEGIN
+  SELECT count(*) INTO v_after FROM public.audit_logs
+   WHERE registro_id = '20000000-0000-0000-0000-000000000003'
+     AND datos_nuevos->>'event' = 'phi_access';
+  IF v_after - v_before <> 5 THEN
+    RAISE EXCEPTION 'log_phi_access debía insertar 5 filas, insertó %', v_after - v_before;
+  END IF;
+
+  -- Verifica que la fila contiene los campos esperados
+  IF NOT EXISTS (
+    SELECT 1 FROM public.audit_logs
+    WHERE registro_id = '20000000-0000-0000-0000-000000000003'
+      AND datos_nuevos->>'event' = 'phi_access'
+      AND datos_nuevos->>'accion' = 'select'
+      AND tabla = 'patients'
+      AND clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  ) THEN
+    RAISE EXCEPTION 'audit_log de phi_access no tiene los campos esperados';
+  END IF;
+END $$;
+
+-- Sin autenticación → RAISE 'No autenticado'
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  -- role sigue en postgres (service_role) → auth.uid() devuelve NULL
+  BEGIN
+    PERFORM public.log_phi_access(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      '20000000-0000-0000-0000-000000000003'::uuid,
+      'patients', 'select'
+    );
+    RAISE EXCEPTION 'log_phi_access debía fallar sin auth.uid()';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM NOT ILIKE '%No autenticado%' AND SQLERRM NOT ILIKE '%log_phi_access debía fallar%' THEN
+      RAISE EXCEPTION 'Mensaje inesperado: %', SQLERRM;
+    END IF;
+    -- Si es el mensaje propio de "debía fallar" → re-raise
+    IF SQLERRM ILIKE '%log_phi_access debía fallar%' THEN
+      RAISE EXCEPTION '%', SQLERRM;
+    END IF;
+  END;
+END $$;
+
+-- Lectura de audit_logs por rol
+-- Staff read audit exige has_role admin OR receptionist
+-- + restrictive multiclinic (clinic_id null OR user_has_clinic_access)
+
+-- Clinic admin A → puede leer logs de clínica A
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_admin_a, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+DO $$
+DECLARE v_c int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.audit_logs
+   WHERE registro_id = '20000000-0000-0000-0000-000000000003'
+     AND datos_nuevos->>'event' = 'phi_access'
+     AND clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  IF v_c < 5 THEN
+    RAISE EXCEPTION 'clinic_admin debería leer >=5 phi_access de A, leyó %', v_c;
+  END IF;
+END $$;
+RESET role;
+
+-- Doctor NO puede leer audit_logs (no tiene has_role admin/receptionist)
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_doctor, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+DO $$
+DECLARE v_c int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.audit_logs
+   WHERE datos_nuevos->>'event' = 'phi_access';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION 'doctor NO debería leer audit_logs, leyó %', v_c;
+  END IF;
+END $$;
+RESET role;
+
+-- Nurse NO puede leer audit_logs
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_nurse, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+DO $$
+DECLARE v_c int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.audit_logs
+   WHERE datos_nuevos->>'event' = 'phi_access';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION 'nurse NO debería leer audit_logs, leyó %', v_c;
+  END IF;
+END $$;
+RESET role;
+
+-- Paciente NO puede leer audit_logs (aunque sean sobre él)
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_patient, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+DO $$
+DECLARE v_c int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.audit_logs
+   WHERE registro_id = '20000000-0000-0000-0000-000000000003';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION 'paciente NO debería leer audit_logs, leyó %', v_c;
+  END IF;
+END $$;
+RESET role;
+
+-- Denegación de INSERT/UPDATE/DELETE directo en audit_logs para cualquier rol
+-- (las policies "Deny all" cubren INSERT/UPDATE/DELETE con qual/with_check=false)
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_admin_a, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+DO $$
+BEGIN
+  INSERT INTO public.audit_logs (user_id, accion, tabla, registro_id, datos_nuevos, clinic_id)
+  VALUES ('10000000-0000-0000-0000-000000000002', 'consultar', 'patients',
+          '20000000-0000-0000-0000-000000000003',
+          jsonb_build_object('event','forged_phi_access'),
+          'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  RAISE EXCEPTION 'clinic_admin NO debería insertar audit_logs directo (solo vía SECURITY DEFINER)';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
+    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+RESET role;
+
+-- =====================================================================
 -- OK: todas las expectativas cumplidas
 -- =====================================================================
-DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles × patients, prescriptions, prescription_items, patient_studies)'; END $$;
-
+DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles × patients, prescriptions, prescription_items, patient_studies, log_phi_access)'; END $$;
 
 ROLLBACK;
