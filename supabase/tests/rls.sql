@@ -98,14 +98,46 @@ ON CONFLICT (id) DO NOTHING;
 -- Doctor vinculado a u_doctor en clínica A (necesario para INSERT prescriptions
 -- ya que la policy exige doctor_id ∈ doctors WHERE user_id = auth.uid())
 \set doc_a '''30000000-0000-0000-0000-000000000001'''
+\set doc_b '''30000000-0000-0000-0000-000000000002'''
+\set u_doctor_b '''10000000-0000-0000-0000-000000000006'''
+\set u_recep    '''10000000-0000-0000-0000-000000000007'''
+\set appt_a     '''50000000-0000-0000-0000-000000000001'''
+\set appt_b     '''50000000-0000-0000-0000-000000000002'''
+
+-- Usuarios adicionales para tests cross-clínica de appointments
+INSERT INTO auth.users (id, email, aud, role) VALUES
+  (:u_doctor_b::uuid, 'doctor.b@test.mx', 'authenticated', 'authenticated'),
+  (:u_recep::uuid,    'recep.a@test.mx',  'authenticated', 'authenticated')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.user_roles (user_id, role) VALUES
+  (:u_doctor_b::uuid, 'doctor'),
+  (:u_recep::uuid,    'receptionist')
+ON CONFLICT DO NOTHING;
+
+-- Receptionist con membership SOLO en clínica A
+INSERT INTO public.clinic_memberships (user_id, clinic_id, role, status) VALUES
+  (:u_recep::uuid,    :clinic_a::uuid, 'receptionist', 'active'),
+  (:u_doctor_b::uuid, :clinic_b::uuid, 'doctor',       'active')
+ON CONFLICT DO NOTHING;
+
 INSERT INTO public.doctors (
   id, clinic_id, user_id, nombre, apellidos, especialidad,
   horario_inicio, horario_fin, duracion_cita_min, activo
-) VALUES (
-  :doc_a::uuid, :clinic_a::uuid, :u_doctor::uuid,
-  'Doc', 'RLS', 'medicina_general',
-  '08:00', '18:00', 30, true
-) ON CONFLICT (id) DO NOTHING;
+) VALUES
+  (:doc_a::uuid, :clinic_a::uuid, :u_doctor::uuid,   'Doc', 'RLS-A', 'medicina_general', '08:00', '18:00', 30, true),
+  (:doc_b::uuid, :clinic_b::uuid, :u_doctor_b::uuid, 'Doc', 'RLS-B', 'medicina_general', '08:00', '18:00', 30, true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Appointments seed: una en cada clínica (setup corre como owner → bypass RLS)
+INSERT INTO public.appointments (
+  id, clinic_id, patient_id, doctor_id, fecha_inicio, fecha_fin, status, motivo_consulta
+) VALUES
+  (:appt_a::uuid, :clinic_a::uuid, :pat_a::uuid, :doc_a::uuid,
+   now() + interval '2 days', now() + interval '2 days 30 minutes', 'confirmada', 'Cita clínica A'),
+  (:appt_b::uuid, :clinic_b::uuid, :pat_b::uuid, :doc_b::uuid,
+   now() + interval '3 days', now() + interval '3 days 30 minutes', 'confirmada', 'Cita clínica B')
+ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================================
 -- Helper para impersonar un uid
@@ -1011,8 +1043,229 @@ END $$;
 RESET role;
 
 -- =====================================================================
+\echo '>>> 10. APPOINTMENTS cross-clínica (Recepción / Admin clínica / Médico / Paciente)'
+-- =====================================================================
+-- 10. APPOINTMENTS — bloqueo cross-clínica con IDs válidos de la otra clínica
+--
+--     Un receptionist / clinic admin / doctor / paciente de la clínica A NO
+--     puede LEER, CREAR, ACTUALIZAR ni CANCELAR una cita de la clínica B
+--     aunque conozca los UUIDs reales (appt_b, pat_b, doc_b). Todas las
+--     denegaciones deben ser silenciosas (0 filas) por RLS restrictive, o
+--     lanzar 42501 / 23514 / P0001 en INSERT con clinic_id mismatch.
+-- =====================================================================
+
+-- Helper repetido: probar los 4 roles con el mismo bloque de asserts. Se
+-- expande manual por rol para que el TAG en [SEC 10 | ROL | ...] identifique
+-- exacto quién falló sin necesidad de looping dinámico.
+
+-- --- 10.1 RECEPTIONIST (clínica A) -------------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_recep, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int; v_rows int;
+BEGIN
+  -- SELECT: appt_a visible, appt_b invisible
+  SELECT count(*) INTO v_c FROM public.appointments
+    WHERE id = '50000000-0000-0000-0000-000000000001';
+  PERFORM pg_temp._assert_count('[SEC 10 | RECEPTIONIST | appointments] SELECT appt_a propio', 1, v_c, '>=');
+
+  SELECT count(*) INTO v_c FROM public.appointments
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  PERFORM pg_temp._assert_count('[SEC 10 | RECEPTIONIST | appointments] SELECT appt_b cross-clínica', 0, v_c, '=');
+
+  -- UPDATE cross-clínica → 0 filas
+  UPDATE public.appointments SET motivo_consulta = 'HACKED'
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | RECEPTIONIST | appointments] UPDATE cross-clínica by-id', 0, v_rows, '=');
+
+  -- CANCEL cross-clínica (UPDATE status) → 0 filas
+  UPDATE public.appointments SET status = 'cancelada'
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | RECEPTIONIST | appointments] CANCEL cross-clínica by-id', 0, v_rows, '=');
+
+  -- DELETE cross-clínica → 0 filas
+  DELETE FROM public.appointments WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | RECEPTIONIST | appointments] DELETE cross-clínica by-id', 0, v_rows, '=');
+END $$;
+
+-- INSERT con clinic_id=B (recepcionista sin membership en B) → debe fallar
+DO $$
+BEGIN
+  INSERT INTO public.appointments (clinic_id, patient_id, doctor_id, fecha_inicio, fecha_fin, status)
+  VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          '20000000-0000-0000-0000-000000000002',
+          '30000000-0000-0000-0000-000000000002',
+          now() + interval '5 days', now() + interval '5 days 30 minutes', 'solicitada');
+  RAISE EXCEPTION '[SEC 10 | RECEPTIONIST | appointments] INSERT en clínica B sin membership debería fallar';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 10 | RECEPTIONIST | appointments] Error inesperado en INSERT cross-clínica: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+-- INSERT con clinic_id=A pero patient_id/doctor_id de B (mismatch)
+DO $$
+BEGIN
+  INSERT INTO public.appointments (clinic_id, patient_id, doctor_id, fecha_inicio, fecha_fin, status)
+  VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          '20000000-0000-0000-0000-000000000002',   -- pat_b
+          '30000000-0000-0000-0000-000000000002',   -- doc_b
+          now() + interval '5 days', now() + interval '5 days 30 minutes', 'solicitada');
+  RAISE EXCEPTION '[SEC 10 | RECEPTIONIST | appointments] INSERT clinic=A con pat/doc de B debería fallar';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 10 | RECEPTIONIST | appointments] Error inesperado en mismatch: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- --- 10.2 CLINIC ADMIN A -----------------------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_admin_a, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int; v_rows int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.appointments
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  PERFORM pg_temp._assert_count('[SEC 10 | CLINIC_ADMIN_A | appointments] SELECT appt_b cross-clínica', 0, v_c, '=');
+
+  UPDATE public.appointments SET motivo_consulta = 'HACKED'
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | CLINIC_ADMIN_A | appointments] UPDATE cross-clínica', 0, v_rows, '=');
+
+  UPDATE public.appointments SET status = 'cancelada'
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | CLINIC_ADMIN_A | appointments] CANCEL cross-clínica', 0, v_rows, '=');
+
+  DELETE FROM public.appointments WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | CLINIC_ADMIN_A | appointments] DELETE cross-clínica', 0, v_rows, '=');
+END $$;
+
+DO $$
+BEGIN
+  INSERT INTO public.appointments (clinic_id, patient_id, doctor_id, fecha_inicio, fecha_fin, status)
+  VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          '20000000-0000-0000-0000-000000000002',
+          '30000000-0000-0000-0000-000000000002',
+          now() + interval '6 days', now() + interval '6 days 30 minutes', 'solicitada');
+  RAISE EXCEPTION '[SEC 10 | CLINIC_ADMIN_A | appointments] INSERT en clínica B debería fallar';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 10 | CLINIC_ADMIN_A | appointments] Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- --- 10.3 DOCTOR (clínica A) -------------------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_doctor, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int; v_rows int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.appointments
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  PERFORM pg_temp._assert_count('[SEC 10 | DOCTOR | appointments] SELECT appt_b cross-clínica', 0, v_c, '=');
+
+  UPDATE public.appointments SET notas = 'HACKED'
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | DOCTOR | appointments] UPDATE cross-clínica', 0, v_rows, '=');
+
+  UPDATE public.appointments SET status = 'cancelada'
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | DOCTOR | appointments] CANCEL cross-clínica', 0, v_rows, '=');
+
+  DELETE FROM public.appointments WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | DOCTOR | appointments] DELETE cross-clínica', 0, v_rows, '=');
+END $$;
+
+-- Doctor intenta crear cita en clínica B usando doc_b (que no es él)
+DO $$
+BEGIN
+  INSERT INTO public.appointments (clinic_id, patient_id, doctor_id, fecha_inicio, fecha_fin, status)
+  VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          '20000000-0000-0000-0000-000000000002',
+          '30000000-0000-0000-0000-000000000002',
+          now() + interval '7 days', now() + interval '7 days 30 minutes', 'solicitada');
+  RAISE EXCEPTION '[SEC 10 | DOCTOR | appointments] INSERT en clínica B sin membership debería fallar';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 10 | DOCTOR | appointments] Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- --- 10.4 PATIENT ------------------------------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_patient, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int; v_rows int;
+BEGIN
+  -- No debe ver la cita de otra clínica ni siquiera con UUID en mano
+  SELECT count(*) INTO v_c FROM public.appointments
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  PERFORM pg_temp._assert_count('[SEC 10 | PATIENT | appointments] SELECT appt_b cross-clínica', 0, v_c, '=');
+
+  -- Tampoco puede ver appt_a (paciente pat_a, no es él — mismo clínica)
+  SELECT count(*) INTO v_c FROM public.appointments
+    WHERE id = '50000000-0000-0000-0000-000000000001';
+  PERFORM pg_temp._assert_count('[SEC 10 | PATIENT | appointments] SELECT appt_a de otro paciente', 0, v_c, '=');
+
+  -- UPDATE / CANCEL / DELETE cross-clínica → 0 filas
+  UPDATE public.appointments SET notas = 'HACKED'
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | PATIENT | appointments] UPDATE cross-clínica', 0, v_rows, '=');
+
+  UPDATE public.appointments SET status = 'cancelada'
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | PATIENT | appointments] CANCEL cross-clínica', 0, v_rows, '=');
+
+  DELETE FROM public.appointments WHERE id = '50000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  PERFORM pg_temp._assert_count('[SEC 10 | PATIENT | appointments] DELETE cross-clínica', 0, v_rows, '=');
+END $$;
+
+-- Paciente intenta agendar en clínica B usando pat_b (no es él) — debe fallar
+DO $$
+BEGIN
+  INSERT INTO public.appointments (clinic_id, patient_id, doctor_id, fecha_inicio, fecha_fin, status)
+  VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          '20000000-0000-0000-0000-000000000002',
+          '30000000-0000-0000-0000-000000000002',
+          now() + interval '8 days', now() + interval '8 days 30 minutes', 'solicitada');
+  RAISE EXCEPTION '[SEC 10 | PATIENT | appointments] INSERT cross-clínica con pat/doc ajenos debería fallar';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 10 | PATIENT | appointments] Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- =====================================================================
 -- OK: todas las expectativas cumplidas
 -- =====================================================================
-DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles × patients, prescriptions, prescription_items, patient_studies, log_phi_access, cross-clínica)'; END $$;
+DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles + receptionist × patients, prescriptions, prescription_items, patient_studies, appointments, log_phi_access, cross-clínica)'; END $$;
 
 ROLLBACK;
