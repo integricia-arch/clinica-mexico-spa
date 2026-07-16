@@ -1264,8 +1264,182 @@ END $$;
 RESET role;
 
 -- =====================================================================
+\echo '>>> 11. log_phi_access sobre APPOINTMENTS (rol correcto + cross-clínica)'
+-- =====================================================================
+-- 11. PHI logging para citas — cada rol autenticado registra su acceso a
+--     una cita de SU clínica con user_id = auth.uid(), tabla='appointments',
+--     clinic_id correcto y event='phi_access'. Cross-clínica: la lectura
+--     directa devuelve 0 filas (no genera log espontáneo) y la llamada
+--     explícita queda registrada con el clinic_id ajeno para que auditoría
+--     detecte abuso. Sin autenticación, la función levanta excepción.
+-- =====================================================================
+
+-- Baseline: filas de audit_logs previas para appt_a y appt_b con event=phi_access
+DO $$
+DECLARE v_a int; v_b int;
+BEGIN
+  SELECT count(*) INTO v_a FROM public.audit_logs
+   WHERE tabla = 'appointments'
+     AND registro_id = '50000000-0000-0000-0000-000000000001'
+     AND datos_nuevos->>'event' = 'phi_access';
+  SELECT count(*) INTO v_b FROM public.audit_logs
+   WHERE tabla = 'appointments'
+     AND registro_id = '50000000-0000-0000-0000-000000000002'
+     AND datos_nuevos->>'event' = 'phi_access';
+  PERFORM set_config('rls_test.phi_appt_a_baseline', v_a::text, true);
+  PERFORM set_config('rls_test.phi_appt_b_baseline', v_b::text, true);
+END $$;
+
+-- 11.1 — Cada rol (global, clinic_admin_a, doctor, nurse, receptionist,
+--       patient) autenticado registra acceso PHI a appt_a en clínica A.
+DO $$
+DECLARE
+  v_pairs jsonb := jsonb_build_array(
+    jsonb_build_object('role','GLOBAL',       'uid','10000000-0000-0000-0000-000000000001'),
+    jsonb_build_object('role','CLINIC_ADMIN', 'uid','10000000-0000-0000-0000-000000000002'),
+    jsonb_build_object('role','DOCTOR',       'uid','10000000-0000-0000-0000-000000000003'),
+    jsonb_build_object('role','NURSE',        'uid','10000000-0000-0000-0000-000000000004'),
+    jsonb_build_object('role','PATIENT',      'uid','10000000-0000-0000-0000-000000000005'),
+    jsonb_build_object('role','RECEPTIONIST', 'uid','10000000-0000-0000-0000-000000000007')
+  );
+  v_item jsonb;
+  v_uid uuid;
+  v_role text;
+  v_hit int;
+BEGIN
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_pairs) LOOP
+    v_role := v_item->>'role';
+    v_uid  := (v_item->>'uid')::uuid;
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_uid, 'role', 'authenticated')::text, true);
+    EXECUTE 'SET LOCAL role authenticated';
+
+    PERFORM public.log_phi_access(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      '50000000-0000-0000-0000-000000000001'::uuid,
+      'appointments', 'select'
+    );
+
+    EXECUTE 'RESET role';
+    PERFORM set_config('request.jwt.claims', NULL, true);
+
+    -- Verifica que quedó exactamente una fila propia con el rol/clinic/tabla correctos
+    SELECT count(*) INTO v_hit FROM public.audit_logs
+      WHERE tabla = 'appointments'
+        AND registro_id = '50000000-0000-0000-0000-000000000001'
+        AND user_id = v_uid
+        AND clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        AND datos_nuevos->>'event' = 'phi_access'
+        AND datos_nuevos->>'accion' = 'select';
+    IF v_hit < 1 THEN
+      RAISE EXCEPTION '[SEC 11 | % | appointments] log_phi_access no registró fila para user_id=% (hit=%)',
+        v_role, v_uid, v_hit;
+    END IF;
+  END LOOP;
+END $$;
+
+-- 11.2 — Verificar el delta total en appt_a: 6 nuevas filas (una por rol)
+DO $$
+DECLARE
+  v_before int := current_setting('rls_test.phi_appt_a_baseline')::int;
+  v_after int;
+BEGIN
+  SELECT count(*) INTO v_after FROM public.audit_logs
+   WHERE tabla = 'appointments'
+     AND registro_id = '50000000-0000-0000-0000-000000000001'
+     AND datos_nuevos->>'event' = 'phi_access';
+  IF v_after - v_before <> 6 THEN
+    RAISE EXCEPTION '[SEC 11 | ALL | appointments] Esperaba 6 phi_access nuevas sobre appt_a, hubo %',
+      v_after - v_before;
+  END IF;
+END $$;
+
+-- 11.3 — Cross-clínica: SELECT directo a appt_b desde receptionist devuelve
+--        0 filas (RLS), por lo que ningún flujo natural genera log espontáneo
+--        sobre appt_b. Confirmamos que appt_b sigue en baseline hasta el
+--        siguiente sub-caso.
+DO $$
+DECLARE
+  v_before int := current_setting('rls_test.phi_appt_b_baseline')::int;
+  v_now int;
+  v_c int;
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', '10000000-0000-0000-0000-000000000007', 'role', 'authenticated')::text, true);
+  EXECUTE 'SET LOCAL role authenticated';
+
+  SELECT count(*) INTO v_c FROM public.appointments
+    WHERE id = '50000000-0000-0000-0000-000000000002';
+  PERFORM pg_temp._assert_count('[SEC 11 | RECEPTIONIST | appointments] SELECT appt_b cross-clínica (no genera phi log)', 0, v_c, '=');
+
+  EXECUTE 'RESET role';
+  PERFORM set_config('request.jwt.claims', NULL, true);
+
+  SELECT count(*) INTO v_now FROM public.audit_logs
+   WHERE tabla = 'appointments'
+     AND registro_id = '50000000-0000-0000-0000-000000000002'
+     AND datos_nuevos->>'event' = 'phi_access';
+  IF v_now <> v_before THEN
+    RAISE EXCEPTION '[SEC 11 | RECEPTIONIST | appointments] SELECT bloqueado no debía generar phi log sobre appt_b (delta=%)',
+      v_now - v_before;
+  END IF;
+END $$;
+
+-- 11.4 — Llamada explícita cross-clínica: log_phi_access no valida clinic
+--        access (es solo audit-trail), pero la fila resultante debe conservar
+--        el clinic_id ajeno y el user_id del abusador para permitir detección.
+DO $$
+DECLARE v_hit int;
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', '10000000-0000-0000-0000-000000000007', 'role', 'authenticated')::text, true);
+  EXECUTE 'SET LOCAL role authenticated';
+
+  PERFORM public.log_phi_access(
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+    '50000000-0000-0000-0000-000000000002'::uuid,
+    'appointments', 'select'
+  );
+
+  EXECUTE 'RESET role';
+  PERFORM set_config('request.jwt.claims', NULL, true);
+
+  SELECT count(*) INTO v_hit FROM public.audit_logs
+    WHERE tabla = 'appointments'
+      AND registro_id = '50000000-0000-0000-0000-000000000002'
+      AND user_id    = '10000000-0000-0000-0000-000000000007'
+      AND clinic_id  = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+      AND datos_nuevos->>'event' = 'phi_access';
+  IF v_hit < 1 THEN
+    RAISE EXCEPTION '[SEC 11 | RECEPTIONIST | appointments] log_phi_access cross-clínica no dejó traza auditable (hit=%)', v_hit;
+  END IF;
+END $$;
+
+-- 11.5 — Sin autenticación: log_phi_access sobre appointments debe fallar
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  BEGIN
+    PERFORM public.log_phi_access(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      '50000000-0000-0000-0000-000000000001'::uuid,
+      'appointments', 'select'
+    );
+    RAISE EXCEPTION '[SEC 11 | ANON | appointments] log_phi_access debía fallar sin auth.uid()';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM ILIKE '%debía fallar sin auth.uid()%' THEN
+      RAISE;
+    END IF;
+    IF SQLERRM NOT ILIKE '%No autenticado%' THEN
+      RAISE EXCEPTION '[SEC 11 | ANON | appointments] Mensaje inesperado: %', SQLERRM;
+    END IF;
+  END;
+END $$;
+
+-- =====================================================================
 -- OK: todas las expectativas cumplidas
 -- =====================================================================
-DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles + receptionist × patients, prescriptions, prescription_items, patient_studies, appointments, log_phi_access, cross-clínica)'; END $$;
+DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles + receptionist × patients, prescriptions, prescription_items, patient_studies, appointments, log_phi_access, cross-clínica, phi_access sobre citas)'; END $$;
 
 ROLLBACK;
