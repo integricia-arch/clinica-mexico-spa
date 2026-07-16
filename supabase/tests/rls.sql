@@ -16,6 +16,28 @@
 
 BEGIN;
 
+-- ---------------------------------------------------------------------
+-- Helpers de aserción — mensajes uniformes para debugging rápido en CI.
+-- Cada fallo emite:
+--   [FAIL] <TAG> — esperado <op> <expected> pero got=<actual>
+-- donde TAG es "SEC N | ROL | TABLA | CASO".
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION pg_temp._assert_count(
+  _tag text, _expected int, _actual int, _op text DEFAULT '='
+) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF (_op = '='  AND _actual <> _expected)
+     OR (_op = '>=' AND _actual <  _expected)
+     OR (_op = '>'  AND _actual <= _expected)
+     OR (_op = '<>' AND _actual =  _expected)
+  THEN
+    RAISE EXCEPTION '[FAIL] % — esperado %%%% pero got=%',
+      _tag, _op, _expected, _actual;
+  END IF;
+END $$;
+
+-- Marca sección en la salida psql
+
 -- =====================================================================
 -- Setup: dos clínicas, cinco usuarios, memberships y datos base
 -- =====================================================================
@@ -91,6 +113,7 @@ INSERT INTO public.doctors (
 -- Uso: SELECT set_config('request.jwt.claims', '{"sub":"<uid>","role":"authenticated"}', true);
 --      SET LOCAL role authenticated;
 
+\echo '>>> 1. GLOBAL ADMIN — ve todo'
 -- =====================================================================
 -- 1. GLOBAL ADMIN — ve todo
 -- =====================================================================
@@ -102,15 +125,16 @@ DO $$
 DECLARE v_c int;
 BEGIN
   SELECT count(*) INTO v_c FROM public.clinics WHERE code IN ('rls_test_a','rls_test_b');
-  IF v_c <> 2 THEN RAISE EXCEPTION 'global admin debería ver ambas clínicas, vio %', v_c; END IF;
+  IF v_c <> 2 THEN RAISE EXCEPTION '[SEC 1 | GLOBAL_ADMIN | clinics] global admin debería ver ambas clínicas, vio %', v_c; END IF;
 
   SELECT count(*) INTO v_c FROM public.patients WHERE id IN
     ('20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002');
-  IF v_c <> 2 THEN RAISE EXCEPTION 'global admin debería ver pacientes de ambas clínicas, vio %', v_c; END IF;
+  IF v_c <> 2 THEN RAISE EXCEPTION '[SEC 1 | GLOBAL_ADMIN | patients] global admin debería ver pacientes de ambas clínicas, vio %', v_c; END IF;
 END $$;
 
 RESET role;
 
+\echo '>>> 2. CLINIC ADMIN (clínica A) — ve solo su clínica'
 -- =====================================================================
 -- 2. CLINIC ADMIN (clínica A) — ve solo su clínica
 -- =====================================================================
@@ -123,19 +147,19 @@ DECLARE v_c int;
 BEGIN
   -- Ve su propia clínica
   SELECT count(*) INTO v_c FROM public.clinics WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  IF v_c <> 1 THEN RAISE EXCEPTION 'clinic_admin_A debería ver clínica A, vio %', v_c; END IF;
+  IF v_c <> 1 THEN RAISE EXCEPTION '[SEC 2 | GLOBAL_ADMIN | clinics] clinic_admin_A debería ver clínica A, vio %', v_c; END IF;
 
   -- NO ve clínica B (bloqueado por multiclinic_access_restrictive)
   SELECT count(*) INTO v_c FROM public.clinics WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-  IF v_c <> 0 THEN RAISE EXCEPTION 'clinic_admin_A no debería ver clínica B, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 2 | GLOBAL_ADMIN | clinics] clinic_admin_A no debería ver clínica B, vio %', v_c; END IF;
 
   -- Ve pacientes clínica A
   SELECT count(*) INTO v_c FROM public.patients WHERE clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  IF v_c < 2 THEN RAISE EXCEPTION 'clinic_admin_A debería ver >=2 pacientes A, vio %', v_c; END IF;
+  IF v_c < 2 THEN RAISE EXCEPTION '[SEC 2 | GLOBAL_ADMIN | patients] clinic_admin_A debería ver >=2 pacientes A, vio %', v_c; END IF;
 
   -- NO ve paciente clínica B
   SELECT count(*) INTO v_c FROM public.patients WHERE id = '20000000-0000-0000-0000-000000000002';
-  IF v_c <> 0 THEN RAISE EXCEPTION 'clinic_admin_A no debería ver paciente de B, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 2 | GLOBAL_ADMIN | patients] clinic_admin_A no debería ver paciente de B, vio %', v_c; END IF;
 END $$;
 
 -- Puede insertar paciente en su clínica
@@ -147,15 +171,16 @@ DO $$
 BEGIN
   INSERT INTO public.patients (clinic_id, nombre, apellidos, sexo, fecha_nacimiento)
   VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Malo', 'CrossClinic', 'M', '2000-01-01');
-  RAISE EXCEPTION 'clinic_admin_A NO debería poder insertar paciente en clínica B';
+  RAISE EXCEPTION '[SEC 2 | GLOBAL_ADMIN | patients] clinic_admin_A NO debería poder insertar paciente en clínica B';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado en insert cross-clínica: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 2 | GLOBAL_ADMIN | patients] Error inesperado en insert cross-clínica: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
 RESET role;
 
+\echo '>>> 3. DOCTOR — ve pacientes de su clínica, no puede crear pacientes'
 -- =====================================================================
 -- 3. DOCTOR — ve pacientes de su clínica, no puede crear pacientes
 -- =====================================================================
@@ -167,10 +192,10 @@ DO $$
 DECLARE v_c int;
 BEGIN
   SELECT count(*) INTO v_c FROM public.patients WHERE clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  IF v_c < 2 THEN RAISE EXCEPTION 'doctor debería leer pacientes A, vio %', v_c; END IF;
+  IF v_c < 2 THEN RAISE EXCEPTION '[SEC 3 | DOCTOR | patients] doctor debería leer pacientes A, vio %', v_c; END IF;
 
   SELECT count(*) INTO v_c FROM public.patients WHERE clinic_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-  IF v_c <> 0 THEN RAISE EXCEPTION 'doctor NO debería leer pacientes B, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 3 | DOCTOR | patients] doctor NO debería leer pacientes B, vio %', v_c; END IF;
 END $$;
 
 -- Doctor NO tiene rol admin/receptionist → INSERT patient debe fallar
@@ -178,15 +203,16 @@ DO $$
 BEGIN
   INSERT INTO public.patients (clinic_id, nombre, apellidos, sexo, fecha_nacimiento)
   VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'X', 'DoctorNoInsert', 'M', '2000-01-01');
-  RAISE EXCEPTION 'doctor NO debería poder crear pacientes (Staff create policy exige admin/receptionist)';
+  RAISE EXCEPTION '[SEC 3 | DOCTOR | patients] doctor NO debería poder crear pacientes (Staff create policy exige admin/receptionist)';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 3 | DOCTOR | patients] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
 RESET role;
 
+\echo '>>> 4. NURSE (Farmacia) — inserta medicamentos en su clínica, no en otra'
 -- =====================================================================
 -- 4. NURSE (Farmacia) — inserta medicamentos en su clínica, no en otra
 -- =====================================================================
@@ -203,10 +229,10 @@ DO $$
 BEGIN
   INSERT INTO public.medicamentos (clinic_id, nombre, precio_unitario, activo)
   VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Cross Med', 10.00, true);
-  RAISE EXCEPTION 'nurse NO debería insertar medicamento en clínica B';
+  RAISE EXCEPTION '[SEC 4 | DOCTOR | medicamentos] nurse NO debería insertar medicamento en clínica B';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 4 | DOCTOR | medicamentos] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
@@ -215,16 +241,17 @@ DO $$
 BEGIN
   DELETE FROM public.medicamentos WHERE nombre = 'Paracetamol RLS';
   IF FOUND THEN
-    RAISE EXCEPTION 'nurse NO debería poder eliminar medicamentos (solo admin)';
+    RAISE EXCEPTION '[SEC 4 | DOCTOR | medicamentos] nurse NO debería poder eliminar medicamentos (solo admin)';
   END IF;
 EXCEPTION WHEN insufficient_privilege OR others THEN
   IF SQLSTATE <> '42501' AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado en delete: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 4 | DOCTOR | medicamentos] Error inesperado en delete: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
 RESET role;
 
+\echo '>>> 5. PACIENTE — solo ve su propio registro'
 -- =====================================================================
 -- 5. PACIENTE — solo ve su propio registro
 -- =====================================================================
@@ -237,15 +264,15 @@ DECLARE v_c int;
 BEGIN
   -- Ve su registro (por policy "Patients read own")
   SELECT count(*) INTO v_c FROM public.patients WHERE id = '20000000-0000-0000-0000-000000000003';
-  IF v_c <> 1 THEN RAISE EXCEPTION 'paciente debería ver su propio registro, vio %', v_c; END IF;
+  IF v_c <> 1 THEN RAISE EXCEPTION '[SEC 5 | PATIENT | patients] paciente debería ver su propio registro, vio %', v_c; END IF;
 
   -- NO ve otro paciente
   SELECT count(*) INTO v_c FROM public.patients WHERE id = '20000000-0000-0000-0000-000000000001';
-  IF v_c <> 0 THEN RAISE EXCEPTION 'paciente NO debería ver otro paciente, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 5 | PATIENT | patients] paciente NO debería ver otro paciente, vio %', v_c; END IF;
 
   -- NO ve medicamentos (no tiene rol staff)
   SELECT count(*) INTO v_c FROM public.medicamentos;
-  IF v_c <> 0 THEN RAISE EXCEPTION 'paciente NO debería ver medicamentos, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 5 | PATIENT | patients] paciente NO debería ver medicamentos, vio %', v_c; END IF;
 END $$;
 
 -- Paciente NO puede crear pacientes
@@ -253,10 +280,10 @@ DO $$
 BEGIN
   INSERT INTO public.patients (clinic_id, nombre, apellidos, sexo, fecha_nacimiento)
   VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'X', 'PatientNoInsert', 'M', '2000-01-01');
-  RAISE EXCEPTION 'paciente NO debería crear pacientes';
+  RAISE EXCEPTION '[SEC 5 | PATIENT | patients] paciente NO debería crear pacientes';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 5 | PATIENT | patients] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
@@ -272,12 +299,13 @@ BEGIN
   WHERE id = '20000000-0000-0000-0000-000000000001';
   GET DIAGNOSTICS v_rows = ROW_COUNT;
   IF v_rows > 0 THEN
-    RAISE EXCEPTION 'paciente NO debería actualizar registro ajeno (afectó % filas)', v_rows;
+    RAISE EXCEPTION '[SEC 5 | PATIENT | patients] paciente NO debería actualizar registro ajeno (afectó % filas)', v_rows;
   END IF;
 END $$;
 
 RESET role;
 
+\echo '>>> 6. PRESCRIPTIONS + PRESCRIPTION_ITEMS por rol'
 -- =====================================================================
 -- 6. PRESCRIPTIONS + PRESCRIPTION_ITEMS por rol
 -- =====================================================================
@@ -306,10 +334,10 @@ DO $$
 DECLARE v_c int;
 BEGIN
   SELECT count(*) INTO v_c FROM public.prescriptions WHERE clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  IF v_c < 1 THEN RAISE EXCEPTION 'admin A debería ver recetas de clínica A, vio %', v_c; END IF;
+  IF v_c < 1 THEN RAISE EXCEPTION '[SEC 6 | PATIENT | prescriptions] admin A debería ver recetas de clínica A, vio %', v_c; END IF;
 
   SELECT count(*) INTO v_c FROM public.prescriptions WHERE clinic_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-  IF v_c <> 0 THEN RAISE EXCEPTION 'admin A NO debería ver recetas de B, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 6 | PATIENT | prescriptions] admin A NO debería ver recetas de B, vio %', v_c; END IF;
 END $$;
 
 -- Admin puede INSERT prescription en su clínica (policy exige has_role admin)
@@ -349,10 +377,10 @@ BEGIN
           '20000000-0000-0000-0000-000000000002',
           '30000000-0000-0000-0000-000000000001',
           'issued','pending');
-  RAISE EXCEPTION 'doctor NO debería insertar receta cross-clínica';
+  RAISE EXCEPTION '[SEC 6 | PATIENT | prescriptions] doctor NO debería insertar receta cross-clínica';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 6 | PATIENT | prescriptions] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
@@ -360,10 +388,10 @@ END $$;
 DO $$
 BEGIN
   DELETE FROM public.prescriptions WHERE id = '40000000-0000-0000-0000-000000000001';
-  IF FOUND THEN RAISE EXCEPTION 'doctor NO debería eliminar recetas'; END IF;
+  IF FOUND THEN RAISE EXCEPTION '[SEC 6 | PATIENT | prescriptions] doctor NO debería eliminar recetas'; END IF;
 EXCEPTION WHEN insufficient_privilege OR others THEN
   IF SQLSTATE <> '42501' AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 6 | PATIENT | prescriptions] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
@@ -379,7 +407,7 @@ DO $$
 DECLARE v_c int;
 BEGIN
   SELECT count(*) INTO v_c FROM public.prescriptions WHERE clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  IF v_c < 1 THEN RAISE EXCEPTION 'nurse debería leer recetas de A, vio %', v_c; END IF;
+  IF v_c < 1 THEN RAISE EXCEPTION '[SEC 6 | NURSE | prescriptions] nurse debería leer recetas de A, vio %', v_c; END IF;
 END $$;
 
 -- NO puede INSERT prescription (INSERT policy exige admin OR doctor)
@@ -390,10 +418,10 @@ BEGIN
           '20000000-0000-0000-0000-000000000001',
           '30000000-0000-0000-0000-000000000001',
           'issued','pending');
-  RAISE EXCEPTION 'nurse NO debería crear recetas';
+  RAISE EXCEPTION '[SEC 6 | NURSE | prescriptions] nurse NO debería crear recetas';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 6 | NURSE | prescriptions] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
@@ -406,10 +434,10 @@ BEGIN
     '40000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     'Diazepam', '5mg', 'oral', 'c/12h', '5 días', 'Con supervisión', true
   );
-  RAISE EXCEPTION 'nurse NO debería insertar prescription_items';
+  RAISE EXCEPTION '[SEC 6 | NURSE | prescription_items] nurse NO debería insertar prescription_items';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 6 | NURSE | prescription_items] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
@@ -426,17 +454,17 @@ BEGIN
   -- Ve solo su propia receta (patient_id = pat_self)
   SELECT count(*) INTO v_c FROM public.prescriptions
    WHERE id = '40000000-0000-0000-0000-000000000001';
-  IF v_c <> 1 THEN RAISE EXCEPTION 'paciente debería ver su receta, vio %', v_c; END IF;
+  IF v_c <> 1 THEN RAISE EXCEPTION '[SEC 6 | PATIENT | patients] paciente debería ver su receta, vio %', v_c; END IF;
 
   -- NO ve receta de otro paciente
   SELECT count(*) INTO v_c FROM public.prescriptions
    WHERE id = '40000000-0000-0000-0000-000000000002';
-  IF v_c <> 0 THEN RAISE EXCEPTION 'paciente NO debería ver receta ajena, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 6 | PATIENT | patients] paciente NO debería ver receta ajena, vio %', v_c; END IF;
 
   -- Ve prescription_items de su receta
   SELECT count(*) INTO v_c FROM public.prescription_items
    WHERE prescription_id = '40000000-0000-0000-0000-000000000001';
-  IF v_c < 1 THEN RAISE EXCEPTION 'paciente debería ver items de su receta, vio %', v_c; END IF;
+  IF v_c < 1 THEN RAISE EXCEPTION '[SEC 6 | PATIENT | patients] paciente debería ver items de su receta, vio %', v_c; END IF;
 END $$;
 
 -- Paciente NO puede crear recetas
@@ -447,15 +475,16 @@ BEGIN
           '20000000-0000-0000-0000-000000000003',
           '30000000-0000-0000-0000-000000000001',
           'issued','pending');
-  RAISE EXCEPTION 'paciente NO debería crear recetas';
+  RAISE EXCEPTION '[SEC 6 | PATIENT | patients] paciente NO debería crear recetas';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 6 | PATIENT | patients] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
 RESET role;
 
+\echo '>>> 7. PATIENT_STUDIES por rol'
 -- =====================================================================
 -- 7. PATIENT_STUDIES por rol
 -- =====================================================================
@@ -480,7 +509,7 @@ DECLARE v_c int;
 BEGIN
   SELECT count(*) INTO v_c FROM public.patient_studies
    WHERE id IN ('50000000-0000-0000-0000-000000000001','50000000-0000-0000-0000-000000000002');
-  IF v_c <> 2 THEN RAISE EXCEPTION 'global admin debería ver ambos estudios, vio %', v_c; END IF;
+  IF v_c <> 2 THEN RAISE EXCEPTION '[SEC 7 | PATIENT | patient_studies] global admin debería ver ambos estudios, vio %', v_c; END IF;
 END $$;
 RESET role;
 
@@ -493,10 +522,10 @@ DO $$
 DECLARE v_c int;
 BEGIN
   SELECT count(*) INTO v_c FROM public.patient_studies WHERE clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  IF v_c < 1 THEN RAISE EXCEPTION 'admin A debería ver estudios A, vio %', v_c; END IF;
+  IF v_c < 1 THEN RAISE EXCEPTION '[SEC 7 | PATIENT | patient_studies] admin A debería ver estudios A, vio %', v_c; END IF;
 
   SELECT count(*) INTO v_c FROM public.patient_studies WHERE clinic_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-  IF v_c <> 0 THEN RAISE EXCEPTION 'admin A NO debería ver estudios B, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 7 | PATIENT | patient_studies] admin A NO debería ver estudios B, vio %', v_c; END IF;
 END $$;
 
 -- Admin puede INSERT estudio en su clínica (is_clinic_staff)
@@ -518,10 +547,10 @@ BEGIN
     '30000000-0000-0000-0000-000000000001',
     'imagen', 'Rx cross', 'normal', false, 'solicitado', now()
   );
-  RAISE EXCEPTION 'admin A NO debería insertar estudio en clínica B';
+  RAISE EXCEPTION '[SEC 7 | PATIENT | patient_studies] admin A NO debería insertar estudio en clínica B';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 7 | PATIENT | patient_studies] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 RESET role;
@@ -569,12 +598,12 @@ BEGIN
   -- Ve su estudio (pat_self)
   SELECT count(*) INTO v_c FROM public.patient_studies
    WHERE id = '50000000-0000-0000-0000-000000000001';
-  IF v_c <> 1 THEN RAISE EXCEPTION 'paciente debería ver su estudio, vio %', v_c; END IF;
+  IF v_c <> 1 THEN RAISE EXCEPTION '[SEC 7 | PATIENT | patients] paciente debería ver su estudio, vio %', v_c; END IF;
 
   -- NO ve estudio ajeno
   SELECT count(*) INTO v_c FROM public.patient_studies
    WHERE id = '50000000-0000-0000-0000-000000000002';
-  IF v_c <> 0 THEN RAISE EXCEPTION 'paciente NO debería ver estudio ajeno, vio %', v_c; END IF;
+  IF v_c <> 0 THEN RAISE EXCEPTION '[SEC 7 | PATIENT | patients] paciente NO debería ver estudio ajeno, vio %', v_c; END IF;
 END $$;
 
 -- Paciente NO puede crear estudios (no es staff)
@@ -587,10 +616,10 @@ BEGIN
     '30000000-0000-0000-0000-000000000001',
     'laboratorio', 'Auto-estudio', 'normal', false, 'solicitado', now()
   );
-  RAISE EXCEPTION 'paciente NO debería crear estudios';
+  RAISE EXCEPTION '[SEC 7 | PATIENT | patients] paciente NO debería crear estudios';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 7 | PATIENT | patients] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 
@@ -647,7 +676,7 @@ BEGIN
    WHERE registro_id = '20000000-0000-0000-0000-000000000003'
      AND datos_nuevos->>'event' = 'phi_access';
   IF v_after - v_before <> 5 THEN
-    RAISE EXCEPTION 'log_phi_access debía insertar 5 filas, insertó %', v_after - v_before;
+    RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] log_phi_access debía insertar 5 filas, insertó %', v_after - v_before;
   END IF;
 
   -- Verifica que la fila contiene los campos esperados
@@ -659,7 +688,7 @@ BEGIN
       AND tabla = 'patients'
       AND clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   ) THEN
-    RAISE EXCEPTION 'audit_log de phi_access no tiene los campos esperados';
+    RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] audit_log de phi_access no tiene los campos esperados';
   END IF;
 END $$;
 
@@ -674,14 +703,14 @@ BEGIN
       '20000000-0000-0000-0000-000000000003'::uuid,
       'patients', 'select'
     );
-    RAISE EXCEPTION 'log_phi_access debía fallar sin auth.uid()';
+    RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] log_phi_access debía fallar sin auth.uid()';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM NOT ILIKE '%No autenticado%' AND SQLERRM NOT ILIKE '%log_phi_access debía fallar%' THEN
-      RAISE EXCEPTION 'Mensaje inesperado: %', SQLERRM;
+      RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] Mensaje inesperado: %', SQLERRM;
     END IF;
     -- Si es el mensaje propio de "debía fallar" → re-raise
     IF SQLERRM ILIKE '%log_phi_access debía fallar%' THEN
-      RAISE EXCEPTION '%', SQLERRM;
+      RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] %', SQLERRM;
     END IF;
   END;
 END $$;
@@ -702,7 +731,7 @@ BEGIN
      AND datos_nuevos->>'event' = 'phi_access'
      AND clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   IF v_c < 5 THEN
-    RAISE EXCEPTION 'clinic_admin debería leer >=5 phi_access de A, leyó %', v_c;
+    RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] clinic_admin debería leer >=5 phi_access de A, leyó %', v_c;
   END IF;
 END $$;
 RESET role;
@@ -717,7 +746,7 @@ BEGIN
   SELECT count(*) INTO v_c FROM public.audit_logs
    WHERE datos_nuevos->>'event' = 'phi_access';
   IF v_c <> 0 THEN
-    RAISE EXCEPTION 'doctor NO debería leer audit_logs, leyó %', v_c;
+    RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] doctor NO debería leer audit_logs, leyó %', v_c;
   END IF;
 END $$;
 RESET role;
@@ -732,7 +761,7 @@ BEGIN
   SELECT count(*) INTO v_c FROM public.audit_logs
    WHERE datos_nuevos->>'event' = 'phi_access';
   IF v_c <> 0 THEN
-    RAISE EXCEPTION 'nurse NO debería leer audit_logs, leyó %', v_c;
+    RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] nurse NO debería leer audit_logs, leyó %', v_c;
   END IF;
 END $$;
 RESET role;
@@ -747,7 +776,7 @@ BEGIN
   SELECT count(*) INTO v_c FROM public.audit_logs
    WHERE registro_id = '20000000-0000-0000-0000-000000000003';
   IF v_c <> 0 THEN
-    RAISE EXCEPTION 'paciente NO debería leer audit_logs, leyó %', v_c;
+    RAISE EXCEPTION '[SEC 7 | PATIENT | patients] paciente NO debería leer audit_logs, leyó %', v_c;
   END IF;
 END $$;
 RESET role;
@@ -764,10 +793,10 @@ BEGIN
           '20000000-0000-0000-0000-000000000003',
           jsonb_build_object('event','forged_phi_access'),
           'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
-  RAISE EXCEPTION 'clinic_admin NO debería insertar audit_logs directo (solo vía SECURITY DEFINER)';
+  RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] clinic_admin NO debería insertar audit_logs directo (solo vía SECURITY DEFINER)';
 EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
   IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
-    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+    RAISE EXCEPTION '[SEC 7 | PATIENT | audit_logs] Error inesperado: % / %', SQLSTATE, SQLERRM;
   END IF;
 END $$;
 RESET role;
