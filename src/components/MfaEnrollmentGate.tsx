@@ -60,11 +60,19 @@ export default function MfaEnrollmentGate({ children }: { children: React.ReactN
   }
 
   async function resetLostFactor() {
+    setErrorMsg(null);
     const { data } = await supabase.auth.mfa.listFactors();
     const totp = data?.totp?.[0];
     if (!totp) { setErrorMsg("No se encontró ningún factor para reiniciar."); return; }
-    const { error } = await supabase.auth.mfa.unenroll({ factorId: totp.id });
+
+    // unenroll() del cliente exige AAL2, que es justo lo que el usuario no
+    // puede pasar si perdió su app autenticadora — por eso se borra vía
+    // Edge Function con service_role (valida que el factor sea suyo primero).
+    const { error } = await supabase.functions.invoke("mfa-reset", {
+      body: { factorId: totp.id },
+    });
     if (error) { setErrorMsg(error.message); return; }
+
     setFactorId(null);
     setChallengeId(null);
     setQr(null);

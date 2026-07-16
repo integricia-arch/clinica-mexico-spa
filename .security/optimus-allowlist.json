@@ -1,0 +1,8 @@
+{
+  "paths": [
+    "Deno.env.get"
+  ],
+  "env_vars": [
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ]
+}
