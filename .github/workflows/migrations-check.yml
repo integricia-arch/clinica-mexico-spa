@@ -1,0 +1,57 @@
+name: Migrations check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/migrations-check.yml'
+  workflow_dispatch:
+
+jobs:
+  apply-migrations:
+    name: Apply migrations to ephemeral DB
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase stack
+        # Levanta Postgres + servicios en Docker. `supabase start` aplica
+        # automáticamente cada archivo de supabase/migrations en orden.
+        # Si alguna migración falla (SQL inválido, policy duplicada,
+        # constraint imposible, GRANT faltante, etc.) el comando sale con
+        # código != 0 y el job falla.
+        run: supabase start --ignore-health-check
+
+      - name: Verify migrations applied cleanly
+        # Doble check: `supabase migration list` debe mostrar todas las
+        # migraciones locales marcadas como aplicadas en la DB efímera.
+        run: |
+          set -euo pipefail
+          supabase migration list --local
+          PENDING=$(supabase migration list --local 2>/dev/null | awk '/^ *[0-9]+/ && $NF == "" { print }' | wc -l | tr -d ' ')
+          if [ "$PENDING" -gt 0 ]; then
+            echo "::error::Hay $PENDING migraciones que no se aplicaron a la DB efímera"
+            exit 1
+          fi
+          echo "✅ Todas las migraciones aplicaron limpias"
+
+      - name: Run Supabase linter on ephemeral DB
+        # Detecta problemas comunes introducidos por la nueva migración:
+        # tablas sin RLS, policies con USING(true), funciones SECURITY DEFINER
+        # sin search_path, etc. No falla el job (informativo).
+        continue-on-error: true
+        run: supabase db lint --local --level warning
+
+      - name: Stop local stack
+        if: always()
+        run: supabase stop --no-backup
