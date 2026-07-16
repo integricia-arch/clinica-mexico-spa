@@ -5,12 +5,20 @@
 Pablo dijo "vamos por orden con los 4 puntos hasta cerrar" — puntos 1 y 2 cerrados esta
 sesión (43). Seguir en orden:
 
-3. **Corte de caja (Opción B, 6 pasos)** — NO EMPEZADO. Ver `project_corte-caja-arquitectura.md`
-   en `memoria/proyectos/` y sección "Pendientes de desarrollo prioritarios" en CLAUDE.md
-   (orden: conteo ciego → folio SEQUENCE/corte Z → umbral diferencia → egresos/ingresos
-   de fondo → corte X → reconciliación turnos generales). Arquitectura completa nueva,
-   sesión larga — considerar spec/plan primero (superpowers:brainstorming +
-   superpowers:writing-plans) antes de tocar código.
+3. **Corte de caja — CORRECCIÓN DE ALCANCE (sesión 44)**: el plan "6 pasos desde cero"
+   citado en CLAUDE.md/`project_corte-caja-arquitectura.md` (archivo que YA NO EXISTE) estaba
+   desactualizado. Verificado en código real: conteo ciego apertura+cierre
+   (`TurnoOpenWizard.tsx`, `TurnoCloseWizard.tsx`), denominación (`DenominacionCounter.tsx`),
+   folio Z, umbral+PIN supervisor, `fondos_movimientos`, corte X — **todo esto YA ESTÁ
+   IMPLEMENTADO**. Ver `memoria/proyectos/investigacion-corte-caja-pos.md` (15-jun) para el
+   detalle original — su tabla de gaps sigue vigente. Gaps reales confirmados pendientes:
+   (4) devoluciones sin autorización supervisor — `ReturnDialog.tsx` sin check de
+   supervisor/PIN, mayor riesgo (fraude por reembolsos); (5) sin distinción cash_drop vs
+   egreso genérico en `fondos_movimientos`; (6) sin campo explicación obligatoria en
+   diferencias; (7) sin folio correlativo de apertura; (8) sin límite de efectivo
+   configurable con alerta; + reconciliación de turnos generales no-farmacia (extender
+   `turnos` fuera de farmacia). Brainstorming en curso (sesión 44) para acotar spec a estos
+   gaps reales, no al plan viejo.
 4. **Chat de ayuda ("hablar con humano")** — tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes`
    ya existen (ver CLAUDE.md sección Manual/Chat). Falta UI + decisión de hosting de IA
    (Ollama necesita VM propia — Workers/Edge Functions no sirven, no soportan proceso
@@ -18,6 +26,13 @@ sesión (43). Seguir en orden:
 
 Antes de tocar nada: leer skill `proyectos` (`~/.claude/skills/proyectos/SKILL.md`) y
 confirmar `mcp__supabase__get_project_url` = `kyfkvdyxpvpiacyymldc` (no el de células madre).
+
+**Fix sesión 44:** sesión previa arrancó con cwd en `C:\Users\pablo` (home) → MCP supabase
+del repo (`.mcp.json`) nunca cargó, cero tools `mcp__supabase__*` disponibles. Creado
+`claude-clinica` (función en `$PROFILE` de PowerShell, `C:\Users\pablo\OneDrive\Documentos\PowerShell\Microsoft.PowerShell_profile.ps1`):
+hace `cd` a este repo y lanza `claude`, dejando el comando `claude` normal intacto para
+otros proyectos. **Usar `claude-clinica` para abrir sesión de este proyecto de ahora en
+adelante** — abre terminal nueva (o `. $PROFILE` en la actual) para que cargue la función.
 
 ## COMPLETADO — sesión 43 (Jul 16), punto 2: responsive farmacia (plan 2026-06-09)
 
