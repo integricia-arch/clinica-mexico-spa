@@ -1,5 +1,24 @@
 # Estado del Proyecto — clinica-mexico-spa
 
+## PRÓXIMA ACCIÓN (sesión 44)
+
+Pablo dijo "vamos por orden con los 4 puntos hasta cerrar" — puntos 1 y 2 cerrados esta
+sesión (43). Seguir en orden:
+
+3. **Corte de caja (Opción B, 6 pasos)** — NO EMPEZADO. Ver `project_corte-caja-arquitectura.md`
+   en `memoria/proyectos/` y sección "Pendientes de desarrollo prioritarios" en CLAUDE.md
+   (orden: conteo ciego → folio SEQUENCE/corte Z → umbral diferencia → egresos/ingresos
+   de fondo → corte X → reconciliación turnos generales). Arquitectura completa nueva,
+   sesión larga — considerar spec/plan primero (superpowers:brainstorming +
+   superpowers:writing-plans) antes de tocar código.
+4. **Chat de ayuda ("hablar con humano")** — tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes`
+   ya existen (ver CLAUDE.md sección Manual/Chat). Falta UI + decisión de hosting de IA
+   (Ollama necesita VM propia — Workers/Edge Functions no sirven, no soportan proceso
+   persistente con modelo cargado). Empezar por esa decisión de hosting antes de UI.
+
+Antes de tocar nada: leer skill `proyectos` (`~/.claude/skills/proyectos/SKILL.md`) y
+confirmar `mcp__supabase__get_project_url` = `kyfkvdyxpvpiacyymldc` (no el de células madre).
+
 ## COMPLETADO — sesión 43 (Jul 16), punto 2: responsive farmacia (plan 2026-06-09)
 
 Plan `docs/superpowers/plans/2026-06-09-farmacia-responsive.md` (11 tasks) ya estaba
