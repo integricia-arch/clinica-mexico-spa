@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       appointment_resources: {
@@ -142,6 +137,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
@@ -228,6 +230,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -442,6 +451,13 @@ export type Database = {
             referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clinic_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clinic_settings: {
@@ -475,6 +491,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -706,6 +729,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_contact_attempts_contacted_by_fkey"
+            columns: ["contacted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -991,6 +1021,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1532,8 +1569,7 @@ export type Database = {
         Row: {
           applies_to_step_key: string | null
           applies_to_step_type:
-            | Database["public"]["Enums"]["journey_step_type"]
-            | null
+            Database["public"]["Enums"]["journey_step_type"] | null
           catalog_key: string
           catalog_name: string
           created_at: string
@@ -1543,8 +1579,7 @@ export type Database = {
         Insert: {
           applies_to_step_key?: string | null
           applies_to_step_type?:
-            | Database["public"]["Enums"]["journey_step_type"]
-            | null
+            Database["public"]["Enums"]["journey_step_type"] | null
           catalog_key: string
           catalog_name: string
           created_at?: string
@@ -1554,8 +1589,7 @@ export type Database = {
         Update: {
           applies_to_step_key?: string | null
           applies_to_step_type?:
-            | Database["public"]["Enums"]["journey_step_type"]
-            | null
+            Database["public"]["Enums"]["journey_step_type"] | null
           catalog_key?: string
           catalog_name?: string
           created_at?: string
@@ -2633,6 +2667,13 @@ export type Database = {
             referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "patients_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       permanent_admins: {
@@ -3475,7 +3516,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -3528,50 +3577,102 @@ export type Database = {
       }
     }
     Functions: {
-      current_user_clinic_ids: { Args: never; Returns: string[] }
-      ensure_permanent_admins: { Args: never; Returns: undefined }
-      generate_prescription_number: { Args: never; Returns: string }
+      audit_trigger: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      current_user_clinic_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown[]
+      }
+      enforce_step_key_immutable: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      ensure_permanent_admins: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      generate_prescription_number: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
       generate_prescription_number_for_doctor: {
-        Args: { _doctor_id: string }
-        Returns: string
+        Args: {
+          _doctor_id: unknown
+        }
+        Returns: unknown
       }
       get_prescription_audit: {
-        Args: { _prescription_id: string }
+        Args: {
+          _prescription_id: unknown
+        }
         Returns: {
+          id: unknown
+          created_at: unknown
+          user_id: unknown
           accion: Database["public"]["Enums"]["audit_action"]
-          created_at: string
-          event: string
-          id: string
-          payload: Json
-          user_id: string
+          event: unknown
+          payload: unknown
         }[]
+      }
+      handle_new_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
       }
       has_role: {
         Args: {
+          _user_id: unknown
           _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
         }
-        Returns: boolean
+        Returns: unknown
       }
-      is_clinic_staff: { Args: { _user_id: string }; Returns: boolean }
-      is_global_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_clinic_staff: {
+        Args: {
+          _user_id: unknown
+        }
+        Returns: unknown
+      }
+      is_global_admin: {
+        Args: {
+          _user_id: unknown
+        }
+        Returns: unknown
+      }
+      journey_audit_trigger: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      journey_step_audit_trigger: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
       log_audit: {
         Args: {
           _accion: Database["public"]["Enums"]["audit_action"]
-          _datos_anteriores?: Json
-          _datos_nuevos?: Json
-          _registro_id: string
-          _tabla: string
+          _tabla: unknown
+          _registro_id: unknown
+          _datos_anteriores?: unknown
+          _datos_nuevos?: unknown
         }
-        Returns: undefined
+        Returns: unknown
       }
-      multiclinic_diagnostics: { Args: never; Returns: Json }
+      multiclinic_diagnostics: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
       pharmacy_close_shift: {
-        Args: { p_cash_count: number; p_notes?: string; p_shift_id: string }
-        Returns: Json
+        Args: {
+          p_shift_id: unknown
+          p_cash_count: unknown
+          p_notes?: unknown
+        }
+        Returns: unknown
       }
       pharmacy_current_shift: {
-        Args: { p_clinic?: string }
+        Args: {
+          p_clinic?: unknown
+        }
         Returns: {
           cash_difference: number | null
           cashier_user_id: string
@@ -3590,41 +3691,91 @@ export type Database = {
           status: string
           updated_at: string
         }
-        SetofOptions: {
-          from: "*"
-          to: "pharmacy_cash_shifts"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
       pharmacy_open_shift: {
         Args: {
-          p_clinic_id: string
-          p_notes?: string
-          p_opening_amount: number
+          p_clinic_id: unknown
+          p_opening_amount: unknown
+          p_notes?: unknown
         }
-        Returns: string
+        Returns: unknown
       }
       pharmacy_recompute_prescription_status: {
-        Args: { p_prescription_id: string }
-        Returns: string
+        Args: {
+          p_prescription_id: unknown
+        }
+        Returns: unknown
       }
-      pharmacy_register_sale: { Args: { p_payload: Json }; Returns: string }
+      pharmacy_register_sale: {
+        Args: {
+          p_payload: unknown
+        }
+        Returns: unknown
+      }
+      pharmacy_sales_set_cashier: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      prevent_critical_step_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      prevent_option_item_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      prevent_permanent_admin_removal: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      touch_clinic_settings_updated_at: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      touch_conversacion_last_message: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      touch_updated_at: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      turnos_audit_pharmacy_link: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      turnos_block_close_if_pharmacy_open: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      turnos_link_pharmacy_shift: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
       update_journey_progress: {
-        Args: { _journey_instance_id: string }
-        Returns: undefined
+        Args: {
+          _journey_instance_id: unknown
+        }
+        Returns: unknown
+      }
+      update_updated_at_column: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
       }
       user_has_clinic_access: {
-        Args: { _clinic_id: string; _user_id: string }
-        Returns: boolean
+        Args: {
+          _user_id: unknown
+          _clinic_id: unknown
+        }
+        Returns: unknown
       }
       user_has_clinic_role: {
         Args: {
-          _clinic_id: string
+          _user_id: unknown
+          _clinic_id: unknown
           _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
         }
-        Returns: boolean
+        Returns: unknown
       }
     }
     Enums: {
@@ -3685,17 +3836,9 @@ export type Database = {
         | "could_not_attend"
         | "callback_requested"
       doctor_operational_status:
-        | "active"
-        | "unavailable"
-        | "vacation"
-        | "sick_leave"
-        | "suspended"
+        "active" | "unavailable" | "vacation" | "sick_leave" | "suspended"
       expediente_tipo:
-        | "primera_vez"
-        | "seguimiento"
-        | "urgencia"
-        | "cirugia"
-        | "cronico"
+        "primera_vez" | "seguimiento" | "urgencia" | "cirugia" | "cronico"
       journey_field_type:
         | "texto_corto"
         | "texto_largo"
@@ -3751,33 +3894,27 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  PublicTableNameOrOptions extends
+    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+    | { schema: keyof Database },
+  TableName extends (PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+        Database[PublicTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
+        PublicSchema["Views"])
+    ? (PublicSchema["Tables"] &
+        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -3785,24 +3922,19 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  PublicTableNameOrOptions extends
+    keyof PublicSchema["Tables"] | { schema: keyof Database },
+  TableName extends (PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -3810,24 +3942,19 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  PublicTableNameOrOptions extends
+    keyof PublicSchema["Tables"] | { schema: keyof Database },
+  TableName extends (PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -3835,168 +3962,13 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  PublicEnumNameOrOptions extends
+    keyof PublicSchema["Enums"] | { schema: keyof Database },
+  EnumName extends (PublicEnumNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
+> = PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
+    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
     : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      app_role: [
-        "admin",
-        "receptionist",
-        "doctor",
-        "nurse",
-        "patient",
-        "manager",
-        "cajero",
-      ],
-      appointment_status: [
-        "solicitada",
-        "tentativa",
-        "pendiente_formulario",
-        "confirmada",
-        "recordatorio_enviado",
-        "confirmada_paciente",
-        "confirmada_medico",
-        "cancelada",
-        "liberada",
-      ],
-      audit_action: [
-        "crear",
-        "actualizar",
-        "cancelar",
-        "eliminar",
-        "conv_escalada",
-        "msg_durante_escalamiento",
-        "prioridad_urgente",
-        "cita_desde_inbox",
-        "notif_doctor",
-        "notif_paciente",
-        "conv_cerrada",
-        "paciente_creado_inbox",
-        "paciente_vinculado_inbox",
-        "doctor_confirmo_cita",
-        "doctor_rechazo_cita",
-        "doctor_contact_attempt_created",
-        "doctor_confirmo_por_llamada",
-        "doctor_rechazo_por_llamada",
-        "doctor_no_contesto",
-        "doctor_status_changed",
-        "doctor_unavailable_override",
-        "patient_followed_up_after_escalation",
-        "reception_notified_again",
-        "reception_case_opened",
-        "reception_case_closed",
-        "patient_insistence_detected",
-      ],
-      canal_tipo: ["telegram", "whatsapp", "instagram", "facebook"],
-      conversacion_status: ["activa", "escalada", "cerrada"],
-      doctor_confirmation_status: ["pending", "confirmed", "declined"],
-      doctor_contact_channel: ["phone", "whatsapp", "email", "internal"],
-      doctor_contact_result: [
-        "answered",
-        "no_answer",
-        "busy",
-        "could_attend",
-        "could_not_attend",
-        "callback_requested",
-      ],
-      doctor_operational_status: [
-        "active",
-        "unavailable",
-        "vacation",
-        "sick_leave",
-        "suspended",
-      ],
-      expediente_tipo: [
-        "primera_vez",
-        "seguimiento",
-        "urgencia",
-        "cirugia",
-        "cronico",
-      ],
-      journey_field_type: [
-        "texto_corto",
-        "texto_largo",
-        "numero",
-        "fecha",
-        "fecha_hora",
-        "seleccion_unica",
-        "seleccion_multiple",
-        "si_no",
-        "archivo",
-        "firma",
-        "usuario_responsable",
-        "medicamento",
-        "diagnostico",
-        "servicio",
-        "metodo_pago",
-        "resultado_laboratorio",
-        "signos_vitales",
-        "checklist",
-      ],
-      journey_rule_severity: ["info", "warning", "blocking"],
-      journey_step_type: [
-        "administrativa",
-        "clinica",
-        "legal",
-        "farmacia",
-        "facturacion",
-        "seguimiento",
-        "auditoria",
-      ],
-      journey_template_type: [
-        "consulta_general",
-        "consulta_seguimiento",
-        "urgencia",
-        "procedimiento_menor",
-        "laboratorio",
-        "farmacia",
-        "teleconsulta",
-        "alta_administrativa",
-      ],
-      journey_version_status: ["draft", "active", "archived"],
-      mensaje_rol: ["user", "assistant", "tool", "system"],
-      movimiento_tipo: [
-        "entrada",
-        "salida",
-        "ajuste",
-        "salida_venta",
-        "salida_surtido_receta",
-        "cancelacion",
-      ],
-      recordatorio_status: ["pendiente", "enviado", "fallido", "cancelado"],
-      recordatorio_tipo: ["t24h", "t2h", "manual"],
-    },
-  },
-} as const
