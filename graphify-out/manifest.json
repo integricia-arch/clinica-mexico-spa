@@ -120,9 +120,9 @@
     "semantic_hash": "6989880b1e604af3ed42859759268818"
   },
   "src/components/MfaEnrollmentGate.tsx": {
-    "mtime": 1783797937.900852,
-    "ast_hash": "e9058ef6ccf7b5b6d15291f3cb0f00bf",
-    "semantic_hash": "e9058ef6ccf7b5b6d15291f3cb0f00bf"
+    "mtime": 1784219225.795392,
+    "ast_hash": "2a5a450276a4d71d68af865d61ced2e3",
+    "semantic_hash": ""
   },
   "src/components/ModuloNoContratadoScreen.tsx": {
     "mtime": 1783717969.4807742,
@@ -1330,9 +1330,9 @@
     "semantic_hash": "0fb1c2f93bbd98c27173887739ba4220"
   },
   "src/integrations/supabase/types.ts": {
-    "mtime": 1783797043.113376,
-    "ast_hash": "3b55c6d489d220b17ef4345b17eb5c85",
-    "semantic_hash": "3b55c6d489d220b17ef4345b17eb5c85"
+    "mtime": 1784219216.2676263,
+    "ast_hash": "cb8347bb46c8822c6072a8a7ae19a437",
+    "semantic_hash": ""
   },
   "src/lib/activeClinic.ts": {
     "mtime": 1780065734.159052,
@@ -3385,9 +3385,9 @@
     "semantic_hash": "d94db8b1f83c2e232ddb4b3abb3237e0"
   },
   ".github/workflows/typecheck.yml": {
-    "mtime": 1783797043.0719671,
-    "ast_hash": "02271813749e80c5aa4fb42e5ae711a3",
-    "semantic_hash": "02271813749e80c5aa4fb42e5ae711a3"
+    "mtime": 1784219216.2605083,
+    "ast_hash": "c3137fc28260504400fd08595a517ba3",
+    "semantic_hash": ""
   },
   ".lovable/plan.md": {
     "mtime": 1780251512.1663773,
@@ -3415,9 +3415,9 @@
     "semantic_hash": "9cc44bca88d05c504c864eb5ca827218"
   },
   "CLAUDE.md": {
-    "mtime": 1784040975.9117866,
-    "ast_hash": "c10551195d30381661855bcc198b98f7",
-    "semantic_hash": "c10551195d30381661855bcc198b98f7"
+    "mtime": 1784065805.1803277,
+    "ast_hash": "a36bfb2ed185880a2606bed0e9cd839b",
+    "semantic_hash": ""
   },
   "DEPLOY.md": {
     "mtime": 1782363698.347135,
@@ -4025,8 +4025,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784065460.2341025,
-    "ast_hash": "83fb7019a53aa4a3be085d0a3f3009fd",
+    "mtime": 1784219216.5501904,
+    "ast_hash": "8bfb7a37518541aca8e718529519550f",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4398,5 +4398,40 @@
     "mtime": 1781487972.2831974,
     "ast_hash": "973bc9a4dec44bb2048332854bc37642",
     "semantic_hash": "973bc9a4dec44bb2048332854bc37642"
+  },
+  ".mcp.json": {
+    "mtime": 1784217642.3578062,
+    "ast_hash": "ae4a238b4d98b30a4af0b2cc4efc4e73",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716143521_08c76f85-05c5-43ed-92f7-66b67af0d3a1.sql": {
+    "mtime": 1784219216.2676263,
+    "ast_hash": "749f2387db01b04288fa9fc3804e81ed",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716145514_1528dc86-8a0d-4728-9df6-41f00838dafc.sql": {
+    "mtime": 1784219216.2688258,
+    "ast_hash": "229c1e921d7ac39636a5f30eeba46acc",
+    "semantic_hash": ""
+  },
+  "supabase/tests/rls.sql": {
+    "mtime": 1784219216.2698572,
+    "ast_hash": "3278f72ab18798ce7b864d98db087162",
+    "semantic_hash": ""
+  },
+  "supabase/tests/smoke.sql": {
+    "mtime": 1784219216.2698572,
+    "ast_hash": "0c49f9a3dc9747c1c7ffd094ec2183bb",
+    "semantic_hash": ""
+  },
+  ".claude/skills/session-sync/SKILL.md": {
+    "mtime": 1784065784.7085848,
+    "ast_hash": "8bcc712eb58978862deb30b745680e1d",
+    "semantic_hash": ""
+  },
+  ".github/workflows/migrations-check.yml": {
+    "mtime": 1784219216.2595077,
+    "ast_hash": "0dbab4d1ac93c5cd3256129107cd507f",
+    "semantic_hash": ""
   }
 }
