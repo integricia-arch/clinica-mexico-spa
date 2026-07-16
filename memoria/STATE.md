@@ -34,11 +34,9 @@ cualquier cliente) + registro de MCP n8n. Se documenta aquí porque tocó este r
 - [x] `docs/app/api-reference/file-conventions/not-found.md` — confirmado vacío/accidental
       (ruta de docs Next.js en proyecto Vite, no trackeado). Carpeta `docs/app/` borrada.
 
-**Pendiente para la próxima sesión:**
-- [ ] Cuando haya instancia n8n real: re-registrar el MCP con `N8N_API_URL`+`N8N_API_KEY`
-      (comando ya documentado en la skill `consultoria-automatizaciones`, sección 5).
-- [ ] Proyecto del laboratorio de células madre: falta precio/tiempos/formato de entrega
-      antes de mandar la propuesta — la skill prohíbe inventarlos.
+**Pendiente para la próxima sesión:** ninguno propio de este proyecto — los 2 pendientes
+que había aquí (MCP n8n, propuesta laboratorio células madre) se movieron a
+`C:\Users\pablo\celulas-madre-ventas\memoria\STATE.md` (2026-07-16), son de ese proyecto.
 
 ---
 
