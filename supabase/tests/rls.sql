@@ -31,7 +31,7 @@ BEGIN
      OR (_op = '>'  AND _actual <= _expected)
      OR (_op = '<>' AND _actual =  _expected)
   THEN
-    RAISE EXCEPTION '[FAIL] % — esperado %%%% pero got=%',
+    RAISE EXCEPTION '[FAIL] % — esperado % % pero got=%',
       _tag, _op, _expected, _actual;
   END IF;
 END $$;
