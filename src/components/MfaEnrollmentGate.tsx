@@ -81,9 +81,16 @@ export default function MfaEnrollmentGate({ children }: { children: React.ReactN
 
         {status === "needs-challenge" && !challengeId && (
           <Button onClick={async () => {
+            setErrorMsg(null);
             const { data } = await supabase.auth.mfa.listFactors();
-            const totp = data?.totp?.[0];
-            if (totp) { setFactorId(totp.id); await startChallenge(totp.id); }
+            // Solo factores TOTP verificados — un factor unverified no puede retarse.
+            const totp = data?.totp?.find((f) => f.status === "verified");
+            if (!totp) {
+              setErrorMsg("No hay un factor TOTP verificado. Contacta al administrador.");
+              return;
+            }
+            setFactorId(totp.id);
+            await startChallenge(totp.id);
           }}>
             Verificar con mi app de autenticación
           </Button>
