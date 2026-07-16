@@ -1,5 +1,51 @@
 # Estado del Proyecto — clinica-mexico-spa
 
+## COMPLETADO Y CERRADO — sesión 42 (Jul 16): fix recuperación MFA + MCP supabase scope + limpieza de pendientes
+
+**Movidos a otro proyecto:** 2 pendientes heredados de la sesión 41 (MCP n8n, propuesta
+laboratorio células madre) no eran de este repo — movidos a
+`celulas-madre-ventas/memoria/STATE.md` (commit `114cc7a`).
+
+**Bug reportado por Pablo:** al entrar a `integrika.mx` le salía pantalla de MFA pidiendo
+código de 6 dígitos, sin QR ni correo, sin poder avanzar — bloqueado de su propia cuenta
+admin.
+
+**Diagnóstico:** falsa alarma inicial descartada — un error de bundle viejo
+(`index-Dtwhgegh.js`) resultó ser cache de navegador, el bundle real en prod
+(`index-DyfEKp-C.js`) sí tenía las env vars horneadas correctamente. El bug real era otro:
+`SELECT` directo a `auth.mfa_factors` confirmó un factor TOTP `status='verified'` desde el
+11 de julio sin `friendly_name` — Pablo perdió/nunca guardó la entrada en su app
+autenticadora. Por diseño, el gate (`MfaEnrollmentGate.tsx`) nunca vuelve a mostrar QR una
+vez que el factor está `verified` — sin ninguna vía de recuperación, quedaba bloqueado
+permanentemente sin intervención SQL manual.
+
+**Desbloqueo inmediato:** `DELETE FROM auth.mfa_factors WHERE id=... AND status='verified'`
+corrido por Pablo en el SQL Editor de Supabase, directo sobre su propio factor.
+
+**Fix de raíz** (commit `f4bbffc`, mergeado con un fix paralelo de Lovable en el mismo
+archivo — `7eeba93` "Corrigió flujo MFA con QR", que limpia factores `unverified` colgados
+antes de enroll y valida `status==='verified'` antes de retar; ambos fixes se combinaron
+sin conflicto de lógica): botón nuevo "¿Perdiste acceso a tu app autenticadora? Reiniciar
+verificación" en el estado `needs-challenge` de `MfaEnrollmentGate.tsx` —
+`resetLostFactor()` llama `mfa.unenroll()` sobre el factor propio (requiere sesión aal1 ya
+autenticada) y regresa a `needs-enroll` para reinscribir con QR nuevo, sin necesitar SQL
+manual. `tsc` limpio, suite 136/136 verde. Pusheado a `main`.
+
+**Hallazgo de seguridad en el camino:** el MCP de supabase activo en esta sesión apuntaba
+a `lwgawlxwrvvbvceugpjw` (proyecto células madre), no a `kyfkvdyxpvpiacyymldc` (prod de
+este proyecto) — mismo problema de scope ya documentado en `celulas-madre-ventas/CLAUDE.md`
+pero al revés. Se paró toda query de escritura hasta resolver. Fix: `.mcp.json` en scope de
+proyecto apuntando al ref correcto (commit `d1a1b62`), y regla global nueva en
+`~/.claude/CLAUDE.md` ("Cambio de proyecto — máxima, no negociable"): validar TODO el stack
+(git, MCP supabase, cualquier otro MCP) contra el proyecto correcto en cada cambio de
+proyecto, antes de tocar nada.
+
+**Pendiente para la próxima sesión:**
+- [ ] Ninguno nuevo de esta sesión. Confirmar con Pablo que ya reinscribió su MFA con QR
+      nuevo y guardó la entrada en su app autenticadora (no quedó verificado en la sesión).
+
+---
+
 ## COMPLETADO Y CERRADO — sesión 41 (Jul 11-14): skill fixer + skill consultoría automatizaciones + MCP n8n
 
 **No es trabajo de clinica-mexico-spa en sí** — sesión mixta: skill de proyecto (`fixer`) +
