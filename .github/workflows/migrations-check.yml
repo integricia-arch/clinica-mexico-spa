@@ -52,6 +52,17 @@ jobs:
         continue-on-error: true
         run: supabase db lint --local --level warning
 
+      - name: Run smoke tests
+        # Aplica seeds mínimos + queries de humo contra la DB efímera.
+        # ON_ERROR_STOP=1 hace que cualquier RAISE EXCEPTION corte el job.
+        run: |
+          set -euo pipefail
+          DB_URL=$(supabase status -o env | grep '^DB_URL=' | cut -d= -f2- | tr -d '"')
+          echo "Conectando a DB efímera para smoke tests…"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/smoke.sql
+          echo "✅ Smoke tests OK"
+
       - name: Stop local stack
         if: always()
         run: supabase stop --no-backup
+
