@@ -22,6 +22,7 @@ import { printActaArqueo } from "@/lib/printActaArqueo";
 import PagoReconcile from "@/components/turno/PagoReconcile";
 import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
 import TurnoOpenWizard from "@/components/turno/TurnoOpenWizard";
+import { exceedsLimiteEfectivo } from "@/lib/cajaLimits";
 
 const fmt = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -728,6 +729,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [fondoDialogOpen, setFondoDialogOpen] = useState(false);
   const [corteXDialogOpen, setCorteXDialogOpen] = useState(false);
+  const [limiteEfectivo, setLimiteEfectivo] = useState<string>("");
 
   const load = async () => {
     if (!activeClinic?.id || !user?.id) return;
@@ -751,6 +753,14 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     setCajas(cajasList);
     setTurnoActivo(activeTurno);
     setAuditLog((auditRows as LinkAudit[]) ?? []);
+
+    const { data: settingsData } = await (supabase as any)
+      .from("clinic_settings")
+      .select("data")
+      .eq("clinic_id", activeClinic.id)
+      .eq("section", "caja")
+      .maybeSingle();
+    setLimiteEfectivo(settingsData?.data?.limite_efectivo ?? "");
 
     // Fondos del turno activo
     if (activeTurno) {
@@ -836,6 +846,17 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
               )}
             </div>
           </div>
+
+          {(() => {
+            const netoFondos = fondos.reduce((s, f) => s + (f.tipo === "ingreso" ? f.monto : -f.monto), 0);
+            const efectivoAprox = turnoActivo.monto_apertura + netoFondos;
+            return exceedsLimiteEfectivo(efectivoAprox, limiteEfectivo) ? (
+              <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>Efectivo en caja (~{fmt(efectivoAprox)}) supera el límite configurado — considera un cash drop.</span>
+              </div>
+            ) : null;
+          })()}
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => setFondoDialogOpen(true)}>

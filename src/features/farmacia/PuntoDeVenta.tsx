@@ -31,7 +31,7 @@ import { posPermissions, blockReasonForDirectSale, isPrescriptionScan, DEMO_INFO
 import { RecetaValidacionModal, type RecetaData } from "./RecetaValidacionModal";
 import { TicketInterno, type TicketData, type TicketPaymentLine } from "./TicketInterno";
 import { PaymentCapture, emptyBreakdown, validatePayment, paymentsToRows, looksLikeFullCardNumber, type PaymentBreakdown } from "./PaymentCapture";
-import { OpenShiftCard, ShiftBadge, fetchCurrentShift, type Shift } from "./ShiftPanel";
+import { OpenShiftCard, ShiftBadge, ShiftCashLimitBanner, fetchCurrentShift, type Shift } from "./ShiftPanel";
 import StripePaymentModal from "@/features/pagos/StripePaymentModal";
 import { LoyaltyPanel } from "@/features/lealtad/LoyaltyPanel";
 import { useLoyaltyMember } from "@/features/lealtad/hooks/useLoyaltyMember";
@@ -721,6 +721,8 @@ export default function PuntoDeVenta({
         </div>
         <ShiftBadge shift={shift} />
       </div>
+
+      {shift && <ShiftCashLimitBanner shift={shift} />}
 
       {/* Toggle de modo */}
       <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-1 w-fit">

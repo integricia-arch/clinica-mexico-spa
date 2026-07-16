@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown, Info, CheckCircle, Printer } from "lucide-react";
+import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown, Info, CheckCircle, Printer, AlertCircle } from "lucide-react";
 import { friendlyError } from "@/lib/errors";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
 import SupervisorPinDialog from "@/components/turno/SupervisorPinDialog";
@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { printActaArqueo } from "@/lib/printActaArqueo";
 import PagoReconcile from "@/components/turno/PagoReconcile";
 import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
+import { exceedsLimiteEfectivo } from "@/lib/cajaLimits";
 
 const formatMXN = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -73,6 +74,46 @@ export function ShiftBadge({ shift }: { shift: Shift | null }) {
       <LockOpen className="h-3 w-3" />
       Turno {shortId} · {formatMXN(shift.opening_amount ?? 0)}
     </Badge>
+  );
+}
+
+export function ShiftCashLimitBanner({ shift }: { shift: Shift | null }) {
+  const { activeClinicId } = useActiveClinic();
+  const [limiteEfectivo, setLimiteEfectivo] = useState<string>("");
+  const [netoFondos, setNetoFondos] = useState(0);
+
+  useEffect(() => {
+    if (!shift || !activeClinicId) return;
+    (async () => {
+      const [{ data: settingsData }, { data: fondosData }] = await Promise.all([
+        (supabase as any)
+          .from("clinic_settings")
+          .select("data")
+          .eq("clinic_id", activeClinicId)
+          .eq("section", "caja")
+          .maybeSingle(),
+        (supabase as any)
+          .from("fondos_movimientos")
+          .select("tipo, monto")
+          .eq("pharmacy_shift_id", shift.id),
+      ]);
+      setLimiteEfectivo(settingsData?.data?.limite_efectivo ?? "");
+      const neto = ((fondosData as { tipo: string; monto: number }[]) ?? []).reduce(
+        (s, f) => s + (f.tipo === "ingreso" ? f.monto : -f.monto), 0,
+      );
+      setNetoFondos(neto);
+    })();
+  }, [shift?.id, activeClinicId]);
+
+  if (!shift) return null;
+  const efectivoAprox = shift.opening_amount + netoFondos;
+  if (!exceedsLimiteEfectivo(efectivoAprox, limiteEfectivo)) return null;
+
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+      <span>Efectivo en caja (~{formatMXN(efectivoAprox)}) supera el límite configurado — considera un cash drop.</span>
+    </div>
   );
 }
 
