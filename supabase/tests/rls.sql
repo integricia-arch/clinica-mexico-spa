@@ -279,8 +279,327 @@ END $$;
 RESET role;
 
 -- =====================================================================
+-- 6. PRESCRIPTIONS + PRESCRIPTION_ITEMS por rol
+-- =====================================================================
+
+-- Seed base: una receta creada como service_role (bypass) para probar SELECT/UPDATE
+\set rx_a '''40000000-0000-0000-0000-000000000001'''
+\set rx_b '''40000000-0000-0000-0000-000000000002'''
+INSERT INTO public.prescriptions (id, clinic_id, patient_id, doctor_id, status, digital_signature_status)
+VALUES
+  (:rx_a::uuid, :clinic_a::uuid, :pat_self::uuid, :doc_a::uuid, 'issued', 'pending'),
+  (:rx_b::uuid, :clinic_b::uuid, :pat_b::uuid,   :doc_a::uuid, 'issued', 'pending')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.prescription_items (
+  prescription_id, clinic_id, generic_name, dose, route, frequency, duration, instructions, is_controlled
+) VALUES
+  (:rx_a::uuid, :clinic_a::uuid, 'Paracetamol', '500mg', 'oral', 'c/8h', '3 días', 'Tomar con alimentos', false),
+  (:rx_b::uuid, :clinic_b::uuid, 'Ibuprofeno',  '400mg', 'oral', 'c/8h', '3 días', 'Tomar con alimentos', false);
+
+-- --- Clinic admin (has_role admin) -----------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_admin_a, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.prescriptions WHERE clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  IF v_c < 1 THEN RAISE EXCEPTION 'admin A debería ver recetas de clínica A, vio %', v_c; END IF;
+
+  SELECT count(*) INTO v_c FROM public.prescriptions WHERE clinic_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  IF v_c <> 0 THEN RAISE EXCEPTION 'admin A NO debería ver recetas de B, vio %', v_c; END IF;
+END $$;
+
+-- Admin puede INSERT prescription en su clínica (policy exige has_role admin)
+INSERT INTO public.prescriptions (clinic_id, patient_id, doctor_id, status, digital_signature_status)
+VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        '20000000-0000-0000-0000-000000000001',
+        '30000000-0000-0000-0000-000000000001',
+        'issued','pending');
+
+RESET role;
+
+-- --- Doctor (dueño de doc_a) -----------------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_doctor, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+-- Puede INSERT usando su propio doctor_id
+INSERT INTO public.prescriptions (clinic_id, patient_id, doctor_id, status, digital_signature_status)
+VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        '20000000-0000-0000-0000-000000000001',
+        '30000000-0000-0000-0000-000000000001',
+        'issued','pending');
+
+-- Puede agregar items a una receta existente (Doctor/admin manage prescription_items)
+INSERT INTO public.prescription_items (
+  prescription_id, clinic_id, generic_name, dose, route, frequency, duration, instructions, is_controlled
+) VALUES (
+  '40000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  'Amoxicilina', '500mg', 'oral', 'c/8h', '7 días', 'Terminar tratamiento', false
+);
+
+-- NO puede insertar prescription en clínica B (restrictive multiclinic bloquea)
+DO $$
+BEGIN
+  INSERT INTO public.prescriptions (clinic_id, patient_id, doctor_id, status, digital_signature_status)
+  VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          '20000000-0000-0000-0000-000000000002',
+          '30000000-0000-0000-0000-000000000001',
+          'issued','pending');
+  RAISE EXCEPTION 'doctor NO debería insertar receta cross-clínica';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
+    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+-- NO puede DELETE (solo admin)
+DO $$
+BEGIN
+  DELETE FROM public.prescriptions WHERE id = '40000000-0000-0000-0000-000000000001';
+  IF FOUND THEN RAISE EXCEPTION 'doctor NO debería eliminar recetas'; END IF;
+EXCEPTION WHEN insufficient_privilege OR others THEN
+  IF SQLSTATE <> '42501' AND SQLERRM NOT ILIKE '%row-level security%' THEN
+    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- --- Nurse / Farmacia -------------------------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_nurse, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+-- Puede LEER recetas (is_clinic_staff incluye nurse)
+DO $$
+DECLARE v_c int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.prescriptions WHERE clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  IF v_c < 1 THEN RAISE EXCEPTION 'nurse debería leer recetas de A, vio %', v_c; END IF;
+END $$;
+
+-- NO puede INSERT prescription (INSERT policy exige admin OR doctor)
+DO $$
+BEGIN
+  INSERT INTO public.prescriptions (clinic_id, patient_id, doctor_id, status, digital_signature_status)
+  VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          '20000000-0000-0000-0000-000000000001',
+          '30000000-0000-0000-0000-000000000001',
+          'issued','pending');
+  RAISE EXCEPTION 'nurse NO debería crear recetas';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
+    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+-- NO puede INSERT prescription_items (policy exige admin/doctor)
+DO $$
+BEGIN
+  INSERT INTO public.prescription_items (
+    prescription_id, clinic_id, generic_name, dose, route, frequency, duration, instructions, is_controlled
+  ) VALUES (
+    '40000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'Diazepam', '5mg', 'oral', 'c/12h', '5 días', 'Con supervisión', true
+  );
+  RAISE EXCEPTION 'nurse NO debería insertar prescription_items';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
+    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- --- Paciente ---------------------------------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_patient, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int;
+BEGIN
+  -- Ve solo su propia receta (patient_id = pat_self)
+  SELECT count(*) INTO v_c FROM public.prescriptions
+   WHERE id = '40000000-0000-0000-0000-000000000001';
+  IF v_c <> 1 THEN RAISE EXCEPTION 'paciente debería ver su receta, vio %', v_c; END IF;
+
+  -- NO ve receta de otro paciente
+  SELECT count(*) INTO v_c FROM public.prescriptions
+   WHERE id = '40000000-0000-0000-0000-000000000002';
+  IF v_c <> 0 THEN RAISE EXCEPTION 'paciente NO debería ver receta ajena, vio %', v_c; END IF;
+
+  -- Ve prescription_items de su receta
+  SELECT count(*) INTO v_c FROM public.prescription_items
+   WHERE prescription_id = '40000000-0000-0000-0000-000000000001';
+  IF v_c < 1 THEN RAISE EXCEPTION 'paciente debería ver items de su receta, vio %', v_c; END IF;
+END $$;
+
+-- Paciente NO puede crear recetas
+DO $$
+BEGIN
+  INSERT INTO public.prescriptions (clinic_id, patient_id, doctor_id, status, digital_signature_status)
+  VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          '20000000-0000-0000-0000-000000000003',
+          '30000000-0000-0000-0000-000000000001',
+          'issued','pending');
+  RAISE EXCEPTION 'paciente NO debería crear recetas';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
+    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- =====================================================================
+-- 7. PATIENT_STUDIES por rol
+-- =====================================================================
+
+\set st_a '''50000000-0000-0000-0000-000000000001'''
+\set st_b '''50000000-0000-0000-0000-000000000002'''
+INSERT INTO public.patient_studies (
+  id, clinic_id, patient_id, doctor_id, tipo, nombre, prioridad, requiere_ayuno, status, solicitado_at
+) VALUES
+  (:st_a::uuid, :clinic_a::uuid, :pat_self::uuid, :doc_a::uuid,
+   'laboratorio', 'BH completa', 'normal', false, 'solicitado', now()),
+  (:st_b::uuid, :clinic_b::uuid, :pat_b::uuid,   :doc_a::uuid,
+   'laboratorio', 'Química', 'normal', false, 'solicitado', now());
+
+-- --- Global admin: ve ambos ------------------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_global, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.patient_studies
+   WHERE id IN ('50000000-0000-0000-0000-000000000001','50000000-0000-0000-0000-000000000002');
+  IF v_c <> 2 THEN RAISE EXCEPTION 'global admin debería ver ambos estudios, vio %', v_c; END IF;
+END $$;
+RESET role;
+
+-- --- Clinic admin A: solo clínica A ----------------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_admin_a, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int;
+BEGIN
+  SELECT count(*) INTO v_c FROM public.patient_studies WHERE clinic_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  IF v_c < 1 THEN RAISE EXCEPTION 'admin A debería ver estudios A, vio %', v_c; END IF;
+
+  SELECT count(*) INTO v_c FROM public.patient_studies WHERE clinic_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  IF v_c <> 0 THEN RAISE EXCEPTION 'admin A NO debería ver estudios B, vio %', v_c; END IF;
+END $$;
+
+-- Admin puede INSERT estudio en su clínica (is_clinic_staff)
+INSERT INTO public.patient_studies (
+  clinic_id, patient_id, doctor_id, tipo, nombre, prioridad, requiere_ayuno, status, solicitado_at
+) VALUES (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '20000000-0000-0000-0000-000000000001',
+  '30000000-0000-0000-0000-000000000001',
+  'imagen', 'Rx tórax', 'normal', false, 'solicitado', now()
+);
+
+-- Admin NO puede insertar cross-clínica
+DO $$
+BEGIN
+  INSERT INTO public.patient_studies (
+    clinic_id, patient_id, doctor_id, tipo, nombre, prioridad, requiere_ayuno, status, solicitado_at
+  ) VALUES (
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '20000000-0000-0000-0000-000000000002',
+    '30000000-0000-0000-0000-000000000001',
+    'imagen', 'Rx cross', 'normal', false, 'solicitado', now()
+  );
+  RAISE EXCEPTION 'admin A NO debería insertar estudio en clínica B';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
+    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+RESET role;
+
+-- --- Doctor: staff, puede manage estudios de su clínica --------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_doctor, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+INSERT INTO public.patient_studies (
+  clinic_id, patient_id, doctor_id, tipo, nombre, prioridad, requiere_ayuno, status, solicitado_at
+) VALUES (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '20000000-0000-0000-0000-000000000001',
+  '30000000-0000-0000-0000-000000000001',
+  'laboratorio', 'PFH', 'normal', false, 'solicitado', now()
+);
+
+UPDATE public.patient_studies SET status = 'en_proceso'
+ WHERE id = '50000000-0000-0000-0000-000000000001';
+
+RESET role;
+
+-- --- Nurse / Farmacia: staff, puede manage --------------------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_nurse, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+INSERT INTO public.patient_studies (
+  clinic_id, patient_id, doctor_id, tipo, nombre, prioridad, requiere_ayuno, status, solicitado_at
+) VALUES (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '20000000-0000-0000-0000-000000000001',
+  '30000000-0000-0000-0000-000000000001',
+  'laboratorio', 'EGO', 'normal', false, 'solicitado', now()
+);
+RESET role;
+
+-- --- Paciente: solo lee sus propios estudios, no puede insertar ------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_patient, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int;
+BEGIN
+  -- Ve su estudio (pat_self)
+  SELECT count(*) INTO v_c FROM public.patient_studies
+   WHERE id = '50000000-0000-0000-0000-000000000001';
+  IF v_c <> 1 THEN RAISE EXCEPTION 'paciente debería ver su estudio, vio %', v_c; END IF;
+
+  -- NO ve estudio ajeno
+  SELECT count(*) INTO v_c FROM public.patient_studies
+   WHERE id = '50000000-0000-0000-0000-000000000002';
+  IF v_c <> 0 THEN RAISE EXCEPTION 'paciente NO debería ver estudio ajeno, vio %', v_c; END IF;
+END $$;
+
+-- Paciente NO puede crear estudios (no es staff)
+DO $$
+BEGIN
+  INSERT INTO public.patient_studies (
+    clinic_id, patient_id, doctor_id, tipo, nombre, prioridad, requiere_ayuno, status, solicitado_at
+  ) VALUES (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '20000000-0000-0000-0000-000000000003',
+    '30000000-0000-0000-0000-000000000001',
+    'laboratorio', 'Auto-estudio', 'normal', false, 'solicitado', now()
+  );
+  RAISE EXCEPTION 'paciente NO debería crear estudios';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514') AND SQLERRM NOT ILIKE '%row-level security%' THEN
+    RAISE EXCEPTION 'Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- =====================================================================
 -- OK: todas las expectativas cumplidas
 -- =====================================================================
-DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles validados)'; END $$;
+DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles × patients, prescriptions, prescription_items, patient_studies)'; END $$;
+
 
 ROLLBACK;
