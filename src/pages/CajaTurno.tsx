@@ -8,6 +8,7 @@ import { restSelect } from "@/lib/restClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
+import SupervisorPinDialog from "@/components/turno/SupervisorPinDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -45,7 +46,7 @@ interface Turno {
 
 interface FondoMovimiento {
   id: string;
-  tipo: "egreso" | "ingreso";
+  tipo: "egreso" | "ingreso" | "cash_drop";
   monto: number;
   motivo: string;
   created_at: string;
@@ -388,34 +389,50 @@ function CloseTurnoDialog({
 // ─── FondoMovimientoDialog ────────────────────────────────────────────────────
 
 function FondoMovimientoDialog({
-  open, turnoId, onClose, onDone,
+  open, turnoId, clinicId, onClose, onDone,
 }: {
-  open: boolean; turnoId: string | null; onClose: () => void; onDone: () => void;
+  open: boolean; turnoId: string | null; clinicId: string; onClose: () => void; onDone: () => void;
 }) {
-  const [tipo, setTipo] = useState<"egreso" | "ingreso">("egreso");
+  const [tipo, setTipo] = useState<"egreso" | "ingreso" | "cash_drop">("egreso");
   const [monto, setMonto] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [destino, setDestino] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
-  function reset() { setTipo("egreso"); setMonto(""); setMotivo(""); setSaving(false); }
+  function reset() { setTipo("egreso"); setMonto(""); setMotivo(""); setDestino(""); setSaving(false); }
 
-  async function handleSubmit() {
+  function requestSubmit() {
     if (!turnoId) return;
     const amount = Number(monto);
     if (Number.isNaN(amount) || amount <= 0) { toast.error("Monto debe ser mayor a cero"); return; }
     if (!motivo.trim()) { toast.error("Motivo requerido"); return; }
+    if (tipo === "cash_drop") {
+      if (!destino.trim()) { toast.error("Destino requerido para cash drop"); return; }
+      setPinDialogOpen(true);
+      return;
+    }
+    doSubmit();
+  }
+
+  async function doSubmit(supervisorId?: string, pin?: string) {
+    if (!turnoId) return;
+    setPinDialogOpen(false);
     setSaving(true);
 
     const { error } = await (supabase as any).rpc("turno_fondo_movimiento", {
       p_turno_id: turnoId,
       p_tipo: tipo,
-      p_monto: amount,
+      p_monto: Number(monto),
       p_motivo: motivo.trim(),
+      p_destino: tipo === "cash_drop" ? destino.trim() : null,
+      p_supervisor_id: supervisorId ?? null,
+      p_supervisor_pin: pin ?? null,
     } as never);
 
     setSaving(false);
     if (error) { toast.error(`Error: ${error.message}`); return; }
-    toast.success(`${tipo === "egreso" ? "Retiro" : "Depósito"} registrado`);
+    toast.success(tipo === "egreso" ? "Retiro registrado" : tipo === "ingreso" ? "Depósito registrado" : "Cash drop registrado");
     reset();
     onDone();
   }
@@ -431,11 +448,12 @@ function FondoMovimientoDialog({
         <div className="space-y-3">
           <div className="space-y-1">
             <Label className="text-xs">Tipo</Label>
-            <Select value={tipo} onValueChange={(v) => setTipo(v as "egreso" | "ingreso")}>
+            <Select value={tipo} onValueChange={(v) => setTipo(v as "egreso" | "ingreso" | "cash_drop")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="egreso">Retiro / Egreso</SelectItem>
                 <SelectItem value="ingreso">Depósito / Ingreso</SelectItem>
+                <SelectItem value="cash_drop">Cash drop (retiro a caja fuerte/banco)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -449,14 +467,30 @@ function FondoMovimientoDialog({
             <Input value={motivo} onChange={(e) => setMotivo(e.target.value)}
               placeholder="Ej. Pago a proveedor, cambio de billetes…" />
           </div>
+          {tipo === "cash_drop" && (
+            <div className="space-y-1">
+              <Label className="text-xs">Destino</Label>
+              <Input value={destino} onChange={(e) => setDestino(e.target.value)}
+                placeholder="Ej. Caja fuerte, banco…" />
+              <p className="text-xs text-muted-foreground">Requiere doble firma: tu registro + PIN de un supervisor.</p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => { reset(); onClose(); }}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button onClick={requestSubmit} disabled={saving}>
             {saving ? "Guardando…" : "Registrar"}
           </Button>
         </DialogFooter>
       </DialogContent>
+      <SupervisorPinDialog
+        open={pinDialogOpen}
+        clinicId={clinicId}
+        title="Autorización de cash drop"
+        description="El cash drop requiere PIN de un supervisor distinto al cajero."
+        onAuthorized={(supervisorId, pin) => doSubmit(supervisorId, pin)}
+        onCancel={() => setPinDialogOpen(false)}
+      />
     </Dialog>
   );
 }
@@ -722,7 +756,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     if (activeTurno) {
       const { data: fondosData } = await (supabase as any)
         .from("fondos_movimientos")
-        .select("id, tipo, monto, motivo, created_at")
+        .select("id, tipo, monto, motivo, destino, created_at")
         .eq("turno_id", activeTurno.id)
         .order("created_at", { ascending: false });
       setFondos((fondosData as FondoMovimiento[]) ?? []);
@@ -877,13 +911,13 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
                           {new Date(f.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
                         </td>
                         <td className="px-3 py-2">
-                          <span className={`font-medium ${f.tipo === "egreso" ? "text-red-600" : "text-green-600"}`}>
-                            {f.tipo === "egreso" ? "Retiro" : "Depósito"}
+                          <span className={`font-medium ${f.tipo === "egreso" ? "text-red-600" : f.tipo === "cash_drop" ? "text-amber-600" : "text-green-600"}`}>
+                            {f.tipo === "egreso" ? "Retiro" : f.tipo === "cash_drop" ? "Cash drop" : "Depósito"}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-foreground">{f.motivo}</td>
-                        <td className={`px-3 py-2 text-right font-medium ${f.tipo === "egreso" ? "text-red-600" : "text-green-600"}`}>
-                          {f.tipo === "egreso" ? "−" : "+"}{fmt(f.monto)}
+                        <td className={`px-3 py-2 text-right font-medium ${f.tipo === "ingreso" ? "text-green-600" : "text-red-600"}`}>
+                          {f.tipo === "ingreso" ? "+" : "−"}{fmt(f.monto)}
                         </td>
                       </tr>
                     ))}
@@ -973,6 +1007,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
       <FondoMovimientoDialog
         open={fondoDialogOpen}
         turnoId={turnoActivo?.id ?? null}
+        clinicId={activeClinic?.id ?? ""}
         onClose={() => setFondoDialogOpen(false)}
         onDone={() => { setFondoDialogOpen(false); load(); }}
       />
