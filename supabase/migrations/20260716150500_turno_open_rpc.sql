@@ -30,6 +30,12 @@ DECLARE
   v_diff numeric(12,2);
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'No autenticado'; END IF;
+  IF NOT public.user_has_clinic_access(v_user, p_clinic_id) THEN
+    RAISE EXCEPTION 'Sin acceso a esta clínica';
+  END IF;
+  IF NOT public.is_caja_staff(v_user) THEN
+    RAISE EXCEPTION 'Sin permiso para abrir turno';
+  END IF;
   IF p_monto_apertura IS NULL OR p_monto_apertura < 0 THEN
     RAISE EXCEPTION 'Monto de apertura inválido';
   END IF;
