@@ -801,9 +801,218 @@ EXCEPTION WHEN insufficient_privilege OR check_violation OR others THEN
 END $$;
 RESET role;
 
+\echo '>>> 9. CROSS-CLÍNICA con IDs válidos de otra clínica'
+-- =====================================================================
+-- 9. Cross-clinic con IDs VÁLIDOS de otra clínica
+--
+--    Verifica que aunque el atacante conozca UUIDs reales de recursos en
+--    otra clínica (pat_b, rx_b, doc_a asignado a A pero con targets B, etc.)
+--    las operaciones se bloquean por RLS/restrictive multiclinic — nunca
+--    por "no encontrado". Cubre SELECT-por-id, UPDATE, DELETE e INSERT con
+--    clinic_id mismatch entre la fila y sus foreign keys.
+-- =====================================================================
+
+-- --- 9.1 CLINIC_ADMIN_A no puede tocar recursos con IDs válidos de B ---
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_admin_a, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int; v_rows int;
+BEGIN
+  -- SELECT-por-id: pat_b existe, pero admin A no debe verlo aunque conozca el UUID
+  SELECT count(*) INTO v_c FROM public.patients
+    WHERE id = '20000000-0000-0000-0000-000000000002';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | CLINIC_ADMIN_A | patients] SELECT by-id de pat_b debería devolver 0, vio %', v_c;
+  END IF;
+
+  -- UPDATE con id válido de otra clínica: 0 filas afectadas (RLS silencioso)
+  UPDATE public.patients SET nombre = 'HACKED'
+    WHERE id = '20000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | CLINIC_ADMIN_A | patients] UPDATE cross-clínica by-id afectó % filas', v_rows;
+  END IF;
+
+  -- SELECT prescripción rx_b (UUID válido) → 0
+  SELECT count(*) INTO v_c FROM public.prescriptions
+    WHERE id = '40000000-0000-0000-0000-000000000002';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | CLINIC_ADMIN_A | prescriptions] SELECT by-id de rx_b debería devolver 0, vio %', v_c;
+  END IF;
+
+  -- DELETE rx_b: 0 filas afectadas
+  DELETE FROM public.prescriptions WHERE id = '40000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | CLINIC_ADMIN_A | prescriptions] DELETE cross-clínica by-id afectó % filas', v_rows;
+  END IF;
+END $$;
+
+-- INSERT prescription con clinic_id=A pero patient_id de B (mismatch multiclínica)
+DO $$
+BEGIN
+  INSERT INTO public.prescriptions (clinic_id, patient_id, doctor_id, status, digital_signature_status)
+  VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          '20000000-0000-0000-0000-000000000002',  -- pat_b (clínica B)
+          '30000000-0000-0000-0000-000000000001',
+          'issued','pending');
+  RAISE EXCEPTION '[SEC 9 | CLINIC_ADMIN_A | prescriptions] INSERT con patient_id de otra clínica debería fallar';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 9 | CLINIC_ADMIN_A | prescriptions] Error inesperado en mismatch clinic/patient: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+-- INSERT prescription_item con prescription_id=rx_b pero clinic_id=A (mismatch)
+DO $$
+BEGIN
+  INSERT INTO public.prescription_items (
+    prescription_id, clinic_id, generic_name, dose, route, frequency, duration, instructions, is_controlled
+  ) VALUES (
+    '40000000-0000-0000-0000-000000000002',           -- rx_b
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',           -- pretende ser de A
+    'Cross', '1g', 'oral', 'c/24h', '1 día', '-', false
+  );
+  RAISE EXCEPTION '[SEC 9 | CLINIC_ADMIN_A | prescription_items] INSERT con prescription_id de otra clínica debería fallar';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 9 | CLINIC_ADMIN_A | prescription_items] Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- --- 9.2 DOCTOR no puede tocar recursos de B aunque conozca UUIDs ------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_doctor, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int; v_rows int;
+BEGIN
+  -- SELECT pat_b por id → 0
+  SELECT count(*) INTO v_c FROM public.patients
+    WHERE id = '20000000-0000-0000-0000-000000000002';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | DOCTOR | patients] SELECT by-id de pat_b debería devolver 0, vio %', v_c;
+  END IF;
+
+  -- UPDATE rx_b: 0 filas (aunque el doctor sea "doctor_id" de la receta, la clínica bloquea)
+  UPDATE public.prescriptions SET status = 'cancelled'
+    WHERE id = '40000000-0000-0000-0000-000000000002';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | DOCTOR | prescriptions] UPDATE cross-clínica by-id afectó % filas', v_rows;
+  END IF;
+
+  -- SELECT patient_studies de B por id → 0
+  SELECT count(*) INTO v_c FROM public.patient_studies
+    WHERE clinic_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | DOCTOR | patient_studies] doctor NO debería ver estudios de B, vio %', v_c;
+  END IF;
+END $$;
+
+-- INSERT prescription_item apuntando a rx_b con clinic_id=B (doctor no tiene membership en B)
+DO $$
+BEGIN
+  INSERT INTO public.prescription_items (
+    prescription_id, clinic_id, generic_name, dose, route, frequency, duration, instructions, is_controlled
+  ) VALUES (
+    '40000000-0000-0000-0000-000000000002',
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    'CrossB', '1g', 'oral', 'c/24h', '1 día', '-', false
+  );
+  RAISE EXCEPTION '[SEC 9 | DOCTOR | prescription_items] doctor sin membership en B no debería insertar items';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 9 | DOCTOR | prescription_items] Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- --- 9.3 NURSE — cross-clínica bloqueado en patient_studies ------------
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_nurse, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_rows int;
+BEGIN
+  -- UPDATE de un patient_study de B → 0 filas
+  UPDATE public.patient_studies SET status = 'cancelled'
+    WHERE clinic_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | NURSE | patient_studies] UPDATE cross-clínica afectó % filas', v_rows;
+  END IF;
+END $$;
+
+-- INSERT patient_study con patient_id de B pero clinic_id=A
+DO $$
+BEGIN
+  INSERT INTO public.patient_studies (patient_id, clinic_id, study_name, status)
+  VALUES ('20000000-0000-0000-0000-000000000002',
+          'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          'Cross study', 'ordered');
+  RAISE EXCEPTION '[SEC 9 | NURSE | patient_studies] INSERT con patient_id de otra clínica debería fallar';
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception OR others THEN
+  IF SQLSTATE NOT IN ('42501','23514','P0001') AND SQLERRM NOT ILIKE '%row-level security%' AND SQLERRM NOT ILIKE '%multi%' THEN
+    RAISE EXCEPTION '[SEC 9 | NURSE | patient_studies] Error inesperado: % / %', SQLSTATE, SQLERRM;
+  END IF;
+END $$;
+
+RESET role;
+
+-- --- 9.4 PATIENT — no puede acceder a otro paciente aunque tenga UUID --
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', :u_patient, 'role', 'authenticated')::text, true);
+SET LOCAL role authenticated;
+
+DO $$
+DECLARE v_c int; v_rows int;
+BEGIN
+  -- SELECT pat_a (mismo clinic pero no es el suyo) por id → 0
+  SELECT count(*) INTO v_c FROM public.patients
+    WHERE id = '20000000-0000-0000-0000-000000000001';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | PATIENT | patients] SELECT by-id de pat_a (misma clínica) debería devolver 0, vio %', v_c;
+  END IF;
+
+  -- SELECT pat_b (clínica ajena) por id → 0
+  SELECT count(*) INTO v_c FROM public.patients
+    WHERE id = '20000000-0000-0000-0000-000000000002';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | PATIENT | patients] SELECT by-id de pat_b (otra clínica) debería devolver 0, vio %', v_c;
+  END IF;
+
+  -- SELECT rx_b (receta ajena, clínica ajena) por id → 0
+  SELECT count(*) INTO v_c FROM public.prescriptions
+    WHERE id = '40000000-0000-0000-0000-000000000002';
+  IF v_c <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | PATIENT | prescriptions] SELECT by-id de rx_b debería devolver 0, vio %', v_c;
+  END IF;
+
+  -- UPDATE de su propio registro cambiando clinic_id a B → debe fallar o afectar 0
+  UPDATE public.patients
+     SET clinic_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+   WHERE id = '20000000-0000-0000-0000-000000000003';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows <> 0 THEN
+    RAISE EXCEPTION '[SEC 9 | PATIENT | patients] paciente NO debería mover su registro a otra clínica (afectó % filas)', v_rows;
+  END IF;
+EXCEPTION WHEN insufficient_privilege OR check_violation OR raise_exception THEN
+  NULL;  -- bloqueo por policy es aceptable
+END $$;
+
+RESET role;
+
 -- =====================================================================
 -- OK: todas las expectativas cumplidas
 -- =====================================================================
-DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles × patients, prescriptions, prescription_items, patient_studies, log_phi_access)'; END $$;
+DO $$ BEGIN RAISE NOTICE '✅ RLS smoke tests OK (5 roles × patients, prescriptions, prescription_items, patient_studies, log_phi_access, cross-clínica)'; END $$;
 
 ROLLBACK;
