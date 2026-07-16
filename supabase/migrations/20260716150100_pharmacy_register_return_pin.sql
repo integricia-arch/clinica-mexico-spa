@@ -87,7 +87,7 @@ BEGIN
     (clinic_id, original_sale_id, shift_id, motivo, refund_method, total_refund, authorized_by, created_by)
   VALUES
     (v_clinic, v_sale.id, v_shift_id,
-     COALESCE(NULLIF(p_payload->>'motivo',''),'Sin motivo especificado'),
+     COALESCE(NULLIF(trim(p_payload->>'motivo'),''),'Sin motivo especificado'),
      v_refund_meth, 0, v_authorized, v_user)
   RETURNING id INTO v_return_id;
 

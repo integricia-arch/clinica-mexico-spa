@@ -1,3 +1,87 @@
+# Task 2 report — devoluciones exigen PIN de supervisor
+
+## Qué se hizo
+
+1. **Migración** `supabase/migrations/20260716150100_pharmacy_register_return_pin.sql`
+   (nuevo archivo, copiado literal del brief): `CREATE OR REPLACE FUNCTION
+   public.pharmacy_register_return(p_payload jsonb)`. Reemplaza la validación
+   de "rol admin/manager permite auto-autorización" por verificación server-side
+   de PIN: exige `p_payload.supervisor_id` y `p_payload.supervisor_pin`, llama
+   `PERFORM public.verify_supervisor_pin(v_clinic, v_authorized, v_pin)` (RPC de
+   Task 1) y usa `v_authorized` (el supervisor) como `authorized_by`, nunca el
+   cajero (`v_user`) que ejecuta la llamada. Incluye
+   `REVOKE EXECUTE ... FROM PUBLIC` + `GRANT ... TO authenticated`.
+
+2. **`src/features/farmacia/ReturnDialog.tsx`** modificado:
+   - Import `useAuth` reemplazado por `import SupervisorPinDialog from
+     "@/components/turno/SupervisorPinDialog"` (ya no se necesita `user.id`
+     como `authorized_by`).
+   - Quité `const { user } = useAuth();` (ya no se usa).
+   - Nuevo state `pinDialogOpen`.
+   - `handleSubmit()` original se dividió: `requestSubmit()` (valida
+     `saleId`/`selectedLines`/`motivo`, abre el diálogo de PIN) y
+     `handleSubmit(supervisorId, pin)` (arma el payload con
+     `supervisor_id`/`supervisor_pin` en vez de `authorized_by: user.id`, y
+     hace el RPC).
+   - Botón del footer ahora llama `requestSubmit` en vez de `handleSubmit`.
+   - Se agregó `<SupervisorPinDialog open={pinDialogOpen} clinicId={clinicId}
+     onAuthorized={handleSubmit} onCancel={() => setPinDialogOpen(false)} />`
+     dentro de `<Dialog>`, junto a `DialogContent` — coincide con la firma real
+     de `SupervisorPinDialog` de Task 1 (`onAuthorized: (supervisorId, pin) =>
+     void`), verificado leyendo el componente antes de escribir.
+
+## Typecheck
+
+Comando exacto corrido desde la raíz del worktree:
+
+```
+npx tsc --noEmit
+```
+
+Salida real: vacía (exit limpio, sin errores).
+
+## Pasos NO ejecutados (sin credenciales Supabase en este entorno)
+
+- Step 2 (`supabase db push --linked`) — no se aplicó la migración a ninguna
+  DB. El archivo SQL está escrito y es el entregable de este paso, pero no fue
+  verificado contra Postgres real.
+- Step 5 (verificación manual en navegador: abrir Farmacia → Devoluciones,
+  probar PIN incorrecto/correcto, y el `SELECT authorized_by, created_by FROM
+  pharmacy_returns ...`) — no se ejecutó, requiere sesión autenticada y datos
+  reales.
+
+Estos dos pasos quedan pendientes para cuando se aplique la migración contra
+el proyecto Supabase real (`kyfkvdyxpvpiacyymldc`).
+
+## Verificación de cambios antes de commit
+
+`git diff --stat --cached` mostró únicamente los dos archivos esperados:
+- `src/features/farmacia/ReturnDialog.tsx` (27 líneas cambiadas)
+- `supabase/migrations/20260716150100_pharmacy_register_return_pin.sql` (145
+  líneas, archivo nuevo)
+
+`.superpowers/sdd/task-1-report.md` (modificado por Task 1, preexistente) NO
+se incluyó en el commit de esta tarea.
+
+## Commit
+
+`ee02262` — `feat: devoluciones exigen PIN de supervisor (segregación de funciones)`
+
+## Concerns
+
+- No se pudo correr la migración ni la verificación manual (sin credenciales
+  Supabase en este entorno) — riesgo residual: un typo en SQL que `tsc` no
+  detecta (es SQL, no TS) solo se descubre al aplicar la migración real. El
+  SQL es una copia literal del brief, que ya fue diseñado/revisado como parte
+  del plan, así que el riesgo es bajo pero no cero.
+- El resto del repo tiene cambios sin commitear ajenos a esta tarea
+  (`memoria/STATE.md`, `graphify-out/*`, `.superpowers/sdd/task-1-report.md`)
+  — no tocados, tal como se pidió.
+
+---
+
+## (Contenido previo de este archivo, de una ejecución anterior con distinto alcance — conservado por referencia histórica, no aplica a este run)
+
 # Task 2 Report: `clinic_has_modulo_access` (gating real, SECURITY DEFINER)
 
 ## Estado: DONE_WITH_CONCERNS
@@ -219,3 +303,64 @@ clinic_has_modulo_access — gate de membresía como primera operación`).
    brief cuando no hay sesión autenticada disponible.
 3. `ecc:security-reviewer` no se re-ejecutó tras este fix puntual (fue el reviewer quien generó
    el hallazgo original); recomendable una pasada de confirmación antes de mergear a main.
+
+---
+
+## Fix: trim() on motivo
+
+### El hallazgo
+
+En `supabase/migrations/20260716150100_pharmacy_register_return_pin.sql`, el campo
+`motivo` de `pharmacy_returns` se calculaba como
+`COALESCE(NULLIF(p_payload->>'motivo',''),'Sin motivo especificado')` sin `trim()`.
+Un payload con `motivo: "   "` (solo espacios) pasa `NULLIF(...,'')` como no-vacío
+(la cadena no es literalmente `''`) y se guarda como whitespace literal en vez de
+caer al fallback `'Sin motivo especificado'`. La RPC es invocable directamente por
+cualquier usuario `authenticated` (`GRANT EXECUTE ... TO authenticated`), así que la
+validación server-side no puede depender de que el cliente ya haya hecho trim —
+viola la Global Constraint del plan: "Motivo/notas siempre trim() antes de validar
+vacío — patrón ya usado en turno_fondo_movimiento".
+
+### Qué se cambió
+
+Línea 90 del mismo archivo, único cambio:
+
+```sql
+-- antes
+COALESCE(NULLIF(p_payload->>'motivo',''),'Sin motivo especificado'),
+-- después
+COALESCE(NULLIF(trim(p_payload->>'motivo'),''),'Sin motivo especificado'),
+```
+
+### Revisión de consistencia (otros campos de texto en la misma función)
+
+- `refund_method` viene de `v_refund_meth`, no de un `COALESCE(NULLIF(p_payload->>...,''),...)`
+  contra texto libre del usuario — no aplica el mismo patrón, fuera de alcance del hallazgo.
+- Los dos usos de `motivo` en `movimientos_inventario` (líneas 114/117) usan un literal fijo
+  construido por el servidor (`'Devolución ref ' || v_return_id::text`), no input directo del
+  payload — no requieren trim.
+- Ningún otro campo en este archivo sigue el patrón `NULLIF(p_payload->>'x','')` sobre texto
+  libre de usuario.
+
+### Typecheck
+
+Comando exacto corrido desde la raíz del worktree:
+
+```
+npx tsc --noEmit
+```
+
+Salida real: vacía (exit limpio, sin errores) — esperado, cambio es SQL-only.
+
+### Verificación
+
+Archivo SQL nuevo, nunca aplicado a ninguna base de datos (sin credenciales Supabase en
+este entorno) — no hay migración en vivo que re-verificar. Cambio revisado por lectura
+directa del archivo: la línea 90 ahora envuelve `p_payload->>'motivo'` en `trim()` antes
+del `NULLIF`, consistente con el patrón ya usado en `turno_fondo_movimiento` referenciado
+por el plan.
+
+### Commit
+
+Nuevo commit (no amend, para mantener historial claro por convención del proyecto):
+`fix: trim motivo before empty-check in pharmacy_register_return`.
