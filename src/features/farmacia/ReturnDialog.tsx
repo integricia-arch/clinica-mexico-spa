@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import SupervisorPinDialog from "@/components/turno/SupervisorPinDialog";
 
 const formatMXN = (n: number) =>
   n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -37,7 +37,6 @@ type Props = {
 };
 
 export function ReturnDialog({ open, onClose, clinicId }: Props) {
-  const { user } = useAuth();
   const { toast } = useToast();
 
   const [folio, setFolio] = useState("");
@@ -47,6 +46,7 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
   const [refundMethod, setRefundMethod] = useState<string>("sin_reembolso");
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   async function buscarVenta() {
     if (!folio.trim()) return;
@@ -138,17 +138,18 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
   const totalRefund = lines.reduce((s, l) => s + l.qty * l.unit_price, 0);
   const selectedLines = lines.filter((l) => l.qty > 0);
 
-  async function handleSubmit() {
+  function requestSubmit() {
     if (!saleId || selectedLines.length === 0) return;
     if (!motivo.trim()) {
       toast({ title: "Motivo requerido", variant: "destructive" });
       return;
     }
-    if (!user?.id) {
-      toast({ title: "Sin sesión activa", variant: "destructive" });
-      return;
-    }
+    setPinDialogOpen(true);
+  }
 
+  async function handleSubmit(supervisorId: string, pin: string) {
+    if (!saleId) return;
+    setPinDialogOpen(false);
     setSubmitting(true);
     try {
       const payload = {
@@ -156,7 +157,8 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
         sale_id: saleId,
         motivo: motivo.trim(),
         refund_method: refundMethod,
-        authorized_by: user.id,
+        supervisor_id: supervisorId,
+        supervisor_pin: pin,
         items: selectedLines.map((l) => ({ sale_item_id: l.sale_item_id, quantity: l.qty })),
       };
 
@@ -266,13 +268,20 @@ export function ReturnDialog({ open, onClose, clinicId }: Props) {
         <DialogFooter className="gap-2 pt-2">
           <Button variant="outline" onClick={handleClose}>Cancelar</Button>
           <Button
-            onClick={handleSubmit}
+            onClick={requestSubmit}
             disabled={submitting || selectedLines.length === 0 || !motivo.trim()}
           >
             {submitting ? "Procesando…" : "Confirmar devolución"}
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <SupervisorPinDialog
+        open={pinDialogOpen}
+        clinicId={clinicId}
+        onAuthorized={handleSubmit}
+        onCancel={() => setPinDialogOpen(false)}
+      />
     </Dialog>
   );
 }
