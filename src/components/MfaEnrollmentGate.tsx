@@ -59,6 +59,19 @@ export default function MfaEnrollmentGate({ children }: { children: React.ReactN
     await refresh();
   }
 
+  async function resetLostFactor() {
+    const { data } = await supabase.auth.mfa.listFactors();
+    const totp = data?.totp?.[0];
+    if (!totp) { setErrorMsg("No se encontró ningún factor para reiniciar."); return; }
+    const { error } = await supabase.auth.mfa.unenroll({ factorId: totp.id });
+    if (error) { setErrorMsg(error.message); return; }
+    setFactorId(null);
+    setChallengeId(null);
+    setQr(null);
+    setErrorMsg(null);
+    await refresh();
+  }
+
   return (
     <div className="flex h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-4 text-center">
@@ -80,20 +93,25 @@ export default function MfaEnrollmentGate({ children }: { children: React.ReactN
         )}
 
         {status === "needs-challenge" && !challengeId && (
-          <Button onClick={async () => {
-            setErrorMsg(null);
-            const { data } = await supabase.auth.mfa.listFactors();
-            // Solo factores TOTP verificados — un factor unverified no puede retarse.
-            const totp = data?.totp?.find((f) => f.status === "verified");
-            if (!totp) {
-              setErrorMsg("No hay un factor TOTP verificado. Contacta al administrador.");
-              return;
-            }
-            setFactorId(totp.id);
-            await startChallenge(totp.id);
-          }}>
-            Verificar con mi app de autenticación
-          </Button>
+          <div className="space-y-3">
+            <Button onClick={async () => {
+              setErrorMsg(null);
+              const { data } = await supabase.auth.mfa.listFactors();
+              // Solo factores TOTP verificados — un factor unverified no puede retarse.
+              const totp = data?.totp?.find((f) => f.status === "verified");
+              if (!totp) {
+                setErrorMsg("No hay un factor TOTP verificado. Contacta al administrador.");
+                return;
+              }
+              setFactorId(totp.id);
+              await startChallenge(totp.id);
+            }}>
+              Verificar con mi app de autenticación
+            </Button>
+            <Button variant="ghost" size="sm" onClick={resetLostFactor}>
+              ¿Perdiste acceso a tu app autenticadora? Reiniciar verificación
+            </Button>
+          </div>
         )}
 
         {challengeId && (
