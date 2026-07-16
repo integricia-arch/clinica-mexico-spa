@@ -40,9 +40,30 @@ proyecto apuntando al ref correcto (commit `d1a1b62`), y regla global nueva en
 (git, MCP supabase, cualquier otro MCP) contra el proyecto correcto en cada cambio de
 proyecto, antes de tocar nada.
 
-**Pendiente para la próxima sesión:**
-- [ ] Ninguno nuevo de esta sesión. Confirmar con Pablo que ya reinscribió su MFA con QR
-      nuevo y guardó la entrada en su app autenticadora (no quedó verificado en la sesión).
+**Pendiente para la próxima sesión — el fix `resetLostFactor` (commit `f4bbffc`) NO
+funciona, corregir:**
+- [ ] **Bug real, probado por Pablo en producción**: al hacer click en "¿Perdiste acceso a
+      tu app autenticadora?" Supabase regresa `AAL2 required to unenroll verified factor`.
+      Es una restricción del lado de Supabase Auth — un usuario en sesión `aal1` (sin haber
+      pasado el challenge TOTP) NUNCA puede desenrolar un factor `verified` vía
+      `supabase.auth.mfa.unenroll()` desde el cliente, sin importar el código. El fix de la
+      sesión 42 estaba mal — asumía que bastaba con la sesión aal1 ya autenticada.
+- [ ] **Fix correcto (no aplicado todavía)**: crear Edge Function nueva (ver patrón
+      `supabase/functions/admin-users/index.ts` — `authHeader` → `supaUser.auth.getUser()`
+      para identificar al usuario, luego cliente `service_role` para la acción privilegiada)
+      que llame `admin.auth.admin.mfa.deleteFactor({ id: factorId, userId: user.id })` —
+      API confirmada en `node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js` (línea
+      773, `_deleteFactor`, expuesta como `admin.mfa.deleteFactor`). Esto SÍ puede borrar un
+      factor `verified` porque usa `service_role`, sin pasar por el chequeo AAL2 del cliente.
+      **Importante**: la función debe validar que `factorId` pertenece al `user.id` del JWT
+      (nunca confiar en un `factorId` que mande el cliente sin verificar dueño) antes de
+      borrar — si no, cualquier usuario autenticado podría borrar el factor MFA de otro.
+- [ ] Cambiar `MfaEnrollmentGate.tsx` (`resetLostFactor`) para llamar esa Edge Function en
+      vez de `supabase.auth.mfa.unenroll()` directo.
+- [ ] Desbloqueo manual usado mientras tanto (2026-07-16, segunda vez): `DELETE FROM
+      auth.mfa_factors WHERE user_id=(SELECT id FROM auth.users WHERE
+      email='integric.ia@gmail.com') AND status='verified'` corrido por Pablo en SQL Editor.
+      Confirmar que ya reinscribió con QR nuevo y guardó la entrada en su app autenticadora.
 
 ---
 
