@@ -93,6 +93,10 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
         setStep("diff-alert");
         return;
       }
+      if (error.message?.startsWith("NOTES_REQUIRED_ON_DIFF")) {
+        toast.error("Hay una diferencia entre lo contado y lo esperado — escribe una explicación en Notas antes de cerrar.");
+        return;
+      }
       toast.error(`No se pudo cerrar el turno: ${error.message}`);
       return;
     }
@@ -172,7 +176,7 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
               }}
             />
             <div className="space-y-1.5">
-              <Label htmlFor="close-notes">Notas (opcional)</Label>
+              <Label htmlFor="close-notes">Notas</Label>
               <Textarea
                 id="close-notes"
                 rows={2}
@@ -180,6 +184,9 @@ export default function TurnoCloseWizard({ turno, onClosed, onCancel }: Props) {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Observaciones del cierre…"
               />
+              <p className="text-xs text-muted-foreground">
+                Obligatorio si el efectivo contado no coincide exactamente con lo esperado.
+              </p>
             </div>
             <Button onClick={() => submit(false)} className="w-full" size="lg" disabled={saving}>
               {saving ? "Cerrando turno…" : "Cerrar turno →"}

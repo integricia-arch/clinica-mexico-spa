@@ -197,6 +197,10 @@ function CloseTurnoDialog({
         setOverridePrompt({ diff, umbral });
         return;
       }
+      if (error.message?.startsWith("NOTES_REQUIRED_ON_DIFF")) {
+        toast.error("Hay una diferencia entre lo contado y lo esperado — escribe una explicación en Notas antes de cerrar.");
+        return;
+      }
       toast.error(`No se pudo cerrar el turno: ${error.message}`);
       return;
     }
@@ -357,6 +361,9 @@ function CloseTurnoDialog({
           <div className="space-y-1">
             <Label className="text-xs">Notas del cierre</Label>
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              Obligatorio si el efectivo contado no coincide exactamente con lo esperado.
+            </p>
           </div>
           <SupervisorAuthDialog
             open={!!overridePrompt}
