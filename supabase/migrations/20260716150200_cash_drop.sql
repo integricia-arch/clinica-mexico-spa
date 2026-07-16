@@ -7,6 +7,8 @@ ALTER TABLE public.fondos_movimientos
   ADD CONSTRAINT fondos_movimientos_tipo_check
   CHECK (tipo IN ('egreso','ingreso','cash_drop'));
 
+DROP FUNCTION IF EXISTS public.turno_fondo_movimiento(uuid, text, numeric, text);
+
 CREATE OR REPLACE FUNCTION public.turno_fondo_movimiento(
   p_turno_id uuid,
   p_tipo text,
@@ -73,3 +75,12 @@ $func$;
 
 REVOKE EXECUTE ON FUNCTION public.turno_fondo_movimiento(uuid, text, numeric, text, text, uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.turno_fondo_movimiento(uuid, text, numeric, text, text, uuid, text) TO authenticated;
+
+DROP POLICY IF EXISTS "Caja staff registra fondos" ON public.fondos_movimientos;
+CREATE POLICY "Caja staff registra fondos" ON public.fondos_movimientos
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    public.user_has_clinic_access(auth.uid(), clinic_id)
+    AND public.is_caja_staff(auth.uid())
+    AND tipo <> 'cash_drop'
+  );
