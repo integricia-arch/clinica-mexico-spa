@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Timer, PlayCircle, StopCircle, AlertCircle, Lock, TrendingUp, TrendingDown,
+  Timer, StopCircle, AlertCircle, Lock, TrendingUp, TrendingDown,
   Minus, ArrowUpDown, FileBarChart2, ChevronDown, ChevronRight, Info, CheckCircle, Printer,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { printActaArqueo } from "@/lib/printActaArqueo";
 import PagoReconcile from "@/components/turno/PagoReconcile";
 import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
+import TurnoOpenWizard from "@/components/turno/TurnoOpenWizard";
 
 const fmt = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -724,9 +725,6 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
   const [auditLog, setAuditLog] = useState<LinkAudit[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [cajaId, setCajaId] = useState("");
-  const [montoApertura, setMontoApertura] = useState(0);
-  const [notas, setNotas] = useState("");
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [fondoDialogOpen, setFondoDialogOpen] = useState(false);
   const [corteXDialogOpen, setCorteXDialogOpen] = useState(false);
@@ -753,11 +751,6 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     setCajas(cajasList);
     setTurnoActivo(activeTurno);
     setAuditLog((auditRows as LinkAudit[]) ?? []);
-
-    if (cajasList[0] && !cajaId) {
-      setCajaId(cajasList[0].id);
-      setMontoApertura(cajasList[0].fondo_default);
-    }
 
     // Fondos del turno activo
     if (activeTurno) {
@@ -803,48 +796,6 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
   };
 
   useEffect(() => { load(); }, [activeClinic?.id, user?.id]);
-
-  const onCajaChange = (id: string) => {
-    setCajaId(id);
-    const caja = cajas.find((c) => c.id === id);
-    if (caja) setMontoApertura(caja.fondo_default);
-  };
-
-  const abrirTurno = async () => {
-    if (!cajaId) { toast.error("Selecciona una caja"); return; }
-    if (!activeClinic?.id || !user?.id) return;
-    setSaving(true);
-
-    const { data: newTurno, error } = await (supabase as any).from("turnos").insert({
-      clinic_id: activeClinic.id,
-      caja_id: cajaId,
-      cajero_user_id: user.id,
-      monto_apertura: montoApertura,
-      notas_apertura: notas.trim() || null,
-      estado: "abierto",
-    }).select("id").single();
-
-    if (error) { setSaving(false); toast.error(`No se pudo abrir el turno: ${error.message}`); return; }
-
-    const selectedCaja = cajas.find((c) => c.id === cajaId);
-    if (selectedCaja?.es_farmacia && newTurno) {
-      const { data: shiftId, error: shiftError } = await (supabase as any).rpc("pharmacy_open_shift", {
-        p_clinic_id: activeClinic.id,
-        p_opening_amount: montoApertura,
-        p_notes: notas.trim() || null,
-      } as never);
-      if (!shiftError && shiftId) {
-        await (supabase as any).from("turnos").update({ pharmacy_shift_id: shiftId }).eq("id", newTurno.id);
-      } else if (shiftError) {
-        toast.warning(`Turno abierto, pero no se pudo abrir turno POS Farmacia: ${shiftError.message}`);
-      }
-    }
-
-    setSaving(false);
-    toast.success("Turno abierto");
-    setNotas("");
-    load();
-  };
 
   const handleTurnoCerrado = () => { setCloseDialogOpen(false); load(); onTurnoCerrado?.(); };
 
@@ -935,39 +886,10 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <PlayCircle className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold text-card-foreground">Abrir turno</h2>
-          </div>
-          <div>
-            <Label htmlFor="caja">Caja *</Label>
-            <Select value={cajaId} onValueChange={onCajaChange}>
-              <SelectTrigger id="caja" className="mt-1">
-                <SelectValue placeholder="Selecciona una caja…" />
-              </SelectTrigger>
-              <SelectContent>
-                {cajas.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="monto">Monto de apertura (MXN) *</Label>
-            <MoneyInput id="monto" value={String(montoApertura)}
-              onValueChange={(raw) => setMontoApertura(parseFloat(raw) || 0)} className="mt-1" />
-          </div>
-          <div>
-            <Label htmlFor="notas-apertura">Notas de apertura (opcional)</Label>
-            <Input id="notas-apertura" value={notas} onChange={(e) => setNotas(e.target.value)}
-              placeholder="Observaciones al abrir el turno…" className="mt-1" />
-          </div>
-          <Button onClick={abrirTurno} disabled={saving} className="w-full sm:w-auto">
-            <PlayCircle className="h-4 w-4 mr-2" />
-            {saving ? "Abriendo…" : "Abrir turno"}
-          </Button>
-        </div>
+        <TurnoOpenWizard
+          cajaFilter="general"
+          onOpened={() => load()}
+        />
       )}
 
       {/* Historial de turnos */}
