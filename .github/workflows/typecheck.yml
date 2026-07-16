@@ -44,6 +44,13 @@ jobs:
       - name: Type-check (tsc --noEmit)
         run: npx tsc -p tsconfig.app.json --noEmit
 
+      - name: Build (vite)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+
       - name: Lint (eslint)
         run: npm run lint
 
