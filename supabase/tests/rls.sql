@@ -73,6 +73,18 @@ INSERT INTO public.patients (id, clinic_id, nombre, apellidos, sexo, fecha_nacim
   (:pat_self::uuid, :clinic_a::uuid, 'Pac',  'SelfOwn',  'M', '1990-01-01', :u_patient::uuid)
 ON CONFLICT (id) DO NOTHING;
 
+-- Doctor vinculado a u_doctor en clínica A (necesario para INSERT prescriptions
+-- ya que la policy exige doctor_id ∈ doctors WHERE user_id = auth.uid())
+\set doc_a '''30000000-0000-0000-0000-000000000001'''
+INSERT INTO public.doctors (
+  id, clinic_id, user_id, nombre, apellidos, especialidad,
+  horario_inicio, horario_fin, duracion_cita_min, activo
+) VALUES (
+  :doc_a::uuid, :clinic_a::uuid, :u_doctor::uuid,
+  'Doc', 'RLS', 'medicina_general',
+  '08:00', '18:00', 30, true
+) ON CONFLICT (id) DO NOTHING;
+
 -- =====================================================================
 -- Helper para impersonar un uid
 -- =====================================================================
