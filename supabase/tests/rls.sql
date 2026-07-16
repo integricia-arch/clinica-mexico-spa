@@ -98,14 +98,46 @@ ON CONFLICT (id) DO NOTHING;
 -- Doctor vinculado a u_doctor en clínica A (necesario para INSERT prescriptions
 -- ya que la policy exige doctor_id ∈ doctors WHERE user_id = auth.uid())
 \set doc_a '''30000000-0000-0000-0000-000000000001'''
+\set doc_b '''30000000-0000-0000-0000-000000000002'''
+\set u_doctor_b '''10000000-0000-0000-0000-000000000006'''
+\set u_recep    '''10000000-0000-0000-0000-000000000007'''
+\set appt_a     '''50000000-0000-0000-0000-000000000001'''
+\set appt_b     '''50000000-0000-0000-0000-000000000002'''
+
+-- Usuarios adicionales para tests cross-clínica de appointments
+INSERT INTO auth.users (id, email, aud, role) VALUES
+  (:u_doctor_b::uuid, 'doctor.b@test.mx', 'authenticated', 'authenticated'),
+  (:u_recep::uuid,    'recep.a@test.mx',  'authenticated', 'authenticated')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.user_roles (user_id, role) VALUES
+  (:u_doctor_b::uuid, 'doctor'),
+  (:u_recep::uuid,    'receptionist')
+ON CONFLICT DO NOTHING;
+
+-- Receptionist con membership SOLO en clínica A
+INSERT INTO public.clinic_memberships (user_id, clinic_id, role, status) VALUES
+  (:u_recep::uuid,    :clinic_a::uuid, 'receptionist', 'active'),
+  (:u_doctor_b::uuid, :clinic_b::uuid, 'doctor',       'active')
+ON CONFLICT DO NOTHING;
+
 INSERT INTO public.doctors (
   id, clinic_id, user_id, nombre, apellidos, especialidad,
   horario_inicio, horario_fin, duracion_cita_min, activo
-) VALUES (
-  :doc_a::uuid, :clinic_a::uuid, :u_doctor::uuid,
-  'Doc', 'RLS', 'medicina_general',
-  '08:00', '18:00', 30, true
-) ON CONFLICT (id) DO NOTHING;
+) VALUES
+  (:doc_a::uuid, :clinic_a::uuid, :u_doctor::uuid,   'Doc', 'RLS-A', 'medicina_general', '08:00', '18:00', 30, true),
+  (:doc_b::uuid, :clinic_b::uuid, :u_doctor_b::uuid, 'Doc', 'RLS-B', 'medicina_general', '08:00', '18:00', 30, true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Appointments seed: una en cada clínica (setup corre como owner → bypass RLS)
+INSERT INTO public.appointments (
+  id, clinic_id, patient_id, doctor_id, fecha_inicio, fecha_fin, status, motivo_consulta
+) VALUES
+  (:appt_a::uuid, :clinic_a::uuid, :pat_a::uuid, :doc_a::uuid,
+   now() + interval '2 days', now() + interval '2 days 30 minutes', 'confirmada', 'Cita clínica A'),
+  (:appt_b::uuid, :clinic_b::uuid, :pat_b::uuid, :doc_b::uuid,
+   now() + interval '3 days', now() + interval '3 days 30 minutes', 'confirmada', 'Cita clínica B')
+ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================================
 -- Helper para impersonar un uid
