@@ -65,6 +65,17 @@ funciona, corregir:**
       email='integric.ia@gmail.com') AND status='verified'` corrido por Pablo en SQL Editor.
       Confirmar que ya reinscribió con QR nuevo y guardó la entrada en su app autenticadora.
 
+**Actualización (mismo día, tras el DELETE)**: con 0 filas confirmadas en `auth.mfa_factors`
+(verificado por SQL), el navegador normal de Pablo SEGUÍA mostrando `needs-challenge`
+("no hay factor verificado") incluso después de logout/login real — session/localStorage
+vieja cacheada del lado del navegador, no un bug de código ni de datos. En **ventana de
+incógnito** el flujo funcionó normal: mostró QR nuevo, enroll completado. Para el navegador
+normal: limpiar site data de `integrika.mx` (DevTools → Application → Storage → Clear site
+data) resuelve. **Nota para el futuro**: si un usuario reporta el gate de MFA "atorado" con
+un estado que no cuadra con lo que dice la DB, primero descartar cache de navegador
+(incógnito) antes de asumir bug de código — se perdió tiempo asumiendo que era el fix nuevo
+el que fallaba, cuando ya no reflejaba estado real.
+
 ---
 
 ## COMPLETADO Y CERRADO — sesión 41 (Jul 11-14): skill fixer + skill consultoría automatizaciones + MCP n8n
