@@ -23,6 +23,17 @@ export default function MfaEnrollmentGate({ children }: { children: React.ReactN
   if (status === "ok") return <>{children}</>;
 
   async function startEnroll() {
+    setErrorMsg(null);
+    // Limpiar factores TOTP unverified colgados de intentos previos —
+    // si no, enroll() falla con "factor already exists" y el QR nunca aparece.
+    const { data: existing } = await supabase.auth.mfa.listFactors();
+    const stale = (existing?.all ?? []).filter(
+      (f) => f.factor_type === "totp" && f.status !== "verified",
+    );
+    for (const f of stale) {
+      await supabase.auth.mfa.unenroll({ factorId: f.id });
+    }
+
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: "totp",
       friendlyName: `totp-${Date.now()}`,
@@ -33,6 +44,7 @@ export default function MfaEnrollmentGate({ children }: { children: React.ReactN
   }
 
   async function startChallenge(fId: string) {
+    setErrorMsg(null);
     const { data, error } = await supabase.auth.mfa.challenge({ factorId: fId });
     if (error || !data) { setErrorMsg(error?.message ?? "Error al iniciar verificación"); return; }
     setChallengeId(data.id);
