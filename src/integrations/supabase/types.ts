@@ -359,6 +359,39 @@ export type Database = {
         }
         Relationships: []
       }
+      catalogo_modulos: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string | null
+          id: string
+          nombre: string
+          precio_centavos: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          precio_centavos?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          precio_centavos?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       checklists: {
         Row: {
           activo: boolean
@@ -402,6 +435,51 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cliente_modulos: {
+        Row: {
+          activo_desde: string
+          activo_hasta: string | null
+          clinic_id: string
+          created_at: string
+          id: string
+          modulo_id: string
+          updated_at: string
+        }
+        Insert: {
+          activo_desde?: string
+          activo_hasta?: string | null
+          clinic_id: string
+          created_at?: string
+          id?: string
+          modulo_id: string
+          updated_at?: string
+        }
+        Update: {
+          activo_desde?: string
+          activo_hasta?: string | null
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          modulo_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_modulos_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_modulos_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "catalogo_modulos"
             referencedColumns: ["id"]
           },
         ]
@@ -482,57 +560,75 @@ export type Database = {
       clinics: {
         Row: {
           address: string | null
+          archived_at: string | null
           city: string | null
           code: string
           country: string
           created_at: string
           email: string | null
+          grace_period_ends_at: string | null
           id: string
           legal_name: string | null
           logo_url: string | null
           name: string
           phone: string | null
+          plan: string
           rfc: string | null
           state: string | null
           status: string
+          subscription_status: string
           timezone: string
           updated_at: string
+          whatsapp_phone_number_id: string | null
+          whatsapp_status: string | null
         }
         Insert: {
           address?: string | null
+          archived_at?: string | null
           city?: string | null
           code: string
           country?: string
           created_at?: string
           email?: string | null
+          grace_period_ends_at?: string | null
           id?: string
           legal_name?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
+          plan?: string
           rfc?: string | null
           state?: string | null
           status?: string
+          subscription_status?: string
           timezone?: string
           updated_at?: string
+          whatsapp_phone_number_id?: string | null
+          whatsapp_status?: string | null
         }
         Update: {
           address?: string | null
+          archived_at?: string | null
           city?: string | null
           code?: string
           country?: string
           created_at?: string
           email?: string | null
+          grace_period_ends_at?: string | null
           id?: string
           legal_name?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
+          plan?: string
           rfc?: string | null
           state?: string | null
           status?: string
+          subscription_status?: string
           timezone?: string
           updated_at?: string
+          whatsapp_phone_number_id?: string | null
+          whatsapp_status?: string | null
         }
         Relationships: []
       }
@@ -2635,6 +2731,53 @@ export type Database = {
           },
         ]
       }
+      payment_gateway_config: {
+        Row: {
+          activo: boolean
+          ambiente: string
+          clinic_id: string
+          created_at: string
+          id: string
+          metodos_habilitados: string[]
+          proveedor: string
+          stripe_publishable_key: string | null
+          stripe_terminal_habilitado: boolean
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          ambiente?: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          metodos_habilitados?: string[]
+          proveedor?: string
+          stripe_publishable_key?: string | null
+          stripe_terminal_habilitado?: boolean
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          ambiente?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          metodos_habilitados?: string[]
+          proveedor?: string
+          stripe_publishable_key?: string | null
+          stripe_terminal_habilitado?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_gateway_config_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permanent_admins: {
         Row: {
           created_at: string
@@ -3477,6 +3620,53 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_audit_alertas: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          detalle: Json | null
+          detectado_at: string
+          id: string
+          referencia_id: string | null
+          resuelto: boolean
+          resuelto_at: string | null
+          resuelto_por: string | null
+          tipo: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          detalle?: Json | null
+          detectado_at?: string
+          id?: string
+          referencia_id?: string | null
+          resuelto?: boolean
+          resuelto_at?: string | null
+          resuelto_por?: string | null
+          tipo: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          detalle?: Json | null
+          detectado_at?: string
+          id?: string
+          referencia_id?: string | null
+          resuelto?: boolean
+          resuelto_at?: string | null
+          resuelto_por?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_audit_alertas_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       doctor_earnings_by_period: {
@@ -3565,6 +3755,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_phi_access: {
+        Args: {
+          p_accion?: string
+          p_clinic_id: string
+          p_patient_id: string
+          p_tabla: string
+        }
+        Returns: undefined
+      }
       multiclinic_diagnostics: { Args: never; Returns: Json }
       pharmacy_close_shift: {
         Args: { p_cash_count: number; p_notes?: string; p_shift_id: string }
@@ -3610,6 +3809,22 @@ export type Database = {
         Returns: string
       }
       pharmacy_register_sale: { Args: { p_payload: Json }; Returns: string }
+      set_clinic_archived: {
+        Args: { _archived: boolean; _clinic_id: string }
+        Returns: undefined
+      }
+      set_clinic_status: {
+        Args: { _clinic_id: string; _status: string }
+        Returns: undefined
+      }
+      set_clinic_whatsapp_number: {
+        Args: {
+          _clinic_id: string
+          _phone_number_id: string
+          _waba_id?: string
+        }
+        Returns: undefined
+      }
       update_journey_progress: {
         Args: { _journey_instance_id: string }
         Returns: undefined
