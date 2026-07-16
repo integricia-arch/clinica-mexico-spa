@@ -1,6 +1,16 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## COMPLETADO Y CERRADO — sesión 43 (Jul 16): fix real MFA (Edge Function) + fix leak MCP global + skill proyectos
+## COMPLETADO — sesión 43 (Jul 16), punto 2: responsive farmacia (plan 2026-06-09)
+
+Plan `docs/superpowers/plans/2026-06-09-farmacia-responsive.md` (11 tasks) ya estaba
+100% implementado en código (probablemente vía Lovable, sin marcar checkboxes ni
+STATE.md). Verificado: `useIsTablet`/`useSidebarState` existen, breakpoints `xl:` en
+AppLayout y PuntoDeVenta, accordion frecuentes, cobro panel sticky, touch targets
+≥44px, stock badges color-coded, `h-11` en PaymentCapture. `npm run build` → 0
+errores TS. Ya commiteado y pusheado a main con anterioridad (commit `aebc646` y
+previos) — ya en prod vía CI/CD. Checkboxes del plan marcados `[x]`.
+
+## COMPLETADO Y CERRADO — sesión 43 (Jul 16), punto 1: fix real MFA (Edge Function) + fix leak MCP global + skill proyectos
 
 **Fix real del bug de sesión 42** (el intento anterior con `unenroll()` cliente fallaba con
 "AAL2 required to unenroll verified factor" — documentado ahí mismo abajo). Solución: nueva

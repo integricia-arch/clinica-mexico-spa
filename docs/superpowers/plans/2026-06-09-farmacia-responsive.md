@@ -1,6 +1,6 @@
 # Farmacia Responsive Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make the farmacia module fully usable on tablet (768–1279px) and desktop (≥1280px) without breaking existing functionality.
 
@@ -29,7 +29,7 @@
 **Files:**
 - Modify: `src/hooks/use-mobile.tsx`
 
-- [ ] **Step 1: Add `useIsTablet` to existing hook file**
+- [x] **Step 1: Add `useIsTablet` to existing hook file**
 
 Open `src/hooks/use-mobile.tsx`. The file currently exports only `useIsMobile`. Add `useIsTablet` below it:
 
@@ -75,14 +75,14 @@ export function useIsTablet() {
 }
 ```
 
-- [ ] **Step 2: Verify build**
+- [x] **Step 2: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error|Error|✓"
 ```
 Expected: `✓ built in` with no TypeScript errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/hooks/use-mobile.tsx && git commit -m "feat: add useIsTablet hook for responsive sidebar"
@@ -95,7 +95,7 @@ cd ~/clinica-mexico-spa && git add src/hooks/use-mobile.tsx && git commit -m "fe
 **Files:**
 - Create: `src/hooks/useSidebarState.ts`
 
-- [ ] **Step 1: Create the hook**
+- [x] **Step 1: Create the hook**
 
 ```typescript
 import { useCallback, useEffect, useState } from "react";
@@ -138,14 +138,14 @@ export function useSidebarState() {
 }
 ```
 
-- [ ] **Step 2: Verify build**
+- [x] **Step 2: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error|Error|✓"
 ```
 Expected: `✓ built in` with no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/hooks/useSidebarState.ts && git commit -m "feat: add useSidebarState hook with tablet/desktop logic"
@@ -160,7 +160,7 @@ cd ~/clinica-mexico-spa && git add src/hooks/useSidebarState.ts && git commit -m
 
 This task changes `lg:` → `xl:` on all sidebar-related classes AND adds desktop collapse mode.
 
-- [ ] **Step 1: Update imports in AppLayout.tsx**
+- [x] **Step 1: Update imports in AppLayout.tsx**
 
 Find the import block at the top of `src/components/AppLayout.tsx`. Add `ChevronLeft` and `PanelLeft` to the lucide import, and add the Sheet import and useSidebarState:
 
@@ -180,7 +180,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSidebarState } from "@/hooks/useSidebarState";
 ```
 
-- [ ] **Step 2: Replace state and use new hook**
+- [x] **Step 2: Replace state and use new hook**
 
 Find and remove this line in `AppLayout`:
 ```typescript
@@ -192,7 +192,7 @@ Replace with:
 const { isOpen: sidebarOpen, isCollapsed, toggle: toggleSidebar, close: closeSidebar, isTablet } = useSidebarState();
 ```
 
-- [ ] **Step 3: Replace the overlay div**
+- [x] **Step 3: Replace the overlay div**
 
 Find:
 ```tsx
@@ -214,7 +214,7 @@ Replace with:
 )}
 ```
 
-- [ ] **Step 4: Replace the `<aside>` element**
+- [x] **Step 4: Replace the `<aside>` element**
 
 Find the entire `<aside>` opening tag:
 ```tsx
@@ -234,7 +234,7 @@ Replace with:
 >
 ```
 
-- [ ] **Step 5: Update the X close button inside sidebar**
+- [x] **Step 5: Update the X close button inside sidebar**
 
 Find:
 ```tsx
@@ -250,7 +250,7 @@ Replace with:
 </button>
 ```
 
-- [ ] **Step 6: Update nav item labels (hide when collapsed)**
+- [x] **Step 6: Update nav item labels (hide when collapsed)**
 
 Find the NavLink className line inside the nav:
 ```tsx
@@ -297,7 +297,7 @@ Replace with:
 </NavLink>
 ```
 
-- [ ] **Step 7: Update section labels (hide when collapsed)**
+- [x] **Step 7: Update section labels (hide when collapsed)**
 
 Find the section label paragraph:
 ```tsx
@@ -315,7 +315,7 @@ Replace with:
 )}
 ```
 
-- [ ] **Step 8: Update sidebar footer (hide text when collapsed)**
+- [x] **Step 8: Update sidebar footer (hide text when collapsed)**
 
 Find the footer div inside the sidebar:
 ```tsx
@@ -378,7 +378,7 @@ Replace with:
 </div>
 ```
 
-- [ ] **Step 9: Fix hamburger button in main header**
+- [x] **Step 9: Fix hamburger button in main header**
 
 Find:
 ```tsx
@@ -396,14 +396,14 @@ Replace with:
 <div className="hidden xl:block" />
 ```
 
-- [ ] **Step 10: Verify build**
+- [x] **Step 10: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error TS|Error|✓ built"
 ```
 Expected: `✓ built in` — zero TypeScript errors.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/components/AppLayout.tsx && git commit -m "feat: sidebar responsive — xl breakpoint + desktop collapse toggle"
@@ -416,7 +416,7 @@ cd ~/clinica-mexico-spa && git add src/components/AppLayout.tsx && git commit -m
 **Files:**
 - Modify: `src/features/farmacia/PuntoDeVenta.tsx`
 
-- [ ] **Step 1: Fix POS 3-column grid**
+- [x] **Step 1: Fix POS 3-column grid**
 
 Find:
 ```tsx
@@ -428,7 +428,7 @@ Replace with:
 <div className="grid gap-4 xl:grid-cols-[220px_1fr_360px] md:grid-cols-[1fr_360px] items-start">
 ```
 
-- [ ] **Step 2: Hide frecuentes left column on tablet**
+- [x] **Step 2: Hide frecuentes left column on tablet**
 
 Find the opening tag of the frecuentes/catálogo left column (directly inside the 3-col grid):
 ```tsx
@@ -446,14 +446,14 @@ Replace the opening tag only:
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Frecuentes</h3>
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error TS|Error|✓ built"
 ```
 Expected: `✓ built in` with no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git commit -m "feat: POS grid xl:3-col md:2-col, hide frecuentes column on tablet"
@@ -468,7 +468,7 @@ cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git
 
 This adds a `<details>` accordion with frecuentes visible only on tablet (xl:hidden), placed between the view-mode toggle and the scanner/catalog section.
 
-- [ ] **Step 1: Find the scanner section start**
+- [x] **Step 1: Find the scanner section start**
 
 Locate this block (it appears after the view-mode toggle buttons and before the scanner form):
 
@@ -483,7 +483,7 @@ Locate this block (it appears after the view-mode toggle buttons and before the 
   <form onSubmit={onScanSubmit} className="flex gap-2">
 ```
 
-- [ ] **Step 2: Insert frecuentes accordion after `{shift && (<>`**
+- [x] **Step 2: Insert frecuentes accordion after `{shift && (<>`**
 
 Add the following block immediately after `{shift && (<>` and before the scanner form:
 
@@ -519,14 +519,14 @@ Add the following block immediately after `{shift && (<>` and before the scanner
 )}
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error TS|Error|✓ built"
 ```
 Expected: `✓ built in` with no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git commit -m "feat: frecuentes accordion for tablet POS view"
@@ -541,7 +541,7 @@ cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git
 
 The Cobro panel needs to be a flex column so the bottom section (totals + buttons + cobrar) sticks to the bottom regardless of scroll.
 
-- [ ] **Step 1: Restructure the Cobro outer div**
+- [x] **Step 1: Restructure the Cobro outer div**
 
 Find the Cobro panel opening div:
 ```tsx
@@ -558,7 +558,7 @@ Replace with:
   <div className="flex-1 overflow-y-auto p-3 space-y-3">
 ```
 
-- [ ] **Step 2: Find the end of scrollable content (before buttons)**
+- [x] **Step 2: Find the end of scrollable content (before buttons)**
 
 Find the two suspend/cancel buttons + cobrar button section at the bottom of the Cobro panel:
 
@@ -607,14 +607,14 @@ Replace with:
 </div>
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error TS|Error|✓ built"
 ```
 Expected: `✓ built in` — if there are JSX nesting errors, check that `</div>` counts match.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git commit -m "feat: cobro panel sticky — cobrar button always visible on tablet"
@@ -629,7 +629,7 @@ cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git
 
 On tablet (<xl), hide clínica and hora from the topbar — only show cajero name and turno badge.
 
-- [ ] **Step 1: Update the topbar spans**
+- [x] **Step 1: Update the topbar spans**
 
 Find the topbar section:
 ```tsx
@@ -655,13 +655,13 @@ Replace with:
 </div>
 ```
 
-- [ ] **Step 2: Verify build**
+- [x] **Step 2: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error TS|Error|✓ built"
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git commit -m "feat: turno header bar responsive — compact on tablet"
@@ -674,7 +674,7 @@ cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git
 **Files:**
 - Modify: `src/features/farmacia/PuntoDeVenta.tsx`
 
-- [ ] **Step 1: Enlarge view mode toggle buttons**
+- [x] **Step 1: Enlarge view mode toggle buttons**
 
 Find:
 ```tsx
@@ -720,7 +720,7 @@ Replace with:
 </button>
 ```
 
-- [ ] **Step 2: Enlarge frecuentes product buttons (desktop left column)**
+- [x] **Step 2: Enlarge frecuentes product buttons (desktop left column)**
 
 Find in the frecuentes section inside the left column (inside `hidden xl:block`):
 ```tsx
@@ -732,7 +732,7 @@ Replace with:
 className="w-full text-left rounded-md border border-border bg-card px-3 py-3 min-h-[52px] hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 ```
 
-- [ ] **Step 3: Enlarge cart qty +/− buttons**
+- [x] **Step 3: Enlarge cart qty +/− buttons**
 
 Find both cart quantity buttons:
 ```tsx
@@ -749,7 +749,7 @@ and
 
 Replace both `className="h-9 w-9"` with `className="h-10 w-10"`.
 
-- [ ] **Step 4: Enlarge cart item rows min-height**
+- [x] **Step 4: Enlarge cart item rows min-height**
 
 Find the cart item row div:
 ```tsx
@@ -761,13 +761,13 @@ Replace with:
 <div key={i} className="py-3 min-h-[56px] grid grid-cols-[1fr_auto] gap-2 items-start">
 ```
 
-- [ ] **Step 5: Verify build**
+- [x] **Step 5: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error TS|Error|✓ built"
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git commit -m "feat: touch targets — cart qty, view mode tabs, frecuentes buttons"
@@ -782,26 +782,26 @@ cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git
 
 All inputs and selects use `h-9` (36px). Minimum for tablet is `h-11` (44px).
 
-- [ ] **Step 1: Replace all `h-9` with `h-11` in PaymentCapture.tsx**
+- [x] **Step 1: Replace all `h-9` with `h-11` in PaymentCapture.tsx**
 
 ```bash
 cd ~/clinica-mexico-spa && sed -i 's/className="h-9"/className="h-11"/g' src/features/farmacia/PaymentCapture.tsx && sed -i 's/className="h-9 /className="h-11 /g' src/features/farmacia/PaymentCapture.tsx
 ```
 
-- [ ] **Step 2: Verify no regressions**
+- [x] **Step 2: Verify no regressions**
 
 ```bash
 cd ~/clinica-mexico-spa && grep -n "h-9\|h-11" src/features/farmacia/PaymentCapture.tsx | head -20
 ```
 Expected: all `h-9` replaced with `h-11`.
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error TS|Error|✓ built"
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/features/farmacia/PaymentCapture.tsx && git commit -m "feat: PaymentCapture h-9→h-11 touch targets for tablet"
@@ -814,7 +814,7 @@ cd ~/clinica-mexico-spa && git add src/features/farmacia/PaymentCapture.tsx && g
 **Files:**
 - Modify: `src/features/farmacia/PuntoDeVenta.tsx`
 
-- [ ] **Step 1: Update catalog product buttons — typography and stock badge**
+- [x] **Step 1: Update catalog product buttons — typography and stock badge**
 
 Find the catalog button in the catalog view (inside `catalogFiltered.map`):
 ```tsx
@@ -860,7 +860,7 @@ Replace with:
 </button>
 ```
 
-- [ ] **Step 2: Update frecuentes product buttons typography (desktop column)**
+- [x] **Step 2: Update frecuentes product buttons typography (desktop column)**
 
 Find inside the frecuentes left column (inside `hidden xl:block`):
 ```tsx
@@ -886,13 +886,13 @@ Replace with:
 </div>
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | grep -E "error TS|Error|✓ built"
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git commit -m "feat: stock badges color-coded + typography scale on product cards"
@@ -902,14 +902,14 @@ cd ~/clinica-mexico-spa && git add src/features/farmacia/PuntoDeVenta.tsx && git
 
 ## Task 11: Final verification + deploy
 
-- [ ] **Step 1: Full build**
+- [x] **Step 1: Full build**
 
 ```bash
 cd ~/clinica-mexico-spa && npm run build 2>&1 | tail -10
 ```
 Expected: `✓ built in` with 0 TypeScript errors.
 
-- [ ] **Step 2: Visual verification desktop — open local preview**
+- [x] **Step 2: Visual verification desktop — open local preview**
 
 ```bash
 cd ~/clinica-mexico-spa && npx wrangler pages dev dist --port 4173 &
@@ -920,7 +920,7 @@ Check at `http://localhost:4173/farmacia`:
 - Stock badges green/yellow/red visible
 - Cobrar button fully visible without scroll
 
-- [ ] **Step 3: Visual verification tablet — resize browser to 1024px**
+- [x] **Step 3: Visual verification tablet — resize browser to 1024px**
 
 Resize browser DevTools to 1024px width. Check:
 - Sidebar hidden, hamburger `☰` visible in top-left header
@@ -929,20 +929,20 @@ Resize browser DevTools to 1024px width. Check:
 - Cobrar button pinned to bottom of cobro panel
 - Topbar shows only cajero + turno badge
 
-- [ ] **Step 4: Visual verification tablet portrait — resize to 768px**
+- [x] **Step 4: Visual verification tablet portrait — resize to 768px**
 
 Check:
 - Same 2-column layout still works
 - All touch targets visually large enough
 - Cobro panel scrollable, cobrar button always visible
 
-- [ ] **Step 5: Deploy to production**
+- [x] **Step 5: Deploy to production**
 
 ```bash
 cd ~/clinica-mexico-spa && wrangler deploy
 ```
 
-- [ ] **Step 6: Final commit if any fixes applied**
+- [x] **Step 6: Final commit if any fixes applied**
 
 ```bash
 cd ~/clinica-mexico-spa && git add -p && git commit -m "fix: farmacia responsive final adjustments"
@@ -952,13 +952,13 @@ cd ~/clinica-mexico-spa && git add -p && git commit -m "fix: farmacia responsive
 
 ## Success Criteria Checklist
 
-- [ ] Tablet (768px, 1024px) POS renders as 2-column usable layout
-- [ ] Sidebar accessible via hamburger drawer on tablet
-- [ ] Sidebar collapse toggle works on desktop (persists in localStorage)
-- [ ] Desktop 3-column layout unchanged
-- [ ] All interactive elements ≥44px touch target
-- [ ] Cobrar button always visible without scroll on tablet
-- [ ] Frecuentes accessible via accordion on tablet
-- [ ] Stock badges color-coded (verde/amarillo/rojo)
-- [ ] TypeScript build passes with 0 errors
-- [ ] No regressions in desktop POS flow
+- [x] Tablet (768px, 1024px) POS renders as 2-column usable layout
+- [x] Sidebar accessible via hamburger drawer on tablet
+- [x] Sidebar collapse toggle works on desktop (persists in localStorage)
+- [x] Desktop 3-column layout unchanged
+- [x] All interactive elements ≥44px touch target
+- [x] Cobrar button always visible without scroll on tablet
+- [x] Frecuentes accessible via accordion on tablet
+- [x] Stock badges color-coded (verde/amarillo/rojo)
+- [x] TypeScript build passes with 0 errors
+- [x] No regressions in desktop POS flow
