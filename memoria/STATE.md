@@ -1,6 +1,30 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## COMPLETADO Y CERRADO — sesión 42 (Jul 16): fix recuperación MFA + MCP supabase scope + limpieza de pendientes
+## COMPLETADO Y CERRADO — sesión 43 (Jul 16): fix real MFA (Edge Function) + fix leak MCP global + skill proyectos
+
+**Fix real del bug de sesión 42** (el intento anterior con `unenroll()` cliente fallaba con
+"AAL2 required to unenroll verified factor" — documentado ahí mismo abajo). Solución: nueva
+Edge Function `supabase/functions/mfa-reset/index.ts` (patrón `admin-users/index.ts`, service_role),
+valida que `factorId` pertenezca al `user_id` del JWT antes de borrar con
+`admin.auth.admin.mfa.deleteFactor()`. `MfaEnrollmentGate.tsx` cambiado para invocar la función
+en vez de `unenroll()` directo. Desplegada por CLI (`supabase functions deploy mfa-reset
+--project-ref kyfkvdyxpvpiacyymldc`) y commiteada (`5a3bb03`).
+
+**Fix leak MCP global (recurrencia del incidente 2026-07-14, esta vez en dirección inversa):**
+entrada `supabase` filtrada en scope global `~/.claude.json` (clave `"C:/Users/pablo"`, sin
+subcarpeta de proyecto) apuntaba al ref de `celulas-madre-ventas` (`lwgawlxwrvvbvceugpjw`) y
+pisaba el `.mcp.json` correcto de este repo. Borrada. Nueva skill `~/.claude/skills/proyectos/`
+documenta el stack completo de ambos proyectos (repo, Supabase ref, MCP, memoria) para evitar
+que vuelva a pasar y para no tener que volver a preguntar el stack de cada proyecto al cambiar.
+
+**Hook de seguridad ajustado:** `optimus_preflight.py` (skill `mcp-sentinel`) bloqueaba sin
+excepción posible cualquier archivo nuevo que leyera `SUPABASE_SERVICE_ROLE_KEY` (patrón
+estándar en 30+ Edge Functions del repo). Se agregó soporte de allowlist (`env_vars`) también
+al check `check_sensitive_env`; ver `.security/optimus-allowlist.json` de este repo.
+
+---
+
+## CERRADO — sesión 42 (Jul 16): diagnóstico MFA + MCP supabase scope + limpieza de pendientes
 
 **Movidos a otro proyecto:** 2 pendientes heredados de la sesión 41 (MCP n8n, propuesta
 laboratorio células madre) no eran de este repo — movidos a
