@@ -1451,5 +1451,15 @@
   "1449": "sheet.tsx",
   "1450": "CaducidadesPanel.tsx",
   "1451": "bot_config.ts",
-  "1452": "bot_horarios.ts"
+  "1452": "bot_horarios.ts",
+  "1453": "usePatientClinicalSnapshot.ts",
+  "1454": "avatar.tsx",
+  "1455": "RecentActivityFeed.tsx",
+  "1456": "index.ts",
+  "1457": "ConfiguracionPagos.test.tsx",
+  "1458": "20260716205000_bot_metricas_diarias.sql",
+  "1459": "20260716_conversacion_analisis.sql",
+  "1460": "20260716_conversacion_analisis_cron.sql",
+  "1461": "20260717000001_add_bot_settings_validation.sql",
+  "1462": "verify_bot_metricas_diarias.sql"
 }

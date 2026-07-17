@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grafo D3 — graphify</title>
+    <script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .container { display: flex; height: 100vh; }
+        #graph { flex: 1; background: radial-gradient(circle at 50% 50%, #1a2438 0%, #0f172a 100%); }
+        .panel { width: 380px; background: rgba(30, 41, 59, 0.95); border-left: 1px solid #334155; padding: 18px; overflow-y: auto; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 12px; }
+        .search-box { display: flex; gap: 8px; }
+        .search-box input { flex: 1; padding: 10px 14px; background: rgba(15, 23, 42, 0.7); border: 1px solid #475569; border-radius: 8px; color: #e2e8f0; font-size: 14px; }
+        .search-box input:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 15px rgba(6, 182, 212, 0.3); }
+        .button { padding: 10px 16px; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3); }
+        .button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4); }
+        .stats { background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6)); padding: 14px; border-radius: 8px; border-left: 3px solid #0ea5e9; font-size: 13px; backdrop-filter: blur(5px); }
+        .stats-title { font-weight: 700; margin-bottom: 8px; color: #06b6d4; font-size: 12px; text-transform: uppercase; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .stat-row .value { font-weight: 600; color: #0ea5e9; }
+        .controls { display: flex; gap: 6px; flex-wrap: wrap; }
+        .control-btn { padding: 8px 12px; background: rgba(52, 65, 84, 0.8); color: #cbd5e1; border: 1px solid #475569; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .control-btn:hover { background: rgba(71, 85, 105, 0.9); border-color: #64748b; }
+        .control-btn.active { background: linear-gradient(135deg, #0ea5e9, #06b6d4); color: white; border-color: #0ea5e9; }
+        .legend { background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.5)); padding: 12px; border-radius: 8px; font-size: 12px; border: 1px solid #334155; backdrop-filter: blur(5px); }
+        .legend-title { font-weight: 700; margin-bottom: 6px; color: #06b6d4; font-size: 11px; text-transform: uppercase; }
+        .legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+        .info-panel { background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6)); padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 12px; max-height: 150px; overflow-y: auto; backdrop-filter: blur(5px); }
+        .info-title { font-weight: 700; color: #06b6d4; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; }
+        .loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(15, 23, 42, 0.95); padding: 40px; border-radius: 12px; border: 1px solid #334155; z-index: 1000; backdrop-filter: blur(10px); }
+        .loading-spinner { width: 50px; height: 50px; border: 3px solid rgba(52, 65, 84, 0.3); border-top: 3px solid #0ea5e9; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        svg { width: 100%; height: 100%; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg id="graph"></svg>
+        <div class="panel">
+            <div class="search-box">
+                <input type="text" id="search" placeholder="Buscar..." autofocus>
+                <button class="button" onclick="clearSearch()">✕</button>
+            </div>
+
+            <div class="stats">
+                <div class="stats-title">📊 Estadísticas</div>
+                <div class="stat-row"><span>Nodos:</span><span class="value">7145</span></div>
+                <div class="stat-row"><span>Aristas:</span><span class="value">10333</span></div>
+                <div class="stat-row"><span>Mostrados:</span><span class="value" id="visible">-</span></div>
+            </div>
+
+            <div class="controls">
+                <button class="control-btn active" onclick="fitGraph()">⬆ Fit</button>
+                <button class="control-btn" onclick="resetZoom()">↻ Reset</button>
+                <button class="control-btn" onclick="togglePhysics()" id="physics-btn">⚡ Physics ON</button>
+            </div>
+
+            <div class="legend">
+                <div class="legend-title">🎨 Tipos</div>
+                <div id="legend-items"></div>
+            </div>
+
+            <div class="info-panel">
+                <div class="info-title">📍 Nodo</div>
+                <div id="node-info">Click en nodo</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div style="color: #e2e8f0;">Inicializando D3 grafo...</div>
+        <small style="color: #64748b; margin-top: 8px;">600 nodos con fuerzas</small>
+    </div>
+
+    <script>
+        const colors = {
+            'code': '#3b82f6', 'doc': '#ef4444', 'document': '#ef4444',
+            'concept': '#10b981', 'decision': '#f59e0b', 'learning': '#8b5cf6',
+            'unknown': '#6b7280'
+        };
+
+        let simulation, graph, fullData, physicsOn = true;
+        const width = window.innerWidth - 380, height = window.innerHeight;
+
+        async function loadGraph() {
+            try {
+                const r = await fetch('../graphify-out/2026-07-17/graph.json');
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                fullData = await r.json();
+                initD3Graph();
+            } catch (e) {
+                document.getElementById('loading').innerHTML = '<div style="color: #ef4444;">❌ ' + e.message + '</div>';
+            }
+        }
+
+        function selectTop(nodes, links, count) {
+            const deg = {};
+            nodes.forEach(n => deg[n.id] = 0);
+            links.forEach(l => {
+                if (deg[l.source]) deg[l.source]++;
+                if (deg[l.target]) deg[l.target]++;
+            });
+            const sel = Object.entries(deg).sort((a, b) => b[1] - a[1]).slice(0, count).map(e => e[0]);
+            const set = new Set(sel);
+            return {
+                nodes: nodes.filter(n => set.has(n.id)),
+                links: links.filter(l => set.has(l.source) && set.has(l.target))
+            };
+        }
+
+        function initD3Graph() {
+            const {nodes: topNodes, links: topLinks} = selectTop(fullData.nodes, fullData.links, 500);
+            const nodeMap = new Map(topNodes.map(n => [n.id, n]));
+
+            const svg = d3.select('#graph');
+            const g = svg.append('g');
+
+            simulation = d3.forceSimulation(topNodes)
+                .force('link', d3.forceLink(topLinks).id(d => d.id).distance(30).strength(0.5))
+                .force('charge', d3.forceManyBody().strength(-300).distanceMax(300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide(8));
+
+            const link = g.append('g').selectAll('line')
+                .data(topLinks)
+                .enter()
+                .append('line')
+                .style('stroke', 'rgba(71, 85, 105, 0.2)')
+                .style('stroke-width', 0.8);
+
+            const node = g.append('g').selectAll('circle')
+                .data(topNodes)
+                .enter()
+                .append('circle')
+                .attr('r', 5)
+                .style('fill', d => colors[d.file_type] || colors.unknown)
+                .style('filter', 'drop-shadow(0 0 6px currentColor)')
+                .call(drag(simulation))
+                .on('click', (e, d) => {
+                    e.stopPropagation();
+                    d3.selectAll('circle').style('opacity', 0.4);
+                    d3.select(e.target).style('opacity', 1).attr('r', 8);
+                    document.getElementById('node-info').innerHTML = `
+                        <strong style="color: #0ea5e9;">${d.label}</strong><br>
+                        Tipo: ${d.file_type || 'unknown'}<br>
+                        <span style="font-size: 11px; color: #64748b;">${d.source_file || '-'}</span>
+                    `;
+                });
+
+            svg.on('click', () => {
+                d3.selectAll('circle').style('opacity', 1).attr('r', 5);
+                document.getElementById('node-info').innerHTML = 'Click en nodo';
+            });
+
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+            });
+
+            const zoom = d3.zoom().on('zoom', (e) => {
+                g.attr('transform', e.transform);
+            });
+            svg.call(zoom);
+
+            updateStats(topNodes);
+            renderLegend(topNodes);
+            document.getElementById('loading').style.display = 'none';
+
+            setTimeout(() => {
+                const bounds = g.node().getBBox();
+                const fullWidth = bounds.width, fullHeight = bounds.height;
+                const midX = bounds.x + fullWidth / 2, midY = bounds.y + fullHeight / 2;
+                const scale = Math.min(width / fullWidth, height / fullHeight) * 0.8;
+                svg.call(zoom.transform, d3.zoomIdentity.translate(width / 2, height / 2).scale(scale).translate(-midX, -midY));
+            }, 500);
+        }
+
+        function updateStats(nodes) {
+            document.getElementById('visible').textContent = nodes.length;
+        }
+
+        function renderLegend(nodes) {
+            const types = {};
+            nodes.forEach(n => {
+                const t = n.file_type || 'unknown';
+                types[t] = (types[t] || 0) + 1;
+            });
+            document.getElementById('legend-items').innerHTML = Object.entries(types)
+                .sort((a, b) => b[1] - a[1]).slice(0, 5).map(e => `
+                <div class="legend-item">
+                    <div class="legend-color" style="background: ${colors[e[0]] || colors.unknown}; color: ${colors[e[0]] || colors.unknown};"></div>
+                    <span>${e[0]} (${e[1]})</span>
+                </div>
+            `).join('');
+        }
+
+        function drag(simulation) {
+            return d3.drag()
+                .on('start', (e) => {
+                    if (!e.active) simulation.alphaTarget(0.3).restart();
+                    e.subject.fx = e.subject.x;
+                    e.subject.fy = e.subject.y;
+                })
+                .on('drag', (e) => {
+                    e.subject.fx = e.x;
+                    e.subject.fy = e.y;
+                })
+                .on('end', (e) => {
+                    if (!e.active) simulation.alphaTarget(0);
+                    e.subject.fx = null;
+                    e.subject.fy = null;
+                });
+        }
+
+        function fitGraph() {
+            if (!simulation) return;
+            simulation.alphaTarget(0.3).restart();
+            setTimeout(() => {
+                const svg = d3.select('#graph');
+                const g = svg.select('g');
+                const bounds = g.node().getBBox();
+                const fullWidth = bounds.width, fullHeight = bounds.height;
+                const midX = bounds.x + fullWidth / 2, midY = bounds.y + fullHeight / 2;
+                const scale = Math.min(width / fullWidth, height / fullHeight) * 0.8;
+                svg.transition().duration(750).call(d3.zoom().transform,
+                    d3.zoomIdentity.translate(width / 2, height / 2).scale(scale).translate(-midX, -midY));
+            }, 200);
+        }
+
+        function resetZoom() {
+            d3.select('#graph').transition().duration(750).call(d3.zoom().transform, d3.zoomIdentity.translate(width / 2, height / 2).scale(0.8));
+        }
+
+        function togglePhysics() {
+            physicsOn = !physicsOn;
+            if (physicsOn) {
+                simulation.alphaTarget(0.3).restart();
+                document.getElementById('physics-btn').classList.add('active');
+            } else {
+                simulation.stop();
+                document.getElementById('physics-btn').classList.remove('active');
+            }
+            document.getElementById('physics-btn').textContent = physicsOn ? '⚡ Physics ON' : '⏹ Physics OFF';
+        }
+
+        document.getElementById('search').addEventListener('keyup', e => {
+            const q = e.target.value.toLowerCase();
+            d3.selectAll('circle').style('opacity', q ? 0.2 : 1);
+            if (!q) return;
+            const matching = fullData.nodes.filter(n =>
+                n.id.toLowerCase().includes(q) || n.label.toLowerCase().includes(q)
+            ).slice(0, 1);
+            if (matching.length) {
+                d3.selectAll('circle').filter(d => matching.some(m => m.id === d.id))
+                    .style('opacity', 1)
+                    .attr('r', 8)
+                    .style('filter', 'drop-shadow(0 0 12px ' + (colors[matching[0].file_type] || colors.unknown) + ')');
+            }
+        });
+
+        function clearSearch() { document.getElementById('search').value = ''; d3.selectAll('circle').style('opacity', 1).attr('r', 5); }
+
+        window.addEventListener('load', loadGraph);
+        window.addEventListener('resize', () => location.reload());
+    </script>
+</body>
+</html>

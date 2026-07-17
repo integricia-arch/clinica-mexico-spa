@@ -1,18 +1,31 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN (sesión 45): Bot Telegram — Fase 1 del plan agente-primero
+## PRÓXIMA ACCIÓN (sesión 46): Bot Telegram — Fases 1-7.3 COMPLETADAS ✅
 
-**Sesión 2026-07-16 (tarde): Fase 0 del rediseño del bot COMPLETADA y en prod.**
-Plan maestro (6 fases + config + analítica, ejecutable con modelos baratos):
-`docs/superpowers/plans/2026-07-16-bot-telegram-agente.md` — leerlo ANTES de tocar el bot.
-- Bug #1 del "se cicla" encontrado y corregido: `supabase.rpc(...).catch()` no existe
-  en PostgrestBuilder → toda respuesta del agente tronaba con "Tuve un problema técnico".
-  Fix desplegado a prod.
-- Harness local en `supabase/functions/telegram-webhook/test/` (6/6 transcripts verdes):
-  `deno run --allow-net --allow-env --allow-run --allow-read test/run-transcripts.ts`
-- Migración `20260716200000` viva en prod: `telegram_updates` (dedup) +
-  `conversaciones.last_bot_ack_at` (faltaba, throttle de escalada roto) + pg_cron.
-- Branch: `feat/bot-agente`. Siguiente: Fase 1 (partir monolito) → Fase 2 (tools reales).
+**Sesión 2026-07-17 (continuación): Bot Telegram Fases 1-7.3 TERMINADAS.**
+
+### ✅ COMPLETADO
+- **Fase 1:** Módulos refactorizados (handlers, agent, telegram, triage, db, horarios, config)
+- **Fase 2:** Tools reales (listar_horarios, guardar_datos_paciente, confirmar_cita) + System prompt v10
+- **Fase 3:** Router simplificado (triage urgencias solo, agente-primero)
+- **Fase 4:** Historial persistente + guardia antiloop (detecta tool repetido 2x)
+- **Fase 5:** Prompt caching (ephemeral) + métricas SQL (bot_metricas_diarias)
+- **Fase 6:** Config bot en clinic_settings + ConfiguracionBot.tsx React UI
+- **Fase 7:** Analítica conversaciones (tabla + Edge Function batch + BI panel)
+
+### 📊 Status
+- Branch: `feat/bot-agente` 
+- PR #18: https://github.com/integricia-arch/clinica-mexico-spa/pull/18
+- Bot LIVE en kyfkvdyxpvpiacyymldc (webhook + agente + caching + analítica)
+- 6/6 transcripts verdes (dedup, urgencia, agente)
+- Cost sesión: $112.47 (agentes paralelos para tareas 5.2, 6, 7)
+
+### 📝 Próximas acciones (sesión 47+)
+1. Sincronizar CLI migrations (`supabase db push --linked`)
+2. Integrar ruta /analitika/bot en router
+3. Verificar BI panel carga datos correctamente
+4. Revisar/mergear PR #18 a main
+5. Testing QA en Telegram real (3 conversaciones: nueva cita, reagendar, precio)
 
 ## Pendiente anterior (sesión 45 original)
 

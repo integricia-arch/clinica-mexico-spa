@@ -1355,9 +1355,9 @@
     "semantic_hash": "ed04b3ffaf4d9f5404ef19bf4587f92c"
   },
   "src/lib/repositories/clinicSettingsRepository.ts": {
-    "mtime": 1781476206.2607398,
-    "ast_hash": "69067599227c371d111a0ca027e01536",
-    "semantic_hash": "69067599227c371d111a0ca027e01536"
+    "mtime": 1784306333.24178,
+    "ast_hash": "4b30489b95429855c7003951310b4165",
+    "semantic_hash": ""
   },
   "src/lib/restClient.ts": {
     "mtime": 1781476206.2627497,
@@ -4602,6 +4602,51 @@
   "supabase/functions/telegram-webhook/bot_triage.ts": {
     "mtime": 1784305316.0994866,
     "ast_hash": "ae77456bf01d4b1c144e02bb14cda54f",
+    "semantic_hash": ""
+  },
+  "src/hooks/useBotAnalitika.ts": {
+    "mtime": 1784306477.555505,
+    "ast_hash": "ef148f36939a0663cfccc3fe1de8ff42",
+    "semantic_hash": ""
+  },
+  "src/pages/analitika/AnalitikaBotPanel.tsx": {
+    "mtime": 1784306504.078247,
+    "ast_hash": "71233c031de8609c7f60c64d50a1992e",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/ConfiguracionBot.tsx": {
+    "mtime": 1784306377.4724958,
+    "ast_hash": "3a279585d68167b9a8fc7357fa6269c7",
+    "semantic_hash": ""
+  },
+  "supabase/functions/analizar-conversaciones/index.ts": {
+    "mtime": 1784306435.767882,
+    "ast_hash": "2f8cd96fff33604d27ac848ed398fc34",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716205000_bot_metricas_diarias.sql": {
+    "mtime": 1784306348.8448539,
+    "ast_hash": "1a2e0345d1c2d15b4a5ef875de721930",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716_conversacion_analisis.sql": {
+    "mtime": 1784306366.3805108,
+    "ast_hash": "f49f3b377b3c9a71c1ebb10100ffd290",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716_conversacion_analisis_cron.sql": {
+    "mtime": 1784306579.56303,
+    "ast_hash": "e465ec4f47065b500a997c06d93b5c9e",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260717000001_add_bot_settings_validation.sql": {
+    "mtime": 1784306328.1701045,
+    "ast_hash": "10a325a42719524006d447ebb61296c0",
+    "semantic_hash": ""
+  },
+  "supabase/tests/verify_bot_metricas_diarias.sql": {
+    "mtime": 1784306373.6792629,
+    "ast_hash": "f8f0bc1f12cd32635d0d192cd22d2ef9",
     "semantic_hash": ""
   }
 }
