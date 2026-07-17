@@ -1,0 +1,9 @@
+{
+  "name": "saludo-menu: hola → bienvenida + menú principal",
+  "steps": [
+    {
+      "send": { "text": "hola" },
+      "expect": ["asistente virtual", "¿En qué te puedo ayudar"]
+    }
+  ]
+}

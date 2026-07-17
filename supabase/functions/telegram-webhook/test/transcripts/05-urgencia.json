@@ -1,0 +1,9 @@
+{
+  "name": "urgencia física: contención con 911 y escalamiento (NUNCA cambia)",
+  "steps": [
+    {
+      "send": { "text": "ayúdame no puedo respirar y me duele el pecho" },
+      "expect": ["911", "Recepción ya fue notificada"]
+    }
+  ]
+}

@@ -25,6 +25,10 @@ const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const CLINIC_NAME          = Deno.env.get("CLINIC_NAME") ?? "ClínicaMX";
 
+// Overridables por env para el harness de pruebas local (test/README.md).
+const TELEGRAM_API_BASE  = Deno.env.get("TELEGRAM_API_BASE")  ?? "https://api.telegram.org";
+const ANTHROPIC_API_BASE = Deno.env.get("ANTHROPIC_API_BASE") ?? "https://api.anthropic.com";
+
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const ANTHROPIC_MODEL_MEMORIA = "claude-haiku-4-5-20251001"; // barato: resumen de memoria del paciente
 const MAX_AGENT_ITERATIONS = 8;
@@ -193,7 +197,7 @@ async function manejarConsultaLibre(
   } else {
     // 2. Haiku fallback para padecimientos no mapeados
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch(`${ANTHROPIC_API_BASE}/v1/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -234,7 +238,7 @@ type BotIntent = "booking" | "consulta" | "info" | "gestion" | "humano" | "otro"
 
 async function clasificarIntentHaiku(text: string): Promise<BotIntent> {
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const resp = await fetch(`${ANTHROPIC_API_BASE}/v1/messages`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -389,6 +393,15 @@ Deno.serve(async (req) => {
 });
 
 async function procesarUpdate(update: any) {
+  // Dedup persistente: Telegram reintenta el webhook y el Set in-process no
+  // sobrevive entre isolates. PK de telegram_updates rechaza el duplicado.
+  if (update?.update_id !== undefined) {
+    const { error } = await supabase.from("telegram_updates").insert({ update_id: update.update_id });
+    if (error) {
+      if (error.code === "23505") return; // update ya procesado
+      console.error("dedup insert error (continuando):", error.message ?? error);
+    }
+  }
   if (update.callback_query) return manejarCallback(update.callback_query);
   const msg = update.message;
   if (!msg?.chat || msg.chat.type !== "private") return;
@@ -755,7 +768,7 @@ function detectarUrgencia(text: string): { urgente: boolean; motivo?: string; do
 
 async function triageLLM(text: string): Promise<{ urgente: boolean; tipo?: TipoUrgencia; motivo?: string }> {
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch(`${ANTHROPIC_API_BASE}/v1/messages`, {
       method: "POST",
       headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
@@ -871,7 +884,7 @@ async function manejarCallback(cq: any) {
 }
 
 async function answerCallback(callback_query_id: string) {
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+  await fetch(`${TELEGRAM_API_BASE}/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ callback_query_id }),
@@ -882,7 +895,7 @@ async function answerCallback(callback_query_id: string) {
 // Called after navigation buttons so double-taps on the same button do nothing.
 async function limpiarTeclado(chatId: string, messageId: number) {
   try {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
+    await fetch(`${TELEGRAM_API_BASE}/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }),
@@ -1870,12 +1883,15 @@ async function ejecutarAgenteLoop(conv: any, chatId: string, messages: any[], us
       const text = resp.content.find((b: any) => b.type === "text")?.text?.trim();
       if (text) {
         if (userText && text && userText.length >= 10) {
+          // PostgrestBuilder no implementa .catch (solo .then) — usar .then(ok, err).
+          // Con .catch() esto tronaba con TypeError y TODA respuesta del agente se
+          // convertía en "Tuve un problema técnico" (bug encontrado por el harness).
           supabase.rpc("chat_registrar_pendiente", {
             p_pregunta: userText,
             p_clinic_id: CLINIC_ID || null,
             p_ruta: null,
             p_respuesta: text,
-          } as never).catch(() => {});
+          } as never).then(undefined, () => {});
         }
         return text;
       }
@@ -1958,7 +1974,7 @@ async function buscarServicios(query: string, chatId: string) {
 }
 
 async function llamarClaude(messages: any[], systemPrompt: string = SYSTEM_PROMPT_BASE) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch(`${ANTHROPIC_API_BASE}/v1/messages`, {
     method: "POST",
     headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1024, system: systemPrompt, tools: TOOLS, messages }),
@@ -2194,7 +2210,7 @@ Responde SOLO con JSON válido, sin explicación ni markdown.`;
 
     const input = `MEMORIA ACTUAL:\n${resumenPrevio || "(vacía)"}\n\nCONVERSACIÓN RECIENTE:\n${transcript}\n\nDevuelve la memoria actualizada como JSON:`;
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch(`${ANTHROPIC_API_BASE}/v1/messages`, {
       method: "POST",
       headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({ model: ANTHROPIC_MODEL_MEMORIA, max_tokens: 400, system: systemPromptHaiku, messages: [{ role: "user", content: input }] }),
@@ -2246,7 +2262,7 @@ async function telegramSendMessage(payload: Record<string, unknown>, label: stri
   // First attempt with Markdown. If Telegram rejects malformed entities (400),
   // retry as plain text so dynamic values (names, fechas, errores) never silence the bot.
   const send = (body: Record<string, unknown>) =>
-    fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    fetch(`${TELEGRAM_API_BASE}/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -2333,7 +2349,7 @@ function parseFechaRegex(input: string): string | null {
 async function parseFechaConClaude(input: string): Promise<string | null> {
   if (!ANTHROPIC_API_KEY) return null;
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch(`${ANTHROPIC_API_BASE}/v1/messages`, {
       method: "POST",
       headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({

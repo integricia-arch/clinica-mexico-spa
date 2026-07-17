@@ -1,0 +1,25 @@
+{
+  "name": "wizard-texto-libre: texto libre en await_day_pick → re-manda días (comportamiento ACTUAL rígido, cambia en Fase 3)",
+  "steps": [
+    {
+      "send": { "text": "hola" },
+      "expect": ["¿En qué te puedo ayudar"]
+    },
+    {
+      "send": { "callback_data": "menu_agendar:" },
+      "expect": ["Elige la especialidad"]
+    },
+    {
+      "send": { "callback_data": "cat:derm" },
+      "expect": ["Elige un servicio"]
+    },
+    {
+      "send": { "callback_data": "srv:11111111-1111-1111-1111-111111111111" },
+      "expect": ["Qué día te viene mejor"]
+    },
+    {
+      "send": { "text": "el martes como a las cuatro de la tarde porfa" },
+      "expect": ["Qué día te viene mejor"]
+    }
+  ]
+}
