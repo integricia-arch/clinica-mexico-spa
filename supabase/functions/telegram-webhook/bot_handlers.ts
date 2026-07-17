@@ -2,6 +2,7 @@ import { supabase, processedCallbackIds } from "./bot_config.ts";
 import { obtenerSesion, upsertSesion } from "./bot_db.ts";
 import { ejecutarAgenteLoop } from "./bot_agent.ts";
 import { enviarTelegram, answerCallback } from "./bot_telegram.ts";
+import { detectarUrgencia, triageLLM, mensajeContencion } from "./bot_triage.ts";
 
 export async function manejarCallback(cq: any) {
   const callbackQueryId = cq.id;
@@ -12,6 +13,20 @@ export async function manejarCallback(cq: any) {
 }
 
 export async function manejarMensaje(chatId: string, rawMsg: any, text: string) {
+  // Triage interceptor (seguridad)
+  let triage = detectarUrgencia(text ?? "");
+  if (!triage.urgente && (text ?? "").trim().length >= 10) {
+    const llm = await triageLLM(text ?? "");
+    if (llm.urgente) triage = { urgente: true, motivo: llm.motivo, dolor: triage.dolor, tipo: llm.tipo };
+  }
+
+  if (triage.urgente) {
+    const aviso = mensajeContencion(triage.tipo);
+    await enviarTelegram(chatId, aviso);
+    return;
+  }
+
+  // Agente maneja todo demás
   const sesion = await obtenerSesion(chatId);
   const messages = [{ role: "user", content: text }];
 

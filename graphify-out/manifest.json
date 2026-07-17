@@ -2155,8 +2155,8 @@
     "semantic_hash": "0b97d96e5ac4a3f81bf02dffb97f1288"
   },
   "supabase/functions/telegram-webhook/index.ts": {
-    "mtime": 1784301501.9311166,
-    "ast_hash": "eac55c004b68a7316d4cfed4738eb662",
+    "mtime": 1784304694.5875242,
+    "ast_hash": "e7620a2f364f27e5f1b69b0166474ffd",
     "semantic_hash": ""
   },
   "supabase/functions/verify-tenant-code/index.ts": {
@@ -4510,18 +4510,18 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/test/transcripts/01-saludo-menu.json": {
-    "mtime": 1784249317.6947637,
-    "ast_hash": "62e10bbc2ddd5f6e0bf6070fab16f0ff",
+    "mtime": 1784304789.8063533,
+    "ast_hash": "6879ea4ebef3b5b32a4e457c1671ad5d",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/test/transcripts/02-agendar-directo.json": {
-    "mtime": 1784249319.3415933,
-    "ast_hash": "487d73035dc95831ad6481dbc6d7a78c",
+    "mtime": 1784304789.8440347,
+    "ast_hash": "b7837f2cce7bf598d5c9f2264fbdf4e6",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/test/transcripts/03-wizard-texto-libre.json": {
-    "mtime": 1784249443.4431055,
-    "ast_hash": "ca17f7a95930330e93fa856c17173e9b",
+    "mtime": 1784304789.8804183,
+    "ast_hash": "ef598431ee90503171ad337f9988edb8",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/test/transcripts/04-despedida.json": {
@@ -4530,13 +4530,13 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/test/transcripts/05-urgencia.json": {
-    "mtime": 1784249327.4059083,
-    "ast_hash": "f57fd0c12f86674f7acbc660ba58f840",
+    "mtime": 1784304805.690845,
+    "ast_hash": "687e6c3854e5fb1c08cef38ef55b6fe0",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/test/transcripts/06-dedup-updates.json": {
-    "mtime": 1784249665.1573596,
-    "ast_hash": "7ecdf747835dd6230910936897523667",
+    "mtime": 1784304805.723278,
+    "ast_hash": "cb3bdd8c4c85202a13af4e22207ddea5",
     "semantic_hash": ""
   },
   "supabase/migrations/20260709000006_subscription_cancel_at.sql": {
@@ -4560,8 +4560,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_agent.ts": {
-    "mtime": 1784302226.7625363,
-    "ast_hash": "9d53a4e9857e2e364c08153a114a906e",
+    "mtime": 1784304746.3087394,
+    "ast_hash": "cfd21303fcf90643830f64124bdffc47",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_config.ts": {
@@ -4575,13 +4575,13 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_handlers.ts": {
-    "mtime": 1784301096.8766325,
-    "ast_hash": "059909f99e92b852b90c5b36e7903215",
+    "mtime": 1784304686.1387756,
+    "ast_hash": "6d09b9c8f6c5312dbf63ce27a505c9ad",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_telegram.ts": {
-    "mtime": 1784301096.7980688,
-    "ast_hash": "b02896cdac037585895bb21da8354fa1",
+    "mtime": 1784304659.3911145,
+    "ast_hash": "fd78a7427a8a4f973a747fb5c87a85f5",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_types.ts": {
@@ -4595,8 +4595,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_horarios.ts": {
-    "mtime": 1784301936.6590872,
-    "ast_hash": "8bb86351e3aa25f0b46f1285a6eab005",
+    "mtime": 1784304761.1380694,
+    "ast_hash": "9d0a0f1316ac27152cb548953c544cfe",
     "semantic_hash": ""
   }
 }

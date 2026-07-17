@@ -1,16 +1,16 @@
 # Graph Report - clinica-mexico-spa  (2026-07-17)
 
 ## Corpus Check
-- 899 files · ~734,996 words
+- 899 files · ~735,092 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 7188 nodes · 10472 edges · 1442 communities (576 shown, 866 thin omitted)
+- 7187 nodes · 10472 edges · 1441 communities (576 shown, 865 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 40 edges (avg confidence: 0.65)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `217322e8`
+- Built from commit: `2e3016a6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -436,7 +436,6 @@
 - useInsumos.ts
 - CorteTurno.tsx
 - LibroControlControlados
-- SYSTEM_PROMPT_BASE
 - useMfaEnforcement.ts
 - Completado (Jul 6, 2026 — sesión 20 — costeo/pricing + manuales 29 pantallas + RLS Fase 1 + pulido /pitch — sesión MUY cara, ~$993)
 - Completado (Jun 13, 2026 — sesión 9)
@@ -1354,7 +1353,7 @@
 - **Auditoría de seguridad Supabase: hallazgo, cierre P1/P2/P3, checklist SECURITY DEFINER** — memoria_diario_2026_07_04_sesion18, memoria_diario_2026_07_04_sesion18_cierre, memoria_diario_2026_07_04_sesion18_security_definer_audit [EXTRACTED 0.90]
 - **Pipeline CFDI: parseo, matching y 4-way match anti-fraude** — memoria_proyectos_investigacion-cfdi-xml-4way-match-antirobo_cfdi_parse_edge_function, memoria_proyectos_investigacion-cfdi-xml-4way-match-antirobo_matching_cascada, memoria_proyectos_investigacion-cfdi-xml-4way-match-antirobo_4way_match_engine [EXTRACTED 0.95]
 
-## Communities (1442 total, 866 thin omitted)
+## Communities (1441 total, 865 thin omitted)
 
 ### Community 0 - "src/pages/ajustes"
 Cohesion: 0.14
@@ -3057,9 +3056,9 @@ Nodes (6): qrcode, qrcode, calcAge(), PrescriptionPrintData, PrescriptionPrintVi
   public/placeholder.svg · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **4268 isolated node(s):** `TOOLS`, `SYSTEM_PROMPT_BASE`, `ClinicSchedule`, `MemoriaPaciente`, `MEMORIA_DEFAULT` (+4263 more)
+- **4267 isolated node(s):** `TOOLS`, `ClinicSchedule`, `MemoriaPaciente`, `MEMORIA_DEFAULT`, `SCHEDULE_DEFAULT` (+4262 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **866 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **865 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -3074,7 +3073,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Why does `qrcode` connect `@radix-ui/react-avatar` to `package`?**
   _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **What connects `TOOLS`, `SYSTEM_PROMPT_BASE`, `ClinicSchedule` to the rest of the system?**
-  _4268 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `TOOLS`, `ClinicSchedule`, `MemoriaPaciente` to the rest of the system?**
+  _4267 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `src/pages/ajustes` be split into smaller, more focused modules?**
   _Cohesion score 0.14166666666666666 - nodes in this community are weakly interconnected._
