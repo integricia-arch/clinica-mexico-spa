@@ -45,19 +45,20 @@ todos por el mismo patrón — cuidado si se vuelve a tocar RPCs de este módulo
   fantasma. + `verify_supervisor_pin` sin check de que el caller pertenezca a la clínica
   (oráculo de fuerza bruta de PIN cross-tenant). Ambos fixed.
 
+**Cerrado:**
+- [x] Merge `worktree-corte-caja-gaps` → `main` (fast-forward, 18 archivos, rama borrada).
+- [x] Aplicadas las 6 migraciones a Supabase (`kyfkvdyxpvpiacyymldc`) — `db push` chocó
+      con drift de historial no relacionado (migración `20260709000001` con entrada
+      duplicada); se aplicaron directo vía `supabase db query --linked --file` (patrón
+      CLAUDE.md) y se marcó el historial con `migration repair --status applied` para
+      las 6 nuevas + `--status reverted` para 8 entradas remote-only de Lovable
+      (documentadas en el error del CLI, nada más tocado). Verificado con
+      `SELECT proname FROM pg_proc` que las 6 RPCs existen vivas:
+      `verify_supervisor_pin`, `pharmacy_register_return`, `turno_close`,
+      `turno_fondo_movimiento`, `turno_open`, `pharmacy_fondo_movimiento`.
+
 **Pendiente antes de dar el punto 3 por cerrado:**
-- [ ] Mergear `worktree-corte-caja-gaps` a `main` (branch en worktree
-      `.claude/worktrees/corte-caja-gaps`, 13 commits, `1209a3d..1e115f7`).
-- [ ] Aplicar las 6 migraciones nuevas a Supabase (`supabase db push --linked`,
-      proyecto `kyfkvdyxpvpiacyymldc`) — **ninguna se aplicó en esta sesión**, el
-      worktree no tenía credenciales Supabase. Migraciones:
-      `20260716150000_verify_supervisor_pin.sql` (+fix en `1e115f7`),
-      `20260716150100_pharmacy_register_return_pin.sql`,
-      `20260716150200_cash_drop.sql`,
-      `20260716150300_pharmacy_cash_drop.sql`,
-      `20260716150400_notes_required_on_diff.sql` (+fix en `1e115f7`),
-      `20260716150500_turno_open_rpc.sql`.
-- [ ] Correr `mcp__supabase__get_advisors(type="security")` después de aplicar.
+- [ ] Correr `mcp__supabase__get_advisors(type="security")`.
 - [ ] Verificación e2e con browser real (login real, devolución con PIN, cash drop,
       cierre con diferencia sin notas, abrir turno general con conteo ciego).
 - [ ] **Gap conocido, NO corregido en esta rama** (fuera de scope, requiere confirmar
