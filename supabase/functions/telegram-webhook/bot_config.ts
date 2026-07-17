@@ -40,3 +40,4 @@ export const TOOLS = [
   { name: "escalar_a_humano", description: "Escalar", input_schema: { type: "object", properties: { razon: { type: "string" } }, required: ["razon"] } },
 ];
 
+
