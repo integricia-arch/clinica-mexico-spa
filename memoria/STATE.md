@@ -1,6 +1,20 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN (sesión 45)
+## PRÓXIMA ACCIÓN (sesión 45): Bot Telegram — Fase 1 del plan agente-primero
+
+**Sesión 2026-07-16 (tarde): Fase 0 del rediseño del bot COMPLETADA y en prod.**
+Plan maestro (6 fases + config + analítica, ejecutable con modelos baratos):
+`docs/superpowers/plans/2026-07-16-bot-telegram-agente.md` — leerlo ANTES de tocar el bot.
+- Bug #1 del "se cicla" encontrado y corregido: `supabase.rpc(...).catch()` no existe
+  en PostgrestBuilder → toda respuesta del agente tronaba con "Tuve un problema técnico".
+  Fix desplegado a prod.
+- Harness local en `supabase/functions/telegram-webhook/test/` (6/6 transcripts verdes):
+  `deno run --allow-net --allow-env --allow-run --allow-read test/run-transcripts.ts`
+- Migración `20260716200000` viva en prod: `telegram_updates` (dedup) +
+  `conversaciones.last_bot_ack_at` (faltaba, throttle de escalada roto) + pg_cron.
+- Branch: `feat/bot-agente`. Siguiente: Fase 1 (partir monolito) → Fase 2 (tools reales).
+
+## Pendiente anterior (sesión 45 original)
 
 **Sesión 44 cerrada por costo ($109+, CRITICAL).** Punto 3 ("corte de caja") de los 4
 puntos: cerrado — mergeado a main, 6 migraciones aplicadas y verificadas vivas en
