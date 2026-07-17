@@ -4560,8 +4560,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_agent.ts": {
-    "mtime": 1784304746.3087394,
-    "ast_hash": "cfd21303fcf90643830f64124bdffc47",
+    "mtime": 1784305488.5971804,
+    "ast_hash": "081782482f5272ef4c0cb8920f050ad0",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_config.ts": {
@@ -4570,13 +4570,13 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_db.ts": {
-    "mtime": 1784302154.3861957,
-    "ast_hash": "376aef641bb4eca78e1eb13919213d9b",
+    "mtime": 1784305469.7322333,
+    "ast_hash": "c5d0270d27a525af6e01a7566061a108",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_handlers.ts": {
-    "mtime": 1784305327.4074516,
-    "ast_hash": "36341953f65d712a10a13fd2724f548a",
+    "mtime": 1784305499.0210736,
+    "ast_hash": "e379a84537b872e8bb53d0179d5315b0",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_telegram.ts": {

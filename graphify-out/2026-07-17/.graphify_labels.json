@@ -743,7 +743,6 @@
   "741": "3.1 SAP Business One — Módulo MM/Purchasing",
   "742": "PrescriptionPrintView.tsx",
   "743": "StripePaymentModal.tsx",
-  "744": "HelpChatWidget.tsx",
   "745": "session-sync",
   "746": "Email y notificaciones",
   "747": "15. Landing page propuesta",
@@ -778,8 +777,6 @@
   "776": "2026-07-10 — sesión 36",
   "777": "Main SaaS deployment (Cloudflare Workers, integrika.mx)",
   "778": "2026-07-08-sesion23.md",
-  "779": "@radix-ui/react-avatar",
-  "780": "input-otp.tsx",
   "781": "README.md",
   "782": "20260716150200_cash_drop.sql",
   "783": "20260716150400_notes_required_on_diff.sql",
@@ -1444,8 +1441,5 @@
   "1442": "smoke.sql",
   "1443": "SYNC_WORKFLOW.md — Workflow Sincronizacion Lovable <-> Local",
   "1444": "20260716200000_bot_fase0_dedup_ack.sql",
-  "1445": "20260709000006_subscription_cancel_at.sql",
-  "1446": "use-mobile.tsx",
-  "1448": "toggle-group.tsx",
-  "1449": "usePatientClinicalSnapshot.ts"
+  "1445": "20260709000006_subscription_cancel_at.sql"
 }

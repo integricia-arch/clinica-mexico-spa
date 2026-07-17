@@ -21,8 +21,13 @@ export async function ejecutarAgenteLoop(chatId: string, conversacionId: string,
   }
 
   const systemPrompt = SYSTEM_PROMPT_BASE;
+  const ejecutadosEnCorrida = new Set<string>();
+  let forceNoTools = false;
+
   for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
-    const resp = await llamarClaude(messages, systemPrompt);
+    // Agregar systemPrompt sin tools si se detectó loop
+    const promptActual = forceNoTools ? systemPrompt.replace(/TOOLS.*SYSTEM/, "SYSTEM") : systemPrompt;
+    const resp = await llamarClaude(messages, promptActual);
 
     if (resp.stop_reason === "end_turn" || resp.stop_reason === "stop_sequence") {
       const text = resp.content.find((b: any) => b.type === "text")?.text?.trim();
@@ -50,16 +55,32 @@ export async function ejecutarAgenteLoop(chatId: string, conversacionId: string,
       messages.push({ role: "assistant", content: resp.content });
       const toolResults: any[] = [];
       let menuEnviado = false;
+      let loopDetectado = false;
+
       for (const tu of toolUses) {
-        const result = await ejecutarToolClaude(tu.name, tu.input, chatId);
-        toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result), is_error: !!(result as any).error });
-        // Guardar acción en historial
-        const accionResumen = tu.name === "listar_horarios" ? `mostró horarios` :
-                              tu.name === "guardar_datos_paciente" ? `guardó datos paciente` :
-                              tu.name === "confirmar_cita" ? `confirmó cita` : tu.name;
-        await guardarAccion(conversacionId, accionResumen);
-        if (tu.name === "mostrar_menu_principal" || tu.name === "mostrar_menu_categorias") menuEnviado = true;
+        const toolKey = `${tu.name}:${JSON.stringify(tu.input)}`;
+        if (ejecutadosEnCorrida.has(toolKey)) {
+          // Repetición detectada
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tu.id,
+            content: JSON.stringify({ error: "Ya ejecutaste este tool. Responde con texto." }),
+            is_error: true,
+          });
+          loopDetectado = true;
+        } else {
+          ejecutadosEnCorrida.add(toolKey);
+          const result = await ejecutarToolClaude(tu.name, tu.input, chatId);
+          toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result), is_error: !!(result as any).error });
+          const accionResumen = tu.name === "listar_horarios" ? `mostró horarios` :
+                                tu.name === "guardar_datos_paciente" ? `guardó datos paciente` :
+                                tu.name === "confirmar_cita" ? `confirmó cita` : tu.name;
+          await guardarAccion(conversacionId, accionResumen);
+          if (tu.name === "mostrar_menu_principal" || tu.name === "mostrar_menu_categorias") menuEnviado = true;
+        }
       }
+
+      if (loopDetectado) forceNoTools = true;
       if (menuEnviado) return "";
       messages.push({ role: "user", content: toolResults });
       continue;

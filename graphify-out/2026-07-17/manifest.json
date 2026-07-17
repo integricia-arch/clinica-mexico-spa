@@ -4530,8 +4530,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/test/transcripts/05-urgencia.json": {
-    "mtime": 1784304805.690845,
-    "ast_hash": "687e6c3854e5fb1c08cef38ef55b6fe0",
+    "mtime": 1784305351.123582,
+    "ast_hash": "5f770e02af0407db25b07290bc777aa5",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/test/transcripts/06-dedup-updates.json": {
@@ -4575,8 +4575,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_handlers.ts": {
-    "mtime": 1784304686.1387756,
-    "ast_hash": "6d09b9c8f6c5312dbf63ce27a505c9ad",
+    "mtime": 1784305327.4074516,
+    "ast_hash": "36341953f65d712a10a13fd2724f548a",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_telegram.ts": {
@@ -4597,6 +4597,11 @@
   "supabase/functions/telegram-webhook/bot_horarios.ts": {
     "mtime": 1784304761.1380694,
     "ast_hash": "9d0a0f1316ac27152cb548953c544cfe",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/bot_triage.ts": {
+    "mtime": 1784305316.0994866,
+    "ast_hash": "ae77456bf01d4b1c144e02bb14cda54f",
     "semantic_hash": ""
   }
 }
