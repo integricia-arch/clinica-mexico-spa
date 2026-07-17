@@ -1,11 +1,30 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN (sesión 44)
+## PRÓXIMA ACCIÓN (sesión 45)
 
-Punto 3 ("corte de caja") de los 4 puntos: **implementado, en worktree
-`corte-caja-gaps` (branch `worktree-corte-caja-gaps`), commits `1209a3d..1e115f7`
-(13 commits), pendiente merge a main + aplicar migraciones a Supabase antes de
-cerrar.** Sigue abajo el detalle. Punto 4 sigue pendiente, ver más abajo.
+**Sesión 44 cerrada por costo ($109+, CRITICAL).** Punto 3 ("corte de caja") de los 4
+puntos: cerrado — mergeado a main, 6 migraciones aplicadas y verificadas vivas en
+Supabase (`kyfkvdyxpvpiacyymldc`). Detalle abajo. Punto 4 sigue pendiente, ver abajo.
+
+**Barrido de pendientes (sesión 44, incompleto por costo) — punto de partida para
+sesión 45, usar modelo barato (Fable 5):**
+- Candidato más maduro: `memoria/proyectos/gaps-almacen-compras-proveedores.md` — ya
+  trae tabla de gaps (CRÍTICO/ALTO/MEDIO/BAJO) + plan de fases armado, mismo formato
+  que el de corte-caja que sí sirvió hoy. Gaps CRÍTICOS marcados ahí: IVA medicamentos
+  (0% vs 16%, riesgo multa SAT), control medicamentos controlados (riesgo penal LGS),
+  lotes/caducidades (riesgo penal COFEPRIS NOM-072), EFOS antes de pagar (CFF 69-B),
+  3-way match compras.
+- **NO verificado contra código todavía** — mismo error que casi se repite hoy con
+  corte-caja: STATE.md/docs de investigación viejos dicen "no implementado" pero a
+  veces ya está. Antes de armar spec/plan: grep/Read el código real
+  (`src/features/almacen`, `src/features/compras`, migraciones de `medicamentos`,
+  `lotes_medicamento`, `proveedores`) y tachar lo que ya exista.
+- Otros 9 docs en `memoria/proyectos/` con "pendiente" sin revisar (no priorizados
+  todavía, listar sesión 45 si hace falta): `investigacion-almacen-compras-proveedores.md`,
+  `investigacion-cfdi-xml-4way-match-antirobo.md`, `investigacion-enfermeria-operativa.md`,
+  `investigacion-operativa-contable-compras.md`, `investigacion-auto-abasto-proveedor-preferido.md`,
+  `inteligencia-procesos-flujo1.md`, `integrika-videos-pipeline.md`,
+  `seguridad-auditoria-supabase-2026-07-04.md`.
 
 ### Corte de caja — 6 gaps reales cerrados (sesión 44), spec+plan+subagent-driven-dev
 
