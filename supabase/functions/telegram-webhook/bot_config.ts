@@ -1,4 +1,4 @@
-export const SYSTEM_PROMPT_BASE = \Eres asistente de AGENDAMIENTO de clínica multiespecialidad en México.
+export const SYSTEM_PROMPT_BASE = `Eres asistente de AGENDAMIENTO de clínica multiespecialidad en México.
 
 TU ROL: Ayudar a agendar citas, informar horarios/precios y conectar con recepción. NO eres médico.
 
@@ -16,7 +16,7 @@ REGLAS DURAS:
 - BOTONES: Usa guardar_datos_paciente para slot-filling conversacional, confirmar_cita para confirmación.
 
 ENTENDER AL USUARIO: Lee intención y estado emocional. Si frustración/confusión → valida, luego guía con paso claro.
-\;
+`;
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getDoctorCalendar, getFreeBusy, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, type BusySlot } from "./google-calendar.ts";
@@ -54,11 +54,39 @@ export const TOOLS = [
       required: ["servicio_id"]
     }
   },
+  {
+    name: "guardar_datos_paciente",
+    description: "Guarda datos del paciente (nombre, apellidos, fecha_nacimiento, sexo, telefono, email, alergias). Devuelve { guardado, faltan }",
+    input_schema: {
+      type: "object",
+      properties: {
+        nombre: { type: "string" },
+        apellidos: { type: "string" },
+        fecha_nacimiento: { type: "string" },
+        sexo: { type: "string" },
+        telefono: { type: "string" },
+        email: { type: "string" },
+        alergias: { type: "string" }
+      }
+    }
+  },
+  {
+    name: "confirmar_cita",
+    description: "Confirma una cita si el usuario dio consentimiento. Input: { slot_key }",
+    input_schema: {
+      type: "object",
+      properties: {
+        slot_key: { type: "string" }
+      },
+      required: ["slot_key"]
+    }
+  },
   { name: "mostrar_menu_principal", description: "Menú principal", input_schema: { type: "object", properties: {} } },
   { name: "mostrar_menu_categorias", description: "Especialidades", input_schema: { type: "object", properties: {} } },
   { name: "buscar_servicios", description: "Buscar", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
   { name: "escalar_a_humano", description: "Escalar", input_schema: { type: "object", properties: { razon: { type: "string" } }, required: ["razon"] } },
 ];
+
 
 
 
