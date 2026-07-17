@@ -97,7 +97,8 @@ BEGIN
     WHERE turno_id = p_turno_id AND tipo = 'cobro' AND estado = 'pagado';
   END IF;
 
-  SELECT COALESCE(SUM(CASE WHEN tipo = 'egreso' THEN -monto ELSE monto END), 0)
+  -- 'egreso' y 'cash_drop' restan (salida física de efectivo); solo 'ingreso' suma.
+  SELECT COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE -monto END), 0)
     INTO v_fondos_net
   FROM public.fondos_movimientos
   WHERE turno_id = p_turno_id;

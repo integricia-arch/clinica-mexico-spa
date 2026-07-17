@@ -17,6 +17,10 @@ DECLARE
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'No autenticado'; END IF;
 
+  IF NOT public.user_has_clinic_access(auth.uid(), p_clinic_id) THEN
+    RAISE EXCEPTION 'Sin acceso a esta clínica';
+  END IF;
+
   SELECT EXISTS (
     SELECT 1 FROM public.clinic_memberships
      WHERE clinic_id = p_clinic_id
