@@ -7,7 +7,13 @@ export async function llamarClaude(messages: any[], systemPrompt: string = SYSTE
   const res = await fetch(`${ANTHROPIC_API_BASE}/v1/messages`, {
     method: "POST",
     headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1024, system: systemPrompt, tools: TOOLS, messages }),
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 1024,
+      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+      tools: TOOLS.map(t => ({ ...t, cache_control: { type: "ephemeral" } })),
+      messages,
+    }),
   });
   if (!res.ok) throw new Error("Anthropic " + res.status + ": " + (await res.text()));
   return await res.json();
