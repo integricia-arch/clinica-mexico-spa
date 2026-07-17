@@ -4560,8 +4560,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_agent.ts": {
-    "mtime": 1784305488.5971804,
-    "ast_hash": "081782482f5272ef4c0cb8920f050ad0",
+    "mtime": 1784305882.864578,
+    "ast_hash": "bc0a00b736b1a8a11c6a5d8c07abc269",
     "semantic_hash": ""
   },
   "supabase/functions/telegram-webhook/bot_config.ts": {

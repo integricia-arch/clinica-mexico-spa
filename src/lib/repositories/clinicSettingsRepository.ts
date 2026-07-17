@@ -22,7 +22,8 @@ export type SettingsSection =
   | "auditoria"
   | "permisos"
   | "caja"
-  | "email";
+  | "email"
+  | "bot";
 
 // La tabla aún no está en los tipos generados; acceso casteado y aislado aquí.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
