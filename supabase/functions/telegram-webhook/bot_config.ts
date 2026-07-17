@@ -21,8 +21,22 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 export const processedCallbackIds = new Set<string>();
 
 export const TOOLS = [
+  {
+    name: "listar_horarios",
+    description: "Lista horarios disponibles para un servicio. Input: { servicio_id, dias_adelante?, max_horarios? }",
+    input_schema: {
+      type: "object",
+      properties: {
+        servicio_id: { type: "string" },
+        dias_adelante: { type: "number" },
+        max_horarios: { type: "number" }
+      },
+      required: ["servicio_id"]
+    }
+  },
   { name: "mostrar_menu_principal", description: "Menú principal", input_schema: { type: "object", properties: {} } },
   { name: "mostrar_menu_categorias", description: "Especialidades", input_schema: { type: "object", properties: {} } },
   { name: "buscar_servicios", description: "Buscar", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
   { name: "escalar_a_humano", description: "Escalar", input_schema: { type: "object", properties: { razon: { type: "string" } }, required: ["razon"] } },
 ];
+
