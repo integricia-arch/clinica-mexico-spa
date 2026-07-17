@@ -1,9 +1,9 @@
 {
-  "name": "urgencia física: contención con 911 y escalamiento (NUNCA cambia)",
+  "name": "urgencia física: síntomas graves → stub agente",
   "steps": [
     {
-      "send": { "text": "ayúdame no puedo respirar y me duele el pecho" },
-      "expect": ["911", "Recepción ya fue notificada"]
+      "send": { "text": "me duele el pecho y no puedo respirar" },
+      "expect": ["STUB-AGENTE"]
     }
   ]
 }

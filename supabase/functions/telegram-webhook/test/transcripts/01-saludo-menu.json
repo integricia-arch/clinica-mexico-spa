@@ -1,9 +1,9 @@
 {
-  "name": "saludo-menu: hola → bienvenida + menú principal",
+  "name": "saludo-menu: hola → agente",
   "steps": [
     {
       "send": { "text": "hola" },
-      "expect": ["asistente virtual", "¿En qué te puedo ayudar"]
+      "expect": ["STUB-AGENTE"]
     }
   ]
 }

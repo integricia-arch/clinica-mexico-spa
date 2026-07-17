@@ -1,9 +1,9 @@
 {
-  "name": "agendar-directo: texto libre de cita → menú categorías (comportamiento ACTUAL, cambia en Fase 3)",
+  "name": "agendar-directo: texto libre de cita → agente",
   "steps": [
     {
       "send": { "text": "quiero una cita con dermatólogo mañana" },
-      "expect": ["Elige la especialidad"]
+      "expect": ["STUB-AGENTE"]
     }
   ]
 }

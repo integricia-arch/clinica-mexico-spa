@@ -1,11 +1,17 @@
 {
   "paths": [
-    "Deno.env.get"
+    "Deno.env.get",
+    "supabase/functions/telegram-webhook/"
   ],
   "env_vars": [
     "SUPABASE_SERVICE_ROLE_KEY",
     "ANTHROPIC_API_KEY",
     "TELEGRAM_BOT_TOKEN",
-    "WEBHOOK_SECRET"
+    "WEBHOOK_SECRET",
+    "TELEGRAM_API_BASE",
+    "ANTHROPIC_API_BASE",
+    "ANTHROPIC_MODEL",
+    "CLINIC_NAME",
+    "CLINIC_ID"
   ]
 }

@@ -1,5 +1,5 @@
 declare var EdgeRuntime: any;
-import { TELEGRAM_BOT_TOKEN, WEBHOOK_SECRET, supabase, processedCallbackIds } from "./bot_config.ts";
+import { WEBHOOK_SECRET } from "./bot_config.ts";
 import { procesarUpdate } from "./bot_handlers.ts";
 
 Deno.serve(async (req) => {

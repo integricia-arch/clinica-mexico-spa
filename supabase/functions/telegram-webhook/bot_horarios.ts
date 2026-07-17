@@ -76,22 +76,23 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7, max_h
     const dd = String(diaMx.getUTCDate()).padStart(2, "0");
 
     for (const doc of doctores) {
-      const [sh, sm] = doc.doctor.horario_inicio.split(":").map(Number);
-      const [eh, em] = doc.doctor.horario_fin.split(":").map(Number);
+      const doctor = (doc as any).doctor;
+      const [sh, sm] = doctor.horario_inicio.split(":").map(Number);
+      const [eh, em] = doctor.horario_fin.split(":").map(Number);
       const hi = String(sh).padStart(2, "0") + ":" + String(sm).padStart(2, "0");
       const hf = String(eh).padStart(2, "0") + ":" + String(em).padStart(2, "0");
-      const inicioDia = new Date(\\-\-\T\:00-06:00\);
-      const finDia = new Date(\\-\-\T\:00-06:00\);
+      const inicioDia = new Date(`${yyyy}-${mm}-${dd}T${hi}:00${MX_TZ_OFFSET}`);
+      const finDia = new Date(`${yyyy}-${mm}-${dd}T${hf}:00${MX_TZ_OFFSET}`);
 
       for (let t = inicioDia.getTime(); t + durMin * 60000 <= finDia.getTime(); t += durMin * 60000) {
         const slotIni = new Date(t);
         const slotFin = new Date(t + durMin * 60000);
         if (slotIni < ahora) continue;
         const conflicto = ocupadas.find((a: any) =>
-          a.doctor_id === doc.doctor_id && new Date(a.fecha_inicio) < slotFin && new Date(a.fecha_fin) > slotIni
+          a.doctor_id === (doc as any).doctor_id && new Date(a.fecha_inicio) < slotFin && new Date(a.fecha_fin) > slotIni
         );
         if (conflicto) continue;
-        const googleBusy = gcalBusy[doc.doctor_id] ?? [];
+        const googleBusy = gcalBusy[(doc as any).doctor_id] ?? [];
         const googleConflicto = googleBusy.some((b) => {
           const bs = new Date(b.start).getTime();
           const be = new Date(b.end).getTime();
@@ -99,8 +100,8 @@ async function listarHorariosDisponibles({ servicio_id, dias_adelante = 7, max_h
         });
         if (googleConflicto) continue;
         horarios.push({
-          doctor_id: doc.doctor_id,
-          doctor_nombre: \Dr(a). \ \\,
+          doctor_id: (doc as any).doctor_id,
+          doctor_nombre: `Dr(a). ${doctor.nombre} ${doctor.apellidos}`,
           fecha_inicio: slotIni.toISOString(),
           fecha_local: slotIni.toLocaleString("es-MX", {
             timeZone: "America/Mexico_City", weekday: "short", day: "numeric", month: "short",
