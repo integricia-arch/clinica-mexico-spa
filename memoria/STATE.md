@@ -2,27 +2,82 @@
 
 ## PRÓXIMA ACCIÓN (sesión 44)
 
-Pablo dijo "vamos por orden con los 4 puntos hasta cerrar" — puntos 1 y 2 cerrados esta
-sesión (43). Seguir en orden:
+Punto 3 ("corte de caja") de los 4 puntos: **implementado, en worktree
+`corte-caja-gaps` (branch `worktree-corte-caja-gaps`), commits `1209a3d..1e115f7`
+(13 commits), pendiente merge a main + aplicar migraciones a Supabase antes de
+cerrar.** Sigue abajo el detalle. Punto 4 sigue pendiente, ver más abajo.
 
-3. **Corte de caja — CORRECCIÓN DE ALCANCE (sesión 44)**: el plan "6 pasos desde cero"
-   citado en CLAUDE.md/`project_corte-caja-arquitectura.md` (archivo que YA NO EXISTE) estaba
-   desactualizado. Verificado en código real: conteo ciego apertura+cierre
-   (`TurnoOpenWizard.tsx`, `TurnoCloseWizard.tsx`), denominación (`DenominacionCounter.tsx`),
-   folio Z, umbral+PIN supervisor, `fondos_movimientos`, corte X — **todo esto YA ESTÁ
-   IMPLEMENTADO**. Ver `memoria/proyectos/investigacion-corte-caja-pos.md` (15-jun) para el
-   detalle original — su tabla de gaps sigue vigente. Gaps reales confirmados pendientes:
-   (4) devoluciones sin autorización supervisor — `ReturnDialog.tsx` sin check de
-   supervisor/PIN, mayor riesgo (fraude por reembolsos); (5) sin distinción cash_drop vs
-   egreso genérico en `fondos_movimientos`; (6) sin campo explicación obligatoria en
-   diferencias; (7) sin folio correlativo de apertura; (8) sin límite de efectivo
-   configurable con alerta; + reconciliación de turnos generales no-farmacia (extender
-   `turnos` fuera de farmacia). Brainstorming en curso (sesión 44) para acotar spec a estos
-   gaps reales, no al plan viejo.
-4. **Chat de ayuda ("hablar con humano")** — tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes`
-   ya existen (ver CLAUDE.md sección Manual/Chat). Falta UI + decisión de hosting de IA
-   (Ollama necesita VM propia — Workers/Edge Functions no sirven, no soportan proceso
-   persistente con modelo cargado). Empezar por esa decisión de hosting antes de UI.
+### Corte de caja — 6 gaps reales cerrados (sesión 44), spec+plan+subagent-driven-dev
+
+El plan "6 pasos desde cero" citado antes en CLAUDE.md/`project_corte-caja-arquitectura.md`
+(archivo que ya no existe) estaba desactualizado — la mayoría de esos pasos YA estaban
+implementados (conteo ciego, denominación, folio Z, umbral+PIN, fondos_movimientos, corte X).
+Spec real: `docs/superpowers/specs/2026-07-16-corte-caja-gaps-design.md`. Plan:
+`docs/superpowers/plans/2026-07-16-corte-caja-gaps.md`. Ejecutado con
+`superpowers:subagent-driven-development`, las 9 tasks + review final de rama completa
+(Opus) — ledger completo en `.claude/worktrees/corte-caja-gaps/.superpowers/sdd/progress.md`.
+
+**Implementado y con review Approved (8 tasks):**
+1. RPC compartida `verify_supervisor_pin` + `SupervisorPinDialog` genérico.
+2. Devoluciones (`pharmacy_register_return`) ahora exigen PIN de supervisor server-side —
+   antes un cajero con rol admin/manager podía auto-autorizarse su propio reembolso.
+3-4. Cash drop (tipo nuevo en `fondos_movimientos`, doble firma cajero+PIN supervisor,
+   campo destino) en caja general y farmacia.
+5. `turno_close` exige explicación cuando hay diferencia al cierre.
+6. Folio correlativo de apertura (`turno_open` RPC nueva) + explicación obligatoria si
+   el conteo de apertura difiere del fondo esperado del Z anterior.
+7. `CajaTurno.tsx` (cajas generales, no-farmacia) ahora usa el mismo wizard de conteo
+   ciego que ya tenía farmacia — antes mostraba el fondo por defecto sin ser ciego.
+8. Límite de efectivo configurable (`clinic_settings`) con banner de alerta no bloqueante.
+
+**Bugs Critical reales encontrados y corregidos durante el proceso de review (4 total,
+todos por el mismo patrón — cuidado si se vuelve a tocar RPCs de este módulo):**
+- Task 3: `CREATE OR REPLACE` no reemplaza una función con distinta arity en Postgres —
+  dejaba vivo un overload viejo sin seguridad. + RLS permitía INSERT directo de cash_drop
+  bypaseando el RPC.
+- Task 5: el plan asumía la firma vieja de `turno_close` (4 params) pero la función viva
+  en prod tiene 5 (con `p_supervisor_id`, agregado por un diagnostic script no trackeado
+  en migrations — drift Lovable/CLI). Reescrito con la firma y body reales.
+- Task 6: RPC nueva `turno_open` (`SECURITY DEFINER`) sin check multi-tenant, bypaseaba
+  la RLS que protegía el INSERT que reemplazó.
+- Review final de rama: `cash_drop` sumaba como `+monto` (ingreso) en vez de `-monto`
+  en `turno_close` — inflaba el efectivo esperado 2x el monto del drop, disparaba faltante
+  fantasma. + `verify_supervisor_pin` sin check de que el caller pertenezca a la clínica
+  (oráculo de fuerza bruta de PIN cross-tenant). Ambos fixed.
+
+**Pendiente antes de dar el punto 3 por cerrado:**
+- [ ] Mergear `worktree-corte-caja-gaps` a `main` (branch en worktree
+      `.claude/worktrees/corte-caja-gaps`, 13 commits, `1209a3d..1e115f7`).
+- [ ] Aplicar las 6 migraciones nuevas a Supabase (`supabase db push --linked`,
+      proyecto `kyfkvdyxpvpiacyymldc`) — **ninguna se aplicó en esta sesión**, el
+      worktree no tenía credenciales Supabase. Migraciones:
+      `20260716150000_verify_supervisor_pin.sql` (+fix en `1e115f7`),
+      `20260716150100_pharmacy_register_return_pin.sql`,
+      `20260716150200_cash_drop.sql`,
+      `20260716150300_pharmacy_cash_drop.sql`,
+      `20260716150400_notes_required_on_diff.sql` (+fix en `1e115f7`),
+      `20260716150500_turno_open_rpc.sql`.
+- [ ] Correr `mcp__supabase__get_advisors(type="security")` después de aplicar.
+- [ ] Verificación e2e con browser real (login real, devolución con PIN, cash drop,
+      cierre con diferencia sin notas, abrir turno general con conteo ciego).
+- [ ] **Gap conocido, NO corregido en esta rama** (fuera de scope, requiere confirmar
+      cuál diagnostic script es el realmente vivo antes de tocar): el mismo bug de signo
+      de `cash_drop` (tratado como ingreso en vez de egreso) probablemente existe también
+      en `turno_corte_x` y `pharmacy_close_shift` — funciones prod NO tocadas por esta
+      rama, viven solo en `supabase/scripts/diagnostics/*.sql` con múltiples variantes
+      por drift. Investigar cuál es la versión viva antes de corregir.
+- [ ] Minor sin resolver (no bloqueantes): `turno_open` no valida que `caja_id`
+      pertenezca a `clinic_id` (gap heredado de la RLS vieja); banner de límite de
+      efectivo no incluye cobros en efectivo en su estimado (solo fondo+movimientos,
+      subestima); `TurnoOpenWizard` usa `.single()` en vez de `.maybeSingle()` para el
+      último corte Z (funciona pero frágil).
+
+### Punto 4 pendiente
+
+**Chat de ayuda ("hablar con humano")** — tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes`
+ya existen (ver CLAUDE.md sección Manual/Chat). Falta UI + decisión de hosting de IA
+(Ollama necesita VM propia — Workers/Edge Functions no sirven, no soportan proceso
+persistente con modelo cargado). Empezar por esa decisión de hosting antes de UI.
 
 Antes de tocar nada: leer skill `proyectos` (`~/.claude/skills/proyectos/SKILL.md`) y
 confirmar `mcp__supabase__get_project_url` = `kyfkvdyxpvpiacyymldc` (no el de células madre).
