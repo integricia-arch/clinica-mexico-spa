@@ -44,3 +44,36 @@ export async function confirmarCita(convId: string, slotKey: string) {
   if (!slot) return { error: "Slot no disponible" };
   return { ok: true, slot };
 }
+
+export async function cargarHistorialParaAnthropic(conversacionId: string) {
+  const { data } = await supabase.from("mensajes").select("rol, contenido")
+    .eq("conversacion_id", conversacionId).in("rol", ["user", "assistant"])
+    .order("created_at", { ascending: false }).limit(40);
+  const messages = (data ?? []).reverse().map((m: any) => ({ role: m.rol, content: m.contenido ?? "" }));
+  while (messages.length > 0 && messages[0].role !== "user") messages.shift();
+  return messages;
+}
+
+export async function guardarAccion(conversacionId: string, accion: string) {
+  try {
+    await supabase.from("mensajes").insert({
+      conversacion_id: conversacionId,
+      rol: "assistant",
+      contenido: `[acción: ${accion}]`,
+    });
+  } catch (err) {
+    console.error("guardarAccion error:", err);
+  }
+}
+
+export async function guardarClick(conversacionId: string, opcion: string) {
+  try {
+    await supabase.from("mensajes").insert({
+      conversacion_id: conversacionId,
+      rol: "user",
+      contenido: `[eligió: ${opcion}]`,
+    });
+  } catch (err) {
+    console.error("guardarClick error:", err);
+  }
+}

@@ -28,10 +28,12 @@ export async function manejarMensaje(chatId: string, rawMsg: any, text: string) 
 
   // Agente maneja todo demás
   const sesion = await obtenerSesion(chatId);
+  // Para este harness, usar chatId como conversacionId (en prod sería distinto)
+  const conversacionId = chatId;
   const messages = [{ role: "user", content: text }];
 
   try {
-    const respuesta = await ejecutarAgenteLoop(chatId, messages, text);
+    const respuesta = await ejecutarAgenteLoop(chatId, conversacionId, messages, text);
     if (respuesta) {
       await enviarTelegram(chatId, respuesta);
     }

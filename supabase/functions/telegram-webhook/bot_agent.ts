@@ -1,6 +1,6 @@
 import { ANTHROPIC_API_KEY, ANTHROPIC_API_BASE, ANTHROPIC_MODEL, SYSTEM_PROMPT_BASE, TOOLS, MAX_AGENT_ITERATIONS, supabase, CLINIC_ID } from "./bot_config.ts";
 import { listarHorariosDisponibles } from "./bot_horarios.ts";
-import { guardarDatosPaciente, confirmarCita } from "./bot_db.ts";
+import { guardarDatosPaciente, confirmarCita, cargarHistorialParaAnthropic, guardarAccion } from "./bot_db.ts";
 import { enviarTelegram, enviarTelegramConBotones } from "./bot_telegram.ts";
 
 export async function llamarClaude(messages: any[], systemPrompt: string = SYSTEM_PROMPT_BASE) {
@@ -13,7 +13,13 @@ export async function llamarClaude(messages: any[], systemPrompt: string = SYSTE
   return await res.json();
 }
 
-export async function ejecutarAgenteLoop(chatId: string, messages: any[], userText?: string): Promise<string> {
+export async function ejecutarAgenteLoop(chatId: string, conversacionId: string, messages: any[], userText?: string): Promise<string> {
+  // Cargar historial completo si no está en messages
+  if (messages.length === 1) {
+    const historial = await cargarHistorialParaAnthropic(conversacionId);
+    messages = [...historial, messages[0]];
+  }
+
   const systemPrompt = SYSTEM_PROMPT_BASE;
   for (let i = 0; i < MAX_AGENT_ITERATIONS; i++) {
     const resp = await llamarClaude(messages, systemPrompt);
@@ -47,6 +53,11 @@ export async function ejecutarAgenteLoop(chatId: string, messages: any[], userTe
       for (const tu of toolUses) {
         const result = await ejecutarToolClaude(tu.name, tu.input, chatId);
         toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: JSON.stringify(result), is_error: !!(result as any).error });
+        // Guardar acción en historial
+        const accionResumen = tu.name === "listar_horarios" ? `mostró horarios` :
+                              tu.name === "guardar_datos_paciente" ? `guardó datos paciente` :
+                              tu.name === "confirmar_cita" ? `confirmó cita` : tu.name;
+        await guardarAccion(conversacionId, accionResumen);
         if (tu.name === "mostrar_menu_principal" || tu.name === "mostrar_menu_categorias") menuEnviado = true;
       }
       if (menuEnviado) return "";
