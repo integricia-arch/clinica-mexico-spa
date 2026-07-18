@@ -1,5 +1,23 @@
 # Estado del Proyecto — clinica-mexico-spa
 
+## PRÓXIMA ACCIÓN (sesión siguiente): Módulo Contable — Fase 1
+
+Plan aprobable en `docs/superpowers/plans/2026-07-18-modulo-contable.md` (5 fases).
+Empezar en **Fase 1: insumos por cita** (`appointment_insumos` + descuento de
+inventario vía `movimientos_inventario` con reference_type='appointment').
+
+Pendientes que NO requieren código (humanos):
+- Alan (alan.calderon.biomed@gmail.com) y Aldo (alomeli19@aspv.edu.mx) entran
+  una vez con Google a integrika.mx → auto-vinculación ya lista; verificar módulos.
+- Pablo decide si aprueba el plan contable tal cual o ajusta fases.
+
+Reglas duras para la próxima sesión (lecciones de hoy, ver CLAUDE.md Learnings):
+- `git status -sb` ANTES del primer commit (hoy se trabajó en feat/bot-agente por error).
+- `supabase.functions.invoke` no lanza excepción — revisar {data, error}.
+- Scripts de terceros nuevos → CSP en public/_headers.
+- Env VITE_* nueva → .env + GitHub secret + env: del workflow (3 lugares).
+
+
 ## Sesión 2026-07-18 (tarde): Auto-provisioning usuarios Google OAuth ✅
 
 ### ✅ COMPLETADO (commits f648237, 19330f2 — aplicado a prod + deployado + pusheado)
