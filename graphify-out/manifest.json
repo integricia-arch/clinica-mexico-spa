@@ -1415,9 +1415,9 @@
     "semantic_hash": "8a6636ed553c5a8c7b850bbc534f0765"
   },
   "src/pages/AdminUsuarios.tsx": {
-    "mtime": 1783355146.4879646,
-    "ast_hash": "5de2831aac2c5f6221d22e658856574a",
-    "semantic_hash": "5de2831aac2c5f6221d22e658856574a"
+    "mtime": 1784390423.4783916,
+    "ast_hash": "a6569bf232f6ec7e12606fe657c2e245",
+    "semantic_hash": ""
   },
   "src/pages/Agenda.tsx": {
     "mtime": 1783355146.4933312,
@@ -1540,9 +1540,9 @@
     "semantic_hash": "830f3b83c8947dbdc3ef672717b7c431"
   },
   "src/pages/Login.tsx": {
-    "mtime": 1783274591.3601286,
-    "ast_hash": "72cccccaaa763c8ec8efac9357a69cbc",
-    "semantic_hash": "72cccccaaa763c8ec8efac9357a69cbc"
+    "mtime": 1784389327.39065,
+    "ast_hash": "655ad84a09e06955d337e21fd3f2a8bf",
+    "semantic_hash": ""
   },
   "src/pages/MisRecetas.tsx": {
     "mtime": 1783355146.5297973,
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784306805.086483,
-    "ast_hash": "9e0eb70db14f5934ef0cda527abb65e7",
+    "mtime": 1784388193.2202075,
+    "ast_hash": "a27788036fcd43d33d2259aa965b7326",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4430,8 +4430,8 @@
     "semantic_hash": ""
   },
   ".security/optimus-allowlist.json": {
-    "mtime": 1784254541.613681,
-    "ast_hash": "3df699fe25cc5fa59a966bcc35557f6c",
+    "mtime": 1784389344.151728,
+    "ast_hash": "5bb4e88ae705c381cd68f6adada44e90",
     "semantic_hash": ""
   },
   "supabase/functions/mfa-reset/index.ts": {
@@ -4662,6 +4662,26 @@
   "docs/graph-viewer.html": {
     "mtime": 1784307470.4705963,
     "ast_hash": "a2d8bc6fe9aa000f8d8663b0ef2c7037",
+    "semantic_hash": ""
+  },
+  "supabase/functions/provision-users-from-queue/index.ts": {
+    "mtime": 1784390407.1210885,
+    "ast_hash": "43054aede4af757f32e122715465926f",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260717130942_fix_bot_metricas_security_invoker.sql": {
+    "mtime": 1784315389.3731298,
+    "ast_hash": "56176811c7f9ffb1e6f8d1d149a42656",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718_add_email_to_doctors_nurses.sql": {
+    "mtime": 1784389936.3918788,
+    "ast_hash": "85dd442f2839a1a4074c58750d195bd6",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718_auto_user_provisioning.sql": {
+    "mtime": 1784389763.0937612,
+    "ast_hash": "92fff606180d04e78ff4e72a1ec6f821",
     "semantic_hash": ""
   }
 }
