@@ -431,3 +431,9 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Learnings (added by /aprende 2026-07-18)
+
+- **CSP vive en `public/_headers`.** Todo script/widget de terceros nuevo debe agregarse ahí o queda bloqueado silenciosamente. Turnstile requiere `https://challenges.cloudflare.com` en `script-src` Y `frame-src`. Ojo: /login puede tardar ~1 min en reflejar headers nuevos por cache de edge. <!-- /aprende 2026-07-18 -->
+- **`supabase.functions.invoke` NO lanza excepción.** Siempre revisar `{ data, error }` del retorno; un try/catch alrededor nunca detecta el fallo (bug real corregido en AdminUsuarios). <!-- /aprende 2026-07-18 -->
+- **Staff de plataforma nuevo = `INSERT INTO platform_staff_pending (email) VALUES ('<email en minúsculas>')`.** Se promueve solo a `platform_staff` en su primer login Google (trigger JIT). Doctores/enfermeras: alta con email en AdminUsuarios y entran con Google, cero pasos manuales. <!-- /aprende 2026-07-18 -->
