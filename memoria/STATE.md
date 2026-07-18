@@ -29,6 +29,12 @@
   portaron a main (la rama sigue con copias duplicadas — se resolverán al
   rebasar el PR del bot).
 
+### ✅ Aldo platform_staff (misma sesión)
+- Ni Aldo ni Alan existen aún en auth.users. Nueva tabla `platform_staff_pending`
+  (migración 20260718130000, aplicada): al primer login Google de
+  alomeli19@aspv.edu.mx el trigger JIT lo promueve a platform_staff solo.
+  Ya encolado. Verificar módulos cuando entre (humano).
+
 ### ⏳ PENDIENTE de esta característica
 - E2E real: entrar con cuenta Google de prueba (requiere humano).
 - Alan (alan.calderon.biomed@gmail.com) en cola: se vincula solo en su primer
