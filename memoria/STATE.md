@@ -35,6 +35,17 @@
   alomeli19@aspv.edu.mx el trigger JIT lo promueve a platform_staff solo.
   Ya encolado. Verificar módulos cuando entre (humano).
 
+### ✅ Cierre total de la sesión (verificaciones finales)
+- E2E SQL con rollback: simulado primer login Google de Alan → 4/4 OK
+  (doctor vinculado, rol, membership activa, cola procesada). Cero residuos.
+- Turnstile: segundo bug encontrado — CSP bloqueaba challenges.cloudflare.com.
+  Fix en public/_headers (script-src + frame-src), deployado y verificado en
+  browser: widget carga sin errores. OJO: /login tenía cache de edge, tardó
+  ~1 min en reflejar.
+- Migración 20260717130942 (security_invoker) aplicada y verificada.
+- platform_staff_pending: Aldo encolado.
+- Único pendiente humano: Alan y Aldo entran con Google y confirman módulos.
+
 ### ⏳ PENDIENTE de esta característica
 - E2E real: entrar con cuenta Google de prueba (requiere humano).
 - Alan (alan.calderon.biomed@gmail.com) en cola: se vincula solo en su primer
