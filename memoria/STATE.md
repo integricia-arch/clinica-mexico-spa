@@ -19,6 +19,16 @@
 - Revisor (agente) veredicto: APPROVE.
 - Optimus allowlist dev en repo `.security/` y `~/.claude/optimus-allowlist.json`.
 
+### ✅ Turnstile resuelto (misma sesión)
+- Causa de "no captcha_token found": deploy-cloudflare.yml no pasaba
+  VITE_TURNSTILE_SITE_KEY al build → Vite eliminaba el widget (dead-code) y el
+  login mandaba sin token con Bot Protection activo. Fix: secret agregado al
+  workflow. Bonus: resetPasswordForEmail ahora manda captchaToken + widget en
+  vista forgot. Verificado: bundle nuevo (index-COMEnnv2.js) contiene Turnstile
+  y site key. OJO: commits de la sesión habían caído en feat/bot-agente; se
+  portaron a main (la rama sigue con copias duplicadas — se resolverán al
+  rebasar el PR del bot).
+
 ### ⏳ PENDIENTE de esta característica
 - E2E real: entrar con cuenta Google de prueba (requiere humano).
 - Alan (alan.calderon.biomed@gmail.com) en cola: se vincula solo en su primer
