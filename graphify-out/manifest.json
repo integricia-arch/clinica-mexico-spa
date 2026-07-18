@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784249928.514231,
-    "ast_hash": "d211b131bd6dcb464010a876d405eb89",
+    "mtime": 1784306805.086483,
+    "ast_hash": "9e0eb70db14f5934ef0cda527abb65e7",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4647,6 +4647,21 @@
   "supabase/tests/verify_bot_metricas_diarias.sql": {
     "mtime": 1784306373.6792629,
     "ast_hash": "f8f0bc1f12cd32635d0d192cd22d2ef9",
+    "semantic_hash": ""
+  },
+  "docs/graph-3d.html": {
+    "mtime": 1784308182.2080262,
+    "ast_hash": "2fab9a9792974af36bfab5b02fe2b9c9",
+    "semantic_hash": ""
+  },
+  "docs/graph-viewer-visjs.html": {
+    "mtime": 1784307681.5422885,
+    "ast_hash": "75e5884dc3ae1a06cd8e1bab3dd8dab8",
+    "semantic_hash": ""
+  },
+  "docs/graph-viewer.html": {
+    "mtime": 1784307470.4705963,
+    "ast_hash": "a2d8bc6fe9aa000f8d8663b0ef2c7037",
     "semantic_hash": ""
   }
 }

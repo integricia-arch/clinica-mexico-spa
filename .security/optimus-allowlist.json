@@ -1,7 +1,8 @@
 {
   "paths": [
     "Deno.env.get",
-    "supabase/functions/telegram-webhook/"
+    "supabase/functions/telegram-webhook/",
+    ".env.example"
   ],
   "env_vars": [
     "SUPABASE_SERVICE_ROLE_KEY",
