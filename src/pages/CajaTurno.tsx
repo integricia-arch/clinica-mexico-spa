@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Timer, PlayCircle, StopCircle, AlertCircle, Lock, TrendingUp, TrendingDown,
+  Timer, StopCircle, AlertCircle, Lock, TrendingUp, TrendingDown,
   Minus, ArrowUpDown, FileBarChart2, ChevronDown, ChevronRight, Info, CheckCircle, Printer,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { restSelect } from "@/lib/restClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
+import SupervisorPinDialog from "@/components/turno/SupervisorPinDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -20,6 +21,8 @@ import { toast } from "sonner";
 import { printActaArqueo } from "@/lib/printActaArqueo";
 import PagoReconcile from "@/components/turno/PagoReconcile";
 import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
+import TurnoOpenWizard from "@/components/turno/TurnoOpenWizard";
+import { exceedsLimiteEfectivo } from "@/lib/cajaLimits";
 
 const fmt = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -45,7 +48,7 @@ interface Turno {
 
 interface FondoMovimiento {
   id: string;
-  tipo: "egreso" | "ingreso";
+  tipo: "egreso" | "ingreso" | "cash_drop";
   monto: number;
   motivo: string;
   created_at: string;
@@ -194,6 +197,10 @@ function CloseTurnoDialog({
         const diff   = Number.isFinite(Number(parts[1])) ? Number(parts[1]) : 0;
         const umbral = Number.isFinite(Number(parts[2])) ? Number(parts[2]) : 0;
         setOverridePrompt({ diff, umbral });
+        return;
+      }
+      if (error.message?.startsWith("NOTES_REQUIRED_ON_DIFF")) {
+        toast.error("Hay una diferencia entre lo contado y lo esperado — escribe una explicación en Notas antes de cerrar.");
         return;
       }
       toast.error(`No se pudo cerrar el turno: ${error.message}`);
@@ -356,6 +363,9 @@ function CloseTurnoDialog({
           <div className="space-y-1">
             <Label className="text-xs">Notas del cierre</Label>
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              Obligatorio si el efectivo contado no coincide exactamente con lo esperado.
+            </p>
           </div>
           <SupervisorAuthDialog
             open={!!overridePrompt}
@@ -388,34 +398,50 @@ function CloseTurnoDialog({
 // ─── FondoMovimientoDialog ────────────────────────────────────────────────────
 
 function FondoMovimientoDialog({
-  open, turnoId, onClose, onDone,
+  open, turnoId, clinicId, onClose, onDone,
 }: {
-  open: boolean; turnoId: string | null; onClose: () => void; onDone: () => void;
+  open: boolean; turnoId: string | null; clinicId: string; onClose: () => void; onDone: () => void;
 }) {
-  const [tipo, setTipo] = useState<"egreso" | "ingreso">("egreso");
+  const [tipo, setTipo] = useState<"egreso" | "ingreso" | "cash_drop">("egreso");
   const [monto, setMonto] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [destino, setDestino] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
-  function reset() { setTipo("egreso"); setMonto(""); setMotivo(""); setSaving(false); }
+  function reset() { setTipo("egreso"); setMonto(""); setMotivo(""); setDestino(""); setSaving(false); }
 
-  async function handleSubmit() {
+  function requestSubmit() {
     if (!turnoId) return;
     const amount = Number(monto);
     if (Number.isNaN(amount) || amount <= 0) { toast.error("Monto debe ser mayor a cero"); return; }
     if (!motivo.trim()) { toast.error("Motivo requerido"); return; }
+    if (tipo === "cash_drop") {
+      if (!destino.trim()) { toast.error("Destino requerido para cash drop"); return; }
+      setPinDialogOpen(true);
+      return;
+    }
+    doSubmit();
+  }
+
+  async function doSubmit(supervisorId?: string, pin?: string) {
+    if (!turnoId) return;
+    setPinDialogOpen(false);
     setSaving(true);
 
     const { error } = await (supabase as any).rpc("turno_fondo_movimiento", {
       p_turno_id: turnoId,
       p_tipo: tipo,
-      p_monto: amount,
+      p_monto: Number(monto),
       p_motivo: motivo.trim(),
+      p_destino: tipo === "cash_drop" ? destino.trim() : null,
+      p_supervisor_id: supervisorId ?? null,
+      p_supervisor_pin: pin ?? null,
     } as never);
 
     setSaving(false);
     if (error) { toast.error(`Error: ${error.message}`); return; }
-    toast.success(`${tipo === "egreso" ? "Retiro" : "Depósito"} registrado`);
+    toast.success(tipo === "egreso" ? "Retiro registrado" : tipo === "ingreso" ? "Depósito registrado" : "Cash drop registrado");
     reset();
     onDone();
   }
@@ -431,11 +457,12 @@ function FondoMovimientoDialog({
         <div className="space-y-3">
           <div className="space-y-1">
             <Label className="text-xs">Tipo</Label>
-            <Select value={tipo} onValueChange={(v) => setTipo(v as "egreso" | "ingreso")}>
+            <Select value={tipo} onValueChange={(v) => setTipo(v as "egreso" | "ingreso" | "cash_drop")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="egreso">Retiro / Egreso</SelectItem>
                 <SelectItem value="ingreso">Depósito / Ingreso</SelectItem>
+                <SelectItem value="cash_drop">Cash drop (retiro a caja fuerte/banco)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -449,14 +476,30 @@ function FondoMovimientoDialog({
             <Input value={motivo} onChange={(e) => setMotivo(e.target.value)}
               placeholder="Ej. Pago a proveedor, cambio de billetes…" />
           </div>
+          {tipo === "cash_drop" && (
+            <div className="space-y-1">
+              <Label className="text-xs">Destino</Label>
+              <Input value={destino} onChange={(e) => setDestino(e.target.value)}
+                placeholder="Ej. Caja fuerte, banco…" />
+              <p className="text-xs text-muted-foreground">Requiere doble firma: tu registro + PIN de un supervisor.</p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => { reset(); onClose(); }}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button onClick={requestSubmit} disabled={saving}>
             {saving ? "Guardando…" : "Registrar"}
           </Button>
         </DialogFooter>
       </DialogContent>
+      <SupervisorPinDialog
+        open={pinDialogOpen}
+        clinicId={clinicId}
+        title="Autorización de cash drop"
+        description="El cash drop requiere PIN de un supervisor distinto al cajero."
+        onAuthorized={(supervisorId, pin) => doSubmit(supervisorId, pin)}
+        onCancel={() => setPinDialogOpen(false)}
+      />
     </Dialog>
   );
 }
@@ -683,12 +726,10 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
   const [auditLog, setAuditLog] = useState<LinkAudit[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [cajaId, setCajaId] = useState("");
-  const [montoApertura, setMontoApertura] = useState(0);
-  const [notas, setNotas] = useState("");
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [fondoDialogOpen, setFondoDialogOpen] = useState(false);
   const [corteXDialogOpen, setCorteXDialogOpen] = useState(false);
+  const [limiteEfectivo, setLimiteEfectivo] = useState<string>("");
 
   const load = async () => {
     if (!activeClinic?.id || !user?.id) return;
@@ -713,16 +754,19 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
     setTurnoActivo(activeTurno);
     setAuditLog((auditRows as LinkAudit[]) ?? []);
 
-    if (cajasList[0] && !cajaId) {
-      setCajaId(cajasList[0].id);
-      setMontoApertura(cajasList[0].fondo_default);
-    }
+    const { data: settingsData } = await (supabase as any)
+      .from("clinic_settings")
+      .select("data")
+      .eq("clinic_id", activeClinic.id)
+      .eq("section", "caja")
+      .maybeSingle();
+    setLimiteEfectivo(settingsData?.data?.limite_efectivo ?? "");
 
     // Fondos del turno activo
     if (activeTurno) {
       const { data: fondosData } = await (supabase as any)
         .from("fondos_movimientos")
-        .select("id, tipo, monto, motivo, created_at")
+        .select("id, tipo, monto, motivo, destino, created_at")
         .eq("turno_id", activeTurno.id)
         .order("created_at", { ascending: false });
       setFondos((fondosData as FondoMovimiento[]) ?? []);
@@ -762,48 +806,6 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
   };
 
   useEffect(() => { load(); }, [activeClinic?.id, user?.id]);
-
-  const onCajaChange = (id: string) => {
-    setCajaId(id);
-    const caja = cajas.find((c) => c.id === id);
-    if (caja) setMontoApertura(caja.fondo_default);
-  };
-
-  const abrirTurno = async () => {
-    if (!cajaId) { toast.error("Selecciona una caja"); return; }
-    if (!activeClinic?.id || !user?.id) return;
-    setSaving(true);
-
-    const { data: newTurno, error } = await (supabase as any).from("turnos").insert({
-      clinic_id: activeClinic.id,
-      caja_id: cajaId,
-      cajero_user_id: user.id,
-      monto_apertura: montoApertura,
-      notas_apertura: notas.trim() || null,
-      estado: "abierto",
-    }).select("id").single();
-
-    if (error) { setSaving(false); toast.error(`No se pudo abrir el turno: ${error.message}`); return; }
-
-    const selectedCaja = cajas.find((c) => c.id === cajaId);
-    if (selectedCaja?.es_farmacia && newTurno) {
-      const { data: shiftId, error: shiftError } = await (supabase as any).rpc("pharmacy_open_shift", {
-        p_clinic_id: activeClinic.id,
-        p_opening_amount: montoApertura,
-        p_notes: notas.trim() || null,
-      } as never);
-      if (!shiftError && shiftId) {
-        await (supabase as any).from("turnos").update({ pharmacy_shift_id: shiftId }).eq("id", newTurno.id);
-      } else if (shiftError) {
-        toast.warning(`Turno abierto, pero no se pudo abrir turno POS Farmacia: ${shiftError.message}`);
-      }
-    }
-
-    setSaving(false);
-    toast.success("Turno abierto");
-    setNotas("");
-    load();
-  };
 
   const handleTurnoCerrado = () => { setCloseDialogOpen(false); load(); onTurnoCerrado?.(); };
 
@@ -845,6 +847,17 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
             </div>
           </div>
 
+          {(() => {
+            const netoFondos = fondos.reduce((s, f) => s + (f.tipo === "ingreso" ? f.monto : -f.monto), 0);
+            const efectivoAprox = turnoActivo.monto_apertura + netoFondos;
+            return exceedsLimiteEfectivo(efectivoAprox, limiteEfectivo) ? (
+              <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>Efectivo en caja (~{fmt(efectivoAprox)}) supera el límite configurado — considera un cash drop.</span>
+              </div>
+            ) : null;
+          })()}
+
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => setFondoDialogOpen(true)}>
               <ArrowUpDown className="h-4 w-4 mr-1.5" /> Egreso / Ingreso
@@ -877,13 +890,13 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
                           {new Date(f.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
                         </td>
                         <td className="px-3 py-2">
-                          <span className={`font-medium ${f.tipo === "egreso" ? "text-red-600" : "text-green-600"}`}>
-                            {f.tipo === "egreso" ? "Retiro" : "Depósito"}
+                          <span className={`font-medium ${f.tipo === "egreso" ? "text-red-600" : f.tipo === "cash_drop" ? "text-amber-600" : "text-green-600"}`}>
+                            {f.tipo === "egreso" ? "Retiro" : f.tipo === "cash_drop" ? "Cash drop" : "Depósito"}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-foreground">{f.motivo}</td>
-                        <td className={`px-3 py-2 text-right font-medium ${f.tipo === "egreso" ? "text-red-600" : "text-green-600"}`}>
-                          {f.tipo === "egreso" ? "−" : "+"}{fmt(f.monto)}
+                        <td className={`px-3 py-2 text-right font-medium ${f.tipo === "ingreso" ? "text-green-600" : "text-red-600"}`}>
+                          {f.tipo === "ingreso" ? "+" : "−"}{fmt(f.monto)}
                         </td>
                       </tr>
                     ))}
@@ -894,39 +907,10 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card p-5 shadow-card space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <PlayCircle className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold text-card-foreground">Abrir turno</h2>
-          </div>
-          <div>
-            <Label htmlFor="caja">Caja *</Label>
-            <Select value={cajaId} onValueChange={onCajaChange}>
-              <SelectTrigger id="caja" className="mt-1">
-                <SelectValue placeholder="Selecciona una caja…" />
-              </SelectTrigger>
-              <SelectContent>
-                {cajas.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="monto">Monto de apertura (MXN) *</Label>
-            <MoneyInput id="monto" value={String(montoApertura)}
-              onValueChange={(raw) => setMontoApertura(parseFloat(raw) || 0)} className="mt-1" />
-          </div>
-          <div>
-            <Label htmlFor="notas-apertura">Notas de apertura (opcional)</Label>
-            <Input id="notas-apertura" value={notas} onChange={(e) => setNotas(e.target.value)}
-              placeholder="Observaciones al abrir el turno…" className="mt-1" />
-          </div>
-          <Button onClick={abrirTurno} disabled={saving} className="w-full sm:w-auto">
-            <PlayCircle className="h-4 w-4 mr-2" />
-            {saving ? "Abriendo…" : "Abrir turno"}
-          </Button>
-        </div>
+        <TurnoOpenWizard
+          cajaFilter="general"
+          onOpened={() => load()}
+        />
       )}
 
       {/* Historial de turnos */}
@@ -973,6 +957,7 @@ export default function CajaTurno({ onTurnoCerrado }: { onTurnoCerrado?: () => v
       <FondoMovimientoDialog
         open={fondoDialogOpen}
         turnoId={turnoActivo?.id ?? null}
+        clinicId={activeClinic?.id ?? ""}
         onClose={() => setFondoDialogOpen(false)}
         onDone={() => { setFondoDialogOpen(false); load(); }}
       />

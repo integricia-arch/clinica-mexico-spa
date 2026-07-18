@@ -107,6 +107,7 @@ export default function TurnoOpenWizard({ cajaFilter, onOpened }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<Step>("conteo");
+  const [notasApertura, setNotasApertura] = useState("");
 
   useEffect(() => {
     if (!activeClinic?.id) return;
@@ -162,27 +163,26 @@ export default function TurnoOpenWizard({ cajaFilter, onOpened }: Props) {
     if (!cajaId || !activeClinic?.id || !user?.id) return;
     const montoContado = Number(conteo);
     if (isNaN(montoContado) || montoContado < 0) { toast.error("Monto inválido"); return; }
+    if (fondoEsperado !== null && montoContado !== fondoEsperado && !notasApertura.trim()) {
+      toast.error("Hay una diferencia contra el fondo esperado — escribe una explicación antes de continuar.");
+      return;
+    }
     setSaving(true);
 
-    const { data: newTurno, error } = await (supabase as any)
-      .from("turnos")
-      .insert({
-        clinic_id: activeClinic.id,
-        caja_id: cajaId,
-        cajero_user_id: user.id,
-        monto_apertura: montoContado,
-        conteo_apertura: montoContado,
-        fondo_esperado: fondoEsperado ?? null,
-        denominaciones_apertura: Object.keys(denomBreakdown).length > 0 ? denomBreakdown : null,
-        estado: "abierto",
-      })
-      .select("id, caja_id, estado, monto_apertura, abierto_at, pharmacy_shift_id")
-      .single();
+    const { data: newTurno, error } = await (supabase as any).rpc("turno_open", {
+      p_clinic_id: activeClinic.id,
+      p_caja_id: cajaId,
+      p_monto_apertura: montoContado,
+      p_conteo_apertura: montoContado,
+      p_fondo_esperado: fondoEsperado,
+      p_denominaciones: Object.keys(denomBreakdown).length > 0 ? denomBreakdown : null,
+      p_notas: notasApertura.trim() || null,
+    });
 
     if (error) { setSaving(false); toast.error(`Error: ${error.message}`); return; }
 
     const caja = cajas.find((c) => c.id === cajaId)!;
-    let pharmacyShiftId = newTurno.pharmacy_shift_id;
+    let pharmacyShiftId: string | null = null;
 
     if (caja.es_farmacia) {
       const { data: shiftId, error: shiftErr } = await (supabase as any).rpc("pharmacy_open_shift", {
@@ -425,6 +425,17 @@ export default function TurnoOpenWizard({ cajaFilter, onOpened }: Props) {
                 </span>
               </div>
             </div>
+            {fondoEsperado !== null && diferencia !== 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="notas-apertura">Explicación de la diferencia *</Label>
+                <Input
+                  id="notas-apertura"
+                  value={notasApertura}
+                  onChange={(e) => setNotasApertura(e.target.value)}
+                  placeholder="Ej. Faltante heredado del turno anterior, pendiente de revisión…"
+                />
+              </div>
+            )}
             <Button onClick={openTurno} className="w-full" size="lg" disabled={saving}>
               <CheckCircle className="mr-2 h-4 w-4" />
               {saving ? "Abriendo turno…" : "Abrir turno y comenzar"}

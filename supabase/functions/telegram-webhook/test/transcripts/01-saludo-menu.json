@@ -1,0 +1,9 @@
+{
+  "name": "saludo-menu: hola → agente",
+  "steps": [
+    {
+      "send": { "text": "hola" },
+      "expect": ["STUB-AGENTE"]
+    }
+  ]
+}

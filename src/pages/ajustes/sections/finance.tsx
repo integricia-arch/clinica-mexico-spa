@@ -309,6 +309,7 @@ export function SectionPagos({ onChange, registerSave }: SectionProps) {
 interface CajaForm {
   umbral_diferencia: string;
   fondo_minimo: string;
+  limite_efectivo: string;
   requiere_conteo_ciego: boolean;
   permite_venta_sin_turno: boolean;
 }
@@ -316,6 +317,7 @@ interface CajaForm {
 const CAJA_DEFAULTS: CajaForm = {
   umbral_diferencia: "",
   fondo_minimo: "",
+  limite_efectivo: "",
   requiere_conteo_ciego: true,
   permite_venta_sin_turno: false,
 };
@@ -349,7 +351,7 @@ export function SectionCaja({ onChange, registerSave }: SectionProps) {
           <CardTitle className="text-base">Controles de diferencia de caja</CardTitle>
           <CardDescription>Define el umbral máximo permitido sin autorización de supervisor.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="grid gap-4 sm:grid-cols-3">
           <Field label="Umbral de diferencia (MXN)" hint="Diferencia |faltante/sobrante| que activa autorización. Vacío = sin límite.">
             <MoneyInput
               placeholder="Sin límite"
@@ -363,6 +365,14 @@ export function SectionCaja({ onChange, registerSave }: SectionProps) {
               placeholder="Sin mínimo"
               value={form.fondo_minimo}
               onValueChange={(raw) => { setField("fondo_minimo", raw); onChange(); }}
+              disabled={readOnly}
+            />
+          </Field>
+          <Field label="Límite de efectivo en caja (MXN)" hint="Alerta (no bloquea) cuando el efectivo esperado supera este valor.">
+            <MoneyInput
+              placeholder="Sin límite"
+              value={form.limite_efectivo}
+              onValueChange={(raw) => { setField("limite_efectivo", raw); onChange(); }}
               disabled={readOnly}
             />
           </Field>

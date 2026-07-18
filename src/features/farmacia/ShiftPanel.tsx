@@ -15,13 +15,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown, Info, CheckCircle, Printer } from "lucide-react";
+import { Banknote, LockOpen, Lock, TrendingUp, TrendingDown, Minus, FileText, ArrowUpDown, Info, CheckCircle, Printer, AlertCircle } from "lucide-react";
 import { friendlyError } from "@/lib/errors";
 import SupervisorAuthDialog from "@/components/turno/SupervisorAuthDialog";
+import SupervisorPinDialog from "@/components/turno/SupervisorPinDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { printActaArqueo } from "@/lib/printActaArqueo";
 import PagoReconcile from "@/components/turno/PagoReconcile";
 import DenominacionCounter, { type DenomBreakdown } from "@/components/turno/DenominacionCounter";
+import { exceedsLimiteEfectivo } from "@/lib/cajaLimits";
 
 const formatMXN = (n: number) =>
   Number(n ?? 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
@@ -72,6 +74,46 @@ export function ShiftBadge({ shift }: { shift: Shift | null }) {
       <LockOpen className="h-3 w-3" />
       Turno {shortId} · {formatMXN(shift.opening_amount ?? 0)}
     </Badge>
+  );
+}
+
+export function ShiftCashLimitBanner({ shift }: { shift: Shift | null }) {
+  const { activeClinicId } = useActiveClinic();
+  const [limiteEfectivo, setLimiteEfectivo] = useState<string>("");
+  const [netoFondos, setNetoFondos] = useState(0);
+
+  useEffect(() => {
+    if (!shift || !activeClinicId) return;
+    (async () => {
+      const [{ data: settingsData }, { data: fondosData }] = await Promise.all([
+        (supabase as any)
+          .from("clinic_settings")
+          .select("data")
+          .eq("clinic_id", activeClinicId)
+          .eq("section", "caja")
+          .maybeSingle(),
+        (supabase as any)
+          .from("fondos_movimientos")
+          .select("tipo, monto")
+          .eq("pharmacy_shift_id", shift.id),
+      ]);
+      setLimiteEfectivo(settingsData?.data?.limite_efectivo ?? "");
+      const neto = ((fondosData as { tipo: string; monto: number }[]) ?? []).reduce(
+        (s, f) => s + (f.tipo === "ingreso" ? f.monto : -f.monto), 0,
+      );
+      setNetoFondos(neto);
+    })();
+  }, [shift?.id, activeClinicId]);
+
+  if (!shift) return null;
+  const efectivoAprox = shift.opening_amount + netoFondos;
+  if (!exceedsLimiteEfectivo(efectivoAprox, limiteEfectivo)) return null;
+
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+      <span>Efectivo en caja (~{formatMXN(efectivoAprox)}) supera el límite configurado — considera un cash drop.</span>
+    </div>
   );
 }
 
@@ -511,19 +553,19 @@ export function FondoMovimientoDialog({
   onClose: () => void;
 }) {
   const { toast } = useToast();
-  const [tipo, setTipo] = useState<"egreso" | "ingreso">("egreso");
+  const [tipo, setTipo] = useState<"egreso" | "ingreso" | "cash_drop">("egreso");
   const [monto, setMonto] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [destino, setDestino] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   function handleClose() {
-    setTipo("egreso");
-    setMonto("");
-    setMotivo("");
+    setTipo("egreso"); setMonto(""); setMotivo(""); setDestino("");
     onClose();
   }
 
-  async function submit() {
+  function requestSubmit() {
     if (!shift) return;
     const amount = Number(monto);
     if (Number.isNaN(amount) || amount <= 0) {
@@ -534,12 +576,29 @@ export function FondoMovimientoDialog({
       toast({ title: "El motivo es requerido", variant: "destructive" });
       return;
     }
+    if (tipo === "cash_drop") {
+      if (!destino.trim()) {
+        toast({ title: "Destino requerido para cash drop", variant: "destructive" });
+        return;
+      }
+      setPinDialogOpen(true);
+      return;
+    }
+    doSubmit();
+  }
+
+  async function doSubmit(supervisorId?: string, pin?: string) {
+    if (!shift) return;
+    setPinDialogOpen(false);
     setSubmitting(true);
     const { error } = await (supabase as any).rpc("pharmacy_fondo_movimiento", {
       p_shift_id: shift.id,
       p_tipo: tipo,
-      p_monto: amount,
+      p_monto: Number(monto),
       p_motivo: motivo.trim(),
+      p_destino: tipo === "cash_drop" ? destino.trim() : null,
+      p_supervisor_id: supervisorId ?? null,
+      p_supervisor_pin: pin ?? null,
     } as never);
     setSubmitting(false);
     if (error) {
@@ -547,8 +606,8 @@ export function FondoMovimientoDialog({
       return;
     }
     toast({
-      title: tipo === "egreso" ? "Egreso registrado" : "Ingreso registrado",
-      description: `${formatMXN(amount)} — ${motivo.trim()}`,
+      title: tipo === "egreso" ? "Egreso registrado" : tipo === "ingreso" ? "Ingreso registrado" : "Cash drop registrado",
+      description: `${formatMXN(Number(monto))} — ${motivo.trim()}`,
     });
     handleClose();
   }
@@ -563,52 +622,52 @@ export function FondoMovimientoDialog({
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Registra retiros (egresos) o depósitos (ingresos) de efectivo durante el turno.
+            Registra retiros (egresos), depósitos (ingresos) o cash drops de efectivo durante el turno.
             Quedan en auditoría y se descuentan del efectivo esperado al cierre.
           </p>
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant={tipo === "egreso" ? "default" : "outline"}
-              onClick={() => setTipo("egreso")}
-              className="flex-1"
-            >
-              Egreso (retiro)
+            <Button size="sm" variant={tipo === "egreso" ? "default" : "outline"} onClick={() => setTipo("egreso")} className="flex-1">
+              Egreso
             </Button>
-            <Button
-              size="sm"
-              variant={tipo === "ingreso" ? "default" : "outline"}
-              onClick={() => setTipo("ingreso")}
-              className="flex-1"
-            >
-              Ingreso (depósito)
+            <Button size="sm" variant={tipo === "ingreso" ? "default" : "outline"} onClick={() => setTipo("ingreso")} className="flex-1">
+              Ingreso
+            </Button>
+            <Button size="sm" variant={tipo === "cash_drop" ? "default" : "outline"} onClick={() => setTipo("cash_drop")} className="flex-1">
+              Cash drop
             </Button>
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Monto (MXN)</Label>
-            <MoneyInput
-              value={monto}
-              onValueChange={setMonto}
-              className="h-11 text-base"
-              placeholder="0.00"
-            />
+            <MoneyInput value={monto} onValueChange={setMonto} className="h-11 text-base" placeholder="0.00" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Motivo</Label>
-            <Textarea
-              rows={2} value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder={tipo === "egreso" ? "Ej: Pago a proveedor" : "Ej: Aportación de cambio"}
-            />
+            <Textarea rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)}
+              placeholder={tipo === "egreso" ? "Ej: Pago a proveedor" : tipo === "ingreso" ? "Ej: Aportación de cambio" : "Ej: Retiro de excedente de caja"} />
           </div>
+          {tipo === "cash_drop" && (
+            <div className="space-y-1">
+              <Label className="text-xs">Destino</Label>
+              <Input value={destino} onChange={(e) => setDestino(e.target.value)} placeholder="Ej. Caja fuerte, banco…" />
+              <p className="text-xs text-muted-foreground">Requiere PIN de un supervisor.</p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={submit} disabled={submitting}>
+          <Button onClick={requestSubmit} disabled={submitting}>
             {submitting ? "Registrando…" : "Registrar"}
           </Button>
         </DialogFooter>
       </DialogContent>
+      <SupervisorPinDialog
+        open={pinDialogOpen}
+        clinicId={shift?.clinic_id ?? ""}
+        title="Autorización de cash drop"
+        description="El cash drop requiere PIN de un supervisor distinto al cajero."
+        onAuthorized={(supervisorId, pin) => doSubmit(supervisorId, pin)}
+        onCancel={() => setPinDialogOpen(false)}
+      />
     </Dialog>
   );
 }

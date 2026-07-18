@@ -1,0 +1,9 @@
+{
+  "name": "wizard-texto-libre: texto libre en conversación → agente",
+  "steps": [
+    {
+      "send": { "text": "hola" },
+      "expect": ["STUB-AGENTE"]
+    }
+  ]
+}

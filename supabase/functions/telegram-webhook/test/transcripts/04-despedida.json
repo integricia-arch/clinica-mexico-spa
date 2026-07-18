@@ -1,0 +1,10 @@
+{
+  "name": "despedida: gracias → llega al agente (stub), sin re-mostrar bienvenida ni menú",
+  "steps": [
+    {
+      "send": { "text": "muchas gracias, es todo por hoy" },
+      "expect": ["STUB-AGENTE"],
+      "notExpect": ["¿En qué te puedo ayudar hoy\\?", "Elige la especialidad"]
+    }
+  ]
+}

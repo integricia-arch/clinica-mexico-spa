@@ -1,0 +1,9 @@
+{
+  "name": "agendar-directo: texto libre de cita → agente",
+  "steps": [
+    {
+      "send": { "text": "quiero una cita con dermatólogo mañana" },
+      "expect": ["STUB-AGENTE"]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "dedup: mismo update_id dos veces → solo se procesa una",
+  "steps": [
+    {
+      "send": { "text": "hola", "update_id": 999 },
+      "expect": ["STUB-AGENTE"]
+    },
+    {
+      "send": { "text": "hola", "update_id": 999 },
+      "expect": [],
+      "max": 0
+    }
+  ]
+}

@@ -120,9 +120,9 @@
     "semantic_hash": "6989880b1e604af3ed42859759268818"
   },
   "src/components/MfaEnrollmentGate.tsx": {
-    "mtime": 1783797937.900852,
-    "ast_hash": "e9058ef6ccf7b5b6d15291f3cb0f00bf",
-    "semantic_hash": "e9058ef6ccf7b5b6d15291f3cb0f00bf"
+    "mtime": 1784221175.6556742,
+    "ast_hash": "ffdb5163ae490ece570e8b5526e44d0e",
+    "semantic_hash": ""
   },
   "src/components/ModuloNoContratadoScreen.tsx": {
     "mtime": 1783717969.4807742,
@@ -225,14 +225,14 @@
     "semantic_hash": "51232ddf0394a864ba289448fcf37197"
   },
   "src/components/turno/TurnoCloseWizard.tsx": {
-    "mtime": 1783355146.327489,
-    "ast_hash": "d27b51a283afd0cba3d565582a4e37f5",
-    "semantic_hash": "d27b51a283afd0cba3d565582a4e37f5"
+    "mtime": 1784247235.3800905,
+    "ast_hash": "dfcfb5efdda8390fa67a4a133ab40ef8",
+    "semantic_hash": ""
   },
   "src/components/turno/TurnoOpenWizard.tsx": {
-    "mtime": 1783355146.3313289,
-    "ast_hash": "387efba390ce0076fd062e23b71d9568",
-    "semantic_hash": "387efba390ce0076fd062e23b71d9568"
+    "mtime": 1784247235.3821518,
+    "ast_hash": "22577efe844586e18cb6fc08e3e7e8b7",
+    "semantic_hash": ""
   },
   "src/components/ui/accordion.tsx": {
     "mtime": 1779032575.9559083,
@@ -935,9 +935,9 @@
     "semantic_hash": "600088b43af802d18ccf5ec063546750"
   },
   "src/features/farmacia/PuntoDeVenta.tsx": {
-    "mtime": 1783355146.4002507,
-    "ast_hash": "d713b23f5e37def24264bf6c2c5b561b",
-    "semantic_hash": "d713b23f5e37def24264bf6c2c5b561b"
+    "mtime": 1784247235.3849144,
+    "ast_hash": "3e2412f9ea644a24104909a4dbbfb20e",
+    "semantic_hash": ""
   },
   "src/features/farmacia/RecetaValidacionModal.tsx": {
     "mtime": 1782076626.0624425,
@@ -945,14 +945,14 @@
     "semantic_hash": "c0348acc0f58de7681edcff64c0dcfff"
   },
   "src/features/farmacia/ReturnDialog.tsx": {
-    "mtime": 1783355146.4026587,
-    "ast_hash": "8b135e6e16ee1d4d8abe78792a2707d2",
-    "semantic_hash": "8b135e6e16ee1d4d8abe78792a2707d2"
+    "mtime": 1784247235.3869517,
+    "ast_hash": "29c260cb212c997bbd1eb64721998f6a",
+    "semantic_hash": ""
   },
   "src/features/farmacia/ShiftPanel.tsx": {
-    "mtime": 1783355146.4049687,
-    "ast_hash": "6fd7b6d506fa3060ba75ecc32cff8359",
-    "semantic_hash": "6fd7b6d506fa3060ba75ecc32cff8359"
+    "mtime": 1784247235.3887575,
+    "ast_hash": "9170b22b490f9785fd46f46d043d6ec2",
+    "semantic_hash": ""
   },
   "src/features/farmacia/SolicitudesInsumos.tsx": {
     "mtime": 1783355146.4075096,
@@ -1330,9 +1330,9 @@
     "semantic_hash": "0fb1c2f93bbd98c27173887739ba4220"
   },
   "src/integrations/supabase/types.ts": {
-    "mtime": 1783797043.113376,
-    "ast_hash": "3b55c6d489d220b17ef4345b17eb5c85",
-    "semantic_hash": "3b55c6d489d220b17ef4345b17eb5c85"
+    "mtime": 1784219216.2676263,
+    "ast_hash": "cb8347bb46c8822c6072a8a7ae19a437",
+    "semantic_hash": ""
   },
   "src/lib/activeClinic.ts": {
     "mtime": 1780065734.159052,
@@ -1465,9 +1465,9 @@
     "semantic_hash": "c09b83d40bc956b2530465b50989ae0c"
   },
   "src/pages/CajaTurno.tsx": {
-    "mtime": 1783355146.5085905,
-    "ast_hash": "9e39187ca66b8ae6393a290c301f343b",
-    "semantic_hash": "9e39187ca66b8ae6393a290c301f343b"
+    "mtime": 1784247235.3930922,
+    "ast_hash": "d21d00da4662985356c5e921e4326e7e",
+    "semantic_hash": ""
   },
   "src/pages/CaminoPaciente.tsx": {
     "mtime": 1781532141.5575328,
@@ -1665,9 +1665,9 @@
     "semantic_hash": "47fe2ba31dc5c8954759a3f1a76a1604"
   },
   "src/pages/ajustes/sections/finance.tsx": {
-    "mtime": 1783217778.4647052,
-    "ast_hash": "db37c8428dfdd1364168915e15f50d5a",
-    "semantic_hash": "db37c8428dfdd1364168915e15f50d5a"
+    "mtime": 1784247235.3963418,
+    "ast_hash": "e5933968e8a2661c7823a030f28281c2",
+    "semantic_hash": ""
   },
   "src/pages/ajustes/sections/inventario.tsx": {
     "mtime": 1783217204.9096117,
@@ -2155,9 +2155,9 @@
     "semantic_hash": "0b97d96e5ac4a3f81bf02dffb97f1288"
   },
   "supabase/functions/telegram-webhook/index.ts": {
-    "mtime": 1782169317.6956036,
-    "ast_hash": "1988c4be569e1c63db9d8fcef2d3576b",
-    "semantic_hash": "1988c4be569e1c63db9d8fcef2d3576b"
+    "mtime": 1784249656.301752,
+    "ast_hash": "c91d2c029df96a325b6adf3d46c2abe8",
+    "semantic_hash": ""
   },
   "supabase/functions/verify-tenant-code/index.ts": {
     "mtime": 1783573382.371471,
@@ -3049,11 +3049,6 @@
     "ast_hash": "98bfe661a8aa405c273728cb047419c8",
     "semantic_hash": "98bfe661a8aa405c273728cb047419c8"
   },
-  "supabase/migrations/20260709000001_subscription_cancel_at.sql": {
-    "mtime": 1783717969.5274558,
-    "ast_hash": "5322f77f5e714a1aeb1a7a44e136f50a",
-    "semantic_hash": "5322f77f5e714a1aeb1a7a44e136f50a"
-  },
   "supabase/migrations/20260709000002_ciclo_compras_triggers.sql": {
     "mtime": 1782712261.8205304,
     "ast_hash": "c9ff938e3ed8919f409995f9c5573283",
@@ -3385,9 +3380,9 @@
     "semantic_hash": "d94db8b1f83c2e232ddb4b3abb3237e0"
   },
   ".github/workflows/typecheck.yml": {
-    "mtime": 1783797043.0719671,
-    "ast_hash": "02271813749e80c5aa4fb42e5ae711a3",
-    "semantic_hash": "02271813749e80c5aa4fb42e5ae711a3"
+    "mtime": 1784219216.2605083,
+    "ast_hash": "c3137fc28260504400fd08595a517ba3",
+    "semantic_hash": ""
   },
   ".lovable/plan.md": {
     "mtime": 1780251512.1663773,
@@ -3415,9 +3410,9 @@
     "semantic_hash": "9cc44bca88d05c504c864eb5ca827218"
   },
   "CLAUDE.md": {
-    "mtime": 1784040975.9117866,
-    "ast_hash": "c10551195d30381661855bcc198b98f7",
-    "semantic_hash": "c10551195d30381661855bcc198b98f7"
+    "mtime": 1784065805.1803277,
+    "ast_hash": "a36bfb2ed185880a2606bed0e9cd839b",
+    "semantic_hash": ""
   },
   "DEPLOY.md": {
     "mtime": 1782363698.347135,
@@ -3760,9 +3755,9 @@
     "semantic_hash": "631bcaa7ce0ed2ad358d19681a0c4054"
   },
   "docs/superpowers/plans/2026-06-09-farmacia-responsive.md": {
-    "mtime": 1781476206.1690416,
-    "ast_hash": "3c104c680cb899da164ca81ae72094d2",
-    "semantic_hash": "3c104c680cb899da164ca81ae72094d2"
+    "mtime": 1784222184.9021423,
+    "ast_hash": "0ab69484fa224f8ee77550213f98aae3",
+    "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-06-11-supervisor-pin.md": {
     "mtime": 1781476206.171042,
@@ -4025,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784065460.2341025,
-    "ast_hash": "83fb7019a53aa4a3be085d0a3f3009fd",
+    "mtime": 1784249928.514231,
+    "ast_hash": "d211b131bd6dcb464010a876d405eb89",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4398,5 +4393,170 @@
     "mtime": 1781487972.2831974,
     "ast_hash": "973bc9a4dec44bb2048332854bc37642",
     "semantic_hash": "973bc9a4dec44bb2048332854bc37642"
+  },
+  ".mcp.json": {
+    "mtime": 1784217642.3578062,
+    "ast_hash": "ae4a238b4d98b30a4af0b2cc4efc4e73",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716143521_08c76f85-05c5-43ed-92f7-66b67af0d3a1.sql": {
+    "mtime": 1784219216.2676263,
+    "ast_hash": "749f2387db01b04288fa9fc3804e81ed",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716145514_1528dc86-8a0d-4728-9df6-41f00838dafc.sql": {
+    "mtime": 1784219216.2688258,
+    "ast_hash": "229c1e921d7ac39636a5f30eeba46acc",
+    "semantic_hash": ""
+  },
+  "supabase/tests/rls.sql": {
+    "mtime": 1784219216.2698572,
+    "ast_hash": "3278f72ab18798ce7b864d98db087162",
+    "semantic_hash": ""
+  },
+  "supabase/tests/smoke.sql": {
+    "mtime": 1784219216.2698572,
+    "ast_hash": "0c49f9a3dc9747c1c7ffd094ec2183bb",
+    "semantic_hash": ""
+  },
+  ".claude/skills/session-sync/SKILL.md": {
+    "mtime": 1784065784.7085848,
+    "ast_hash": "8bcc712eb58978862deb30b745680e1d",
+    "semantic_hash": ""
+  },
+  ".github/workflows/migrations-check.yml": {
+    "mtime": 1784219216.2595077,
+    "ast_hash": "0dbab4d1ac93c5cd3256129107cd507f",
+    "semantic_hash": ""
+  },
+  ".security/optimus-allowlist.json": {
+    "mtime": 1784249214.5480764,
+    "ast_hash": "6569df3406233fb9e2487a858896b16a",
+    "semantic_hash": ""
+  },
+  "supabase/functions/mfa-reset/index.ts": {
+    "mtime": 1784221165.5954728,
+    "ast_hash": "fe9288e15d8cef2a3bdb31645cff9b6b",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-07-16-corte-caja-gaps-design.md": {
+    "mtime": 1784223564.5132544,
+    "ast_hash": "361b683fe1b639bff1dbe63ba1f8706c",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-16-corte-caja-gaps.md": {
+    "mtime": 1784224101.329579,
+    "ast_hash": "6d5bfea89757a3e3d7b59426a4059ab6",
+    "semantic_hash": ""
+  },
+  "src/components/turno/SupervisorPinDialog.tsx": {
+    "mtime": 1784247235.3777092,
+    "ast_hash": "a659823ffc3a39574a09c11f2d0cfd48",
+    "semantic_hash": ""
+  },
+  "src/lib/cajaLimits.test.ts": {
+    "mtime": 1784247235.3898084,
+    "ast_hash": "b2f7980ee0847f85f9091094897d07fc",
+    "semantic_hash": ""
+  },
+  "src/lib/cajaLimits.ts": {
+    "mtime": 1784247235.39079,
+    "ast_hash": "2a76d4f9aa2935fad14ffb550eceef8f",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150000_verify_supervisor_pin.sql": {
+    "mtime": 1784247235.3973577,
+    "ast_hash": "cec273e6ce1ee12d01d280ba0a21aa06",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150100_pharmacy_register_return_pin.sql": {
+    "mtime": 1784247235.3983545,
+    "ast_hash": "7f32a69281f4a9eac5476089e9b8f5da",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150200_cash_drop.sql": {
+    "mtime": 1784247235.4015827,
+    "ast_hash": "18fc9941c6a14aa0ffbdbd48d6010761",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150300_pharmacy_cash_drop.sql": {
+    "mtime": 1784247235.4025593,
+    "ast_hash": "f98b09ccc552b827ef21a68dc7b4895d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150400_notes_required_on_diff.sql": {
+    "mtime": 1784247235.4040797,
+    "ast_hash": "43cff12944fcfa0315a9cb68ec858fbd",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150500_turno_open_rpc.sql": {
+    "mtime": 1784247235.405592,
+    "ast_hash": "1562f5eae26df4ad7cdbd97b410504f7",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/fixtures/seed.json": {
+    "mtime": 1784249265.8533154,
+    "ast_hash": "c3f34f5201365c0941cc73353755a8f7",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/run-transcripts.ts": {
+    "mtime": 1784249555.2147517,
+    "ast_hash": "079e0071f81d581d1d97a2a3526d068c",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/stub-server.ts": {
+    "mtime": 1784249434.7078333,
+    "ast_hash": "11940d9c40f9fb65f62cd28e7fb20a61",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/transcripts/01-saludo-menu.json": {
+    "mtime": 1784249317.6947637,
+    "ast_hash": "62e10bbc2ddd5f6e0bf6070fab16f0ff",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/transcripts/02-agendar-directo.json": {
+    "mtime": 1784249319.3415933,
+    "ast_hash": "487d73035dc95831ad6481dbc6d7a78c",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/transcripts/03-wizard-texto-libre.json": {
+    "mtime": 1784249443.4431055,
+    "ast_hash": "ca17f7a95930330e93fa856c17173e9b",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/transcripts/04-despedida.json": {
+    "mtime": 1784249325.4771912,
+    "ast_hash": "5380b4f407edbf20feba1becb74db674",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/transcripts/05-urgencia.json": {
+    "mtime": 1784249327.4059083,
+    "ast_hash": "f57fd0c12f86674f7acbc660ba58f840",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/transcripts/06-dedup-updates.json": {
+    "mtime": 1784249665.1573596,
+    "ast_hash": "7ecdf747835dd6230910936897523667",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260709000006_subscription_cancel_at.sql": {
+    "mtime": 1783717969.5274558,
+    "ast_hash": "5322f77f5e714a1aeb1a7a44e136f50a",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716200000_bot_fase0_dedup_ack.sql": {
+    "mtime": 1784249642.7333655,
+    "ast_hash": "07284e50bb99aafb092a1cea6148a22d",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-16-bot-telegram-agente.md": {
+    "mtime": 1784249888.511093,
+    "ast_hash": "8c375656cc38290c318860f898ea6f94",
+    "semantic_hash": ""
+  },
+  "supabase/functions/telegram-webhook/test/README.md": {
+    "mtime": 1784249345.494748,
+    "ast_hash": "e6fe5ca2770f2d4d9e0c6cb4e0c19a7c",
+    "semantic_hash": ""
   }
 }

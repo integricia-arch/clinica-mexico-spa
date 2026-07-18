@@ -66,14 +66,19 @@ export default function Login() {
       if (view === "signup") {
         const { error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: window.location.origin, captchaToken: captchaToken ?? undefined },
+          options: {
+            emailRedirectTo: window.location.origin,
+            ...(captchaToken && { captchaToken }),
+          },
         });
         if (error) throw error;
         toast({ title: "Cuenta creada", description: "Revisa tu correo para confirmar tu cuenta." });
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email, password,
-          options: { captchaToken: captchaToken ?? undefined },
+          options: {
+            ...(captchaToken && { captchaToken }),
+          },
         });
         if (error) throw error;
         const from = (location.state as { from?: string } | null)?.from ?? "/";

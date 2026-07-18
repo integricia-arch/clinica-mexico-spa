@@ -1,23 +1,170 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN (sesión 44)
+## Sesión 2026-07-18: Grafo + Migraciones SECURITY_INVOKER
 
-Pablo dijo "vamos por orden con los 4 puntos hasta cerrar" — puntos 1 y 2 cerrados esta
-sesión (43). Seguir en orden:
+### ✅ COMPLETADO
+- 3 visualizadores de grafo HTML (Cytoscape, Vis.js, D3.js)
+- Skill `/grafo-viewer` para invocaciones futuras
+- Migración SECURITY_INVOKER creada (bot_metricas_diarias)
 
-3. **Corte de caja (Opción B, 6 pasos)** — NO EMPEZADO. Ver `project_corte-caja-arquitectura.md`
-   en `memoria/proyectos/` y sección "Pendientes de desarrollo prioritarios" en CLAUDE.md
-   (orden: conteo ciego → folio SEQUENCE/corte Z → umbral diferencia → egresos/ingresos
-   de fondo → corte X → reconciliación turnos generales). Arquitectura completa nueva,
-   sesión larga — considerar spec/plan primero (superpowers:brainstorming +
-   superpowers:writing-plans) antes de tocar código.
-4. **Chat de ayuda ("hablar con humano")** — tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes`
-   ya existen (ver CLAUDE.md sección Manual/Chat). Falta UI + decisión de hosting de IA
-   (Ollama necesita VM propia — Workers/Edge Functions no sirven, no soportan proceso
-   persistente con modelo cargado). Empezar por esa decisión de hosting antes de UI.
+### 🔴 BLOQUEADOS (HIGH PRIORITY)
+1. **Migration SECURITY_INVOKER** — `supabase db push --linked --include-all --debug`
+   - Archivo: `supabase/migrations/20260717130942_fix_bot_metricas_security_invoker.sql`
+   - Bloqueador: Migration history conflict (20260716_conversacion_analisis*)
+   - Pendiente: Push + commit
+
+2. **Turnstile captcha error** — "no captcha_token found"
+   - Solución rápida: Deshabilitar en Supabase Auth
+   - Solución completa: Cloudflare setup (deferred)
+
+3. **Usuarios admin** (PENDING)
+   - alomeli19@aspv.edu.mx (Aldo)
+   - alan.calderon.biomed@gmail.com (Alan)
+   - Asignar: platform_staff role, verificar login + módulos
+
+### 📊 Cambios no committeados
+```
+Modified: graphify-out/* (8 files)
+Untracked: supabase/migrations/20260717130942_fix_bot_metricas_security_invoker.sql
+```
+
+---
+
+## PRÓXIMA ACCIÓN (sesión 46): Bot Telegram — Fases 1-7.3 COMPLETADAS ✅
+
+**Sesión 2026-07-17 (continuación): Bot Telegram Fases 1-7.3 TERMINADAS.**
+
+### ✅ COMPLETADO
+- **Fase 1:** Módulos refactorizados (handlers, agent, telegram, triage, db, horarios, config)
+- **Fase 2:** Tools reales (listar_horarios, guardar_datos_paciente, confirmar_cita) + System prompt v10
+- **Fase 3:** Router simplificado (triage urgencias solo, agente-primero)
+- **Fase 4:** Historial persistente + guardia antiloop (detecta tool repetido 2x)
+- **Fase 5:** Prompt caching (ephemeral) + métricas SQL (bot_metricas_diarias)
+- **Fase 6:** Config bot en clinic_settings + ConfiguracionBot.tsx React UI
+- **Fase 7:** Analítica conversaciones (tabla + Edge Function batch + BI panel)
+
+### 📊 Status
+- Branch: `feat/bot-agente` 
+- PR #18: https://github.com/integricia-arch/clinica-mexico-spa/pull/18
+- Bot LIVE en kyfkvdyxpvpiacyymldc (webhook + agente + caching + analítica)
+- 6/6 transcripts verdes (dedup, urgencia, agente)
+- Cost sesión: $112.47 (agentes paralelos para tareas 5.2, 6, 7)
+
+### 📝 Próximas acciones (sesión 47+)
+1. Sincronizar CLI migrations (`supabase db push --linked`)
+2. Integrar ruta /analitika/bot en router
+3. Verificar BI panel carga datos correctamente
+4. Revisar/mergear PR #18 a main
+5. Testing QA en Telegram real (3 conversaciones: nueva cita, reagendar, precio)
+
+## Pendiente anterior (sesión 45 original)
+
+**Sesión 44 cerrada por costo ($109+, CRITICAL).** Punto 3 ("corte de caja") de los 4
+puntos: cerrado — mergeado a main, 6 migraciones aplicadas y verificadas vivas en
+Supabase (`kyfkvdyxpvpiacyymldc`). Detalle abajo. Punto 4 sigue pendiente, ver abajo.
+
+**Barrido de pendientes (sesión 44, incompleto por costo) — punto de partida para
+sesión 45, usar modelo barato (Fable 5):**
+- Candidato más maduro: `memoria/proyectos/gaps-almacen-compras-proveedores.md` — ya
+  trae tabla de gaps (CRÍTICO/ALTO/MEDIO/BAJO) + plan de fases armado, mismo formato
+  que el de corte-caja que sí sirvió hoy. Gaps CRÍTICOS marcados ahí: IVA medicamentos
+  (0% vs 16%, riesgo multa SAT), control medicamentos controlados (riesgo penal LGS),
+  lotes/caducidades (riesgo penal COFEPRIS NOM-072), EFOS antes de pagar (CFF 69-B),
+  3-way match compras.
+- **NO verificado contra código todavía** — mismo error que casi se repite hoy con
+  corte-caja: STATE.md/docs de investigación viejos dicen "no implementado" pero a
+  veces ya está. Antes de armar spec/plan: grep/Read el código real
+  (`src/features/almacen`, `src/features/compras`, migraciones de `medicamentos`,
+  `lotes_medicamento`, `proveedores`) y tachar lo que ya exista.
+- Otros 9 docs en `memoria/proyectos/` con "pendiente" sin revisar (no priorizados
+  todavía, listar sesión 45 si hace falta): `investigacion-almacen-compras-proveedores.md`,
+  `investigacion-cfdi-xml-4way-match-antirobo.md`, `investigacion-enfermeria-operativa.md`,
+  `investigacion-operativa-contable-compras.md`, `investigacion-auto-abasto-proveedor-preferido.md`,
+  `inteligencia-procesos-flujo1.md`, `integrika-videos-pipeline.md`,
+  `seguridad-auditoria-supabase-2026-07-04.md`.
+
+### Corte de caja — 6 gaps reales cerrados (sesión 44), spec+plan+subagent-driven-dev
+
+El plan "6 pasos desde cero" citado antes en CLAUDE.md/`project_corte-caja-arquitectura.md`
+(archivo que ya no existe) estaba desactualizado — la mayoría de esos pasos YA estaban
+implementados (conteo ciego, denominación, folio Z, umbral+PIN, fondos_movimientos, corte X).
+Spec real: `docs/superpowers/specs/2026-07-16-corte-caja-gaps-design.md`. Plan:
+`docs/superpowers/plans/2026-07-16-corte-caja-gaps.md`. Ejecutado con
+`superpowers:subagent-driven-development`, las 9 tasks + review final de rama completa
+(Opus) — ledger completo en `.claude/worktrees/corte-caja-gaps/.superpowers/sdd/progress.md`.
+
+**Implementado y con review Approved (8 tasks):**
+1. RPC compartida `verify_supervisor_pin` + `SupervisorPinDialog` genérico.
+2. Devoluciones (`pharmacy_register_return`) ahora exigen PIN de supervisor server-side —
+   antes un cajero con rol admin/manager podía auto-autorizarse su propio reembolso.
+3-4. Cash drop (tipo nuevo en `fondos_movimientos`, doble firma cajero+PIN supervisor,
+   campo destino) en caja general y farmacia.
+5. `turno_close` exige explicación cuando hay diferencia al cierre.
+6. Folio correlativo de apertura (`turno_open` RPC nueva) + explicación obligatoria si
+   el conteo de apertura difiere del fondo esperado del Z anterior.
+7. `CajaTurno.tsx` (cajas generales, no-farmacia) ahora usa el mismo wizard de conteo
+   ciego que ya tenía farmacia — antes mostraba el fondo por defecto sin ser ciego.
+8. Límite de efectivo configurable (`clinic_settings`) con banner de alerta no bloqueante.
+
+**Bugs Critical reales encontrados y corregidos durante el proceso de review (4 total,
+todos por el mismo patrón — cuidado si se vuelve a tocar RPCs de este módulo):**
+- Task 3: `CREATE OR REPLACE` no reemplaza una función con distinta arity en Postgres —
+  dejaba vivo un overload viejo sin seguridad. + RLS permitía INSERT directo de cash_drop
+  bypaseando el RPC.
+- Task 5: el plan asumía la firma vieja de `turno_close` (4 params) pero la función viva
+  en prod tiene 5 (con `p_supervisor_id`, agregado por un diagnostic script no trackeado
+  en migrations — drift Lovable/CLI). Reescrito con la firma y body reales.
+- Task 6: RPC nueva `turno_open` (`SECURITY DEFINER`) sin check multi-tenant, bypaseaba
+  la RLS que protegía el INSERT que reemplazó.
+- Review final de rama: `cash_drop` sumaba como `+monto` (ingreso) en vez de `-monto`
+  en `turno_close` — inflaba el efectivo esperado 2x el monto del drop, disparaba faltante
+  fantasma. + `verify_supervisor_pin` sin check de que el caller pertenezca a la clínica
+  (oráculo de fuerza bruta de PIN cross-tenant). Ambos fixed.
+
+**Cerrado:**
+- [x] Merge `worktree-corte-caja-gaps` → `main` (fast-forward, 18 archivos, rama borrada).
+- [x] Aplicadas las 6 migraciones a Supabase (`kyfkvdyxpvpiacyymldc`) — `db push` chocó
+      con drift de historial no relacionado (migración `20260709000001` con entrada
+      duplicada); se aplicaron directo vía `supabase db query --linked --file` (patrón
+      CLAUDE.md) y se marcó el historial con `migration repair --status applied` para
+      las 6 nuevas + `--status reverted` para 8 entradas remote-only de Lovable
+      (documentadas en el error del CLI, nada más tocado). Verificado con
+      `SELECT proname FROM pg_proc` que las 6 RPCs existen vivas:
+      `verify_supervisor_pin`, `pharmacy_register_return`, `turno_close`,
+      `turno_fondo_movimiento`, `turno_open`, `pharmacy_fondo_movimiento`.
+
+**Pendiente antes de dar el punto 3 por cerrado:**
+- [ ] Correr `mcp__supabase__get_advisors(type="security")`.
+- [ ] Verificación e2e con browser real (login real, devolución con PIN, cash drop,
+      cierre con diferencia sin notas, abrir turno general con conteo ciego).
+- [ ] **Gap conocido, NO corregido en esta rama** (fuera de scope, requiere confirmar
+      cuál diagnostic script es el realmente vivo antes de tocar): el mismo bug de signo
+      de `cash_drop` (tratado como ingreso en vez de egreso) probablemente existe también
+      en `turno_corte_x` y `pharmacy_close_shift` — funciones prod NO tocadas por esta
+      rama, viven solo en `supabase/scripts/diagnostics/*.sql` con múltiples variantes
+      por drift. Investigar cuál es la versión viva antes de corregir.
+- [ ] Minor sin resolver (no bloqueantes): `turno_open` no valida que `caja_id`
+      pertenezca a `clinic_id` (gap heredado de la RLS vieja); banner de límite de
+      efectivo no incluye cobros en efectivo en su estimado (solo fondo+movimientos,
+      subestima); `TurnoOpenWizard` usa `.single()` en vez de `.maybeSingle()` para el
+      último corte Z (funciona pero frágil).
+
+### Punto 4 pendiente
+
+**Chat de ayuda ("hablar con humano")** — tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes`
+ya existen (ver CLAUDE.md sección Manual/Chat). Falta UI + decisión de hosting de IA
+(Ollama necesita VM propia — Workers/Edge Functions no sirven, no soportan proceso
+persistente con modelo cargado). Empezar por esa decisión de hosting antes de UI.
 
 Antes de tocar nada: leer skill `proyectos` (`~/.claude/skills/proyectos/SKILL.md`) y
 confirmar `mcp__supabase__get_project_url` = `kyfkvdyxpvpiacyymldc` (no el de células madre).
+
+**Fix sesión 44:** sesión previa arrancó con cwd en `C:\Users\pablo` (home) → MCP supabase
+del repo (`.mcp.json`) nunca cargó, cero tools `mcp__supabase__*` disponibles. Creado
+`claude-clinica` (función en `$PROFILE` de PowerShell, `C:\Users\pablo\OneDrive\Documentos\PowerShell\Microsoft.PowerShell_profile.ps1`):
+hace `cd` a este repo y lanza `claude`, dejando el comando `claude` normal intacto para
+otros proyectos. **Usar `claude-clinica` para abrir sesión de este proyecto de ahora en
+adelante** — abre terminal nueva (o `. $PROFILE` en la actual) para que cargue la función.
 
 ## COMPLETADO — sesión 43 (Jul 16), punto 2: responsive farmacia (plan 2026-06-09)
 

@@ -1,0 +1,9 @@
+-- pg_cron scheduling for nightly analysis
+-- Manual setup via Supabase Dashboard > Database > Webhooks > Scheduled or external cron service
+-- Example pg_cron (requires pg_cron extension already enabled):
+-- SELECT cron.schedule(
+--   'analizar-conversaciones-nightly',
+--   '0 2 * * *',
+--   'SELECT net.http_post(''https://kyfkvdyxpvpiacyymldc.supabase.co/functions/v1/analizar-conversaciones'', jsonb_build_object())'
+-- );
+-- Note: Bearer auth for Edge Function should be handled via environment variable or Supabase dashboard authorization

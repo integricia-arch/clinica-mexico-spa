@@ -1,0 +1,63 @@
+{
+  "servicios": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "nombre": "Consulta Dermatológica",
+      "especialidad": "Dermatología",
+      "duracion_minutos": 30,
+      "precio_centavos": 50000,
+      "activo": true
+    },
+    {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "nombre": "Consulta Medicina General",
+      "especialidad": "Medicina general",
+      "duracion_minutos": 30,
+      "precio_centavos": 35000,
+      "activo": true
+    }
+  ],
+  "doctors": [
+    {
+      "id": "33333333-3333-3333-3333-333333333333",
+      "nombre": "Ana",
+      "apellidos": "García",
+      "especialidad": "Dermatología",
+      "activo": true,
+      "horario_inicio": "09:00",
+      "horario_fin": "14:00"
+    }
+  ],
+  "doctor_servicios": [
+    {
+      "id": "44444444-4444-4444-4444-444444444444",
+      "doctor_id": "33333333-3333-3333-3333-333333333333",
+      "servicio_id": "11111111-1111-1111-1111-111111111111",
+      "doctors": { "activo": true },
+      "doctor": {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "nombre": "Ana",
+        "apellidos": "García",
+        "especialidad": "Dermatología",
+        "activo": true,
+        "horario_inicio": "09:00",
+        "horario_fin": "14:00"
+      }
+    },
+    {
+      "id": "55555555-5555-5555-5555-555555555555",
+      "doctor_id": "33333333-3333-3333-3333-333333333333",
+      "servicio_id": "22222222-2222-2222-2222-222222222222",
+      "doctors": { "activo": true },
+      "doctor": {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "nombre": "Ana",
+        "apellidos": "García",
+        "especialidad": "Dermatología",
+        "activo": true,
+        "horario_inicio": "09:00",
+        "horario_fin": "14:00"
+      }
+    }
+  ]
+}
