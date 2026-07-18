@@ -1,10 +1,27 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN (sesión siguiente): Módulo Contable — Fase 1
+## PRÓXIMA ACCIÓN: Módulo Contable — Fase 2 (honorarios por paciente/doctor/día)
 
-Plan aprobable en `docs/superpowers/plans/2026-07-18-modulo-contable.md` (5 fases).
-Empezar en **Fase 1: insumos por cita** (`appointment_insumos` + descuento de
-inventario vía `movimientos_inventario` con reference_type='appointment').
+Plan en `docs/superpowers/plans/2026-07-18-modulo-contable.md`. Rama `feat/modulo-contable`.
+
+### ✅ Fase 1 COMPLETADA (2026-07-18, revisor APPROVE)
+- Migración `20260718150000_fase1_appointment_insumos.sql` aplicada a prod:
+  tabla `appointment_insumos` (log append-only consumo/reversa, costo snapshot,
+  RLS SELECT por membership, escritura SOLO vía RPCs SECURITY DEFINER
+  `registrar_insumos_cita` / `revertir_insumos_cita` con checklist completo).
+- **Desviación consciente del plan:** movimientos_inventario NO se usa (es
+  exclusivo de medicamentos, medicamento_id NOT NULL); appointment_insumos ES
+  el log de movimientos de insumos. Revisor validó la decisión.
+- E2E SQL con rollback 6/6 (stock baja, snapshot inmutable, costo 0 bloquea,
+  stock insuficiente bloquea, reversa idempotente, sin membership forbidden).
+- UI: `InsumosCitaSection` en DischargeForm (respeta step cerrado).
+- Historial de migraciones reparado: 4 entradas remotas huérfanas revertidas;
+  `20260709000001_subscription_cancel_at.sql` renombrada a `20260709000006`
+  (colisión de versión con ciclo_compras).
+- Deuda LOW: RPC sin idempotency key ante retry de red; `revertir_insumos_cita`
+  no wireada al flujo de cancelación de cita (primitiva lista).
+- `get_advisors(security)` pendiente — MCP supabase no cargó esta sesión
+  (arrancó fuera del repo); correr en próxima sesión con MCP.
 
 Pendientes que NO requieren código (humanos):
 - Alan (alan.calderon.biomed@gmail.com) y Aldo (alomeli19@aspv.edu.mx) entran

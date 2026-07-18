@@ -10,6 +10,7 @@ import { Loader2, Check } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
 import { isClosed } from "./_shared";
+import InsumosCitaSection from "./InsumosCitaSection";
 
 interface DocumentosEntregados {
   receta: boolean;
@@ -19,7 +20,7 @@ interface DocumentosEntregados {
 }
 
 export default function DischargeForm({
-  stepId, stepStatus, existingData, onSaved,
+  stepId, stepStatus, appointmentId, existingData, onSaved,
 }: StepFormProps) {
   const [indicaciones, setIndicaciones] = useState<string>(existingData.indicaciones ?? "");
   const [diagnosticoFinal, setDiagnosticoFinal] = useState<string>(existingData.diagnostico_final ?? "");
@@ -78,6 +79,8 @@ export default function DischargeForm({
         <Label>Indicaciones al paciente</Label>
         <Textarea value={indicaciones} onChange={(e) => setIndicaciones(e.target.value)} disabled={closed} rows={4} />
       </div>
+
+      {appointmentId && <InsumosCitaSection appointmentId={appointmentId} closed={closed} />}
 
       <div className="space-y-2">
         <Label>Documentos entregados al paciente</Label>
