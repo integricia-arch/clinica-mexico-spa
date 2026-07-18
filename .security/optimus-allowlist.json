@@ -1,8 +1,44 @@
 {
   "paths": [
-    "Deno.env.get"
+    "Deno.env.get",
+    "import.meta.env",
+    "process.env",
+    "supabase/functions/",
+    "supabase/migrations/",
+    ".env.example",
+    "C:/Users/pablo/clinica-mexico-spa/src",
+    "C:\\Users\\pablo\\clinica-mexico-spa\\src"
   ],
   "env_vars": [
-    "SUPABASE_SERVICE_ROLE_KEY"
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "ANTHROPIC_API_KEY",
+    "TELEGRAM_BOT_TOKEN",
+    "WEBHOOK_SECRET",
+    "TELEGRAM_API_BASE",
+    "ANTHROPIC_API_BASE",
+    "ANTHROPIC_MODEL",
+    "CLINIC_NAME",
+    "CLINIC_ID",
+    "STRIPE_SECRET_KEY",
+    "GITHUB_TOKEN",
+    "GH_TOKEN",
+    "DATABASE_URL"
+  ],
+  "domains": [
+    "kyfkvdyxpvpiacyymldc.supabase.co",
+    "supabase.com",
+    "integrika.mx",
+    "api.cloudflare.com"
+  ],
+  "commands": [
+    "kyfkvdyxpvpiacyymldc.supabase.co",
+    "localhost",
+    "127.0.0.1",
+    "git commit",
+    "git push origin",
+    "supabase functions deploy",
+    "supabase db push",
+    "npm run",
+    "wrangler deploy"
   ]
 }

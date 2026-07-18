@@ -598,6 +598,7 @@ export default function AdminUsuarios() {
   type DoctorForm = {
     nombre: string;
     apellidos: string;
+    email: string;
     especialidad: string;
     cedula_profesional: string;
     telefono: string;
@@ -607,7 +608,7 @@ export default function AdminUsuarios() {
     activo: boolean;
   };
   const emptyDoctor: DoctorForm = {
-    nombre: "", apellidos: "", especialidad: "", cedula_profesional: "",
+    nombre: "", apellidos: "", email: "", especialidad: "", cedula_profesional: "",
     telefono: "", horario_inicio: "08:00", horario_fin: "18:00",
     duracion_cita_min: 30, activo: true,
   };
@@ -628,6 +629,7 @@ export default function AdminUsuarios() {
     setDoctorForm({
       nombre: d.nombre ?? "",
       apellidos: d.apellidos ?? "",
+      email: (d as any).email ?? "",
       especialidad: d.especialidad ?? "",
       cedula_profesional: d.cedula_profesional ?? "",
       telefono: d.telefono ?? "",
@@ -643,6 +645,8 @@ export default function AdminUsuarios() {
     const f = doctorForm;
     if (!f.nombre.trim()) return "El nombre es requerido";
     if (!f.apellidos.trim()) return "Los apellidos son requeridos";
+    if (!f.email.trim()) return "El email es requerido (se usa para crear cuenta automática)";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) return "Email inválido";
     if (!f.especialidad.trim()) return "La especialidad es requerida";
     if (f.nombre.length > 80) return "Nombre demasiado largo";
     if (f.apellidos.length > 80) return "Apellidos demasiado largos";
@@ -672,6 +676,7 @@ export default function AdminUsuarios() {
     const payload = {
       nombre: doctorForm.nombre.trim(),
       apellidos: doctorForm.apellidos.trim(),
+      email: doctorForm.email.trim().toLowerCase(),
       especialidad: doctorForm.especialidad.trim(),
       cedula_profesional: doctorForm.cedula_profesional.trim() || null,
       telefono: doctorForm.telefono.trim() || null,
@@ -692,6 +697,21 @@ export default function AdminUsuarios() {
       return;
     }
     toast.success(doctorEdit ? "Médico actualizado" : "Médico creado");
+
+    // Provisionar usuario automáticamente si es nuevo, activo, y tiene email
+    if (!doctorEdit && doctorForm.activo && doctorForm.email.trim()) {
+      const email = doctorForm.email.trim().toLowerCase();
+      const tId = toast.loading("Creando cuenta de usuario automáticamente...");
+      const { data, error: provErr } = await supabase.functions.invoke("provision-users-from-queue", { body: {} });
+      toast.dismiss(tId);
+      if (provErr || data?.failed > 0) {
+        console.error("Provision error:", provErr ?? data?.errors);
+        toast.error("Médico creado, pero la cuenta no se pudo crear automáticamente. Se vinculará sola cuando entre con Google, o reintenta guardando de nuevo.");
+      } else {
+        toast.success(`Cuenta lista: ya puede entrar con Google usando ${email}`);
+      }
+    }
+
     setDoctorDialogOpen(false);
     fetchDoctors();
   };
@@ -776,6 +796,7 @@ export default function AdminUsuarios() {
   type NurseForm = {
     nombre: string;
     apellidos: string;
+    email: string;
     categoria: NurseCategoria;
     especialidad: string;
     cedula_profesional: string;
@@ -785,7 +806,7 @@ export default function AdminUsuarios() {
     activo: boolean;
   };
   const emptyNurse: NurseForm = {
-    nombre: "", apellidos: "", categoria: "auxiliar", especialidad: "", cedula_profesional: "",
+    nombre: "", apellidos: "", email: "", categoria: "auxiliar", especialidad: "", cedula_profesional: "",
     telefono: "", horario_inicio: "08:00", horario_fin: "18:00", activo: true,
   };
   const [nurseEdit, setNurseEdit] = useState<NurseRow | null>(null);
@@ -805,6 +826,7 @@ export default function AdminUsuarios() {
     setNurseForm({
       nombre: n.nombre ?? "",
       apellidos: n.apellidos ?? "",
+      email: (n as any).email ?? "",
       categoria: n.categoria,
       especialidad: n.especialidad ?? "",
       cedula_profesional: n.cedula_profesional ?? "",
@@ -820,6 +842,8 @@ export default function AdminUsuarios() {
     const f = nurseForm;
     if (!f.nombre.trim()) return "El nombre es requerido";
     if (!f.apellidos.trim()) return "Los apellidos son requeridos";
+    if (!f.email.trim()) return "El email es requerido (se usa para crear cuenta automática)";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) return "Email inválido";
     if (f.nombre.length > 80) return "Nombre demasiado largo";
     if (f.apellidos.length > 80) return "Apellidos demasiado largos";
     if (f.cedula_profesional && !/^[A-Za-z0-9-]{4,20}$/.test(f.cedula_profesional.trim())) {
@@ -844,6 +868,7 @@ export default function AdminUsuarios() {
     const payload = {
       nombre: nurseForm.nombre.trim(),
       apellidos: nurseForm.apellidos.trim(),
+      email: nurseForm.email.trim().toLowerCase(),
       categoria: nurseForm.categoria,
       especialidad: nurseForm.especialidad.trim() || null,
       cedula_profesional: nurseForm.cedula_profesional.trim() || null,
@@ -864,6 +889,21 @@ export default function AdminUsuarios() {
       return;
     }
     toast.success(nurseEdit ? "Enfermera actualizada" : "Enfermera creada");
+
+    // Provisionar usuario automáticamente si es nuevo, activo, y tiene email
+    if (!nurseEdit && nurseForm.activo && nurseForm.email.trim()) {
+      const email = nurseForm.email.trim().toLowerCase();
+      const tId = toast.loading("Creando cuenta de usuario automáticamente...");
+      const { data, error: provErr } = await supabase.functions.invoke("provision-users-from-queue", { body: {} });
+      toast.dismiss(tId);
+      if (provErr || data?.failed > 0) {
+        console.error("Provision error:", provErr ?? data?.errors);
+        toast.error("Enfermera creada, pero la cuenta no se pudo crear automáticamente. Se vinculará sola cuando entre con Google, o reintenta guardando de nuevo.");
+      } else {
+        toast.success(`Cuenta lista: ya puede entrar con Google usando ${email}`);
+      }
+    }
+
     setNurseDialogOpen(false);
     fetchNurses();
   };

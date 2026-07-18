@@ -66,14 +66,19 @@ export default function Login() {
       if (view === "signup") {
         const { error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: window.location.origin, captchaToken: captchaToken ?? undefined },
+          options: {
+            emailRedirectTo: window.location.origin,
+            ...(captchaToken && { captchaToken }),
+          },
         });
         if (error) throw error;
         toast({ title: "Cuenta creada", description: "Revisa tu correo para confirmar tu cuenta." });
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email, password,
-          options: { captchaToken: captchaToken ?? undefined },
+          options: {
+            ...(captchaToken && { captchaToken }),
+          },
         });
         if (error) throw error;
         const from = (location.state as { from?: string } | null)?.from ?? "/";
@@ -96,10 +101,15 @@ export default function Login() {
       toast({ variant: "destructive", title: "Error", description: "Ingresa tu correo electrónico." });
       return;
     }
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast({ variant: "destructive", title: "Verificación requerida", description: "Completa la verificación de seguridad antes de continuar." });
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
+        ...(captchaToken && { captchaToken }),
       });
       if (error) throw error;
       toast({
@@ -113,6 +123,9 @@ export default function Login() {
       toast({ variant: "destructive", title, description });
     } finally {
       setLoading(false);
+      // Token Turnstile es de un solo uso -- resetear siempre tras el intento.
+      turnstileRef.current?.reset();
+      setCaptchaToken(null);
     }
   };
 
@@ -178,7 +191,17 @@ export default function Login() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                {TURNSTILE_SITE_KEY && (
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={setCaptchaToken}
+                    onExpire={() => setCaptchaToken(null)}
+                    onError={() => setCaptchaToken(null)}
+                    options={{ size: "flexible" }}
+                  />
+                )}
+                <Button type="submit" className="w-full" disabled={loading || (!!TURNSTILE_SITE_KEY && !captchaToken)}>
                   {loading ? "Enviando..." : "Enviar enlace de recuperación"}
                 </Button>
               </form>

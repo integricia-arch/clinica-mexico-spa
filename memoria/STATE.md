@@ -1,6 +1,91 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN (sesión 45)
+## Sesión 2026-07-18 (tarde): Auto-provisioning usuarios Google OAuth ✅
+
+### ✅ COMPLETADO (commits f648237, 19330f2 — aplicado a prod + deployado + pusheado)
+- Migración `20260718110000_auto_user_provisioning.sql`: email en doctors/nurses,
+  cola con clinic_id, `provision_link_user()` (rol + clinic_membership + user_id),
+  trigger JIT en auth.users, RPC `provision_link_by_email`.
+- Migración `20260718120000_provisioning_hardening.sql` (code review CRITICAL):
+  JIT solo con `email_confirmed_at NOT NULL` (anti-secuestro de cuenta por signup
+  con email ajeno); baja doctor/enfermera desactiva membership, reactivación la
+  restaura; cola filtra por entity_type.
+- Edge function `provision-users-from-queue` v3: fix `SUPABASE_ANON_KEY` sin
+  definir (estaba rota en prod), password CSPRNG, vincula usuarios ya existentes,
+  service_role bypass. `verify_jwt=true` en config.toml.
+- AdminUsuarios: invoke revisa `{data,error}`, toast correcto, email lowercase.
+- Flujo final: alta con email → cuenta Auth confirmada → login "Continuar con
+  Google" auto-linkea → ve su clínica. Orden inverso (Google primero) también.
+- Revisor (agente) veredicto: APPROVE.
+- Optimus allowlist dev en repo `.security/` y `~/.claude/optimus-allowlist.json`.
+
+### ⏳ PENDIENTE de esta característica
+- E2E real: entrar con cuenta Google de prueba (requiere humano).
+- Alan (alan.calderon.biomed@gmail.com) en cola: se vincula solo en su primer
+  login Google, o al guardar cualquier alta en AdminUsuarios.
+- Deuda LOW: función procesa toda la cola, toast no correlaciona entidad exacta.
+- Recepcionistas siguen con staff_link_codes (scope aparte).
+
+---
+
+## Sesión 2026-07-18: Grafo + Migraciones SECURITY_INVOKER
+
+### ✅ COMPLETADO
+- 3 visualizadores de grafo HTML (Cytoscape, Vis.js, D3.js)
+- Skill `/grafo-viewer` para invocaciones futuras
+- Migración SECURITY_INVOKER creada (bot_metricas_diarias)
+
+### 🔴 BLOQUEADOS (HIGH PRIORITY)
+1. **Migration SECURITY_INVOKER** — `supabase db push --linked --include-all --debug`
+   - Archivo: `supabase/migrations/20260717130942_fix_bot_metricas_security_invoker.sql`
+   - Bloqueador: Migration history conflict (20260716_conversacion_analisis*)
+   - Pendiente: Push + commit
+
+2. **Turnstile captcha error** — "no captcha_token found"
+   - Solución rápida: Deshabilitar en Supabase Auth
+   - Solución completa: Cloudflare setup (deferred)
+
+3. **Usuarios admin** (PENDING)
+   - alomeli19@aspv.edu.mx (Aldo)
+   - alan.calderon.biomed@gmail.com (Alan)
+   - Asignar: platform_staff role, verificar login + módulos
+
+### 📊 Cambios no committeados
+```
+Modified: graphify-out/* (8 files)
+Untracked: supabase/migrations/20260717130942_fix_bot_metricas_security_invoker.sql
+```
+
+---
+
+## PRÓXIMA ACCIÓN (sesión 46): Bot Telegram — Fases 1-7.3 COMPLETADAS ✅
+
+**Sesión 2026-07-17 (continuación): Bot Telegram Fases 1-7.3 TERMINADAS.**
+
+### ✅ COMPLETADO
+- **Fase 1:** Módulos refactorizados (handlers, agent, telegram, triage, db, horarios, config)
+- **Fase 2:** Tools reales (listar_horarios, guardar_datos_paciente, confirmar_cita) + System prompt v10
+- **Fase 3:** Router simplificado (triage urgencias solo, agente-primero)
+- **Fase 4:** Historial persistente + guardia antiloop (detecta tool repetido 2x)
+- **Fase 5:** Prompt caching (ephemeral) + métricas SQL (bot_metricas_diarias)
+- **Fase 6:** Config bot en clinic_settings + ConfiguracionBot.tsx React UI
+- **Fase 7:** Analítica conversaciones (tabla + Edge Function batch + BI panel)
+
+### 📊 Status
+- Branch: `feat/bot-agente` 
+- PR #18: https://github.com/integricia-arch/clinica-mexico-spa/pull/18
+- Bot LIVE en kyfkvdyxpvpiacyymldc (webhook + agente + caching + analítica)
+- 6/6 transcripts verdes (dedup, urgencia, agente)
+- Cost sesión: $112.47 (agentes paralelos para tareas 5.2, 6, 7)
+
+### 📝 Próximas acciones (sesión 47+)
+1. Sincronizar CLI migrations (`supabase db push --linked`)
+2. Integrar ruta /analitika/bot en router
+3. Verificar BI panel carga datos correctamente
+4. Revisar/mergear PR #18 a main
+5. Testing QA en Telegram real (3 conversaciones: nueva cita, reagendar, precio)
+
+## Pendiente anterior (sesión 45 original)
 
 **Sesión 44 cerrada por costo ($109+, CRITICAL).** Punto 3 ("corte de caja") de los 4
 puntos: cerrado — mergeado a main, 6 migraciones aplicadas y verificadas vivas en
