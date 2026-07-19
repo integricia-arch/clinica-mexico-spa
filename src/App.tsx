@@ -50,6 +50,7 @@ import Caja from "@/pages/Caja";
 import TurnoGuard from "@/components/TurnoGuard";
 import AjustesPlataforma from "@/pages/ajustes/AjustesPlataforma";
 import BI from "@/pages/BI";
+import Contabilidad from "@/pages/Contabilidad";
 import AyudaInterna from "@/pages/AyudaInterna";
 import SinAcceso from "./pages/SinAcceso";
 import NotFound from "./pages/NotFound";
@@ -141,6 +142,7 @@ const App = () => (
                         <Route path="/admin/tenants/:id" element={<ProtectedRoute><AdminTenantDetail /></ProtectedRoute>} />
                         <Route path="/admin/whatsapp-alertas" element={<ProtectedRoute allowedRoles={["admin"]}><WhatsappAlertas /></ProtectedRoute>} />
                         <Route path="/inteligencia" element={<ProtectedRoute allowedRoles={["admin","manager"]}><BI /></ProtectedRoute>} />
+                        <Route path="/contabilidad" element={<ProtectedRoute allowedRoles={["admin","manager"]}><Contabilidad /></ProtectedRoute>} />
                         <Route path="/ayuda-interna" element={<ProtectedRoute allowedRoles={["admin","manager","receptionist"]}><AyudaInterna /></ProtectedRoute>} />
                         <Route path="/lealtad" element={<ProtectedRoute allowedRoles={["admin","manager"]}><Lealtad /></ProtectedRoute>} />
 

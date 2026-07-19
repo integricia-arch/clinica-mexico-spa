@@ -432,6 +432,26 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
+## Módulo Contable (Fases 1-4, 2026-07-18)
+
+**Tablas clave:**
+- `appointment_insumos` (id, appointment_id, insumo_id, cantidad, costo_unitario_centavos snapshot, tipo: consumo/reversa) — log de movimientos de insumos, descuenta stock vía RPCs.
+- `cuentas_contables` (codigo, nombre, tipo: ingreso/egreso, es_fijo) — catálogo simple (no SAT implementado aún).
+- `movimientos_contables` (clinic_id, cuenta_id, origen: manual/consulta/farmacia/compra/honorario, monto_centavos, fecha_devengo, fecha_pago, reference_type/id, evento: devengo/cancelacion) — append-only devengo.
+- `doctor_honorarios_config` (doctor_id, tipo: porcentaje/fijo_por_consulta, valor, vigente_desde) — histórico sin UPDATE destructivo.
+
+**RPCs principales:** `registrar_insumos_cita(appointment_id, items)` — inserta appointment_insumos + descuenta stock (transaccional); `kpis_dashboard(clinic_id, fecha_inicio, fecha_fin)` — retorna P&L y KPIs.
+
+**Reglas duras:**
+- `appointment_insumos` es el log de insumos, NO `movimientos_inventario` (que es solo medicamentos).
+- Escritura de insumos/movimientos/egresos: **SOLO vía RPCs SECURITY DEFINER** (policies deniegan DML directo).
+- `movimientos_contables` append-only; INSERT manual solo admin/manager (origin='manual').
+- Idempotencia por `(reference_type, reference_id, evento)` UNIQUE constraint.
+- Cron contab-devengar-honorarios: 8:30 UTC diario.
+- **Limitación conocida:** costo de ventas NO incluye costo de medicamentos (farmacia) — solo insumos clínicos.
+
+**Vistas:** `pnl_mensual`, `flujo_efectivo`, `doctor_honorarios_detalle` (grano: cita, agregable por paciente/doctor/día).
+
 ## Learnings (added by /aprende 2026-07-18)
 
 - **CSP vive en `public/_headers`.** Todo script/widget de terceros nuevo debe agregarse ahí o queda bloqueado silenciosamente. Turnstile requiere `https://challenges.cloudflare.com` en `script-src` Y `frame-src`. Ojo: /login puede tardar ~1 min en reflejar headers nuevos por cache de edge. <!-- /aprende 2026-07-18 -->
