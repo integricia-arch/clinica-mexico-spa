@@ -1,28 +1,36 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: módulo contable CERRADO (fases 1-9 completas). Backlog sin fecha: control de activos fijos (investigado, no construido) + import/export UI + conexión API con celulas-madre-ventas (ver abajo).
+## PRÓXIMA ACCIÓN: PR #19 (IVA automático por régimen fiscal) esperando revisión/merge. Después: control de activos fijos (investigado, no construido) + import/export UI + conexión API con celulas-madre-ventas (ver abajo).
 
-## 🔒 BLOQUEADO — esperando confirmación del contador de Pablo (2026-07-19)
+## PR #19 abierto — IVA automático por régimen fiscal (2026-07-19, sesión posterior)
 
-Motor de IVA trasladado (fase 9) ya construido y probado, pero `ING_CONSULTAS`/
-`ING_FARMACIA`/`ING_OTROS` siguen en `iva_tratamiento = sin_configurar` a propósito
-— el sistema NO calcula IVA hasta tener estas respuestas. Pablo va a confirmar con
-su contador y regresa. Preguntas pendientes:
+En vez de esperar respuesta manual del contador cuenta por cuenta, Pablo pidió que el
+sistema derive el tratamiento IVA aplicando la normatividad vigente según lo que se
+seleccione. Construido vía brainstorming → spec → plan → subagent-driven-development:
 
-1. Tipo de persona de la clínica (física con actividad profesional de salud, o moral/
-   sociedad mercantil) — determina si consultas están exentas de IVA (Art. 15-XIV LIVA,
-   solo aplica a personas físicas) o gravadas al 16%.
-2. Con la respuesta anterior: qué tratamiento poner en Catálogos para cada cuenta de
-   ingreso (`ING_CONSULTAS`, `ING_FARMACIA` — normalmente tasa 0% medicamentos de
-   patente —, `ING_OTROS`).
-3. Confirmar que el régimen fiscal capturado en `/configuracion/facturacion`
-   (`cfdi_config.regimen_fiscal`) sea la clave SAT correcta.
-4. Si se retoma control de activos fijos: tasa de depreciación fiscal de equipo
-   médico (LISR Art. 34 no tiene fracción explícita confirmada).
+- Spec: `docs/superpowers/specs/2026-07-19-iva-automatico-regimen-fiscal-design.md`
+- Plan: `docs/superpowers/plans/2026-07-19-iva-automatico-regimen-fiscal.md`
+- PR: https://github.com/integricia-arch/clinica-mexico-spa/pull/19 (branch `feat/iva-automatico-regimen-fiscal`)
 
-**Siguiente sesión, una vez Pablo traiga las respuestas:** solo entrar a Catálogos y
-configurar el IVA de cada cuenta — el motor de cálculo ya existe, no hace falta
-tocar código.
+**Qué hace:** columna nueva `cfdi_config.tipo_persona` (física/moral) + función pura
+`deriveIvaTratamiento()` (`src/features/contabilidad/ivaRules.ts`, 10 tests) que deriva
+el tratamiento de `ING_CONSULTAS`/`ING_FARMACIA`/`ING_OTROS` a partir de régimen fiscal +
+tipo de persona: `ING_FARMACIA` siempre tasa 0% (Art. 2-A LIVA), `ING_CONSULTAS` exento
+si física / 16% si moral (Art. 15-XIV LIVA), `ING_OTROS` siempre 16%. Selector
+`tipo_persona` en Facturación (auto-bloqueado si el régimen no es ambiguo; editable en
+los 4 regímenes que aplican a ambos — 610/622/624/626 RESICO). En Catálogos, sugerencia
++ botón "Aplicar" — **ninguna escritura automática sin click explícito**. Sin RPC ni RLS
+nueva, reutiliza el UPDATE admin-only que ya existía para `cuentas_contables`.
+
+151/151 tests pasan, tsc limpio, migración ya aplicada y verificada en prod
+(`kyfkvdyxpvpiacyymldc`). Review final de rama: 1 hallazgo Important (query de
+`cfdi_config` sin `clinic_id` en Catálogos, gap del plan no del implementador) corregido
+antes del PR.
+
+**Pendiente:** merge del PR (Pablo revisa) + verificación manual en `/configuracion/facturacion`
+y Catálogos con datos reales antes de dar por cerrado el punto 5 del backlog de fase 9.
+Punto 1 de activos fijos sigue bloqueado — misma pregunta de tasa fiscal de equipo médico,
+sin resolver, no cubierta por esta feature.
 
 **Sesión 2026-07-19 (sonnet) — Fase 9, IVA y preparación fiscal:**
 - Hallazgo: IVA acreditable (compras) y catálogo con código SAT ya estaban listos desde

@@ -25,9 +25,9 @@
     "semantic_hash": "5bb078a18b33b10a9664a451e496939c"
   },
   "manual-site/src/components/HomepageFeatures/index.tsx": {
-    "mtime": 1783773214.393297,
-    "ast_hash": "18a09f572984f4b9dd7bc217b1512454",
-    "semantic_hash": "18a09f572984f4b9dd7bc217b1512454"
+    "mtime": 1784436373.557409,
+    "ast_hash": "14d5ea19434420f11f19ed785019303b",
+    "semantic_hash": ""
   },
   "manual-site/src/pages/index.tsx": {
     "mtime": 1781627833.57895,
@@ -80,9 +80,9 @@
     "semantic_hash": "9965bb421dab910f32dbf9e2cf859e4a"
   },
   "src/App.tsx": {
-    "mtime": 1783717969.4738698,
-    "ast_hash": "538ff814b63709c34120abde700c2a26",
-    "semantic_hash": "538ff814b63709c34120abde700c2a26"
+    "mtime": 1784436373.5654674,
+    "ast_hash": "d60b4e45527cf95e0148280c152498d4",
+    "semantic_hash": ""
   },
   "src/assets/lottie/online-health-report.json": {
     "mtime": 1780160237.7857602,
@@ -90,9 +90,9 @@
     "semantic_hash": "0b6bd020793aeb9a2ed53d8cbe5a46b9"
   },
   "src/components/AppLayout.tsx": {
-    "mtime": 1783717969.4787621,
-    "ast_hash": "14a499a96b9dc6e89e70ae06132c9118",
-    "semantic_hash": "14a499a96b9dc6e89e70ae06132c9118"
+    "mtime": 1784436759.3183136,
+    "ast_hash": "c214207d76929979868c7dc577e4854e",
+    "semantic_hash": ""
   },
   "src/components/ErrorBoundary.tsx": {
     "mtime": 1781476206.1960528,
@@ -120,8 +120,8 @@
     "semantic_hash": "6989880b1e604af3ed42859759268818"
   },
   "src/components/MfaEnrollmentGate.tsx": {
-    "mtime": 1784219225.795392,
-    "ast_hash": "2a5a450276a4d71d68af865d61ced2e3",
+    "mtime": 1784221175.6556742,
+    "ast_hash": "ffdb5163ae490ece570e8b5526e44d0e",
     "semantic_hash": ""
   },
   "src/components/ModuloNoContratadoScreen.tsx": {
@@ -225,14 +225,14 @@
     "semantic_hash": "51232ddf0394a864ba289448fcf37197"
   },
   "src/components/turno/TurnoCloseWizard.tsx": {
-    "mtime": 1783355146.327489,
-    "ast_hash": "d27b51a283afd0cba3d565582a4e37f5",
-    "semantic_hash": "d27b51a283afd0cba3d565582a4e37f5"
+    "mtime": 1784247235.3800905,
+    "ast_hash": "dfcfb5efdda8390fa67a4a133ab40ef8",
+    "semantic_hash": ""
   },
   "src/components/turno/TurnoOpenWizard.tsx": {
-    "mtime": 1783355146.3313289,
-    "ast_hash": "387efba390ce0076fd062e23b71d9568",
-    "semantic_hash": "387efba390ce0076fd062e23b71d9568"
+    "mtime": 1784247235.3821518,
+    "ast_hash": "22577efe844586e18cb6fc08e3e7e8b7",
+    "semantic_hash": ""
   },
   "src/components/ui/accordion.tsx": {
     "mtime": 1779032575.9559083,
@@ -615,9 +615,9 @@
     "semantic_hash": "835c876ac9cbeb4e5cecfe98b3553f42"
   },
   "src/features/camino-paciente/operativo/StepForms/DischargeForm.tsx": {
-    "mtime": 1781565169.5560052,
-    "ast_hash": "04d8e227827dff20b92d587c0d7a6153",
-    "semantic_hash": "04d8e227827dff20b92d587c0d7a6153"
+    "mtime": 1784436373.5685663,
+    "ast_hash": "33aeb9c527f01ba426499e9fc6753b6a",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/FollowupForm.tsx": {
     "mtime": 1782156412.0218475,
@@ -935,9 +935,9 @@
     "semantic_hash": "600088b43af802d18ccf5ec063546750"
   },
   "src/features/farmacia/PuntoDeVenta.tsx": {
-    "mtime": 1783355146.4002507,
-    "ast_hash": "d713b23f5e37def24264bf6c2c5b561b",
-    "semantic_hash": "d713b23f5e37def24264bf6c2c5b561b"
+    "mtime": 1784247235.3849144,
+    "ast_hash": "3e2412f9ea644a24104909a4dbbfb20e",
+    "semantic_hash": ""
   },
   "src/features/farmacia/RecetaValidacionModal.tsx": {
     "mtime": 1782076626.0624425,
@@ -945,14 +945,14 @@
     "semantic_hash": "c0348acc0f58de7681edcff64c0dcfff"
   },
   "src/features/farmacia/ReturnDialog.tsx": {
-    "mtime": 1783355146.4026587,
-    "ast_hash": "8b135e6e16ee1d4d8abe78792a2707d2",
-    "semantic_hash": "8b135e6e16ee1d4d8abe78792a2707d2"
+    "mtime": 1784247235.3869517,
+    "ast_hash": "29c260cb212c997bbd1eb64721998f6a",
+    "semantic_hash": ""
   },
   "src/features/farmacia/ShiftPanel.tsx": {
-    "mtime": 1783355146.4049687,
-    "ast_hash": "6fd7b6d506fa3060ba75ecc32cff8359",
-    "semantic_hash": "6fd7b6d506fa3060ba75ecc32cff8359"
+    "mtime": 1784247235.3887575,
+    "ast_hash": "9170b22b490f9785fd46f46d043d6ec2",
+    "semantic_hash": ""
   },
   "src/features/farmacia/SolicitudesInsumos.tsx": {
     "mtime": 1783355146.4075096,
@@ -1355,7 +1355,7 @@
     "semantic_hash": "ed04b3ffaf4d9f5404ef19bf4587f92c"
   },
   "src/lib/repositories/clinicSettingsRepository.ts": {
-    "mtime": 1781476206.2607398,
+    "mtime": 1784392963.188452,
     "ast_hash": "69067599227c371d111a0ca027e01536",
     "semantic_hash": "69067599227c371d111a0ca027e01536"
   },
@@ -1415,9 +1415,9 @@
     "semantic_hash": "8a6636ed553c5a8c7b850bbc534f0765"
   },
   "src/pages/AdminUsuarios.tsx": {
-    "mtime": 1783355146.4879646,
-    "ast_hash": "5de2831aac2c5f6221d22e658856574a",
-    "semantic_hash": "5de2831aac2c5f6221d22e658856574a"
+    "mtime": 1784393007.521625,
+    "ast_hash": "16785c5fa4900e710d31fa9d6695678e",
+    "semantic_hash": ""
   },
   "src/pages/Agenda.tsx": {
     "mtime": 1783355146.4933312,
@@ -1465,9 +1465,9 @@
     "semantic_hash": "c09b83d40bc956b2530465b50989ae0c"
   },
   "src/pages/CajaTurno.tsx": {
-    "mtime": 1783355146.5085905,
-    "ast_hash": "9e39187ca66b8ae6393a290c301f343b",
-    "semantic_hash": "9e39187ca66b8ae6393a290c301f343b"
+    "mtime": 1784247235.3930922,
+    "ast_hash": "d21d00da4662985356c5e921e4326e7e",
+    "semantic_hash": ""
   },
   "src/pages/CaminoPaciente.tsx": {
     "mtime": 1781532141.5575328,
@@ -1485,9 +1485,9 @@
     "semantic_hash": "1510e19ffb08a7b224048e491f001e1d"
   },
   "src/pages/Configuracion.tsx": {
-    "mtime": 1783355146.514085,
-    "ast_hash": "8a1165b33a6536a159639191aef13fc1",
-    "semantic_hash": "8a1165b33a6536a159639191aef13fc1"
+    "mtime": 1784436373.5771346,
+    "ast_hash": "81f2ebcb8a90b649de70c437dc022b21",
+    "semantic_hash": ""
   },
   "src/pages/Dashboard.tsx": {
     "mtime": 1782155859.463447,
@@ -1540,9 +1540,9 @@
     "semantic_hash": "830f3b83c8947dbdc3ef672717b7c431"
   },
   "src/pages/Login.tsx": {
-    "mtime": 1783274591.3601286,
-    "ast_hash": "72cccccaaa763c8ec8efac9357a69cbc",
-    "semantic_hash": "72cccccaaa763c8ec8efac9357a69cbc"
+    "mtime": 1784393007.5240717,
+    "ast_hash": "b7a41816feeeb02a060a3e9803bb6839",
+    "semantic_hash": ""
   },
   "src/pages/MisRecetas.tsx": {
     "mtime": 1783355146.5297973,
@@ -1665,9 +1665,9 @@
     "semantic_hash": "47fe2ba31dc5c8954759a3f1a76a1604"
   },
   "src/pages/ajustes/sections/finance.tsx": {
-    "mtime": 1783217778.4647052,
-    "ast_hash": "db37c8428dfdd1364168915e15f50d5a",
-    "semantic_hash": "db37c8428dfdd1364168915e15f50d5a"
+    "mtime": 1784247235.3963418,
+    "ast_hash": "e5933968e8a2661c7823a030f28281c2",
+    "semantic_hash": ""
   },
   "src/pages/ajustes/sections/inventario.tsx": {
     "mtime": 1783217204.9096117,
@@ -1690,9 +1690,9 @@
     "semantic_hash": "d2048dfd6632e5dd8d9ae77c5a3b8d21"
   },
   "src/pages/configuracion/ConfiguracionCFDI.tsx": {
-    "mtime": 1783355146.557769,
-    "ast_hash": "344a515424e5a554a8e4931e5317ca51",
-    "semantic_hash": "344a515424e5a554a8e4931e5317ca51"
+    "mtime": 1784497200.17404,
+    "ast_hash": "db9045e8d0a535c61ab0435bf62fee45",
+    "semantic_hash": ""
   },
   "src/pages/configuracion/ConfiguracionEmail.tsx": {
     "mtime": 1781476206.3153093,
@@ -2155,7 +2155,7 @@
     "semantic_hash": "0b97d96e5ac4a3f81bf02dffb97f1288"
   },
   "supabase/functions/telegram-webhook/index.ts": {
-    "mtime": 1782169317.6956036,
+    "mtime": 1784392963.1944633,
     "ast_hash": "1988c4be569e1c63db9d8fcef2d3576b",
     "semantic_hash": "1988c4be569e1c63db9d8fcef2d3576b"
   },
@@ -3049,11 +3049,6 @@
     "ast_hash": "98bfe661a8aa405c273728cb047419c8",
     "semantic_hash": "98bfe661a8aa405c273728cb047419c8"
   },
-  "supabase/migrations/20260709000001_subscription_cancel_at.sql": {
-    "mtime": 1783717969.5274558,
-    "ast_hash": "5322f77f5e714a1aeb1a7a44e136f50a",
-    "semantic_hash": "5322f77f5e714a1aeb1a7a44e136f50a"
-  },
   "supabase/migrations/20260709000002_ciclo_compras_triggers.sql": {
     "mtime": 1782712261.8205304,
     "ast_hash": "c9ff938e3ed8919f409995f9c5573283",
@@ -3375,9 +3370,9 @@
     "semantic_hash": "123fa9b255eca3c5e50b85166da5c4ea"
   },
   ".github/workflows/deploy-cloudflare.yml": {
-    "mtime": 1783005018.6515684,
-    "ast_hash": "c9359688c64c455de788a83554b185a7",
-    "semantic_hash": "c9359688c64c455de788a83554b185a7"
+    "mtime": 1784393007.5148332,
+    "ast_hash": "d3f4f55c1cbd576960e04658292d963a",
+    "semantic_hash": ""
   },
   ".github/workflows/schema-drift-check.yml": {
     "mtime": 1780343417.2455845,
@@ -3410,13 +3405,13 @@
     "semantic_hash": "f7fbe75edb7752d658e1365512dacad2"
   },
   "AGENTS.md": {
-    "mtime": 1782689898.3826382,
-    "ast_hash": "9cc44bca88d05c504c864eb5ca827218",
-    "semantic_hash": "9cc44bca88d05c504c864eb5ca827218"
+    "mtime": 1784414507.4346542,
+    "ast_hash": "64db31e3f148c0e708ed649183905039",
+    "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784065805.1803277,
-    "ast_hash": "a36bfb2ed185880a2606bed0e9cd839b",
+    "mtime": 1784493434.386968,
+    "ast_hash": "35b16d55af05281fcbc3fb51f8c54b5a",
     "semantic_hash": ""
   },
   "DEPLOY.md": {
@@ -3760,9 +3755,9 @@
     "semantic_hash": "631bcaa7ce0ed2ad358d19681a0c4054"
   },
   "docs/superpowers/plans/2026-06-09-farmacia-responsive.md": {
-    "mtime": 1781476206.1690416,
-    "ast_hash": "3c104c680cb899da164ca81ae72094d2",
-    "semantic_hash": "3c104c680cb899da164ca81ae72094d2"
+    "mtime": 1784222184.9021423,
+    "ast_hash": "0ab69484fa224f8ee77550213f98aae3",
+    "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-06-11-supervisor-pin.md": {
     "mtime": 1781476206.171042,
@@ -4025,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784219216.5501904,
-    "ast_hash": "8bfb7a37518541aca8e718529519550f",
+    "mtime": 1784495094.6246111,
+    "ast_hash": "bdf0f4d95304605c4154410ecc741818",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4432,6 +4427,311 @@
   ".github/workflows/migrations-check.yml": {
     "mtime": 1784219216.2595077,
     "ast_hash": "0dbab4d1ac93c5cd3256129107cd507f",
+    "semantic_hash": ""
+  },
+  ".security/optimus-allowlist.json": {
+    "mtime": 1784393007.5158308,
+    "ast_hash": "20a90b08659975f3d02e6dc5069d3274",
+    "semantic_hash": ""
+  },
+  "src/components/turno/SupervisorPinDialog.tsx": {
+    "mtime": 1784247235.3777092,
+    "ast_hash": "a659823ffc3a39574a09c11f2d0cfd48",
+    "semantic_hash": ""
+  },
+  "src/features/camino-paciente/operativo/StepForms/InsumosCitaSection.tsx": {
+    "mtime": 1784436373.571099,
+    "ast_hash": "bb0ec6d407dfaffddfb775084254cdb9",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/CatalogosTab.tsx": {
+    "mtime": 1784497618.454035,
+    "ast_hash": "4935588912a2d12a5bcbea686d6e32c3",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/PolizasTab.tsx": {
+    "mtime": 1784436890.576808,
+    "ast_hash": "e76011485086264539fe2fa2a0b69101",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/RegistrarEgresoModal.tsx": {
+    "mtime": 1784436373.5731118,
+    "ast_hash": "a68925d2c9af901032c3139323d0b63b",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/exportContabilidadCsv.ts": {
+    "mtime": 1784436373.575123,
+    "ast_hash": "d5b9e5335ac4d45c64cd0ad8d73504f7",
+    "semantic_hash": ""
+  },
+  "src/hooks/useContabilidad.ts": {
+    "mtime": 1784436373.575123,
+    "ast_hash": "51f1d61773c3163844eead70006bab5f",
+    "semantic_hash": ""
+  },
+  "src/lib/cajaLimits.test.ts": {
+    "mtime": 1784247235.3898084,
+    "ast_hash": "b2f7980ee0847f85f9091094897d07fc",
+    "semantic_hash": ""
+  },
+  "src/lib/cajaLimits.ts": {
+    "mtime": 1784247235.39079,
+    "ast_hash": "2a76d4f9aa2935fad14ffb550eceef8f",
+    "semantic_hash": ""
+  },
+  "src/pages/Contabilidad.tsx": {
+    "mtime": 1784489381.8736312,
+    "ast_hash": "771c634eab68cd5978ac7f67b1d77458",
+    "semantic_hash": ""
+  },
+  "supabase/functions/mfa-reset/index.ts": {
+    "mtime": 1784221165.5954728,
+    "ast_hash": "fe9288e15d8cef2a3bdb31645cff9b6b",
+    "semantic_hash": ""
+  },
+  "supabase/functions/provision-users-from-queue/index.ts": {
+    "mtime": 1784393007.5267825,
+    "ast_hash": "b7dcf7f68368d782213c274723b61114",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260709000006_subscription_cancel_at.sql": {
+    "mtime": 1784436373.5811653,
+    "ast_hash": "5322f77f5e714a1aeb1a7a44e136f50a",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150000_verify_supervisor_pin.sql": {
+    "mtime": 1784247235.3973577,
+    "ast_hash": "cec273e6ce1ee12d01d280ba0a21aa06",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150100_pharmacy_register_return_pin.sql": {
+    "mtime": 1784247235.3983545,
+    "ast_hash": "7f32a69281f4a9eac5476089e9b8f5da",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150200_cash_drop.sql": {
+    "mtime": 1784247235.4015827,
+    "ast_hash": "18fc9941c6a14aa0ffbdbd48d6010761",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150300_pharmacy_cash_drop.sql": {
+    "mtime": 1784247235.4025593,
+    "ast_hash": "f98b09ccc552b827ef21a68dc7b4895d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150400_notes_required_on_diff.sql": {
+    "mtime": 1784247235.4040797,
+    "ast_hash": "43cff12944fcfa0315a9cb68ec858fbd",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260716150500_turno_open_rpc.sql": {
+    "mtime": 1784247235.405592,
+    "ast_hash": "1562f5eae26df4ad7cdbd97b410504f7",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260717130942_fix_bot_metricas_security_invoker.sql": {
+    "mtime": 1784393331.141381,
+    "ast_hash": "5c4e5fa8f6197d9d27c0c04fadd81665",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718110000_auto_user_provisioning.sql": {
+    "mtime": 1784393007.5278301,
+    "ast_hash": "127bb7a370aa3f74ae26a66e9ff5314e",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718120000_provisioning_hardening.sql": {
+    "mtime": 1784393007.52928,
+    "ast_hash": "262919a7824e8b43690df2026c931668",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718130000_platform_staff_pending.sql": {
+    "mtime": 1784393229.3158593,
+    "ast_hash": "a9f750177cd8bcbe9104417b6d642c56",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718150000_fase1_appointment_insumos.sql": {
+    "mtime": 1784436373.5811653,
+    "ast_hash": "9066e419a6a7de2366f19e98662fe3b7",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718160000_fase2_doctor_honorarios.sql": {
+    "mtime": 1784436373.5842075,
+    "ast_hash": "2d73015bbacef3a8918997920b3130b1",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718170000_fase3_nucleo_contable.sql": {
+    "mtime": 1784436373.5859382,
+    "ast_hash": "ba1378fb00a44fe7428641e6d3661ad3",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260718180000_fase4_reportes_contables.sql": {
+    "mtime": 1784436373.5859382,
+    "ast_hash": "1f71203f3370ce88dfcbf5996bbaf3cc",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719100000_cuentas_contables_admin.sql": {
+    "mtime": 1784436845.9389963,
+    "ast_hash": "0a8ad962e860f67102e598305fd3157d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719110000_fase6a_polizas_esquema.sql": {
+    "mtime": 1784437355.1027799,
+    "ast_hash": "92c399a45f7d1485808776f0a2e0f0c2",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719120000_fase6b_motor_asientos.sql": {
+    "mtime": 1784470944.109284,
+    "ast_hash": "6ac1db782d5efc8e9da2e74ae1e1044d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719130000_fase6b_hotfix_grants_backfill.sql": {
+    "mtime": 1784478366.0257623,
+    "ast_hash": "1d22e6caad8e469d06b6a48d94646998",
+    "semantic_hash": ""
+  },
+  "docs/manual-usuario/contabilidad.md": {
+    "mtime": 1784493447.7438662,
+    "ast_hash": "6d4af4c696e021e538d87043fcb8f997",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-16-corte-caja-gaps.md": {
+    "mtime": 1784224101.329579,
+    "ast_hash": "6d5bfea89757a3e3d7b59426a4059ab6",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-18-modulo-contable.md": {
+    "mtime": 1784415040.766877,
+    "ast_hash": "5511a6a63a12c10fc6d32f977d7a4af5",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-19-fase6-partida-doble.md": {
+    "mtime": 1784437103.374712,
+    "ast_hash": "dddf3acf79c3ca4da2ede432cba90da7",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-19-modulo-contable-completo.md": {
+    "mtime": 1784437238.473616,
+    "ast_hash": "0adbc4198d2dcd9976135a4cfefcb2be",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-07-16-corte-caja-gaps-design.md": {
+    "mtime": 1784223564.5132544,
+    "ast_hash": "361b683fe1b639bff1dbe63ba1f8706c",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/modulo-contable-memoria-tecnica.md": {
+    "mtime": 1784493418.491984,
+    "ast_hash": "d45db46ac8be98ffb8b727768bf6b9d4",
+    "semantic_hash": ""
+  },
+  "memoria/referencias/contabilidad-marco-legal-mx.md": {
+    "mtime": 1784436860.9376137,
+    "ast_hash": "d0a619b37621cf03a98f1fc0aacdaa99",
+    "semantic_hash": ""
+  },
+  "memoria/referencias/contpaq-gap-analysis.md": {
+    "mtime": 1784436922.577731,
+    "ast_hash": "e2ce757a6a9be2cc986e7e1ee54910fc",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/ReportesTab.tsx": {
+    "mtime": 1784493345.9738748,
+    "ast_hash": "f5b1142af0e364a4ca7098b29001a825",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/exportReporteCsv.ts": {
+    "mtime": 1784491641.0747428,
+    "ast_hash": "e470bf2fa8da1198627822973e7220ba",
+    "semantic_hash": ""
+  },
+  "src/hooks/useReportesContables.ts": {
+    "mtime": 1784493227.3447268,
+    "ast_hash": "41c4399e700ad6948f5093df278bfc14",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719140000_fase6c_reportes_partida_doble.sql": {
+    "mtime": 1784488079.8236113,
+    "ast_hash": "716b93d3f4a3c4424b03793981a8f30a",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/CierreTab.tsx": {
+    "mtime": 1784488951.0595517,
+    "ast_hash": "5de30558d7ada26c0b826d7e6dcc1ab4",
+    "semantic_hash": ""
+  },
+  "src/hooks/useCierreMensual.ts": {
+    "mtime": 1784488897.2250602,
+    "ast_hash": "e4abb3ab8ad92aa4a32ddc5cd01e1057",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719150000_fase7_cierre_mensual.sql": {
+    "mtime": 1784488760.5503623,
+    "ast_hash": "3e2e72cf04fabfeaf108171072ef7481",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/BancosTab.tsx": {
+    "mtime": 1784489367.4644823,
+    "ast_hash": "b5f799bf28b08cabe350b4fed0f81e2d",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/parseEstadoCuentaCsv.ts": {
+    "mtime": 1784489344.1001875,
+    "ast_hash": "5e34dbca270be263726ec88b262b17fd",
+    "semantic_hash": ""
+  },
+  "src/hooks/useConciliacionBancaria.ts": {
+    "mtime": 1784489333.9420538,
+    "ast_hash": "1c48832f2afa52bc6046cf3edaabfefb",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719160000_fase8_conciliacion_bancaria.sql": {
+    "mtime": 1784489278.4438524,
+    "ast_hash": "0b89d4e0b26c45fdb0b8f6f13facf47f",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719170000_fase10_candado_movimientos_manual.sql": {
+    "mtime": 1784491658.670015,
+    "ast_hash": "00643def5e43a0ff486ce1b5f4c27d38",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/exportAnexo24.ts": {
+    "mtime": 1784493311.0356028,
+    "ast_hash": "f67931cca73cdc84846d520219164172",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719180000_fase9_iva_trasladado.sql": {
+    "mtime": 1784493388.497083,
+    "ast_hash": "8f4bb9c33433af5fad8aef4406fdf0f4",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/comparativo-aspel-contpaqi-import-export.md": {
+    "mtime": 1784494139.78105,
+    "ast_hash": "233e5592bdcd795489a056d8c3c30565",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-07-19-iva-automatico-regimen-fiscal-design.md": {
+    "mtime": 1784496456.4203298,
+    "ast_hash": "32bb0f261c5e240bdb04043f669eb34b",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-07-19-iva-automatico-regimen-fiscal.md": {
+    "mtime": 1784496603.053042,
+    "ast_hash": "add51aeee840c16397ded7ca1eb10d3b",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720100000_tipo_persona_cfdi_config.sql": {
+    "mtime": 1784496862.665255,
+    "ast_hash": "9beb1b9a753606afb28442174ab4b2ef",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/ivaRules.ts": {
+    "mtime": 1784497005.8933876,
+    "ast_hash": "051783517d64efc43fb54a5d8ff1c902",
+    "semantic_hash": ""
+  },
+  "src/test/contabilidad/ivaRules.test.ts": {
+    "mtime": 1784496983.5093157,
+    "ast_hash": "818a5718836371dee4fb2251b1e79540",
     "semantic_hash": ""
   }
 }
