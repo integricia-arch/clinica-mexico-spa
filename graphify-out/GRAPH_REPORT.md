@@ -1,7 +1,7 @@
 # Graph Report - clinica-mexico-spa  (2026-07-19)
 
 ## Corpus Check
-- 926 files · ~780,447 words
+- 926 files · ~780,514 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f62d18fe`
+- Built from commit: `c95e3d6b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1540,7 +1540,7 @@ Nodes (19): @docusaurus/core, @docusaurus/faster, @docusaurus/preset-classic, @e
 
 ### Community 38 - "src/features/camino-paciente"
 Cohesion: 0.03
-Nodes (79): 3-Way Match OC + Recepción + Factura ✅, Archivos clave, Auto-reorder operacional ✅, Aviso de costo — sesión 31, 🔒 BLOQUEADO — esperando confirmación del contador de Pablo (2026-07-19), Bot Telegram — 3 bugs fixes + selección de día ✅ (commits `750b0ee`, `512e87c`, `6e33c9e`), Bot Telegram — bugs menú doble + servicios vacíos + doble-booking ✅ (commit `e64ce37`), Bug fix: autorizado_by (+71 more)
+Nodes (79): 3-Way Match OC + Recepción + Factura ✅, Archivos clave, Auto-reorder operacional ✅, Aviso de costo — sesión 31, Bot Telegram — 3 bugs fixes + selección de día ✅ (commits `750b0ee`, `512e87c`, `6e33c9e`), Bot Telegram — bugs menú doble + servicios vacíos + doble-booking ✅ (commit `e64ce37`), Bug fix: autorizado_by, Bug fix: pharmacy PIN override (+71 more)
 
 ### Community 39 - "supabase/functions/_shared"
 Cohesion: 0.15
@@ -2532,7 +2532,7 @@ Nodes (21): 1.1 Columna `supervisor_pin_hash`, 1.2 RPC `set_supervisor_pin`, 1.3
 
 ### Community 638 - "Completado (Jun 12, 2026)"
 Cohesion: 0.67
-Nodes (3): Completado (Jun 12, 2026), DB local SQL Server — schema sync, Git / Deploy
+Nodes (3): Chat IA — cerrar sesión + auto-cierre 5 min ✅, Chat IA — sistema FAQ 3 tiers + roles/módulo ✅, Completado (Jun 17, 2026 — Chat IA 3-tier FAQ + cerrar consulta + inactividad)
 
 ### Community 639 - "input-otp.tsx"
 Cohesion: 0.08
@@ -3187,7 +3187,7 @@ Nodes (19): EMPTY, NotaConsultaModal(), Props, buildUrl(), getHeaders(), restIns
   public/placeholder.svg · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **4394 isolated node(s):** `CuentaContable`, `IVA_LABELS`, `emptyForm`, `REGIMENES`, `PACS` (+4389 more)
+- **4394 isolated node(s):** `PRÓXIMA ACCIÓN: PR #19 (IVA automático por régimen fiscal) esperando revisión/merge. Después: control de activos fijos (investigado, no construido) + import/export UI + conexión API con celulas-madre-ventas (ver abajo).`, `PR #19 abierto — IVA automático por régimen fiscal (2026-07-19, sesión posterior)`, `✅ Sesión 2026-07-18/19 (noche) — bloque 2: partida doble arrancada`, `Deudas registradas del módulo contable`, `✅ Fases 2-5 (2026-07-18, ejecutadas por subagentes sonnet/haiku, Fable validó)` (+4389 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **880 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -3201,10 +3201,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `placeholder.svg — imagen placeholder genérica` and `testimonio-1.jpg — foto de testimonio de paciente/cliente`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **Why does `dependencies` connect `package` to `TurnoGuard.tsx`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `DashboardFilters.tsx`, `package`, `package`, `package`, `package`, `permissions.ts`, `package`, `src/components/ManualButton`, `package`, `src/features/recetas`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `src/integrations/lovable`, `src/lib/activeClinic`, `HelpChatWidget.tsx`, `package`?**
-  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **Why does `qrcode` connect `src/features/recetas` to `package`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
-- **What connects `CuentaContable`, `IVA_LABELS`, `emptyForm` to the rest of the system?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+- **What connects `PRÓXIMA ACCIÓN: PR #19 (IVA automático por régimen fiscal) esperando revisión/merge. Después: control de activos fijos (investigado, no construido) + import/export UI + conexión API con celulas-madre-ventas (ver abajo).`, `PR #19 abierto — IVA automático por régimen fiscal (2026-07-19, sesión posterior)`, `✅ Sesión 2026-07-18/19 (noche) — bloque 2: partida doble arrancada` to the rest of the system?**
   _4394 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `src/pages/ajustes` be split into smaller, more focused modules?**
   _Cohesion score 0.07676767676767676 - nodes in this community are weakly interconnected._
