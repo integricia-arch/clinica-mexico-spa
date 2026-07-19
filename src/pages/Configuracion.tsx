@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard, Mail, BarChart2, LifeBuoy, ShieldCheck, Clock, CheckSquare, Square } from "lucide-react";
+import { Building2, Users, Shield, Bell, Globe, FileText, MapPin, Plus, Route as RouteIcon, ArrowRight, ScrollText, SlidersHorizontal, CreditCard, Mail, BarChart2, LifeBuoy, ShieldCheck, Clock, CheckSquare, Square, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -15,6 +15,7 @@ type Seccion = { icon: any; titulo: string; descripcion: string; to?: string; ad
 
 const secciones: Seccion[] = [
   { icon: BarChart2, titulo: "Inteligencia BI", descripcion: "Reportes y análisis de citas, pacientes, ingresos y rendimiento de la clínica.", to: "/inteligencia", adminOnly: true },
+  { icon: Wallet, titulo: "Contabilidad", descripcion: "Estado de resultados, flujo de efectivo, punto de equilibrio y registro de egresos manuales.", to: "/contabilidad", adminOnly: true },
   { icon: LifeBuoy, titulo: "Ayuda interna", descripcion: "Sesiones de soporte del personal: gestión de tickets escalados y base de conocimiento (FAQ).", to: "/ayuda-interna", adminOnly: true },
   { icon: Users, titulo: "Usuarios y roles", descripcion: "Administrar cuentas: Administrador, Recepción, Médico, Enfermería, Farmacia, Caja/Facturación.", to: "/admin/usuarios", adminOnly: true },
   { icon: ShieldCheck, titulo: "Auditoría", descripcion: "Historial de accesos y cambios en agenda, expedientes, farmacia y caja. Seguimientos y errores POS.", to: "/auditoria", adminOnly: true },
