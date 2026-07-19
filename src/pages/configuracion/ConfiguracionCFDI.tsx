@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { REGIMEN_TIPO_PERSONA, type TipoPersona } from "@/features/contabilidad/ivaRules";
 
 const REGIMENES = [
   { clave: "601", nombre: "General de Ley Personas Morales" },
@@ -42,6 +43,7 @@ interface CfdiConfigRow {
   rfc: string;
   razon_social: string;
   regimen_fiscal: string;
+  tipo_persona: TipoPersona | null;
   domicilio_fiscal_cp: string;
   serie_defecto: string;
   pac_proveedor: string;
@@ -58,7 +60,7 @@ interface CfdiConfigRow {
 }
 
 const EMPTY: CfdiConfigRow = {
-  rfc: "", razon_social: "", regimen_fiscal: "601", domicilio_fiscal_cp: "",
+  rfc: "", razon_social: "", regimen_fiscal: "601", tipo_persona: REGIMEN_TIPO_PERSONA["601"], domicilio_fiscal_cp: "",
   serie_defecto: "A", pac_proveedor: "facturama", pac_ambiente: "sandbox",
   pac_usuario: "", pac_contrasena: "", csd_cer_nombre: "", csd_key_nombre: "",
   csd_cer_path: "", csd_key_path: "", csd_contrasena: "",
@@ -86,7 +88,7 @@ export default function ConfiguracionCFDI() {
       setLoading(true);
       const { data } = await (supabase as any)
         .from("cfdi_config")
-        .select("id, rfc, razon_social, regimen_fiscal, domicilio_fiscal_cp, serie_defecto, pac_proveedor, pac_ambiente, pac_usuario, csd_cer_nombre, csd_key_nombre, csd_cer_path, csd_key_path, iva_default, zona_fronteriza")
+        .select("id, rfc, razon_social, regimen_fiscal, tipo_persona, domicilio_fiscal_cp, serie_defecto, pac_proveedor, pac_ambiente, pac_usuario, csd_cer_nombre, csd_key_nombre, csd_cer_path, csd_key_path, iva_default, zona_fronteriza")
         .eq("clinic_id", activeClinicId)
         .maybeSingle();
       if (data) {
@@ -96,6 +98,7 @@ export default function ConfiguracionCFDI() {
           rfc: (row.rfc as string) ?? "",
           razon_social: (row.razon_social as string) ?? "",
           regimen_fiscal: (row.regimen_fiscal as string) ?? "601",
+          tipo_persona: (row.tipo_persona as TipoPersona | null) ?? REGIMEN_TIPO_PERSONA[(row.regimen_fiscal as string) ?? "601"],
           domicilio_fiscal_cp: (row.domicilio_fiscal_cp as string) ?? "",
           serie_defecto: (row.serie_defecto as string) ?? "A",
           pac_proveedor: (row.pac_proveedor as string) ?? "facturama",
@@ -116,7 +119,7 @@ export default function ConfiguracionCFDI() {
     load();
   }, [activeClinicId]);
 
-  const set = (field: keyof CfdiConfigRow, value: string | boolean) =>
+  const set = (field: keyof CfdiConfigRow, value: string | boolean | TipoPersona | null) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSave = async () => {
@@ -124,6 +127,7 @@ export default function ConfiguracionCFDI() {
     if (!form.rfc.trim()) { toast.error("RFC del emisor es obligatorio"); return; }
     if (!form.razon_social.trim()) { toast.error("Razón social es obligatoria"); return; }
     if (!form.domicilio_fiscal_cp.trim()) { toast.error("CP del domicilio fiscal es obligatorio"); return; }
+    if (!form.tipo_persona) { toast.error("Selecciona el tipo de persona"); return; }
 
     setSaving(true);
     // Upload CSD files if selected
@@ -162,6 +166,7 @@ export default function ConfiguracionCFDI() {
       rfc: form.rfc.toUpperCase().trim(),
       razon_social: form.razon_social.trim(),
       regimen_fiscal: form.regimen_fiscal,
+      tipo_persona: form.tipo_persona,
       domicilio_fiscal_cp: form.domicilio_fiscal_cp.trim(),
       serie_defecto: form.serie_defecto.trim() || "A",
       pac_proveedor: form.pac_proveedor,
@@ -288,7 +293,13 @@ export default function ConfiguracionCFDI() {
             <select
               id="regimen_fiscal"
               value={form.regimen_fiscal}
-              onChange={(e) => set("regimen_fiscal", e.target.value)}
+              onChange={(e) => {
+                const nuevoRegimen = e.target.value;
+                const sugerido = REGIMEN_TIPO_PERSONA[nuevoRegimen];
+                set("regimen_fiscal", nuevoRegimen);
+                if (sugerido !== null) set("tipo_persona", sugerido);
+                else if (REGIMEN_TIPO_PERSONA[form.regimen_fiscal] !== null) set("tipo_persona", null);
+              }}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
             >
               {REGIMENES.map((r) => (
@@ -300,6 +311,40 @@ export default function ConfiguracionCFDI() {
             <Label htmlFor="serie_defecto">Serie por defecto</Label>
             <Input id="serie_defecto" value={form.serie_defecto} onChange={(e) => set("serie_defecto", e.target.value)}
               placeholder="A" maxLength={10} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="tipo_persona">Tipo de persona *</Label>
+            {REGIMEN_TIPO_PERSONA[form.regimen_fiscal] !== null ? (
+              <>
+                <Input
+                  id="tipo_persona"
+                  disabled
+                  value={REGIMEN_TIPO_PERSONA[form.regimen_fiscal] === "fisica" ? "Física" : "Moral"}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Determinado por el régimen fiscal seleccionado.
+                </p>
+              </>
+            ) : (
+              <>
+                <select
+                  id="tipo_persona"
+                  value={form.tipo_persona ?? ""}
+                  onChange={(e) => set("tipo_persona", (e.target.value || null) as TipoPersona | null)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+                >
+                  <option value="">Selecciona…</option>
+                  <option value="fisica">Física</option>
+                  <option value="moral">Moral</option>
+                </select>
+                <p className="mt-1 text-xs text-warning">
+                  Este régimen aplica a ambos tipos de persona — selecciona el correcto.
+                </p>
+              </>
+            )}
           </div>
         </div>
 
