@@ -1,13 +1,28 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: GATE 6B (revisor + get_advisors) → 6C → 7 → 8
+## PRÓXIMA ACCIÓN: 6C → 7 → 8  (GATE 6B ✅ VERDE — ejecutar con `/model sonnet`)
 
-**PASO 0 nuevo:** 6B COMPLETA (738e621, migración 20260719120000, 1121 líneas, aplicada,
-E2E completo verde, verificada en DB: 9 reglas, tablas, 0 residuos) pero SIN pase de revisor
-por cierre de sesión. Antes de 6C: (1) agente code-reviewer sobre 738e621 — foco: bypass de
-membership con auth.uid() IS NULL en crear_poliza/cancelar_poliza (cron/backfill; confirmar
-que anon no tiene EXECUTE), triggers nunca abortan negocio, idempotencias; (2)
-mcp__supabase__get_advisors(security). No avanzar con CRITICAL/HIGH.
+**GATE 6B CERRADO 2026-07-19 (Fable) — hotfix `427544e` aplicado a prod + pusheado.**
+El gate encontró un **CRITICAL** que el revisor estático marcó como "no explotable":
+- **CRITICAL (corregido):** en Supabase `REVOKE ... FROM PUBLIC` NO revoca el EXECUTE
+  directo que `ALTER DEFAULT PRIVILEGES` da a anon/authenticated. Verificado en prod:
+  `crear_poliza.proacl` tenía `anon=X`, `has_function_privilege('anon',...)=true`. Como
+  `auth.uid()` es NULL para anon (no solo service_role), el bypass de membership se saltaba
+  entero → anon sin login podía crear/cancelar pólizas de cualquier clinic_id vía
+  /rest/v1/rpc. Fix: migración `20260719130000` con REVOKE EXECUTE explícito de anon (y de
+  authenticated en funciones service_role-only) sobre las 12 funciones contables 6A/6B.
+  Re-verificado: **0 funciones contables con EXECUTE para anon.**
+- **HIGH (corregido, defensivo):** `contab_backfill_polizas` ahora captura excepción por
+  fila y encola pendiente en vez de abortar la corrida. El escenario exacto del review
+  (monto=0) resultó imposible: CHECK `monto_centavos` lo bloquea. E2E rollback verde
+  (corre limpio + idempotente).
+- **LECCIÓN NUEVA (aplicar al checklist SECURITY DEFINER de CLAUDE.md):** en Supabase el
+  REVOKE debe ser `FROM PUBLIC, anon, authenticated` — nunca `FROM PUBLIC` a secas.
+  Advisor global sigue mostrando ~71 funciones SECURITY DEFINER pre-existentes con anon
+  EXECUTE (otras fases) — auditar/remediar fuera del scope del gate 6B.
+
+**Sin CRITICAL/HIGH abiertos en 6B → luz verde para 6C.** Recordatorio de la regla de costo:
+6C/7/8 se ejecutan con **`/model sonnet`** siguiendo el plan maestro; Fable solo gates/replaneo.
 
 **Ejecutar con `/model sonnet`** siguiendo el plan maestro
 `docs/superpowers/plans/2026-07-19-modulo-contable-completo.md` y el detalle en
