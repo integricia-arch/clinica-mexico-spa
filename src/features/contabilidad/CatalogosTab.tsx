@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { untypedTable } from "@/lib/untypedTable";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { friendlyError } from "@/lib/errors";
 import { deriveIvaTratamiento, type IvaTratamiento, type CodigoCuentaIngreso } from "@/features/contabilidad/ivaRules";
 
@@ -40,6 +41,7 @@ const emptyForm = {
 };
 
 function CuentasCrud() {
+  const { activeClinicId } = useActiveClinic();
   const [cuentas, setCuentas] = useState<CuentaContable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,11 +64,16 @@ function CuentasCrud() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
+    if (!activeClinicId) return;
     untypedTable("cfdi_config")
       .select("regimen_fiscal,tipo_persona")
+      .eq("clinic_id", activeClinicId)
       .maybeSingle()
-      .then(({ data }) => setCfdiConfig(data as typeof cfdiConfig));
-  }, []);
+      .then(({ data, error: err }) => {
+        if (err) { console.error("[CatalogosTab] cfdi_config", err); return; }
+        setCfdiConfig(data as typeof cfdiConfig);
+      });
+  }, [activeClinicId]);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (c: CuentaContable) => {
