@@ -1,10 +1,18 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: Fase 6B — motor de asientos automáticos
+## PRÓXIMA ACCIÓN: verificar/terminar 6B, luego 6C → 7 → 8
 
 **Ejecutar con `/model sonnet`** siguiendo el plan maestro
-`docs/superpowers/plans/2026-07-19-modulo-contable-completo.md` (§6B) y el detalle en
+`docs/superpowers/plans/2026-07-19-modulo-contable-completo.md` y el detalle en
 `2026-07-19-fase6-partida-doble.md`. Fable solo para gates/replaneo.
+
+**PASO 0 obligatorio — estado de 6B incierto:** al cierre de sesión (2026-07-19 ~1am) un
+agente estaba ejecutando 6B en background (migración `20260719120000_fase6b_motor_asientos.sql`).
+Verificar: ¿existe ese archivo en git log de main? ¿`supabase migration list --linked` muestra
+20260719120000 aplicada? Casos: (a) commit + aplicada + E2E reportado → pasar revisor y seguir a 6C;
+(b) aplicada sin archivo local o a medias → reparar historial según CLAUDE.md y re-ejecutar 6B;
+(c) nada → ejecutar 6B desde cero según §6B del plan (spec completa ahí, incluye
+contab_reglas_asiento, triggers extendidos, backfill, cola de pendientes).
 
 ### ✅ Sesión 2026-07-18/19 (noche) — bloque 2: partida doble arrancada
 - Plan maestro módulo contable completo (fases 6A-10, NIF/fiscal, frontera por eventos): `814a6c3`.
