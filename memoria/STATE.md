@@ -1,6 +1,30 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: 10 (cierre de módulo — docs/memoria) o 9 opcional (IVA, requiere decisión) — 6C/7/8 VERDE, en prod, pusheados
+## PRÓXIMA ACCIÓN: módulo contable CERRADO (fase 10 completa). Solo pendiente: fase 9 (IVA) opcional, requiere decisión de negocio con Pablo — sin fecha.
+
+**Sesión 2026-07-19 (sonnet) — Fase 10, cierre del módulo:**
+- Revisor global (subagent code-reviewer) sobre `Contabilidad.tsx` + `src/features/contabilidad/*` +
+  hooks + migraciones 3/6A/6B/6C/7/8: 0 CRITICAL, 1 HIGH, 1 MEDIUM.
+- **HIGH corregido:** candado de período (fase 7) solo protegía `crear_poliza()`. Un
+  egreso manual insertado directo en `movimientos_contables` (`RegistrarEgresoModal`)
+  con fecha en mes ya cerrado pasaba la policy RLS sin problema — el trigger que
+  intenta generar su póliza sí fallaba por el candado pero tragaba la excepción
+  (encola en `contab_asientos_pendientes`) sin abortar el INSERT ni avisar al usuario.
+  Fix: trigger `trg_contab_valida_periodo_movimiento_manual`
+  (`20260719170000_fase10_candado_movimientos_manual.sql`), aplicado a prod.
+- **MEDIUM corregido:** `exportReporteCsv.ts` no escapaba comas en `concepto`/`descripcion`
+  (texto libre) — rompía alineado de columnas en Excel. Fix: helper `csvField` con
+  quoting/escape, aplicado a libro diario y auxiliar de cuenta.
+- `get_advisors(security)` + inspección manual (`pg_proc`/`pg_policies`) de las 14
+  funciones SECURITY DEFINER de fases 6C/7/8: checklist CLAUDE.md cumplido en todas
+  (search_path fijo, REVOKE PUBLIC/anon, tenant-check primero). Sin CRITICAL/HIGH.
+- Memoria técnica (`modulo-contable-memoria-tecnica.md` §9), `CLAUDE.md` (sección
+  módulo contable) y manual de usuario (`docs/manual-usuario/contabilidad.md`, tabs
+  Pólizas/Reportes/Cierre/Bancos) actualizados con fases 6C-8 y el bug corregido.
+- Fase 9 (IVA) queda pospuesta, sin fecha — requiere decisión de negocio con Pablo
+  (régimen fiscal, tasas, RESICO vs general).
+
+---
 
 **Sesión 2026-07-19 (sonnet) — 6C, 7 y 8 completas y desplegadas:**
 - **Fase 8 — Conciliación bancaria** (commit `a00568a`): tabla `contab_estados_cuenta`
@@ -32,10 +56,9 @@
 - **Fase 9 (opcional, plan maestro §Fase 9)** — IVA y preparación fiscal: desglose
   IVA en cobros de caja (cambio de captura en módulo caja), reporte IVA
   acreditable/trasladado, exportador Anexo 24. Decidir con Pablo si se hace —
-  el plan la marca explícitamente como opcional tras 6-8.
-- **Fase 10 — Cierre del módulo**: revisor global + `get_advisors(security)` +
-  actualizar `memoria/proyectos/modulo-contable-memoria-tecnica.md`, `CLAUDE.md`,
-  manual de usuario (`/contabilidad`). Pendiente, no ejecutado esta sesión.
+  el plan la marca explícitamente como opcional tras 6-8. Único pendiente del
+  módulo contable.
+- Fase 10 (cierre del módulo) — COMPLETA, ver arriba.
 
 Costo de sesión elevado (~$10.59+ reportado por el harness durante 6C/7/8) —
 próxima sesión: confirmar con Pablo si sigue 9/10 o se declara el módulo

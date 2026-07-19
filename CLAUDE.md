@@ -432,23 +432,32 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
-## Módulo Contable (Fases 1-4, 2026-07-18)
+## Módulo Contable (Fases 1-8, CERRADO 2026-07-19 — fase 9 IVA pospuesta)
 
-**Tablas clave:**
+Ver `memoria/proyectos/modulo-contable-memoria-tecnica.md` para fórmulas exactas y guía de auditoría de números. Dos sistemas coexisten a propósito: devengo simple (fases 1-4, alimenta KPIs/dashboard) y partida doble clásica (fases 6C-8, alimenta reportes formales). No están sincronizados automáticamente — ver sección 9 de la memoria técnica.
+
+**Tablas — devengo simple (fases 1-4):**
 - `appointment_insumos` (id, appointment_id, insumo_id, cantidad, costo_unitario_centavos snapshot, tipo: consumo/reversa) — log de movimientos de insumos, descuenta stock vía RPCs.
-- `cuentas_contables` (codigo, nombre, tipo: ingreso/egreso, es_fijo) — catálogo simple (no SAT implementado aún).
+- `cuentas_contables` (codigo, nombre, tipo: ingreso/egreso, es_fijo, **naturaleza: deudora/acreedora** agregada en fase 6C) — catálogo simple (no SAT implementado aún).
 - `movimientos_contables` (clinic_id, cuenta_id, origen: manual/consulta/farmacia/compra/honorario, monto_centavos, fecha_devengo, fecha_pago, reference_type/id, evento: devengo/cancelacion) — append-only devengo.
 - `doctor_honorarios_config` (doctor_id, tipo: porcentaje/fijo_por_consulta, valor, vigente_desde) — histórico sin UPDATE destructivo.
 
-**RPCs principales:** `registrar_insumos_cita(appointment_id, items)` — inserta appointment_insumos + descuenta stock (transaccional); `kpis_dashboard(clinic_id, fecha_inicio, fecha_fin)` — retorna P&L y KPIs.
+**Tablas — partida doble (fases 6C-8):**
+- `polizas`/`poliza_partidas`/`poliza_folios` — asientos formales debe=haber, folio autonumérico por clínica+tipo. Escritura SOLO vía `crear_poliza()`/`cancelar_poliza()`.
+- `contab_cierres` — marca período cerrado (fase 7); `contab_estados_cuenta` — líneas de banco importadas para conciliación (fase 8).
+
+**RPCs — devengo simple:** `registrar_insumos_cita(appointment_id, items)` — inserta appointment_insumos + descuenta stock (transaccional); `kpis_dashboard(clinic_id, fecha_inicio, fecha_fin)` — retorna P&L y KPIs.
+
+**RPCs — partida doble:** `crear_poliza(payload jsonb)` — valida balance debe=haber, candado de período, idempotencia; `cancelar_poliza(poliza_id)` — reversa, no borra; `cierre_mensual(clinic_id, periodo)` — cierra mes, genera póliza de cierre a cuenta 305; `balanza_comprobacion`/`libro_diario`/`auxiliares_cuenta`/`estado_resultados`/`balance_general(clinic_id, ...)` — reportes en vivo; `contab_importar_estado_cuenta`/`contab_matching_bancario`/`contab_conciliar_linea`/`contab_desconciliar_linea` — conciliación bancaria (fase 8).
 
 **Reglas duras:**
 - `appointment_insumos` es el log de insumos, NO `movimientos_inventario` (que es solo medicamentos).
-- Escritura de insumos/movimientos/egresos: **SOLO vía RPCs SECURITY DEFINER** (policies deniegan DML directo).
-- `movimientos_contables` append-only; INSERT manual solo admin/manager (origin='manual').
-- Idempotencia por `(reference_type, reference_id, evento)` UNIQUE constraint.
+- Escritura de insumos/movimientos/egresos/pólizas: **SOLO vía RPCs SECURITY DEFINER** (policies deniegan DML directo).
+- `movimientos_contables` y `polizas`/`poliza_partidas` son append-only; cancelaciones son reversas, no DELETE.
+- Idempotencia por `(reference_type, reference_id, evento)` en ambos sistemas.
+- Candado de período (fase 7): `crear_poliza()` rechaza fecha en mes ya cerrado en `contab_cierres`.
 - Cron contab-devengar-honorarios: 8:30 UTC diario.
-- **Limitación conocida:** costo de ventas NO incluye costo de medicamentos (farmacia) — solo insumos clínicos.
+- **Limitación conocida:** costo de ventas NO incluye costo de medicamentos (farmacia) — solo insumos clínicos. Fase 9 (IVA) pospuesta, sin fecha — requiere decisión de negocio (régimen fiscal, tasas).
 
 **Vistas:** `pnl_mensual`, `flujo_efectivo`, `doctor_honorarios_detalle` (grano: cita, agregable por paciente/doctor/día).
 

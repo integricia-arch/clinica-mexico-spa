@@ -17,6 +17,51 @@
 4. Mira el gráfico de **Estado de Resultados (P&L)** — las barras te muestran visualmente cómo crecen ingresos y bajan por gastos.
 5. Si necesitas los datos en Excel, haz clic en **Exportar CSV** — descargas una hoja con todos los movimientos contables del período.
 
+### Las 6 pestañas de Contabilidad
+
+La pantalla tiene 6 secciones (pestañas arriba): **Resumen** (KPIs y P&L, descrito arriba),
+**Pólizas**, **Reportes**, **Cierre**, **Bancos** y **Catálogos**.
+
+### Cómo capturar una póliza (asiento contable formal)
+
+1. Ve a la pestaña **Pólizas**.
+2. Haz clic en **Nueva póliza**, elige tipo (Ingreso/Egreso/Diario) y fecha.
+3. Agrega al menos 2 líneas (partidas): cada línea es una cuenta contable con un monto
+   en **Cargo** (debe) o **Abono** (haber) — nunca ambos en la misma línea.
+4. El sistema no deja guardar si Cargo total ≠ Abono total (partida doble: todo debe cuadrar).
+5. Si el mes de la fecha ya está **cerrado** (ver pestaña Cierre), la póliza se rechaza —
+   usa una fecha del período abierto.
+6. Para anular una póliza ya guardada, usa **Cancelar** — no se borra, se crea una póliza
+   reversa (invierte cargos y abonos) para dejar rastro completo.
+
+### Cómo ver los reportes formales (balanza, libro diario, balance general)
+
+1. Ve a la pestaña **Reportes**.
+2. Elige el sub-reporte: **Balanza de comprobación**, **Libro diario**, **Auxiliar por
+   cuenta**, **Estado de resultados** o **Balance general**.
+3. Ajusta el rango de fechas (o "al" para balance general, que es una foto a un día).
+4. Exporta a CSV si lo necesitas para el contador externo.
+
+### Cómo cerrar el mes contable
+
+1. Ve a la pestaña **Cierre**. Solo administrador o gerente.
+2. Elige el mes a cerrar — debe estar totalmente terminado (no se puede cerrar el mes en curso).
+3. Al confirmar, el sistema genera automáticamente una póliza que cancela los saldos de
+   ingresos y egresos del mes contra "Resultados acumulados" (cuenta 305).
+4. Una vez cerrado, **ya no se pueden capturar pólizas nuevas con fecha en ese mes** —
+   si te equivocaste, contacta al dev (no hay botón de reabrir).
+
+### Cómo conciliar el banco (pestaña Bancos)
+
+1. Ve a la pestaña **Bancos**.
+2. Sube el estado de cuenta en CSV (formato: fecha, concepto, monto, referencia).
+3. El sistema descarta líneas duplicadas automáticamente si vuelves a subir el mismo archivo.
+4. Haz clic en **Sugerir conciliación** — el sistema propone qué línea de banco corresponde
+   a qué póliza (mismo monto exacto, fecha ±2 días).
+5. Revisa cada sugerencia y confirma (**Conciliar**) o descarta. Si te equivocaste, usa
+   **Desconciliar** para deshacer el match.
+6. No hay conexión directa al banco — es carga manual de CSV (versión 1).
+
 ### Cómo registrar un egreso manual (renta, luz, servicios, etc.)
 
 1. Ve a **Contabilidad** → sección **Egresos manuales** (abajo de los KPIs).
@@ -70,10 +115,12 @@
 
 _El botón "?" dentro de la app corta el contenido justo antes de este encabezado._
 
-- **Archivo(s) principal(es):** `src/pages/Contabilidad.tsx`, `src/components/ContabilityDashboard.tsx`, `src/hooks/useBI.ts` (KPIs y rangos).
-- **Tablas Supabase involucradas:** `appointment_insumos`, `cuentas_contables`, `movimientos_contables`, `doctor_honorarios_config`.
-- **RPCs/edge functions:** `registrar_insumos_cita()` (insert insumos + descuenta stock), `kpis_dashboard()` (retorna P&L), trigger PG en `movimientos` y `pharmacy_sales`.
-- **Cómo agregar un tipo de egreso nuevo:** en migration, `INSERT INTO cuentas_contables (codigo, nombre, tipo, es_fijo) ...` — aparecerá automático en el dropdown.
+- **Archivo(s) principal(es):** `src/pages/Contabilidad.tsx` (tabs), `src/hooks/useContabilidad.ts`, `src/features/contabilidad/{PolizasTab,ReportesTab,CierreTab,BancosTab,CatalogosTab}.tsx`.
+- **Tablas Supabase involucradas — devengo simple:** `appointment_insumos`, `cuentas_contables`, `movimientos_contables`, `doctor_honorarios_config`.
+- **Tablas Supabase involucradas — partida doble:** `polizas`, `poliza_partidas`, `poliza_folios`, `contab_cierres`, `contab_estados_cuenta`.
+- **RPCs/edge functions:** `registrar_insumos_cita()`, `kpis_dashboard()`, trigger PG en `movimientos`/`pharmacy_sales` (devengo simple); `crear_poliza()`, `cancelar_poliza()`, `cierre_mensual()`, `balanza_comprobacion()`, `libro_diario()`, `auxiliares_cuenta()`, `estado_resultados()`, `balance_general()`, `contab_importar_estado_cuenta()`, `contab_matching_bancario()`, `contab_conciliar_linea()`, `contab_desconciliar_linea()` (partida doble).
+- **Cómo agregar un tipo de egreso nuevo:** en migration, `INSERT INTO cuentas_contables (codigo, nombre, tipo, es_fijo, naturaleza) ...` — aparecerá automático en el dropdown.
 - **Cómo agregar una regla de negocio nueva:** triggers en Postgres (`contab_*`) para automático, o policy RLS si necesita control de acceso.
+- **Los dos sistemas (devengo simple vs. partida doble) NO se sincronizan automático** — ver sección 9 de `memoria/proyectos/modulo-contable-memoria-tecnica.md`.
 
-_/aprende 2026-07-18_ — Fase 5 documentación módulo contable.
+_/aprende 2026-07-19_ — Fase 10, cierre del módulo contable (fases 1-8 documentadas, fase 9 IVA pospuesta).

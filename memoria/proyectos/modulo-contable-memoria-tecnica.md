@@ -1,6 +1,8 @@
-# Módulo Contable — Memoria Técnica (Fases 1-4, 2026-07-18)
+# Módulo Contable — Memoria Técnica (Fases 1-8, cierre 2026-07-19)
 
-Fecha: 2026-07-18 | Estado: Producción | Migraciones: `20260718150000` a `20260718180000`
+Fecha: 2026-07-19 | Estado: Producción, módulo CERRADO (fase 10) | Migraciones: `20260718150000` a `20260719160000`
+
+Fase 9 (IVA) queda pospuesta — requiere decisión de negocio (régimen fiscal, tasas, RESICO vs general). Fases 1-8 son la base de devengo simple (sin partida doble) MÁS un sistema de partida doble en paralelo (pólizas) para reportes formales. Ver sección 9 para cómo se relacionan ambos.
 
 ## 1. Arquitectura de Datos
 
@@ -562,10 +564,86 @@ SELECT cron.schedule('contab-devengar-honorarios', '30 8 * * *',
 - **Idempotencia:** UNIQUE(reference_type, reference_id, evento) ON CONFLICT DO NOTHING
 - **Healing:** Si falló un día, se rellena en siguientes ejecuciones
 
+## 9. Partida Doble (Fase 6C/7/8) — cómo se relaciona con `movimientos_contables`
+
+`movimientos_contables` (fases 1-4) es devengo de una sola columna: suma/resta por cuenta,
+sin balance debe=haber. **No se tocó ni se reemplazó.** En paralelo se construyó un sistema
+de partida doble clásico (`polizas`/`poliza_partidas`) para reportes formales (balanza,
+libro diario, balance general, estado de resultados con debe/haber). Ambos sistemas
+coexisten; `movimientos_contables` sigue siendo la fuente de `kpis_dashboard`/`pnl_mensual`.
+`polizas` NO se genera automático desde `movimientos_contables` — son captura manual vía
+`crear_poliza()` o desde el dashboard/POS en fases futuras. `contab_auditoria_huecos()`
+detecta pólizas sin `reference_type` y movimientos_contables sin póliza asociada, para
+cerrar la brecha manualmente.
+
+```
+poliza_folios (clinic_id, tipo) → ultimo_folio [SEQUENCE por clínica+tipo]
+polizas
+  ├─ id, clinic_id, folio, tipo: ingreso|egreso|diario
+  ├─ fecha, concepto, uuid_cfdi
+  ├─ reference_type, reference_id, evento: registro|cancelacion  [idempotencia]
+  ├─ estado: activa|cancelada
+  └─ created_by
+poliza_partidas
+  ├─ poliza_id, orden, cuenta_id → cuentas_contables
+  ├─ debe_centavos, haber_centavos  [exactamente uno > 0 por partida]
+  └─ descripcion
+cuentas_contables — se le agregó `naturaleza: deudora|acreedora` (fase 6C, columna nueva
+  sobre el catálogo de fase 1; necesaria para saldo en balanza/balance general)
+```
+
+**Reglas de negocio duras (enforced en `crear_poliza()`, SECURITY DEFINER):**
+- Mínimo 2 partidas, cada una con debe XOR haber > 0.
+- `SUM(debe) = SUM(haber)` o rechaza con `poliza_desbalanceada`.
+- Candado de período: rechaza fecha dentro de un mes ya cerrado (`contab_cierres.cerrado_at IS NOT NULL`)
+  — `cierre_mensual()` crea su propia póliza de cierre ANTES de marcar cerrado, así no se autobloquea.
+- Idempotencia por `(reference_type, reference_id, evento)`: si ya existe, regresa el id existente sin duplicar.
+- `cancelar_poliza()` no borra — inserta una póliza reversa (debe/haber invertidos) vinculada por `reference_type='poliza_reversa'`.
+
+**Fase 7 — Cierre mensual:** `cierre_mensual(clinic_id, periodo)` solo admin/manager de esa
+clínica, rechaza mes en curso (`periodo_no_terminado`), calcula neto de cuentas
+ingreso/egreso del mes, genera póliza que cancela esos saldos contra la cuenta `305`
+(Resultados acumulados) y marca `contab_cierres`. Después de cerrado, `crear_poliza()`
+bloquea nuevas pólizas con fecha en ese mes.
+
+**Fase 8 — Conciliación bancaria:** `contab_estados_cuenta` (líneas de banco, import CSV vía
+`contab_importar_estado_cuenta()`, dedupe por `line_hash` — el hash se calcula en el RPC,
+no vía `GENERATED ALWAYS AS`, porque `fecha::text` no es IMMUTABLE y Postgres rechaza el
+cast con 42P17). `contab_matching_bancario()` sugiere partida candidata por monto exacto +
+fecha ±2 días, excluyendo partidas ya conciliadas. `contab_conciliar_linea()`/
+`contab_desconciliar_linea()` hacen el match manual, ambos con check de tenant. Sin
+integración a API bancaria — el usuario sube CSV manual (v1).
+
+**Reportes en vivo (fase 6C):** `balanza_comprobacion`, `libro_diario`, `auxiliares_cuenta`,
+`estado_resultados`, `balance_general` — las 5 leen directo de `polizas`/`poliza_partidas`,
+todas con tenant-check como primera operación, `search_path=public`, EXECUTE revocado de
+PUBLIC/anon (solo `authenticated`/`service_role`). Verificado vía `get_advisors(security)`
++ inspección manual de `pg_proc`/`pg_policies` en el cierre de fase 10 (2026-07-19) — limpio.
+
+**Bug encontrado y corregido en fase 10:** el candado de período solo protegía
+`crear_poliza()`. Un egreso manual capturado directo en `movimientos_contables`
+(`RegistrarEgresoModal`) con fecha en mes cerrado pasaba la policy RLS sin problema —
+el trigger que intenta generar la póliza correspondiente sí fallaba por el candado,
+pero traga la excepción (encola en `contab_asientos_pendientes`) sin abortar el INSERT
+ni avisar al usuario. Fix: trigger `trg_contab_valida_periodo_movimiento_manual`
+(`20260719170000_fase10_candado_movimientos_manual.sql`) bloquea síncrono cualquier
+INSERT `origen='manual'` con `fecha_devengo` en un mes ya cerrado.
+
+**Seguridad — checklist de fase 10 (auditoría completa, 2026-07-19):**
+Las 14 funciones SECURITY DEFINER de fases 6C/7/8 cumplen el checklist obligatorio de
+CLAUDE.md (search_path fijo, REVOKE PUBLIC + GRANT mínimo, tenant-check primero). Único
+hallazgo del `get_advisors`: los WARN de `pg_graphql_*_table_exposed` son ruido — GRANT de
+tabla a `anon`/`authenticated` es el default de Supabase al crear tabla, pero RLS deniega
+todo lo que no tiene policy explícita (verificado con `pg_policies`: ninguna tabla contable
+tiene policy para `anon`). `poliza_folios` tiene RLS habilitado sin ninguna policy —
+intencional, deny-all; solo se toca desde `crear_poliza()` que es SECURITY DEFINER y
+bypassa RLS. `cuentas_contables` mantiene `SELECT USING(true)` para `authenticated` — es
+catálogo compartido sin datos de clínica, no requiere scoping por tenant.
+
 ## Relaciones Clave
 
 - [[reference_usefielderrors-hook]] — validación de formularios
-- [[Fases de Desarrollo Contable]] — roadmap actual (Fases 5+)
+- [[Fases de Desarrollo Contable]] — roadmap actual (fase 9 IVA pospuesta, sin fecha)
 - [[Glosario Financiero]] — términos de negocio
 
-**Última actualización:** 2026-07-18 | Fase 4 en producción
+**Última actualización:** 2026-07-19 | Fases 1-8 en producción, módulo cerrado (fase 10)
