@@ -12,6 +12,7 @@ import { RegistrarEgresoModal } from "@/features/contabilidad/RegistrarEgresoMod
 import { exportContabilidadCsv } from "@/features/contabilidad/exportContabilidadCsv";
 import { PolizasTab } from "@/features/contabilidad/PolizasTab";
 import { CatalogosTab } from "@/features/contabilidad/CatalogosTab";
+import { ReportesTab } from "@/features/contabilidad/ReportesTab";
 
 function fmtMXN(centavos: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(centavos / 100);
@@ -68,6 +69,7 @@ export default function Contabilidad() {
         <TabsList>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
           <TabsTrigger value="polizas">Pólizas</TabsTrigger>
+          <TabsTrigger value="reportes">Reportes</TabsTrigger>
           <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
         </TabsList>
 
@@ -223,6 +225,10 @@ export default function Contabilidad() {
 
         <TabsContent value="polizas">
           <PolizasTab />
+        </TabsContent>
+
+        <TabsContent value="reportes">
+          <ReportesTab />
         </TabsContent>
 
         <TabsContent value="catalogos">
