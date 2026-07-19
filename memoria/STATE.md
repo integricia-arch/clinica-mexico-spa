@@ -1,6 +1,13 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: verificar/terminar 6B, luego 6C → 7 → 8
+## PRÓXIMA ACCIÓN: GATE 6B (revisor + get_advisors) → 6C → 7 → 8
+
+**PASO 0 nuevo:** 6B COMPLETA (738e621, migración 20260719120000, 1121 líneas, aplicada,
+E2E completo verde, verificada en DB: 9 reglas, tablas, 0 residuos) pero SIN pase de revisor
+por cierre de sesión. Antes de 6C: (1) agente code-reviewer sobre 738e621 — foco: bypass de
+membership con auth.uid() IS NULL en crear_poliza/cancelar_poliza (cron/backfill; confirmar
+que anon no tiene EXECUTE), triggers nunca abortan negocio, idempotencias; (2)
+mcp__supabase__get_advisors(security). No avanzar con CRITICAL/HIGH.
 
 **Ejecutar con `/model sonnet`** siguiendo el plan maestro
 `docs/superpowers/plans/2026-07-19-modulo-contable-completo.md` y el detalle en
