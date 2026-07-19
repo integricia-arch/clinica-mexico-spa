@@ -1,6 +1,35 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: 6C → 7 → 8  (GATE 6B ✅ VERDE — ejecutar con `/model sonnet`)
+## PRÓXIMA ACCIÓN: 8 (conciliación bancaria) — 6C y 7 VERDE, en prod, pusheados
+
+**Sesión 2026-07-19 (sonnet) — 6C y 7 completas y desplegadas:**
+- **6C — Reportes en vivo** (commit `db4d42f`): RPCs `balanza_comprobacion`,
+  `libro_diario`, `auxiliares_cuenta`, `estado_resultados`, `balance_general`
+  sobre `polizas`/`poliza_partidas`. Tab "Reportes" en `/contabilidad` (4
+  sub-vistas + CSV). Migración `20260719140000_fase6c_reportes_partida_doble.sql`.
+- **Fase 7 — Cierre mensual y control** (commit `5963884`): RPC `cierre_mensual`
+  genera póliza de cierre (ingresos/egresos netos → cuenta 305 Resultados
+  acumulados) y marca `contab_cierres`. Candado de período agregado a
+  `crear_poliza` (rechaza pólizas con fecha en mes cerrado). RPCs de auditoría
+  `contab_auditoria_huecos` (asientos sin referencia / movimientos sin póliza)
+  y `contab_concilia_cortes` (corte Z de caja general vs pólizas del turno —
+  **alcance: solo caja general, farmacia usa otro esquema de turnos, fuera de
+  v1**). Tab "Cierre" en `/contabilidad`. Migración `20260719150000_fase7_cierre_mensual.sql`.
+- Ambas: tsc 0 errores, `npm run build:all` limpio (¡ojo! `npm run build` solo
+  BORRA `dist/manual` por `emptyOutDir` default de vite — usar siempre
+  `build:all` en prod, ya documentado abajo), deploy Workers verificado,
+  advisors security sin CRITICAL/HIGH ni anon EXECUTE en las RPCs nuevas.
+  Push a `main` hecho en ambas.
+
+**Siguiente: Fase 8 — Conciliación bancaria** (plan maestro §Fase 8): tabla
+`contab_estados_cuenta` (carga CSV del banco) + matching semiautomático contra
+pólizas de cuenta Bancos (monto+fecha±2días) + UI de conciliación. Sin API
+bancaria en v1. Más grande que 6C/7 — confirmar con Pablo antes de arrancar
+(costo de sesión ya elevado, ver nota de costo abajo).
+
+---
+
+## HISTORIAL (contexto previo a esta sesión — 6B y anteriores)
 
 **GATE 6B CERRADO 2026-07-19 (Fable) — hotfix `427544e` aplicado a prod + pusheado.**
 El gate encontró un **CRITICAL** que el revisor estático marcó como "no explotable":
