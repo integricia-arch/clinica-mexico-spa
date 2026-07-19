@@ -6,7 +6,7 @@ import {
   Pill, Settings, Menu, X, Bell, ChevronDown, LogOut,
   Headset, MessageCircle, BellRing, ClipboardList, Stethoscope,
   CreditCard, Lock, UserRound, ChevronLeft, ChevronRight,
-  Send, Gift, ShoppingCart, Package,
+  Send, Gift, ShoppingCart, Package, Wallet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -53,6 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/almacen", icon: Package, label: "Almacén", roles: ["admin", "nurse", "receptionist", "cajero"], moduloSlug: "almacen" },
   { to: "/enfermeria", icon: Stethoscope, label: "Enfermería", roles: ["admin", "manager", "nurse"] },
   { to: "/lealtad", icon: Gift, label: "Lealtad", roles: ["admin", "manager"] },
+  { to: "/contabilidad", icon: Wallet, label: "Contabilidad", roles: ["admin", "manager"] },
   { to: "/facturacion", icon: Receipt, label: "Facturación", roles: ["admin", "receptionist"], moduloSlug: "facturacion_cfdi" },
   { to: "/inbox", icon: MessageCircle, label: "Conversaciones", roles: ["admin", "receptionist", "doctor", "nurse"] },
   // ── Admin ──
