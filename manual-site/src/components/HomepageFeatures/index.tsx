@@ -50,6 +50,7 @@ const SECTIONS: { label: string; items: ModuleItem[] }[] = [
     label: 'Admin',
     items: [
       { slug: 'inteligencia-bi', label: 'Inteligencia BI', Icon: BarChart2, ready: true },
+      { slug: 'contabilidad', label: 'Contabilidad', Icon: Receipt, ready: true },
       { slug: 'admin-usuarios', label: 'Usuarios', Icon: UserCog, ready: true },
       { slug: 'admin-arco', label: 'Solicitudes ARCO', Icon: FileSearch, ready: true },
       { slug: 'admin-diagnostico-multiclinica', label: 'Diagnóstico multi-clínica', Icon: Network, ready: true },
