@@ -1,6 +1,37 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: módulo contable CERRADO (fase 10 completa). Solo pendiente: fase 9 (IVA) opcional, requiere decisión de negocio con Pablo — sin fecha.
+## PRÓXIMA ACCIÓN: módulo contable CERRADO (fases 1-9 completas). Backlog sin fecha: control de activos fijos (investigado, no construido) + import/export UI + conexión API con celulas-madre-ventas (ver abajo).
+
+**Sesión 2026-07-19 (sonnet) — Fase 9, IVA y preparación fiscal:**
+- Hallazgo: IVA acreditable (compras) y catálogo con código SAT ya estaban listos desde
+  fase 6A/6B — solo faltaba IVA trasladado (ventas). Migración `20260719180000_fase9_iva_trasladado.sql`:
+  `cuentas_contables.iva_tratamiento`/`iva_tasa_pct` (arranca `sin_configurar`, nunca asume
+  exento/gravado — depende de si el emisor es persona física/moral, no se puede inferir),
+  `contab_generar_poliza_evento()` extendido a 3 líneas cuando la cuenta está gravada, RPC
+  `reporte_iva()`. UI: columnas IVA en Catálogos, tab "IVA" en Reportes, exportador Anexo 24
+  (`exportAnexo24.ts`, XML **sin firmar** — nunca se toca e.firma) reusando `cfdi_config`
+  (RFC/régimen) ya existente en `/configuracion/facturacion` — no se creó config nueva.
+- **CRITICAL encontrado y corregido en el mismo cierre:** `reporte_iva` quedó con `EXECUTE`
+  para `anon` tras crearse — mismo patrón ya documentado en gate 6B (`REVOKE FROM PUBLIC`
+  a secas no revoca el grant default a anon/authenticated en Supabase). Fix aplicado a prod
+  y al archivo de migración: `REVOKE ... FROM PUBLIC, anon, authenticated` explícito.
+- tsc limpio. `movimientos_contables`/KPIs de fases 1-4 no se tocaron (cero riesgo de
+  regresión) — el motor de IVA solo vive en la capa de pólizas (partida doble).
+- Memoria técnica (§10), CLAUDE.md y manual de usuario actualizados.
+- **Investigación en paralelo (NO implementado):** control de activos fijos — Pablo
+  confirmó que la clínica sí tiene equipo médico/mobiliario inventariable/etiquetable.
+  Tasas LISR Art. 34: mobiliario/oficina 10%, cómputo 30%; equipo médico sin fracción
+  explícita confirmada (cae presumiblemente en residual ~10%, verificar con contador
+  antes de construir). Detalle completo + campos sugeridos para `activos_fijos` en
+  `memoria/proyectos/modulo-contable-memoria-tecnica.md` §11.
+- **Backlog pedido por Pablo, solo anotado (no implementado esta sesión):** interfaces
+  de carga de archivos (import) para cuentas/catálogos, exportación de información para
+  usuario final, y una conexión API hacia `celulas-madre-ventas` (proyecto separado,
+  Supabase distinto — validar stack completo por la máxima de cambio de proyecto en
+  CLAUDE.md global antes de tocar nada ahí). Sin diseño aún, siguiente sesión: definir
+  alcance con Pablo antes de tocar código.
+
+---
 
 **Sesión 2026-07-19 (sonnet) — Fase 10, cierre del módulo:**
 - Revisor global (subagent code-reviewer) sobre `Contabilidad.tsx` + `src/features/contabilidad/*` +

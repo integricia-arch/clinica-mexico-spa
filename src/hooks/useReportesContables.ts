@@ -114,6 +114,34 @@ export function useAuxiliaresCuenta() {
   return { rows, loading, error, load };
 }
 
+export interface IvaFila {
+  tipo: "trasladado" | "acreditable";
+  cuenta_codigo: string;
+  cuenta_nombre: string;
+  monto_centavos: number;
+}
+
+export function useReporteIva() {
+  const { activeClinicId } = useActiveClinic();
+  const [rows, setRows] = useState<IvaFila[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (desde: string, hasta: string) => {
+    if (!activeClinicId || !desde || !hasta) return;
+    setLoading(true);
+    setError(null);
+    const { data, error: err } = await (supabase as any).rpc("reporte_iva", {
+      p_clinic_id: activeClinicId, p_desde: desde, p_hasta: hasta,
+    });
+    if (err) setError(friendlyError(err));
+    else setRows((data ?? []) as IvaFila[]);
+    setLoading(false);
+  }, [activeClinicId]);
+
+  return { rows, loading, error, load };
+}
+
 export function useBalanceGeneral() {
   const { activeClinicId } = useActiveClinic();
   const [rows, setRows] = useState<BalanceFila[]>([]);

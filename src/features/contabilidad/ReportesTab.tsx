@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
-import { Download } from "lucide-react";
+import { Download, FileDown } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { untypedTable } from "@/lib/untypedTable";
 import { exportReporteCsv } from "@/features/contabilidad/exportReporteCsv";
+import { exportarCatalogoCuentasAnexo24, exportarBalanzaAnexo24 } from "@/features/contabilidad/exportAnexo24";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 import {
-  useBalanzaComprobacion, useLibroDiario, useAuxiliaresCuenta, useBalanceGeneral,
+  useBalanzaComprobacion, useLibroDiario, useAuxiliaresCuenta, useBalanceGeneral, useReporteIva,
 } from "@/hooks/useReportesContables";
 
 function fmtMXN(centavos: number) {
@@ -348,6 +351,95 @@ function BalanceGeneralTab() {
   );
 }
 
+function IvaTab() {
+  const { activeClinicId } = useActiveClinic();
+  const [desde, setDesde] = useState(inicioMes);
+  const [hasta, setHasta] = useState(finMes);
+  const [exportando, setExportando] = useState<"catalogo" | "balanza" | null>(null);
+  const { rows, loading, error, load } = useReporteIva();
+
+  useEffect(() => { load(desde, hasta); }, [load, desde, hasta]);
+
+  const trasladado = rows.find((r) => r.tipo === "trasladado")?.monto_centavos ?? 0;
+  const acreditable = rows.find((r) => r.tipo === "acreditable")?.monto_centavos ?? 0;
+  const aPagar = trasladado - acreditable;
+
+  const mes = new Date(hasta + "T12:00:00").getMonth() + 1;
+  const anio = new Date(hasta + "T12:00:00").getFullYear();
+
+  const exportarAnexo = async (tipo: "catalogo" | "balanza") => {
+    if (!activeClinicId) return;
+    setExportando(tipo);
+    try {
+      if (tipo === "catalogo") await exportarCatalogoCuentasAnexo24(activeClinicId, mes, anio);
+      else await exportarBalanzaAnexo24(activeClinicId, mes, anio, desde, hasta);
+      toast.success("XML generado — recuerda: no está firmado, tu contador debe firmarlo con e.firma antes de subirlo al SAT.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error generando el XML");
+    }
+    setExportando(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <Label htmlFor="field-iva-desde" className="text-xs">Desde</Label>
+            <Input id="field-iva-desde" type="date" className="h-8 w-36" value={desde} onChange={(e) => setDesde(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="field-iva-hasta" className="text-xs">Hasta</Label>
+            <Input id="field-iva-hasta" type="date" className="h-8 w-36" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">Error: {error}</div>}
+
+      <Card>
+        <CardContent className="p-4">
+          {loading ? <Skeleton className="h-24 w-full rounded-xl" /> : (
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs text-muted-foreground">IVA trasladado (ventas)</p>
+                <p className="text-lg font-bold">{fmtMXN(trasladado)}</p>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs text-muted-foreground">IVA acreditable (compras)</p>
+                <p className="text-lg font-bold">{fmtMXN(acreditable)}</p>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs text-muted-foreground">{aPagar >= 0 ? "IVA a pagar" : "IVA a favor"}</p>
+                <p className={`text-lg font-bold ${aPagar >= 0 ? "" : "text-emerald-600"}`}>{fmtMXN(Math.abs(aPagar))}</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-4 space-y-2">
+          <p className="text-sm font-medium">Anexo 24 (contabilidad electrónica)</p>
+          <p className="text-xs text-muted-foreground">
+            Genera catálogo de cuentas y balanza de comprobación del mes de la fecha "Hasta", en formato XML.
+            <strong> No están firmados</strong> — tu contador debe firmarlos con e.firma antes de subirlos al SAT.
+            Configura el RFC en Configuración → Facturación y CFDI antes de exportar.
+          </p>
+          <div className="flex gap-2 pt-1">
+            <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={exportando !== null} onClick={() => exportarAnexo("catalogo")}>
+              <FileDown className="h-3.5 w-3.5" /> {exportando === "catalogo" ? "Generando…" : "Catálogo de cuentas XML"}
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={exportando !== null} onClick={() => exportarAnexo("balanza")}>
+              <FileDown className="h-3.5 w-3.5" /> {exportando === "balanza" ? "Generando…" : "Balanza XML"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function ReportesTab() {
   return (
     <Tabs defaultValue="balanza">
@@ -356,11 +448,13 @@ export function ReportesTab() {
         <TabsTrigger value="diario">Libro diario</TabsTrigger>
         <TabsTrigger value="auxiliares">Auxiliares</TabsTrigger>
         <TabsTrigger value="balance">Balance</TabsTrigger>
+        <TabsTrigger value="iva">IVA</TabsTrigger>
       </TabsList>
       <TabsContent value="balanza" className="pt-4"><BalanzaTab /></TabsContent>
       <TabsContent value="diario" className="pt-4"><LibroDiarioTab /></TabsContent>
       <TabsContent value="auxiliares" className="pt-4"><AuxiliaresTab /></TabsContent>
       <TabsContent value="balance" className="pt-4"><BalanceGeneralTab /></TabsContent>
+      <TabsContent value="iva" className="pt-4"><IvaTab /></TabsContent>
     </Tabs>
   );
 }

@@ -432,7 +432,7 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
-## Módulo Contable (Fases 1-8, CERRADO 2026-07-19 — fase 9 IVA pospuesta)
+## Módulo Contable (Fases 1-9, CERRADO 2026-07-19)
 
 Ver `memoria/proyectos/modulo-contable-memoria-tecnica.md` para fórmulas exactas y guía de auditoría de números. Dos sistemas coexisten a propósito: devengo simple (fases 1-4, alimenta KPIs/dashboard) y partida doble clásica (fases 6C-8, alimenta reportes formales). No están sincronizados automáticamente — ver sección 9 de la memoria técnica.
 
@@ -457,7 +457,9 @@ Ver `memoria/proyectos/modulo-contable-memoria-tecnica.md` para fórmulas exacta
 - Idempotencia por `(reference_type, reference_id, evento)` en ambos sistemas.
 - Candado de período (fase 7): `crear_poliza()` rechaza fecha en mes ya cerrado en `contab_cierres`.
 - Cron contab-devengar-honorarios: 8:30 UTC diario.
-- **Limitación conocida:** costo de ventas NO incluye costo de medicamentos (farmacia) — solo insumos clínicos. Fase 9 (IVA) pospuesta, sin fecha — requiere decisión de negocio (régimen fiscal, tasas).
+- **Limitación conocida:** costo de ventas NO incluye costo de medicamentos (farmacia) — solo insumos clínicos.
+- **IVA (fase 9):** `cuentas_contables.iva_tratamiento`/`iva_tasa_pct` configurable por cuenta de ingreso (arranca `sin_configurar` — nunca asumir exento/gravado). `contab_generar_poliza_evento()` genera póliza de 3 líneas (cargo Caja / abono Ingreso subtotal / abono IVA trasladado cuenta `209`) cuando la cuenta destino está gravada. RPC `reporte_iva()` = trasladado (209) − acreditable (118, ya existente desde fase 6B). Exportador Anexo 24 (`exportAnexo24.ts`) genera XML **sin firmar** (nunca tocar e.firma) leyendo RFC/régimen de `cfdi_config` (ya existente en `/configuracion/facturacion`, no duplicar). Régimen fiscal (general/RESICO) es solo metadato — el mecanismo de IVA es idéntico en ambos.
+- **Control de activos fijos: investigado, NO implementado.** Ver `memoria/proyectos/modulo-contable-memoria-tecnica.md` §11 — tasas LISR Art. 34, campos sugeridos para `activos_fijos`. Requiere confirmar tasa fiscal de equipo médico con el contador antes de construir.
 
 **Vistas:** `pnl_mensual`, `flujo_efectivo`, `doctor_honorarios_detalle` (grano: cita, agregable por paciente/doctor/día).
 

@@ -640,6 +640,67 @@ intencional, deny-all; solo se toca desde `crear_poliza()` que es SECURITY DEFIN
 bypassa RLS. `cuentas_contables` mantiene `SELECT USING(true)` para `authenticated` — es
 catálogo compartido sin datos de clínica, no requiere scoping por tenant.
 
+## 10. Fase 9 — IVA y preparación fiscal (2026-07-19)
+
+**Hallazgo previo a construir:** el lado de IVA acreditable (compras) y el catálogo con
+código agrupador SAT ya estaban construidos desde fase 6A/6B (`cuentas_contables.codigo_agrupador_sat`,
+`facturas_proveedor.iva_centavos`, trigger `contab_factura_proveedor`). Fase 9 solo
+construyó el lado de IVA **trasladado** (ventas).
+
+**Investigación fiscal previa (para no adivinar mal):** el mecanismo de IVA es idéntico
+en régimen General y RESICO (RESICO solo simplifica ISR). El tratamiento de IVA de un
+ingreso SÍ varía según si el emisor es persona física profesional de la salud (exento,
+Art. 15-XIV LIVA) o persona moral (gravado 16%, sin exención) — esto NO se puede inferir
+de forma segura, por eso es configurable por cuenta, arrancando en `sin_configurar`.
+
+**Cambios:**
+- `cuentas_contables.iva_tratamiento` (`sin_configurar`|`exento`|`tasa_0`|`tasa_general`)
+  e `iva_tasa_pct` — editable en tab Catálogos, solo para cuentas `tipo='ingreso'`.
+- `contab_generar_poliza_evento()` extendido: si la cuenta de abono (ingreso) tiene
+  tratamiento gravado con tasa configurada, separa la póliza en 3 líneas (Caja debe total /
+  Ingreso haber subtotal / IVA trasladado cuenta `209` haber iva), IVA calculado hacia
+  atrás desde el total ya cobrado (`iva = total - total/(1+tasa/100)`). Sin configurar o
+  exento → 2 líneas, igual que antes. `movimientos_contables` (devengo simple, KPIs) NO
+  se tocó — cero riesgo de romper fases 1-4.
+- RPC `reporte_iva(clinic_id, desde, hasta)`: trasladado (209) − acreditable (118) por
+  período, lee `poliza_partidas`. Tab "IVA" en Reportes.
+- Exportador Anexo 24 (`exportAnexo24.ts`): XML catálogo de cuentas + balanza,
+  **sin firmar** (nunca se toca e.firma — fuera de alcance permanente). Lee RFC/régimen
+  de `cfdi_config` (ya existía desde el módulo de facturación, no se creó config nueva).
+- **Bug encontrado y corregido en el mismo cierre:** `reporte_iva` quedó con `EXECUTE`
+  para `anon` tras el `CREATE FUNCTION` — mismo patrón CRITICAL ya documentado en gate
+  6B (`REVOKE ... FROM PUBLIC` a secas no revoca el grant default a `anon`/`authenticated`
+  en Supabase). Fix: `REVOKE ... FROM PUBLIC, anon, authenticated` explícito.
+
+**Fuera de alcance de fase 9:** firma e.firma, retención de IVA en honorarios médicos,
+tercer archivo de Anexo 24 (pólizas, a requerimiento SAT).
+
+## 11. Investigación pendiente de decisión — Control de Activos Fijos (2026-07-19)
+
+Pablo confirmó que la clínica sí tiene equipo médico/mobiliario inventariable y
+etiquetable, hoy sin control de activos fijos en el sistema (`insumos` es solo para
+consumibles). Investigación (no implementado):
+
+- Tasas depreciación fiscal LISR Art. 34 (línea recta, sobre MOI): mobiliario/equipo de
+  oficina 10%, equipo de cómputo 30%, construcciones 5%, autos 25%. **Equipo médico no
+  tiene fracción explícita confirmada en el Art. 34** — cae presumiblemente en la
+  fracción residual (~10%), pero no se confirmó contra el texto oficial del DOF
+  (fetch a sat.gob.mx dio 403) — **verificar con el contador antes de codificar**.
+- Depreciación contable (NIF C-6, vida útil estimada) y fiscal (LISR, tasa fija) suelen
+  diferir — llevar ambos cálculos en paralelo, no un solo campo.
+- Existe deducción inmediata opcional para personas morales <$100M ingresos — % no
+  verificado contra DOF 2026, tratar como orientativo.
+- Campos mínimos sugeridos para tabla futura `activos_fijos`: `folio_inventario`,
+  `codigo_qr`, `nombre`/`categoria` (determina tasa fiscal), `numero_serie`, `proveedor_id`,
+  `fecha_adquisicion`, `valor_adquisicion_centavos` (MOI sin IVA), `tasa_depreciacion_contable`,
+  `tasa_depreciacion_fiscal` + `fraccion_lisr_art34`, `estado` (activo/mantenimiento/baja),
+  `ubicacion_fisica`, `responsable_custodio_id`, `fecha_baja`/`motivo_baja`. Relación futura
+  1-a-muchos a `activos_fijos_mantenimientos` (no construir todavía).
+- Etiquetado: QR + folio impreso, no hay norma mexicana obligatoria, es práctica de
+  mercado libre.
+- **No implementado.** Requiere decisión de negocio (confirmar tasa fiscal de equipo
+  médico con el contador) antes de escribir migración.
+
 ## Relaciones Clave
 
 - [[reference_usefielderrors-hook]] — validación de formularios

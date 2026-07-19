@@ -62,6 +62,32 @@ La pantalla tiene 6 secciones (pestañas arriba): **Resumen** (KPIs y P&L, descr
    **Desconciliar** para deshacer el match.
 6. No hay conexión directa al banco — es carga manual de CSV (versión 1).
 
+### Cómo configurar el IVA de un ingreso (consultas, farmacia, otros)
+
+1. Ve a **Catálogos** → edita la cuenta de ingreso (ej. "Ingresos por consultas").
+2. Elige el **Tratamiento IVA**: Sin configurar (por defecto, no calcula nada), Exento,
+   Tasa 0% o Tasa general (captura el % exacto, normalmente 16).
+3. **Antes de cambiar esto, confírmalo con tu contador** — depende de si tu clínica
+   factura como persona física (servicios médicos suelen estar exentos) o persona
+   moral (se gravan normal). Configurarlo mal puede causar que declares IVA de más o
+   de menos.
+4. Una vez configurado, cada cobro nuevo de esa cuenta separa automático el IVA
+   (lo calcula del total ya cobrado, no cambia lo que le cobras al paciente).
+
+### Cómo ver el reporte de IVA y exportar Anexo 24
+
+1. Ve a **Reportes** → pestaña **IVA**.
+2. Verás IVA trasladado (de tus ventas), IVA acreditable (de tus compras a
+   proveedores, ya se calcula solo desde que capturas facturas) y el resultado
+   (a pagar o a favor).
+3. Botones **Catálogo de cuentas XML** y **Balanza XML** generan los archivos del
+   Anexo 24 (contabilidad electrónica SAT) del mes de la fecha "Hasta".
+4. **Estos archivos NO están firmados** — el sistema nunca toca tu e.firma (por
+   seguridad). Pásaselos a tu contador para que los firme y suba al SAT con su
+   propio software.
+5. Necesitas tener el RFC capturado en **Configuración → Facturación y CFDI**
+   antes de exportar, o el botón mostrará error.
+
 ### Cómo registrar un egreso manual (renta, luz, servicios, etc.)
 
 1. Ve a **Contabilidad** → sección **Egresos manuales** (abajo de los KPIs).

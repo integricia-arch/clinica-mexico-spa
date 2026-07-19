@@ -14,6 +14,8 @@ import { untypedTable } from "@/lib/untypedTable";
 import { useAuth } from "@/hooks/useAuth";
 import { friendlyError } from "@/lib/errors";
 
+type IvaTratamiento = "sin_configurar" | "exento" | "tasa_0" | "tasa_general";
+
 interface CuentaContable {
   id: string;
   codigo: string;
@@ -22,9 +24,21 @@ interface CuentaContable {
   es_fijo: boolean;
   codigo_agrupador_sat: string | null;
   activo: boolean;
+  iva_tratamiento: IvaTratamiento;
+  iva_tasa_pct: number | null;
 }
 
-const emptyForm = { codigo: "", nombre: "", tipo: "egreso" as "ingreso" | "egreso", es_fijo: false, codigo_agrupador_sat: "" };
+const IVA_LABELS: Record<IvaTratamiento, string> = {
+  sin_configurar: "Sin configurar",
+  exento: "Exento",
+  tasa_0: "Tasa 0%",
+  tasa_general: "Tasa general",
+};
+
+const emptyForm = {
+  codigo: "", nombre: "", tipo: "egreso" as "ingreso" | "egreso", es_fijo: false, codigo_agrupador_sat: "",
+  iva_tratamiento: "sin_configurar" as IvaTratamiento, iva_tasa_pct: "",
+};
 
 function CuentasCrud() {
   const [cuentas, setCuentas] = useState<CuentaContable[]>([]);
@@ -38,7 +52,7 @@ function CuentasCrud() {
   const load = async () => {
     setLoading(true);
     const { data, error: err } = await untypedTable("cuentas_contables")
-      .select("id,codigo,nombre,tipo,es_fijo,codigo_agrupador_sat,activo")
+      .select("id,codigo,nombre,tipo,es_fijo,codigo_agrupador_sat,activo,iva_tratamiento,iva_tasa_pct")
       .order("codigo");
     if (err) setError(friendlyError(err));
     else setCuentas((data ?? []) as CuentaContable[]);
@@ -50,18 +64,28 @@ function CuentasCrud() {
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (c: CuentaContable) => {
     setEditing(c);
-    setForm({ codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, es_fijo: c.es_fijo, codigo_agrupador_sat: c.codigo_agrupador_sat ?? "" });
+    setForm({
+      codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, es_fijo: c.es_fijo, codigo_agrupador_sat: c.codigo_agrupador_sat ?? "",
+      iva_tratamiento: c.iva_tratamiento, iva_tasa_pct: c.iva_tasa_pct != null ? String(c.iva_tasa_pct) : "",
+    });
     setModalOpen(true);
   };
 
   const save = async () => {
     if (!form.codigo.trim() || !form.nombre.trim()) { toast.error("Código y nombre son obligatorios"); return; }
+    const requiereTasa = form.tipo === "ingreso" && form.iva_tratamiento !== "sin_configurar" && form.iva_tratamiento !== "exento";
+    if (requiereTasa && !form.iva_tasa_pct.trim()) { toast.error("Captura la tasa de IVA (%) para este tratamiento"); return; }
     setSaving(true);
+    const ivaPayload = form.tipo === "ingreso" ? {
+      iva_tratamiento: form.iva_tratamiento,
+      iva_tasa_pct: requiereTasa ? parseFloat(form.iva_tasa_pct) : (form.iva_tratamiento === "tasa_0" ? 0 : null),
+    } : {};
     const { error: err } = editing
       ? await untypedTable("cuentas_contables").update({
           nombre: form.nombre.trim(),
           es_fijo: form.es_fijo,
           codigo_agrupador_sat: form.codigo_agrupador_sat.trim() || null,
+          ...ivaPayload,
         }).eq("id", editing.id)
       : await untypedTable("cuentas_contables").insert({
           codigo: form.codigo.trim(),
@@ -69,6 +93,7 @@ function CuentasCrud() {
           tipo: form.tipo,
           es_fijo: form.es_fijo,
           codigo_agrupador_sat: form.codigo_agrupador_sat.trim() || null,
+          ...ivaPayload,
         });
     setSaving(false);
     if (err) { toast.error(friendlyError(err)); return; }
@@ -105,6 +130,7 @@ function CuentasCrud() {
                   <th className="pb-2 pr-4 font-medium text-muted-foreground">Tipo</th>
                   <th className="pb-2 pr-4 font-medium text-muted-foreground">Fijo</th>
                   <th className="pb-2 pr-4 font-medium text-muted-foreground">SAT</th>
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground">IVA</th>
                   <th className="pb-2 pr-4 font-medium text-muted-foreground">Activo</th>
                   <th className="pb-2 font-medium text-muted-foreground" />
                 </tr>
@@ -117,6 +143,13 @@ function CuentasCrud() {
                     <td className="py-2 pr-4 capitalize">{c.tipo}</td>
                     <td className="py-2 pr-4">{c.es_fijo ? "Sí" : "No"}</td>
                     <td className="py-2 pr-4 text-muted-foreground">{c.codigo_agrupador_sat ?? "—"}</td>
+                    <td className="py-2 pr-4">
+                      {c.tipo === "ingreso" ? (
+                        <span className={c.iva_tratamiento === "sin_configurar" ? "text-amber-600" : "text-muted-foreground"}>
+                          {IVA_LABELS[c.iva_tratamiento]}{c.iva_tratamiento === "tasa_general" && c.iva_tasa_pct != null ? ` (${c.iva_tasa_pct}%)` : ""}
+                        </span>
+                      ) : "—"}
+                    </td>
                     <td className="py-2 pr-4">{c.activo ? "Activo" : "Inactivo"}</td>
                     <td className="py-2 text-right space-x-2">
                       <Button size="sm" variant="outline" className="h-7" onClick={() => openEdit(c)}>Editar</Button>
@@ -168,6 +201,32 @@ function CuentasCrud() {
                 onCheckedChange={(v) => setForm((f) => ({ ...f, es_fijo: !!v }))} />
               <Label htmlFor="field-es_fijo" className="text-sm font-normal">Gasto fijo (punto de equilibrio)</Label>
             </div>
+            {form.tipo === "ingreso" && (
+              <div className="rounded-lg border border-border p-3 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Tratamiento de IVA de este ingreso — confírmalo con tu contador antes de
+                  configurarlo (afecta si se retiene IVA al cobrar).
+                </p>
+                <div>
+                  <Label className="text-sm">Tratamiento IVA</Label>
+                  <Select value={form.iva_tratamiento} onValueChange={(v) => setForm((f) => ({ ...f, iva_tratamiento: v as IvaTratamiento, iva_tasa_pct: v === "tasa_general" ? f.iva_tasa_pct : "" }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(IVA_LABELS) as IvaTratamiento[]).map((k) => (
+                        <SelectItem key={k} value={k}>{IVA_LABELS[k]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.iva_tratamiento === "tasa_general" && (
+                  <div>
+                    <Label htmlFor="field-iva_tasa_pct">Tasa de IVA (%) *</Label>
+                    <Input id="field-iva_tasa_pct" type="number" step="0.01" placeholder="16"
+                      value={form.iva_tasa_pct} onChange={(e) => setForm((f) => ({ ...f, iva_tasa_pct: e.target.value }))} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Button>
