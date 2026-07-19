@@ -6,9 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useContabilidad, PeriodoContable } from "@/hooks/useContabilidad";
 import { RegistrarEgresoModal } from "@/features/contabilidad/RegistrarEgresoModal";
 import { exportContabilidadCsv } from "@/features/contabilidad/exportContabilidadCsv";
+import { PolizasTab } from "@/features/contabilidad/PolizasTab";
+import { CatalogosTab } from "@/features/contabilidad/CatalogosTab";
 
 function fmtMXN(centavos: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(centavos / 100);
@@ -56,12 +59,20 @@ export default function Contabilidad() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">Contabilidad</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Estado de resultados, flujo de efectivo y KPIs financieros</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div>
+        <h1 className="text-xl font-bold">Contabilidad</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">Estado de resultados, flujo de efectivo y KPIs financieros</p>
+      </div>
+
+      <Tabs defaultValue="resumen">
+        <TabsList>
+          <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="polizas">Pólizas</TabsTrigger>
+          <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="resumen" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-2">
           <Select value={periodo} onValueChange={(v) => setPeriodo(v as PeriodoContable)}>
             <SelectTrigger className="w-40 h-8 text-sm">
               <SelectValue />
@@ -90,7 +101,6 @@ export default function Contabilidad() {
             <Plus className="h-3.5 w-3.5" />
             Registrar egreso
           </Button>
-        </div>
       </div>
 
       {error && (
@@ -209,6 +219,16 @@ export default function Contabilidad() {
       </Card>
 
       <RegistrarEgresoModal open={modalOpen} onOpenChange={setModalOpen} onSaved={refresh} />
+        </TabsContent>
+
+        <TabsContent value="polizas">
+          <PolizasTab />
+        </TabsContent>
+
+        <TabsContent value="catalogos">
+          <CatalogosTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

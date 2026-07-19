@@ -1,0 +1,231 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Package, Users, ChevronRight, Plus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { untypedTable } from "@/lib/untypedTable";
+import { useAuth } from "@/hooks/useAuth";
+import { friendlyError } from "@/lib/errors";
+
+interface CuentaContable {
+  id: string;
+  codigo: string;
+  nombre: string;
+  tipo: "ingreso" | "egreso";
+  es_fijo: boolean;
+  codigo_sat: string | null;
+  activo: boolean;
+}
+
+const emptyForm = { codigo: "", nombre: "", tipo: "egreso" as "ingreso" | "egreso", es_fijo: false, codigo_sat: "" };
+
+function CuentasCrud() {
+  const [cuentas, setCuentas] = useState<CuentaContable[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<CuentaContable | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data, error: err } = await untypedTable("cuentas_contables")
+      .select("id,codigo,nombre,tipo,es_fijo,codigo_sat,activo")
+      .order("codigo");
+    if (err) setError(friendlyError(err));
+    else setCuentas((data ?? []) as CuentaContable[]);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
+  const openEdit = (c: CuentaContable) => {
+    setEditing(c);
+    setForm({ codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, es_fijo: c.es_fijo, codigo_sat: c.codigo_sat ?? "" });
+    setModalOpen(true);
+  };
+
+  const save = async () => {
+    if (!form.codigo.trim() || !form.nombre.trim()) { toast.error("Código y nombre son obligatorios"); return; }
+    setSaving(true);
+    const { error: err } = editing
+      ? await untypedTable("cuentas_contables").update({
+          nombre: form.nombre.trim(),
+          es_fijo: form.es_fijo,
+          codigo_sat: form.codigo_sat.trim() || null,
+        }).eq("id", editing.id)
+      : await untypedTable("cuentas_contables").insert({
+          codigo: form.codigo.trim(),
+          nombre: form.nombre.trim(),
+          tipo: form.tipo,
+          es_fijo: form.es_fijo,
+          codigo_sat: form.codigo_sat.trim() || null,
+        });
+    setSaving(false);
+    if (err) { toast.error(friendlyError(err)); return; }
+    toast.success(editing ? "Cuenta actualizada" : "Cuenta creada");
+    setModalOpen(false);
+    load();
+  };
+
+  const toggleActivo = async (c: CuentaContable) => {
+    const { error: err } = await untypedTable("cuentas_contables").update({ activo: !c.activo }).eq("id", c.id);
+    if (err) { toast.error(friendlyError(err)); return; }
+    load();
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Cuentas contables</CardTitle>
+        <Button size="sm" onClick={openCreate} className="h-8 gap-1.5">
+          <Plus className="h-3.5 w-3.5" /> Nueva cuenta
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {error && <p className="text-sm text-destructive mb-2">Error: {error}</p>}
+        {loading ? (
+          <Skeleton className="h-40 w-full rounded-xl" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Código</th>
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Nombre</th>
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Tipo</th>
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Fijo</th>
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground">SAT</th>
+                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Activo</th>
+                  <th className="pb-2 font-medium text-muted-foreground" />
+                </tr>
+              </thead>
+              <tbody>
+                {cuentas.map((c) => (
+                  <tr key={c.id} className={`border-b border-border/40 last:border-0 ${!c.activo ? "opacity-50" : ""}`}>
+                    <td className="py-2 pr-4 font-mono text-xs">{c.codigo}</td>
+                    <td className="py-2 pr-4">{c.nombre}</td>
+                    <td className="py-2 pr-4 capitalize">{c.tipo}</td>
+                    <td className="py-2 pr-4">{c.es_fijo ? "Sí" : "No"}</td>
+                    <td className="py-2 pr-4 text-muted-foreground">{c.codigo_sat ?? "—"}</td>
+                    <td className="py-2 pr-4">{c.activo ? "Activo" : "Inactivo"}</td>
+                    <td className="py-2 text-right space-x-2">
+                      <Button size="sm" variant="outline" className="h-7" onClick={() => openEdit(c)}>Editar</Button>
+                      <Button size="sm" variant="outline" className="h-7" onClick={() => toggleActivo(c)}>
+                        {c.activo ? "Desactivar" : "Activar"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar cuenta" : "Nueva cuenta"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="field-codigo">Código *</Label>
+              <Input id="field-codigo" value={form.codigo} disabled={!!editing}
+                onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value.toUpperCase() }))} />
+            </div>
+            <div>
+              <Label htmlFor="field-nombre">Nombre *</Label>
+              <Input id="field-nombre" value={form.nombre}
+                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-sm">Tipo *</Label>
+              <Select value={form.tipo} disabled={!!editing} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as "ingreso" | "egreso" }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ingreso">Ingreso</SelectItem>
+                  <SelectItem value="egreso">Egreso</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="field-codigo_sat">Código SAT</Label>
+              <Input id="field-codigo_sat" value={form.codigo_sat} placeholder="Opcional"
+                onChange={(e) => setForm((f) => ({ ...f, codigo_sat: e.target.value }))} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="field-es_fijo" checked={form.es_fijo}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, es_fijo: !!v }))} />
+              <Label htmlFor="field-es_fijo" className="text-sm font-normal">Gasto fijo (punto de equilibrio)</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+function OtrosCatalogos() {
+  const links = [
+    { to: "/ajustes", icon: Package, title: "Proveedores e Insumos", desc: "Catálogo de insumos, kits y proveedores" },
+    { to: "/admin/usuarios", icon: Users, title: "Doctores y Enfermeras", desc: "Alta y administración de personal clínico" },
+  ];
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      {links.map(({ to, icon: Icon, title, desc }) => (
+        <Link key={to} to={to}>
+          <Card className="hover:bg-muted/50 transition-colors">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="shrink-0 rounded-lg p-2 bg-slate-100">
+                <Icon className="h-4 w-4 text-slate-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{title}</p>
+                <p className="text-xs text-muted-foreground truncate">{desc}</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+export function CatalogosTab() {
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole("admin");
+
+  return (
+    <div className="space-y-4">
+      {isAdmin ? (
+        <CuentasCrud />
+      ) : (
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            Solo administradores pueden crear o editar cuentas contables.
+          </CardContent>
+        </Card>
+      )}
+
+      <div>
+        <h2 className="text-sm font-medium mb-2">Otros catálogos</h2>
+        <OtrosCatalogos />
+      </div>
+    </div>
+  );
+}
