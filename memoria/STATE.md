@@ -1,8 +1,32 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: Módulo Contable — Fase 2 (honorarios por paciente/doctor/día)
+## PRÓXIMA ACCIÓN: verificar deploy de Contabilidad + pendientes humanos
 
-Plan en `docs/superpowers/plans/2026-07-18-modulo-contable.md`. Rama `feat/modulo-contable`.
+Módulo Contable Fases 1-5 COMPLETO (2026-07-18 noche), mergeado a main.
+- Verificar https://integrika.mx/contabilidad tras el deploy de CI (login admin).
+- Correr `get_advisors(security)` en próxima sesión con MCP (esta sesión arrancó sin él).
+- Humanos: Alan y Aldo siguen sin entrar con Google (auto-vinculación lista).
+
+### Deudas registradas del módulo contable
+- Ruta `/configuracion` excluye a manager (`allowedRoles admin,doctor`): manager solo
+  llega a /contabilidad por URL directa. Decisión de producto pendiente de Pablo.
+- `registrar_insumos_cita` sin idempotency key ante retry de red (LOW).
+- `revertir_insumos_cita` no wireada al flujo de cancelación de cita (primitiva lista).
+- Costo de ventas NO incluye costo de medicamentos de farmacia (documentado en SQL).
+- `doctor_honorarios_config.created_by` no anclado a auth.uid() en policy (LOW).
+
+### ✅ Fases 2-5 (2026-07-18, ejecutadas por subagentes sonnet/haiku, Fable validó)
+- F2 `c89b0ca`: doctor_honorarios_config (vigencias append-only) + vista
+  doctor_honorarios_detalle (grano cita, cuadra con doctor_earnings_by_period). APPROVE.
+- F3 `91d6771`: cuentas_contables (9 seed) + movimientos_contables (devengo,
+  idempotencia por reference+evento) + triggers caja/farmacia/facturas_proveedor +
+  cron contab-devengar-honorarios 8:30 UTC. E2E 11/11. APPROVE.
+- F4 `935e5ca`+`465784b`+`23cc25b`: RPCs pnl_mensual/flujo_efectivo/kpis_dashboard
+  + página /contabilidad (KPIs, P&L, flujo, CSV, egreso manual, admin/manager). APPROVE.
+- F5 `a956b54`: CLAUDE.md sección módulo contable + manual usuario /contabilidad
+  (manual_paginas + Docusaurus ready). build:all ✓.
+
+Plan original en `docs/superpowers/plans/2026-07-18-modulo-contable.md`. Rama `feat/modulo-contable`.
 
 ### ✅ Fase 1 COMPLETADA (2026-07-18, revisor APPROVE)
 - Migración `20260718150000_fase1_appointment_insumos.sql` aplicada a prod:
