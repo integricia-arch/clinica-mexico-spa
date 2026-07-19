@@ -20,11 +20,11 @@ interface CuentaContable {
   nombre: string;
   tipo: "ingreso" | "egreso";
   es_fijo: boolean;
-  codigo_sat: string | null;
+  codigo_agrupador_sat: string | null;
   activo: boolean;
 }
 
-const emptyForm = { codigo: "", nombre: "", tipo: "egreso" as "ingreso" | "egreso", es_fijo: false, codigo_sat: "" };
+const emptyForm = { codigo: "", nombre: "", tipo: "egreso" as "ingreso" | "egreso", es_fijo: false, codigo_agrupador_sat: "" };
 
 function CuentasCrud() {
   const [cuentas, setCuentas] = useState<CuentaContable[]>([]);
@@ -38,7 +38,7 @@ function CuentasCrud() {
   const load = async () => {
     setLoading(true);
     const { data, error: err } = await untypedTable("cuentas_contables")
-      .select("id,codigo,nombre,tipo,es_fijo,codigo_sat,activo")
+      .select("id,codigo,nombre,tipo,es_fijo,codigo_agrupador_sat,activo")
       .order("codigo");
     if (err) setError(friendlyError(err));
     else setCuentas((data ?? []) as CuentaContable[]);
@@ -50,7 +50,7 @@ function CuentasCrud() {
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (c: CuentaContable) => {
     setEditing(c);
-    setForm({ codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, es_fijo: c.es_fijo, codigo_sat: c.codigo_sat ?? "" });
+    setForm({ codigo: c.codigo, nombre: c.nombre, tipo: c.tipo, es_fijo: c.es_fijo, codigo_agrupador_sat: c.codigo_agrupador_sat ?? "" });
     setModalOpen(true);
   };
 
@@ -61,14 +61,14 @@ function CuentasCrud() {
       ? await untypedTable("cuentas_contables").update({
           nombre: form.nombre.trim(),
           es_fijo: form.es_fijo,
-          codigo_sat: form.codigo_sat.trim() || null,
+          codigo_agrupador_sat: form.codigo_agrupador_sat.trim() || null,
         }).eq("id", editing.id)
       : await untypedTable("cuentas_contables").insert({
           codigo: form.codigo.trim(),
           nombre: form.nombre.trim(),
           tipo: form.tipo,
           es_fijo: form.es_fijo,
-          codigo_sat: form.codigo_sat.trim() || null,
+          codigo_agrupador_sat: form.codigo_agrupador_sat.trim() || null,
         });
     setSaving(false);
     if (err) { toast.error(friendlyError(err)); return; }
@@ -116,7 +116,7 @@ function CuentasCrud() {
                     <td className="py-2 pr-4">{c.nombre}</td>
                     <td className="py-2 pr-4 capitalize">{c.tipo}</td>
                     <td className="py-2 pr-4">{c.es_fijo ? "Sí" : "No"}</td>
-                    <td className="py-2 pr-4 text-muted-foreground">{c.codigo_sat ?? "—"}</td>
+                    <td className="py-2 pr-4 text-muted-foreground">{c.codigo_agrupador_sat ?? "—"}</td>
                     <td className="py-2 pr-4">{c.activo ? "Activo" : "Inactivo"}</td>
                     <td className="py-2 text-right space-x-2">
                       <Button size="sm" variant="outline" className="h-7" onClick={() => openEdit(c)}>Editar</Button>
@@ -159,9 +159,9 @@ function CuentasCrud() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="field-codigo_sat">Código SAT</Label>
-              <Input id="field-codigo_sat" value={form.codigo_sat} placeholder="Opcional"
-                onChange={(e) => setForm((f) => ({ ...f, codigo_sat: e.target.value }))} />
+              <Label htmlFor="field-codigo_agrupador_sat">Código SAT</Label>
+              <Input id="field-codigo_agrupador_sat" value={form.codigo_agrupador_sat} placeholder="Opcional"
+                onChange={(e) => setForm((f) => ({ ...f, codigo_agrupador_sat: e.target.value }))} />
             </div>
             <div className="flex items-center gap-2">
               <Checkbox id="field-es_fijo" checked={form.es_fijo}
