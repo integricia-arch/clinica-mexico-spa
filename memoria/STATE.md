@@ -1,6 +1,25 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: verificar deploy de Contabilidad + pendientes humanos
+## PRÓXIMA ACCIÓN: Fase 6B — motor de asientos automáticos
+
+**Ejecutar con `/model sonnet`** siguiendo el plan maestro
+`docs/superpowers/plans/2026-07-19-modulo-contable-completo.md` (§6B) y el detalle en
+`2026-07-19-fase6-partida-doble.md`. Fable solo para gates/replaneo.
+
+### ✅ Sesión 2026-07-18/19 (noche) — bloque 2: partida doble arrancada
+- Plan maestro módulo contable completo (fases 6A-10, NIF/fiscal, frontera por eventos): `814a6c3`.
+- 6A COMPLETA `72230b4` + hotfix `62d80ee` (revisor: 1 HIGH corregido — CatalogosTab
+  usaba codigo_sat renombrado): catálogo con naturaleza/tipos/jerarquía/agrupador SAT
+  (33 cuentas), tablas polizas/poliza_partidas/poliza_folios, RPCs crear_poliza (Σdebe=Σhaber)
+  y cancelar_poliza (reversa). E2E 6/6 rollback. Verificado en DB.
+- Menú lateral Contabilidad `c94e05f`; tabs Pólizas/Catálogos + CRUD cuentas `3237a2b`+`d4ef14b`.
+- Memoria técnica 571 líneas `d0b9774`; gap analysis CONTPAQi + marco legal MX `69c9008`.
+- Pedido de Pablo NO ejecutado a propósito (registrado): cierres/apertura de ejercicio,
+  reportes SAT, herramientas para contador, descarga de facturas → mapeado a fases 7 y 9
+  del plan maestro; planear ahí, no improvisar.
+- Costo sesión ≈ $380 USD — regla operativa nueva: sesiones de ejecución con sonnet.
+
+## (histórico) Verificar deploy de Contabilidad + pendientes humanos
 
 Módulo Contable Fases 1-5 COMPLETO (2026-07-18 noche), mergeado a main.
 - Verificar https://integrika.mx/contabilidad tras el deploy de CI (login admin).
