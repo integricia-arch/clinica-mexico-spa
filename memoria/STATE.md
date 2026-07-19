@@ -2,6 +2,28 @@
 
 ## PRÓXIMA ACCIÓN: módulo contable CERRADO (fases 1-9 completas). Backlog sin fecha: control de activos fijos (investigado, no construido) + import/export UI + conexión API con celulas-madre-ventas (ver abajo).
 
+## 🔒 BLOQUEADO — esperando confirmación del contador de Pablo (2026-07-19)
+
+Motor de IVA trasladado (fase 9) ya construido y probado, pero `ING_CONSULTAS`/
+`ING_FARMACIA`/`ING_OTROS` siguen en `iva_tratamiento = sin_configurar` a propósito
+— el sistema NO calcula IVA hasta tener estas respuestas. Pablo va a confirmar con
+su contador y regresa. Preguntas pendientes:
+
+1. Tipo de persona de la clínica (física con actividad profesional de salud, o moral/
+   sociedad mercantil) — determina si consultas están exentas de IVA (Art. 15-XIV LIVA,
+   solo aplica a personas físicas) o gravadas al 16%.
+2. Con la respuesta anterior: qué tratamiento poner en Catálogos para cada cuenta de
+   ingreso (`ING_CONSULTAS`, `ING_FARMACIA` — normalmente tasa 0% medicamentos de
+   patente —, `ING_OTROS`).
+3. Confirmar que el régimen fiscal capturado en `/configuracion/facturacion`
+   (`cfdi_config.regimen_fiscal`) sea la clave SAT correcta.
+4. Si se retoma control de activos fijos: tasa de depreciación fiscal de equipo
+   médico (LISR Art. 34 no tiene fracción explícita confirmada).
+
+**Siguiente sesión, una vez Pablo traiga las respuestas:** solo entrar a Catálogos y
+configurar el IVA de cada cuenta — el motor de cálculo ya existe, no hace falta
+tocar código.
+
 **Sesión 2026-07-19 (sonnet) — Fase 9, IVA y preparación fiscal:**
 - Hallazgo: IVA acreditable (compras) y catálogo con código SAT ya estaban listos desde
   fase 6A/6B — solo faltaba IVA trasladado (ventas). Migración `20260719180000_fase9_iva_trasladado.sql`:
@@ -29,7 +51,10 @@
   usuario final, y una conexión API hacia `celulas-madre-ventas` (proyecto separado,
   Supabase distinto — validar stack completo por la máxima de cambio de proyecto en
   CLAUDE.md global antes de tocar nada ahí). Sin diseño aún, siguiente sesión: definir
-  alcance con Pablo antes de tocar código.
+  alcance con Pablo antes de tocar código. **Comparativo completo Aspel/Contpaqi
+  (qué reportes/import-export maneja el software contable estándar mexicano vs lo
+  nuestro) guardado en `memoria/proyectos/comparativo-aspel-contpaqi-import-export.md`
+  — no se pierde entre sesiones.**
 
 ---
 
