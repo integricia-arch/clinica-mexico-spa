@@ -1,8 +1,15 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: 8 (conciliación bancaria) — 6C y 7 VERDE, en prod, pusheados
+## PRÓXIMA ACCIÓN: 10 (cierre de módulo — docs/memoria) o 9 opcional (IVA, requiere decisión) — 6C/7/8 VERDE, en prod, pusheados
 
-**Sesión 2026-07-19 (sonnet) — 6C y 7 completas y desplegadas:**
+**Sesión 2026-07-19 (sonnet) — 6C, 7 y 8 completas y desplegadas:**
+- **Fase 8 — Conciliación bancaria** (commit `a00568a`): tabla `contab_estados_cuenta`
+  (líneas de estado de cuenta, import CSV, dedupe por `line_hash` — nota: NO usar
+  `GENERATED ALWAYS AS` con `fecha::text`, Postgres lo rechaza con 42P17 porque el
+  cast date→text no es IMMUTABLE; el hash se calcula en el RPC al insertar). RPCs
+  `contab_importar_estado_cuenta`, `contab_matching_bancario` (sugiere partida por
+  monto+fecha±2d), `contab_conciliar_linea`/`contab_desconciliar_linea`. Tab "Bancos".
+  Migración `20260719160000_fase8_conciliacion_bancaria.sql`. Sin API bancaria (v1).
 - **6C — Reportes en vivo** (commit `db4d42f`): RPCs `balanza_comprobacion`,
   `libro_diario`, `auxiliares_cuenta`, `estado_resultados`, `balance_general`
   sobre `polizas`/`poliza_partidas`. Tab "Reportes" en `/contabilidad` (4
@@ -21,11 +28,18 @@
   advisors security sin CRITICAL/HIGH ni anon EXECUTE en las RPCs nuevas.
   Push a `main` hecho en ambas.
 
-**Siguiente: Fase 8 — Conciliación bancaria** (plan maestro §Fase 8): tabla
-`contab_estados_cuenta` (carga CSV del banco) + matching semiautomático contra
-pólizas de cuenta Bancos (monto+fecha±2días) + UI de conciliación. Sin API
-bancaria en v1. Más grande que 6C/7 — confirmar con Pablo antes de arrancar
-(costo de sesión ya elevado, ver nota de costo abajo).
+**Siguiente:**
+- **Fase 9 (opcional, plan maestro §Fase 9)** — IVA y preparación fiscal: desglose
+  IVA en cobros de caja (cambio de captura en módulo caja), reporte IVA
+  acreditable/trasladado, exportador Anexo 24. Decidir con Pablo si se hace —
+  el plan la marca explícitamente como opcional tras 6-8.
+- **Fase 10 — Cierre del módulo**: revisor global + `get_advisors(security)` +
+  actualizar `memoria/proyectos/modulo-contable-memoria-tecnica.md`, `CLAUDE.md`,
+  manual de usuario (`/contabilidad`). Pendiente, no ejecutado esta sesión.
+
+Costo de sesión elevado (~$10.59+ reportado por el harness durante 6C/7/8) —
+próxima sesión: confirmar con Pablo si sigue 9/10 o se declara el módulo
+contable "suficiente" por ahora.
 
 ---
 
