@@ -701,10 +701,42 @@ consumibles). Investigación (no implementado):
 - **No implementado.** Requiere decisión de negocio (confirmar tasa fiscal de equipo
   médico con el contador) antes de escribir migración.
 
+## Pendiente — alta de cuenta al vuelo desde NuevaPolizaDialog (registrado 2026-07-20)
+
+Caso de uso: al capturar póliza manual (`src/features/contabilidad/NuevaPolizaDialog.tsx`),
+usuario a veces necesita cuenta que no existe en catálogo. Hoy el dialog solo lee
+`cuentas_contables` (select `id,codigo,nombre`), no permite crear. **No implementado.**
+
+Requisitos para cuando se construya:
+- Alta de cuenta inline (modal/inline form dentro de `NuevaPolizaDialog`), sin salir del flujo de póliza.
+- Cuenta nueva debe capturar `tipo` (activo/pasivo/capital/ingreso/egreso), `naturaleza`
+  (deudora/acreedora) — **NUNCA inferir**, el catálogo actual falla duro si se asume
+  (ver regla IVA `sin_configurar` — mismo patrón: obligar selección explícita).
+- Soporte de jerarquía abuelo→padre→hijo ya existe en schema
+  (`cuenta_padre_id`, `nivel`, código con notación punto `115.01` bajo `115` — ver seed
+  en `20260719110000_fase6a_polizas_esquema.sql:84-98`). Cuenta nueva debe poder
+  elegir padre (selector de árbol, no solo lista plana) y heredar `tipo`/`naturaleza`
+  del padre por default (pero permitir override si el negocio lo requiere).
+- Validación de acumulación: cuenta que tiene hijas es "cuenta de mayor" (no debe
+  recibir movimientos directos si el negocio exige que solo las hojas del árbol
+  muevan dinero) — decidir si se fuerza esta regla o se permite cuenta padre con
+  movimiento propio. Si se fuerza: constraint o check en `crear_poliza()` que rechace
+  `cuenta_id` con hijos activos en `poliza_partidas`.
+- Saldo de cuenta padre = suma recursiva de saldos de hijas + movimientos propios
+  (si se permiten). Reportes (`balanza_comprobacion`, `estado_resultados`,
+  `balance_general`) ya viven como RPC — validar si ya acumulan por árbol o son planos;
+  si son planos, requieren ajuste para sumar por rama antes de esto poder shipearse.
+- Todo alta de cuenta desde UI pasa por función `SECURITY DEFINER` nueva o RPC
+  existente con REVOKE/GRANT explícito — seguir checklist del CLAUDE.md del proyecto
+  (§ "Checklist obligatorio — toda función SECURITY DEFINER nueva").
+
+No hay branch ni migración iniciada para esto — es solo requisito capturado, a
+priorizar cuando el usuario lo pida explícitamente.
+
 ## Relaciones Clave
 
 - [[reference_usefielderrors-hook]] — validación de formularios
 - [[Fases de Desarrollo Contable]] — roadmap actual (fase 9 IVA pospuesta, sin fecha)
 - [[Glosario Financiero]] — términos de negocio
 
-**Última actualización:** 2026-07-19 | Fases 1-8 en producción, módulo cerrado (fase 10)
+**Última actualización:** 2026-07-20 | Fases 1-8 en producción, módulo cerrado (fase 10). Pendiente nuevo: alta de cuenta al vuelo con validación de árbol (ver sección arriba).

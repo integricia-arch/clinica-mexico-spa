@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Package, Users, ChevronRight, Plus } from "lucide-react";
+import { Package, Users, ChevronRight, Plus, Network } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { friendlyError } from "@/lib/errors";
 import { deriveIvaTratamiento, type IvaTratamiento, type CodigoCuentaIngreso } from "@/features/contabilidad/ivaRules";
+import { ArbolCuentasDialog } from "@/features/contabilidad/ArbolCuentasDialog";
 
 interface CuentaContable {
   id: string;
@@ -310,9 +311,17 @@ function OtrosCatalogos() {
 export function CatalogosTab() {
   const { hasRole } = useAuth();
   const isAdmin = hasRole("admin");
+  const [arbolOpen, setArbolOpen] = useState(false);
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setArbolOpen(true)}>
+          <Network className="h-3.5 w-3.5" /> Ver árbol de cuentas
+        </Button>
+      </div>
+      <ArbolCuentasDialog open={arbolOpen} onOpenChange={setArbolOpen} />
+
       {isAdmin ? (
         <CuentasCrud />
       ) : (

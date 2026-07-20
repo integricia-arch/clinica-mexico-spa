@@ -64,7 +64,11 @@ export default function ResetPassword() {
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: friendlyError(error) });
+      toast({
+        variant: "destructive",
+        title: "No se pudo guardar la nueva contraseña",
+        description: friendlyError(error, "Ocurrió un error al guardar la contraseña. Solicita un nuevo enlace e intenta de nuevo."),
+      });
       return;
     }
     toast({ title: "Contraseña actualizada", description: "Inicia sesión con tu nueva contraseña." });

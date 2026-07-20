@@ -18,6 +18,15 @@ const CODE_MAP: Record<string, string> = {
   "42501": "No tienes permisos para realizar esta acción.",
   "PGRST301": "No tienes permisos para acceder a este recurso.",
   "PGRST116": "No se encontró el registro solicitado.",
+  // Supabase Auth (GoTrue) error codes
+  "same_password": "La nueva contraseña debe ser diferente a la actual.",
+  "weak_password": "La contraseña es muy débil. Usa mayúsculas, minúsculas, números y símbolos.",
+  "session_not_found": "Tu sesión expiró. Solicita un nuevo enlace de restablecimiento.",
+  "user_not_found": "No se encontró la cuenta asociada a este enlace.",
+  "email_not_confirmed": "El correo no ha sido confirmado.",
+  "invalid_credentials": "Correo o contraseña incorrectos.",
+  "over_request_rate_limit": "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
+  "over_email_send_rate_limit": "Ya se envió un enlace recientemente. Revisa tu correo o espera unos minutos.",
 };
 
 export function friendlyError(err: AnyError, fallback = "Ocurrió un error. Por favor intenta de nuevo."): string {
