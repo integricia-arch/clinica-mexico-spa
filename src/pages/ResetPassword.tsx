@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Heart, Lock, AlertCircle } from "lucide-react";
+import { Heart, Lock, AlertCircle, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 import { friendlyError } from "@/lib/errors";
 
-type Status = "checking" | "ready" | "error";
+type Status = "checking" | "mfa-challenge" | "ready" | "error";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -17,8 +17,37 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<Status>("checking");
   const [errorMsg, setErrorMsg] = useState("");
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Sesión de recovery viene en AAL1. Si la cuenta tiene MFA, updateUser()
+  // rechaza con "insufficient_aal" — hay que subir a AAL2 con un challenge
+  // TOTP antes de mostrar el formulario de contraseña.
+  const checkAssurance = async () => {
+    const { data: aal, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !aal) { setStatus("ready"); return; }
+    if (aal.currentLevel === "aal2" || aal.nextLevel !== "aal2") { setStatus("ready"); return; }
+
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    const totp = factors?.totp?.find((f) => f.status === "verified");
+    if (!totp) {
+      setErrorMsg("Tu cuenta requiere verificación en dos pasos pero no tiene un factor configurado. Contacta al administrador.");
+      setStatus("error");
+      return;
+    }
+    setMfaFactorId(totp.id);
+    const { data: challenge, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: totp.id });
+    if (challengeErr || !challenge) {
+      setMfaError(challengeErr?.message ?? "No se pudo iniciar la verificación en dos pasos.");
+    } else {
+      setMfaChallengeId(challenge.id);
+    }
+    setStatus("mfa-challenge");
+  };
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -31,7 +60,7 @@ export default function ResetPassword() {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setStatus("ready");
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") void checkAssurance();
     });
 
     // Si el hash contiene tokens (magiclink o recovery), establecer sesión manualmente
@@ -49,6 +78,21 @@ export default function ResetPassword() {
 
     return () => { subscription.unsubscribe(); clearTimeout(t); };
   }, []);
+
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaFactorId || !mfaChallengeId) return;
+    setMfaError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: mfaChallengeId, code: mfaCode });
+    setLoading(false);
+    if (error) {
+      console.error("[ResetPassword] mfa.verify falló", { code: error.code, status: error.status, message: error.message });
+      setMfaError(friendlyError(error, error.message || "Código inválido. Intenta de nuevo."));
+      return;
+    }
+    setStatus("ready");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +149,30 @@ export default function ResetPassword() {
                 Solicitar nuevo enlace
               </Button>
             </div>
+          )}
+
+          {status === "mfa-challenge" && (
+            <>
+              <div className="flex items-center gap-2 mb-6">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <h2 className="text-display text-lg font-semibold text-card-foreground">Verificación en dos pasos</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Tu cuenta tiene autenticación de dos factores. Ingresa el código de tu app autenticadora para continuar.
+              </p>
+              {mfaError && <p className="text-sm text-destructive mb-3">{mfaError}</p>}
+              <form onSubmit={handleVerifyMfa} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mfa-code">Código de 6 dígitos</Label>
+                  <Input id="mfa-code" inputMode="numeric" autoComplete="one-time-code" placeholder="123456"
+                    value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} required minLength={6} maxLength={6}
+                    disabled={!mfaChallengeId} />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading || !mfaChallengeId}>
+                  {loading ? "Verificando..." : "Verificar"}
+                </Button>
+              </form>
+            </>
           )}
 
           {status === "ready" && (
