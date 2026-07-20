@@ -1,6 +1,52 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 5). Árbol de cuentas + fix de reset de contraseña con MFA, commiteado/pusheado/desplegado, **verificado en vivo por Pablo en localhost** (login propio, tab Catálogos → "Ver árbol de cuentas" → expand/collapse y saldos por rama funcionando, incluye `115 Inventario - Almacén` como cuenta de mayor sumando `115.01`/`115.02`). Pendiente real sin cambios: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 6). Módulo contable: normatividad local + fusión catálogo duplicado + UI pólizas (detalle/export) + export/import catálogo + botón "Validar cuadre" — **commiteado, NO desplegado a prod, NO verificado visualmente por Pablo**. Plan de trazabilidad (reporte↔trámite) quedó en `memoria/proyectos/plan-trazabilidad-contable-almacen.md`, sin implementar, retomar en sesión nueva. Pendiente real sin cambios: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+
+## Sesión 2026-07-20 (parte 6) — normatividad contable local + fusión catálogo + UI pólizas + validador de cuadre
+
+**Normatividad local (`docs/normatividad-contable/`):** LISR/LIVA/Reglamento LIVA (oficiales,
+diputados.gob.mx) + boletines NIF A-1/A-2/B-2/B-3/C-6 (académicos gratis), PDF+Markdown
+(MarkItDown instalado esta sesión: `pip install "markitdown[all]"` + ffmpeg via winget).
+Libros comerciales recomendados (Moreno Fernández, Romero López) **NO descargados**
+(derechos de autor) — solo citados como bibliografía en la memoria técnica. Memoria técnica
+(`modulo-contable-memoria-tecnica.md`) §12: cada pieza del sistema citada contra norma/ley.
+
+**Fusión de catálogo duplicado (aplicado en prod):** 8 pares de cuentas duplicadas
+(`ING_CONSULTAS`/`401`, `EGR_HONORARIOS`/`601`, etc.) fusionadas en migración
+`20260720170000_fusion_catalogo_cuentas_duplicado.sql`. Se conservó el código legacy
+(`ING_/EGR_`), se le copió `naturaleza`+`codigo_agrupador_sat` del numérico, se repuntaron
+todas las FK (`contab_reglas_asiento`, `poliza_partidas`, `contab_estados_cuenta`,
+`movimientos_contables`), y se agregó llave de defensa `nombre_normalizado` (UNIQUE por
+tipo, wrapper `f_unaccent_immutable()` porque `unaccent()` no es IMMUTABLE). **Efecto
+colateral encontrado:** ~25 migraciones en prod sin commitear en el repo (drift Lovable/CLI,
+incluía `activos_fijos`, `mfa_*`, `revoke_anon_*` de hoy) — reconciliado con
+`migration repair --status reverted/applied` antes de aplicar el fix. `get_advisors` limpio.
+
+**UI pólizas:** `PolizaDetalleDialog.tsx` (nuevo) — modal legible por póliza con export CSV
+individual y cancelar. `LibroDiarioTab` (ReportesTab.tsx) — listado ahora es tabla compacta
+con botón "Ver detalle" en vez de tarjetas expandidas apiladas.
+
+**Catálogo export/import:** botones en `CatalogosTab.tsx` — exportar CSV completo, importar
+CSV (upsert por código, nunca toca `iva_tratamiento` — regla legal no se masifica).
+
+**Botón "Validar cuadre"** (`ValidadorCuadreDialog.tsx`, nuevo, en Reportes): agrega 4 checks
+en un clic — balanza (debe=haber), ecuación contable (Activo=Pasivo+Capital), huecos
+devengo↔pólizas (`contab_auditoria_huecos`) y diferencias de cortes de caja
+(`contab_concilia_cortes`) — estos 2 últimos RPCs ya existían desde fase 7 pero nunca se
+habían expuesto en UI hasta hoy.
+
+**Auditoría catálogo (hallazgo, ya corregido):** cero cuentas mal configuradas de IVA hoy
+(todo `sin_configurar`); psicología/nutrición/estética son zona gris para exención (LIVA
+Art 15-XIV vía Reglamento Art 41) pero la clínica aún no tiene esos servicios — sin riesgo
+activo, documentado en memoria técnica §12.7 para cuando se agreguen.
+
+**Pendiente explícito, siguiente sesión:** ejecutar `memoria/proyectos/plan-trazabilidad-contable-almacen.md`
+(clic bidireccional reporte↔trámite, empezar por Fase 0 auditoría de `reference_type` reales
+en BD). Verificar visualmente en prod (no probado en localhost/browser esta sesión) que
+pólizas UI + catálogo export/import + validador funcionan como se espera antes de seguir
+construyendo encima. **Costo de esta sesión: ~$85+**, salto fuerte por acumulación de
+contexto largo (migraciones, exploración de esquema, PDFs) — para la próxima, considerar
+sesión nueva por sub-tema en vez de una sola sesión larga para todo el módulo contable.
 
 ## Sesión 2026-07-20 (parte 5) — árbol de cuentas contables + fix reset de contraseña bloqueado por MFA
 

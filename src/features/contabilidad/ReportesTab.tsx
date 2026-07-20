@@ -13,6 +13,9 @@ import { untypedTable } from "@/lib/untypedTable";
 import { exportReporteCsv } from "@/features/contabilidad/exportReporteCsv";
 import { exportarCatalogoCuentasAnexo24, exportarBalanzaAnexo24 } from "@/features/contabilidad/exportAnexo24";
 import { NuevaPolizaDialog } from "@/features/contabilidad/NuevaPolizaDialog";
+import { PolizaDetalleDialog, type PolizaAgrupada } from "@/features/contabilidad/PolizaDetalleDialog";
+import { ValidadorCuadreDialog } from "@/features/contabilidad/ValidadorCuadreDialog";
+import { ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { friendlyError } from "@/lib/errors";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
@@ -126,6 +129,7 @@ export function LibroDiarioTab() {
   const [tipoMovimiento, setTipoMovimiento] = useState<string>("todos");
   const [nuevaOpen, setNuevaOpen] = useState(false);
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
+  const [detalle, setDetalle] = useState<PolizaAgrupada | null>(null);
   const { rows: allRows, loading, error, load } = useLibroDiario();
 
   useEffect(() => { load(desde, hasta); }, [load, desde, hasta]);
@@ -137,6 +141,7 @@ export function LibroDiarioTab() {
     setCancelandoId(null);
     if (err) { toast.error(friendlyError(err, "No se pudo cancelar la póliza.")); return; }
     toast.success("Póliza cancelada (reversa generada)");
+    setDetalle(null);
     load(desde, hasta);
   };
 
@@ -212,69 +217,58 @@ export function LibroDiarioTab() {
       {loading ? <Skeleton className="h-40 w-full rounded-xl" /> : rows.length === 0 ? (
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground py-4 text-center">Sin pólizas con estos filtros</p></CardContent></Card>
       ) : (
-        <div className="space-y-3">
-          {agruparPorPoliza(rows).map((p) => {
-            const cuadra = p.debe === p.haber;
-            return (
-              <Card key={p.poliza_id} className={cuadra ? undefined : "border-destructive"}>
-                <CardContent className="p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
-                    <p className="text-sm font-medium">
-                      {p.tipo.slice(0, 3).toUpperCase()}-{p.folio} — {TIPO_POLIZA_LABELS[p.tipo] ?? p.tipo} · {p.fecha}
-                      <span className="text-muted-foreground font-normal"> · {p.concepto}</span>
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cuadra ? "bg-emerald-100 text-emerald-700" : "bg-destructive/15 text-destructive"}`}>
-                        {cuadra ? "Cuadra" : "DESCUADRE"}
-                      </span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{p.estado}</span>
-                      {p.estado === "contabilizada" && (
-                        <Button
-                          size="sm" variant="outline" className="h-7 text-xs"
-                          disabled={cancelandoId === p.poliza_id}
-                          onClick={() => handleCancelar(p.poliza_id)}
-                        >
-                          Cancelar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  {p.uuid_cfdi && <p className="text-xs text-muted-foreground pb-2">UUID CFDI: {p.uuid_cfdi}</p>}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-left">
-                          <th className="pb-1.5 pr-4 font-medium text-muted-foreground">Cuenta</th>
-                          <th className="pb-1.5 pr-4 font-medium text-muted-foreground">Descripción</th>
-                          <th className="pb-1.5 pr-4 font-medium text-muted-foreground text-right">Cargo</th>
-                          <th className="pb-1.5 font-medium text-muted-foreground text-right">Abono</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {p.lineas.map((l) => (
-                          <tr key={`${p.poliza_id}-${l.orden}`} className="border-b border-border/40 last:border-0">
-                            <td className="py-1.5 pr-4">{l.cuenta_codigo} {l.cuenta_nombre}</td>
-                            <td className="py-1.5 pr-4 text-muted-foreground">{l.descripcion ?? "—"}</td>
-                            <td className="py-1.5 pr-4 text-right">{l.debe_centavos > 0 ? fmtMXN(l.debe_centavos) : "—"}</td>
-                            <td className="py-1.5 text-right">{l.haber_centavos > 0 ? fmtMXN(l.haber_centavos) : "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t border-border font-medium">
-                          <td className="py-1.5 pr-4" colSpan={2}>Total</td>
-                          <td className="py-1.5 pr-4 text-right">{fmtMXN(p.debe)}</td>
-                          <td className="py-1.5 text-right">{fmtMXN(p.haber)}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Folio</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Tipo</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Fecha</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Concepto</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Total</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Estado</th>
+                    <th className="pb-2 font-medium text-muted-foreground" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {agruparPorPoliza(rows).map((p) => {
+                    const cuadra = p.debe === p.haber;
+                    return (
+                      <tr key={p.poliza_id} className={`border-b border-border/40 last:border-0 ${cuadra ? "" : "bg-destructive/5"}`}>
+                        <td className="py-2 pr-4 font-mono text-xs">{p.tipo.slice(0, 3).toUpperCase()}-{p.folio}</td>
+                        <td className="py-2 pr-4 capitalize">{TIPO_POLIZA_LABELS[p.tipo] ?? p.tipo}</td>
+                        <td className="py-2 pr-4">{p.fecha}</td>
+                        <td className="py-2 pr-4 max-w-xs truncate" title={p.concepto}>{p.concepto}</td>
+                        <td className="py-2 pr-4 text-right font-medium">{fmtMXN(p.debe)}</td>
+                        <td className="py-2 pr-4">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cuadra ? "bg-emerald-100 text-emerald-700" : "bg-destructive/15 text-destructive"}`}>
+                            {cuadra ? "Cuadra" : "DESCUADRE"}
+                          </span>
+                          <span className="ml-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{p.estado}</span>
+                        </td>
+                        <td className="py-2 text-right">
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDetalle(p)}>
+                            Ver detalle
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      <PolizaDetalleDialog
+        poliza={detalle}
+        onOpenChange={(open) => { if (!open) setDetalle(null); }}
+        onCancelar={handleCancelar}
+        cancelando={!!cancelandoId}
+      />
     </div>
   );
 }
@@ -719,17 +713,24 @@ function IvaTab() {
 }
 
 export function ReportesTab() {
+  const [validarOpen, setValidarOpen] = useState(false);
   return (
     <Tabs defaultValue="balanza">
-      <TabsList>
-        <TabsTrigger value="balanza">Balanza</TabsTrigger>
-        <TabsTrigger value="diario">Libro diario</TabsTrigger>
-        <TabsTrigger value="mayor">Libro mayor</TabsTrigger>
-        <TabsTrigger value="auxiliares">Auxiliares</TabsTrigger>
-        <TabsTrigger value="resultados">Estado de resultados</TabsTrigger>
-        <TabsTrigger value="balance">Balance general</TabsTrigger>
-        <TabsTrigger value="iva">IVA</TabsTrigger>
-      </TabsList>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <TabsList>
+          <TabsTrigger value="balanza">Balanza</TabsTrigger>
+          <TabsTrigger value="diario">Libro diario</TabsTrigger>
+          <TabsTrigger value="mayor">Libro mayor</TabsTrigger>
+          <TabsTrigger value="auxiliares">Auxiliares</TabsTrigger>
+          <TabsTrigger value="resultados">Estado de resultados</TabsTrigger>
+          <TabsTrigger value="balance">Balance general</TabsTrigger>
+          <TabsTrigger value="iva">IVA</TabsTrigger>
+        </TabsList>
+        <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setValidarOpen(true)}>
+          <ShieldCheck className="h-3.5 w-3.5" /> Validar cuadre
+        </Button>
+      </div>
+      <ValidadorCuadreDialog open={validarOpen} onOpenChange={setValidarOpen} />
       <TabsContent value="balanza" className="pt-4"><BalanzaTab /></TabsContent>
       <TabsContent value="diario" className="pt-4"><LibroDiarioTab /></TabsContent>
       <TabsContent value="mayor" className="pt-4"><MayorTab /></TabsContent>

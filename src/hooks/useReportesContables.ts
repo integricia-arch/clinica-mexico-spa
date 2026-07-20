@@ -174,6 +174,66 @@ export function useEstadoResultados() {
   return { rows, loading, error, load };
 }
 
+export interface HuecoFila {
+  tipo_hueco: "sin_referencia" | "sin_poliza";
+  fecha: string;
+  origen_id: string;
+  descripcion: string;
+  monto_centavos: number;
+}
+
+export function useAuditoriaHuecos() {
+  const { activeClinicId } = useActiveClinic();
+  const [rows, setRows] = useState<HuecoFila[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (desde: string, hasta: string) => {
+    if (!activeClinicId || !desde || !hasta) return;
+    setLoading(true);
+    setError(null);
+    const { data, error: err } = await (supabase as any).rpc("contab_auditoria_huecos", {
+      p_clinic_id: activeClinicId, p_desde: desde, p_hasta: hasta,
+    });
+    if (err) setError(friendlyError(err));
+    else setRows((data ?? []) as HuecoFila[]);
+    setLoading(false);
+  }, [activeClinicId]);
+
+  return { rows, loading, error, load };
+}
+
+export interface CorteDiffFila {
+  turno_id: string;
+  corte_id: string;
+  corte_tipo: string;
+  fecha_corte: string;
+  total_corte_centavos: number;
+  total_polizas_centavos: number;
+  diferencia_centavos: number;
+}
+
+export function useConciliaCortes() {
+  const { activeClinicId } = useActiveClinic();
+  const [rows, setRows] = useState<CorteDiffFila[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (desde: string, hasta: string) => {
+    if (!activeClinicId || !desde || !hasta) return;
+    setLoading(true);
+    setError(null);
+    const { data, error: err } = await (supabase as any).rpc("contab_concilia_cortes", {
+      p_clinic_id: activeClinicId, p_desde: desde, p_hasta: hasta,
+    });
+    if (err) setError(friendlyError(err));
+    else setRows((data ?? []) as CorteDiffFila[]);
+    setLoading(false);
+  }, [activeClinicId]);
+
+  return { rows, loading, error, load };
+}
+
 export function useBalanceGeneral() {
   const { activeClinicId } = useActiveClinic();
   const [rows, setRows] = useState<BalanceFila[]>([]);

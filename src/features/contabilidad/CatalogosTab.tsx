@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Package, Users, ChevronRight, Plus, Network } from "lucide-react";
+import { Package, Users, ChevronRight, Plus, Network, Download, Upload } from "lucide-react";
+import { exportReporteCsv } from "@/features/contabilidad/exportReporteCsv";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,8 @@ function CuentasCrud() {
   const [editing, setEditing] = useState<CuentaContable | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [cfdiConfig, setCfdiConfig] = useState<{ regimen_fiscal: string; tipo_persona: "fisica" | "moral" | null } | null>(null);
 
   const load = async () => {
@@ -123,6 +126,67 @@ function CuentasCrud() {
     load();
   };
 
+  const exportarCatalogo = () => {
+    exportReporteCsv(
+      "catalogo_cuentas",
+      ["codigo", "nombre", "tipo", "es_fijo", "codigo_agrupador_sat", "activo", "iva_tratamiento", "iva_tasa_pct"],
+      cuentas.map((c) => [
+        c.codigo, c.nombre, c.tipo, c.es_fijo ? "true" : "false",
+        c.codigo_agrupador_sat ?? "", c.activo ? "true" : "false",
+        c.iva_tratamiento, c.iva_tasa_pct != null ? String(c.iva_tasa_pct) : "",
+      ]),
+    );
+  };
+
+  // ponytail: parser CSV simple (split por coma, sin comillas embebidas) — mismo patrón
+  // que parseEstadoCuentaCsv.ts. Import NUNCA toca iva_tratamiento/iva_tasa_pct: ese
+  // campo requiere confirmación explícita con contador (regla dura del proyecto), no se
+  // puede masificar por CSV. Solo codigo/nombre/tipo/es_fijo/codigo_agrupador_sat.
+  const importarCatalogo = async (file: File) => {
+    const texto = await file.text();
+    const filas = texto.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const inicio = /codigo/i.test(filas[0] ?? "") ? 1 : 0;
+    const errores: string[] = [];
+    let creadas = 0;
+    let actualizadas = 0;
+
+    setImporting(true);
+    for (let i = inicio; i < filas.length; i++) {
+      const cols = filas[i].split(",").map((c) => c.trim());
+      const [codigo, nombre, tipo, esFijoStr, sat] = cols;
+      if (!codigo || !nombre) { errores.push(`Línea ${i + 1}: código y nombre requeridos`); continue; }
+      if (tipo && tipo !== "ingreso" && tipo !== "egreso") { errores.push(`Línea ${i + 1}: tipo "${tipo}" inválido (ingreso|egreso)`); continue; }
+      const existente = cuentas.find((c) => c.codigo === codigo);
+      const esFijo = /^(true|si|sí|1)$/i.test(esFijoStr ?? "");
+
+      if (existente) {
+        const { error: err } = await untypedTable("cuentas_contables").update({
+          nombre, es_fijo: esFijo, codigo_agrupador_sat: sat || null,
+        }).eq("id", existente.id);
+        if (err) { errores.push(`Línea ${i + 1} (${codigo}): ${friendlyError(err)}`); continue; }
+        actualizadas++;
+      } else {
+        if (!tipo) { errores.push(`Línea ${i + 1}: tipo requerido para cuenta nueva (${codigo})`); continue; }
+        const { error: err } = await untypedTable("cuentas_contables").insert({
+          codigo, nombre, tipo, es_fijo: esFijo, codigo_agrupador_sat: sat || null,
+        });
+        if (err) { errores.push(`Línea ${i + 1} (${codigo}): ${friendlyError(err)}`); continue; }
+        creadas++;
+      }
+    }
+    setImporting(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    if (errores.length > 0) {
+      toast.error(`${errores.length} línea(s) con error — ver consola`);
+      console.error("[CatalogosTab] errores importación:", errores);
+    }
+    if (creadas || actualizadas) {
+      toast.success(`Importación: ${creadas} cuenta(s) creada(s), ${actualizadas} actualizada(s)`);
+      load();
+    }
+  };
+
   const aplicarSugerido = async (c: CuentaContable, sugerido: { tratamiento: IvaTratamiento; tasaPct: number | null }) => {
     const { error: err } = await untypedTable("cuentas_contables").update({
       iva_tratamiento: sugerido.tratamiento,
@@ -135,11 +199,26 @@ function CuentasCrud() {
 
   return (
     <Card>
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between flex-wrap gap-2">
         <CardTitle className="text-sm">Cuentas contables</CardTitle>
-        <Button size="sm" onClick={openCreate} className="h-8 gap-1.5">
-          <Plus className="h-3.5 w-3.5" /> Nueva cuenta
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef} type="file" accept=".csv" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) importarCatalogo(f); }}
+          />
+          <Button
+            size="sm" variant="outline" className="h-8 gap-1.5"
+            disabled={importing} onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-3.5 w-3.5" /> {importing ? "Importando…" : "Importar CSV"}
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={cuentas.length === 0} onClick={exportarCatalogo}>
+            <Download className="h-3.5 w-3.5" /> Exportar CSV
+          </Button>
+          <Button size="sm" onClick={openCreate} className="h-8 gap-1.5">
+            <Plus className="h-3.5 w-3.5" /> Nueva cuenta
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {error && <p className="text-sm text-destructive mb-2">Error: {error}</p>}

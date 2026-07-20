@@ -733,6 +733,194 @@ Requisitos para cuando se construya:
 No hay branch ni migración iniciada para esto — es solo requisito capturado, a
 priorizar cuando el usuario lo pida explícitamente.
 
+## 12. Respaldo Normativo y Bibliográfico (agregado 2026-07-20)
+
+Investigación web para citar norma/ley que sustenta cada pieza del módulo — ningún
+número del sistema descansa solo en "así lo hicimos", cada uno mapea a una norma.
+
+### 12.1 Devengo contable (fases 1-4, `movimientos_contables`, `pnl_mensual`)
+
+**NIF A-2 — Postulados Básicos (CINIF, vigente desde 2006).** Postulado de
+Devengación Contable: "los efectos de las transacciones... deben reconocerse
+contablemente en su totalidad, en el momento en que ocurren, independientemente
+de la fecha en que se consideren realizados para fines contables" — es decir,
+NUNCA con base en cobro/pago de efectivo. Esto es exactamente la separación
+`fecha_devengo` (P&L, `pnl_mensual`) vs `fecha_pago` (caja, `flujo_efectivo`) ya
+implementada en el sistema — no es una decisión de diseño arbitraria, es
+requisito normativo.
+Fuente: [NIF A-2 (PDF, UNAM)](http://fcaenlinea1.unam.mx/anexos/1165/1165_u5_a2.pdf),
+[Postulados básicos NIF A-2 explicados](https://facture.com.mx/los-postulados-basicos-de-la-nif-a-2-explicacion-sencilla/)
+
+### 12.2 Partida doble (fases 6C-8, `polizas`/`poliza_partidas`)
+
+**NIF A-1 — Marco Conceptual, postulado de Dualidad Económica (CINIF).**
+Da sustento teórico a la partida doble: "toda transacción afecta al menos a dos
+cuentas... se reconoce un cargo (debe) y un abono (haber), manteniendo la
+igualdad entre débitos y créditos" — el mismo constraint que enforza
+`crear_poliza()` (`SUM(debe) = SUM(haber)`, mínimo 2 partidas, cada una debe XOR
+haber). El check de balance en la RPC no es capricho técnico: es la norma.
+Fuente: [Marco Conceptual NIF Serie A (PDF)](https://cdn2.hubspot.net/hubfs/4362409/MaterialesCursos/VII-1_1308_06febrero2019_MARCO_CONCEPTUAL_DE_LAS_NIFS__pdf.pdf),
+[Historia partida doble y NIF México](https://elconta.mx/historia-contabilidad-partida-doble-y-las-nif-mexico/)
+
+### 12.3 Estado de resultados y flujo de efectivo (`pnl_mensual`, `flujo_efectivo`, `estado_resultados`)
+
+**NIF B-3 — Estado de Resultados Integral:** estado financiero enfocado en el
+aspecto operativo, muestra ingresos, costos y gastos generados por la operación
+del día a día, con el fin de mostrar la utilidad o pérdida final del período —
+exactamente lo que retorna `pnl_mensual`/`estado_resultados` (utilidad bruta →
+utilidad neta).
+**NIF B-2 — Estado de Flujos de Efectivo (vigente desde 2008, sustituyó al
+estado de cambios en situación financiera):** exige reportar flujos de efectivo
+*realizados* — separado del devengo — porque el efectivo es indispensable para
+mantener operaciones y pagar acreedores/dueños. Es el respaldo normativo directo
+de por qué `flujo_efectivo` filtra por `fecha_pago` y NUNCA por `fecha_devengo`
+(mezclar ambos violaría el objetivo mismo de la norma).
+Fuente: [NIF B-2 (CCPUDG, PDF)](https://ccpudg.org.mx/wp-content/uploads/016-Boletin-Comision-NIF-CCPUDG-NIF-B-2-Estado-de-Flujos-de-Efectivo.pdf),
+[NIF B-3 auscultación (CINIF, PDF)](https://www.cinif.org.mx/uploads/NIF_B-3_proyecto_auscultacion.pdf)
+
+### 12.4 Punto de equilibrio (`kpis_dashboard.punto_equilibrio_centavos`)
+
+No es una NIF — es teoría clásica de contabilidad de costos/gerencial (modelo
+Costo-Volumen-Utilidad, CVU). Fórmula estándar:
+`Punto de equilibrio = Costos fijos totales / % margen de contribución`,
+donde margen de contribución = (ingresos − costos variables) / ingresos.
+Coincide exactamente con la fórmula ya implementada:
+`gastos_fijos / (margen_bruto_pct / 100)` — el margen bruto de este sistema hace
+de proxy del margen de contribución (asume que costo_ventas ≈ costo variable,
+gastos_operativos ≈ costo fijo — razonable en clínica: honorarios/renta/nómina
+son mayormente fijos, insumos son variables).
+Fuente: [Punto de equilibrio y relación costo-volumen-utilidad — gestiopolis](https://www.gestiopolis.com/punto-de-equilibrio-relacion-costo-volumen-utilidad/),
+[Análisis CVU — margen de contribución](https://www.centro-virtual.com/recursos/biblioteca/pdf/analisis_costos/unidad3_pdf1.pdf)
+
+### 12.5 Depreciación — contable vs fiscal (activos fijos, gap sección 11)
+
+Confirma lo ya anotado en §11: **dos tasas distintas, NUNCA una sola.**
+
+- **Contable — NIF C-6 (Propiedades, Planta y Equipo):** permite 3 métodos
+  (línea recta, saldos decrecientes, unidades producidas); vida útil y valor
+  residual se revisan **al cierre de cada ejercicio** (no es un valor fijado una
+  sola vez al alta del activo — implicación de diseño: `activos_fijos` necesita
+  poder ajustar vida útil restante sin perder histórico de depreciación ya
+  corrida).
+- **Fiscal — LISR Art. 34 (confirmado, ya no es solo estimado en §11):**
+  mobiliario y equipo de oficina **10%**, equipo de cómputo **30%**,
+  construcciones **5%**, autos **25%**, maquinaria/equipo para energía
+  renovable **100%** (deducción inmediata total). Método línea recta obligatorio
+  fiscal, sobre el Monto Original de la Inversión (MOI), aplica aunque el activo
+  no esté pagado en su totalidad. **Equipo médico sigue sin fracción explícita
+  en el texto del Art. 34** revisado — cae presumiblemente en la tasa residual
+  de mobiliario/equipo (10%), pero esto NO reemplaza la instrucción de §11 de
+  confirmar con el contador antes de codificar (la duda es solo de clasificación
+  del activo, no de la tasa en sí).
+Fuente: [Art. 34 LISR 2026 — SDV Asesores](https://sdv.com.mx/compendio/ley-isr/articulo-34/),
+[NIF C-6 resumen — CPCON](https://cpcongroup.mx/insights/nif-c-6-propiedades-planta-y-equipo-mexico),
+[Depreciación fiscal 2026 — SAT Fácil](https://www.satfacil.com.mx/blog/activo-fijo-depreciacion-fiscal-lisr-2026)
+
+### 12.6 IVA en servicios médicos (fase 9, `iva_tratamiento` por cuenta)
+
+Confirma por qué el sistema arranca en `sin_configurar` en vez de asumir exento
+(regla ya documentada en §10, ahora con cita legal exacta): **LIVA Art. 15,
+fracción XIV** exenta el IVA de servicios médicos que requieran título de
+médico, **solo si los presta una persona física** (individual o a través de
+sociedad civil) — Art. 41 del Reglamento LIVA acota la exención a médicos,
+médicos veterinarios y cirujanos dentistas. **Psicólogos y nutriólogos quedan
+FUERA de la exención** (deben facturar con IVA 16%) — dato relevante si la
+clínica factura esos servicios bajo cuentas de ingreso que hoy asumen exención
+por default. Si la clínica opera como persona moral (no física), el servicio
+médico **no aplica la exención** — grava 16% sin importar la profesión.
+Fuente: [Exención IVA servicios médicos — Mario Beltrán](https://www.mariobeltran.mx/post/exenci%C3%B3n-de-iva-servicios-m%C3%A9dicos),
+[IVA en servicios de asistencia médica — Siempre al Día](https://siemprealdia.co/mexico/fiscal/iva-en-servicios-de-asistencia-medica/),
+[IVA psicólogos y nutriólogos — Cayso](https://www.cayso.com.mx/cursosenlinea/iva-para-psicologos-y-nutriologos/)
+
+**Acción sugerida (no ejecutada):** revisar catálogo `cuentas_contables` — si
+existe cuenta de ingreso para psicología/nutrición, su `iva_tratamiento` debe
+quedar en `tasa_general` (16%), nunca `exento`, y si la clínica opera como
+persona moral, NINGUNA cuenta de servicio médico debe llevar `exento` sin
+importar la profesión del prestador.
+
+### 12.7 Auditoría de `cuentas_contables` (2026-07-20)
+
+Verificado en vivo (`execute_sql`, proyecto `kyfkvdyxpvpiacyymldc`): las 34 cuentas
+existentes tienen `iva_tratamiento='sin_configurar'` — nada mal configurado hoy.
+Dos hallazgos de diseño, sin corrección urgente:
+
+1. **Catálogo duplicado por sistema:** cuentas del devengo simple fase 1-4
+   (`ING_CONSULTAS`, `ING_FARMACIA`, `ING_OTROS`, `EGR_HONORARIOS`, `EGR_RENTA`,
+   `EGR_NOMINA`, `EGR_SERVICIOS`, `EGR_OTROS`, `EGR_COMPRAS` — sin
+   `codigo_agrupador_sat`) coexisten con cuentas numéricas de partida doble fase
+   6C (`401`, `402`, `403`, `601`-`604`, `699` — con SAT) que representan los
+   MISMOS conceptos de negocio, IDs distintos. Es por diseño (§9), pero el
+   selector de cuenta en `NuevaPolizaDialog` no distingue visualmente cuál
+   pertenece a qué sistema — riesgo de que un usuario capture póliza contra la
+   cuenta equivocada. **No corregido** (requiere decidir si se fusiona el
+   catálogo o se etiqueta visualmente por sistema — fuera de alcance de esta
+   sesión).
+2. **Sin granularidad de IVA por tipo de consulta:** `servicios.especialidad`
+   hoy solo tiene Dermatología, Estética, Medicina general, Odontología (sin
+   psicología/nutrición — verificado, cero riesgo activo). Pero solo existe UNA
+   cuenta de ingreso "Ingresos por consultas" — si se agrega psicología/
+   nutrición (no exentas, LIVA Art 15-XIV vía Reglamento Art. 41) junto a
+   medicina general (exenta), NO se puede llevar `iva_tratamiento` distinto en
+   la misma cuenta. Adicional: **"Estética" es zona gris** — procedimiento
+   cosmético hecho por médico titulado puede no calificar la exención (criterio
+   SAT distingue servicio médico de servicio estético) — no asumir, confirmar
+   con contador antes de configurar esa cuenta como exenta o gravada.
+   **Acción sugerida (no ejecutada):** si se agregan esas especialidades,
+   crear sub-cuenta de ingreso por especialidad (hijo de `ING_CONSULTAS`/`401`,
+   ya existe soporte de jerarquía en el schema) en vez de reusar la cuenta
+   genérica.
+
+### 12.7b Fusión de catálogo duplicado (ejecutado 2026-07-20, migración `20260720170000_fusion_catalogo_cuentas_duplicado.sql`)
+
+Corregido: los 8 pares duplicados de §12.7 se fusionaron. Se conservó el codigo LEGACY
+(`ING_CONSULTAS`, `ING_FARMACIA`, `ING_OTROS`, `EGR_HONORARIOS`, `EGR_RENTA`,
+`EGR_NOMINA`, `EGR_SERVICIOS`, `EGR_OTROS`) por tener más superficie de código
+dependiente; se le copió `naturaleza` + `codigo_agrupador_sat` de su par numérico antes
+de repuntar `contab_reglas_asiento`, `poliza_partidas`, `contab_estados_cuenta`,
+`movimientos_contables` y `cuenta_padre_id` al id sobreviviente, y borrar el duplicado
+(`401`,`402`,`403`,`601`,`602`,`603`,`604`,`699`). Verificado post-migración: 8 cuentas
+(antes 16), cada una con `naturaleza`/`codigo_agrupador_sat` poblado. `get_advisors`
+limpio, sin hallazgos nuevos.
+
+**Llave de defensa agregada:** columna generada `nombre_normalizado` (minúsculas, sin
+acentos vía wrapper `public.f_unaccent_immutable()` — `extensions.unaccent()` es STABLE,
+no IMMUTABLE, rechazado en columna generada con 42P17; se resolvió con wrapper SQL
+IMMUTABLE de diccionario fijo, mismo patrón ya usado para otros casos de STABLE-en-generated
+en el proyecto) + `UNIQUE INDEX (tipo, nombre_normalizado) WHERE activo`. Previene alta de
+cuenta nueva con nombre idéntico a una ya activa del mismo tipo. **Limitación conocida:**
+solo detecta coincidencia exacta de nombre normalizado, no sinónimos — el par
+"Otros gastos"/"Otros egresos" que causó esta fusión NO habría chocado con esta regla
+(nombres distintos). Sigue dependiendo de revisión humana al dar de alta cuentas con
+significado equivalente mas nombre distinto.
+
+**Migraciones no committeadas encontradas durante esta sesión:** al hacer `db push` se
+detectó que ~25 migraciones de producción (`activos_fijos`, `camino_registrar_cobro_rpc`,
+`doctors_modo_cobro`, `tipo_persona_cfdi_config`, tanda `mfa_*`/`revoke_anon_*`/
+`fix_function_search_path`) tenían nombres de archivo local distintos a los registrados en
+el historial remoto — mismo patrón de drift ya documentado en CLAUDE.md ("Historial de
+migrations Lovable vs CLI"). Reconciliado con `migration repair --status reverted/applied`
+(bookkeeping puro, contenido ya coincidía, cero riesgo de datos) antes de aplicar esta
+migración — sin esto, el push habría fallado o corrido sobre historial desincronizado.
+
+### 12.8 Bibliografía recomendada (libros de texto, apegados a NIF)
+
+Sugerencia de Pablo — ambos alinean teoría contable clásica con NIF vigente,
+sirven como respaldo pedagógico complementario a las citas normativas de arriba:
+
+- **Moreno Fernández, Joaquín A. — *Contabilidad Básica*** (Grupo Editorial
+  Patria / CECSA, varias ediciones). Incluye apéndice con esquema básico de la
+  normatividad contable emitida por CINIF (NIF). Cubre partida doble, postulados
+  básicos, estados financieros — base para §12.1/12.2 de esta memoria.
+- **Romero López, Álvaro Javier — *Principios de Contabilidad*** (McGraw-Hill
+  Interamericana, 7a ed. 2023, ISBN 9786071520265). Estructurado directamente
+  sobre NIF A-1 Marco Conceptual (vigente desde 2023) y sus postulados básicos,
+  en convergencia con NIIF/IFRS. Buena referencia para el marco conceptual
+  citado en §12.1/12.2 con más profundidad pedagógica que los boletines sueltos.
+
+Ninguno de los dos cubre en detalle LISR Art. 34 ni LIVA (son libros de teoría
+contable, no de fiscal) — para eso las fuentes de §12.5/12.6 siguen siendo la
+referencia primaria.
+
 ## Relaciones Clave
 
 - [[reference_usefielderrors-hook]] — validación de formularios
