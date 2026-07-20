@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Loader2, Check } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 import InsumosCitaSection from "./InsumosCitaSection";
 
 interface DocumentosEntregados {
@@ -20,7 +20,7 @@ interface DocumentosEntregados {
 }
 
 export default function DischargeForm({
-  stepId, stepStatus, appointmentId, existingData, onSaved,
+  stepId, stepKey, stepStatus, appointmentId, existingData, onSaved,
 }: StepFormProps) {
   const [indicaciones, setIndicaciones] = useState<string>(existingData.indicaciones ?? "");
   const [diagnosticoFinal, setDiagnosticoFinal] = useState<string>(existingData.diagnostico_final ?? "");
@@ -58,7 +58,7 @@ export default function DischargeForm({
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Paciente dado de alta"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Paciente dado de alta"); onSaved?.(); }
   };
 
   return (

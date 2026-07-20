@@ -600,9 +600,9 @@
     "semantic_hash": "10af32c84a9b82eeb3108d99e025aab1"
   },
   "src/features/camino-paciente/operativo/StepForms/BillingForm.tsx": {
-    "mtime": 1783217591.8798091,
-    "ast_hash": "517eaf2c2b7bdcebb51b31cab5b00782",
-    "semantic_hash": "517eaf2c2b7bdcebb51b31cab5b00782"
+    "mtime": 1784514077.2098393,
+    "ast_hash": "3e073873b84ae60632e5e0a24fddee98",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/ConsultationForm.tsx": {
     "mtime": 1781532788.713864,
@@ -1415,8 +1415,8 @@
     "semantic_hash": "8a6636ed553c5a8c7b850bbc534f0765"
   },
   "src/pages/AdminUsuarios.tsx": {
-    "mtime": 1784393007.521625,
-    "ast_hash": "16785c5fa4900e710d31fa9d6695678e",
+    "mtime": 1784514169.7345614,
+    "ast_hash": "7f3da47ba69dcdeaa1959d1940800636",
     "semantic_hash": ""
   },
   "src/pages/Agenda.tsx": {
@@ -1955,9 +1955,9 @@
     "semantic_hash": "32a2fe6761682142358c69850eb9dae8"
   },
   "supabase/functions/create-appointment/index.ts": {
-    "mtime": 1783797043.1597483,
-    "ast_hash": "546c3b001c907a9eaeb51821c98cb003",
-    "semantic_hash": "546c3b001c907a9eaeb51821c98cb003"
+    "mtime": 1784511850.3630571,
+    "ast_hash": "9fc1ec35e1a4fcaf91c8b129ecbb1a06",
+    "semantic_hash": ""
   },
   "supabase/functions/create-tenant/index.ts": {
     "mtime": 1783615536.6630428,
@@ -2090,9 +2090,9 @@
     "semantic_hash": "7484d268ef68c22fd69578f0635cee41"
   },
   "supabase/functions/notify-doctor-confirmation/index.ts": {
-    "mtime": 1780251512.189556,
-    "ast_hash": "f5d90344dacba8be296a5969b58f81b7",
-    "semantic_hash": "f5d90344dacba8be296a5969b58f81b7"
+    "mtime": 1784512116.0947957,
+    "ast_hash": "704831d5efbff5a9476ea3f19e08e6be",
+    "semantic_hash": ""
   },
   "supabase/functions/notify-new-user/index.ts": {
     "mtime": 1781759890.7261367,
@@ -2110,9 +2110,9 @@
     "semantic_hash": "a0b3d04dce7dcecdd367771f395adb5c"
   },
   "supabase/functions/notify-nurse-assignment/index.ts": {
-    "mtime": 1783799421.3271565,
-    "ast_hash": "7c10aecace2ede2352534afcd170daf5",
-    "semantic_hash": "7c10aecace2ede2352534afcd170daf5"
+    "mtime": 1784511856.6942265,
+    "ast_hash": "4f09041a7c26cd66de7c571735701f21",
+    "semantic_hash": ""
   },
   "supabase/functions/seed-demo-data/index.ts": {
     "mtime": 1780374895.4501674,
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784510884.0820024,
-    "ast_hash": "8f7dc267aa1e6f83bcd0122b42a8a384",
+    "mtime": 1784514301.5501885,
+    "ast_hash": "c6ca5bf3dddd6f6e7168711b4033cb3c",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4767,6 +4767,21 @@
   "supabase/migrations/20260719220000_activos_fijos.sql": {
     "mtime": 1784510287.4026656,
     "ast_hash": "0e8613306dfc47b2ebf6cffc36ee39f7",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720000000_fix_journey_instances_insert_rls.sql": {
+    "mtime": 1784512743.923009,
+    "ast_hash": "2a97d250a1e69200e01bae4253481b68",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720010000_camino_registrar_cobro_rpc.sql": {
+    "mtime": 1784513859.8283124,
+    "ast_hash": "ab41926bcca3ff906457f2849db9993a",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720020000_doctors_modo_cobro.sql": {
+    "mtime": 1784514205.2779548,
+    "ast_hash": "41e5be68782b0453211e181885054c01",
     "semantic_hash": ""
   }
 }

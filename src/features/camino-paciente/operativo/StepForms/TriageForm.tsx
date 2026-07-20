@@ -12,7 +12,7 @@ import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-pacient
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
 // Catálogo corto de diagnósticos de enfermería (PAE/PLACE) — solo los más
 // frecuentes en consulta externa, no el catálogo NANDA completo.
@@ -27,7 +27,7 @@ const DIAGNOSTICOS_ENFERMERIA = [
   "Patrón respiratorio ineficaz",
 ] as const;
 
-export default function TriageForm({ stepId, stepStatus, existingData, onSaved }: StepFormProps) {
+export default function TriageForm({ stepId, stepKey, stepStatus, existingData, onSaved }: StepFormProps) {
   const { user } = useAuth();
   const [peso, setPeso] = useState(existingData.peso_kg ?? "");
   const [talla, setTalla] = useState(existingData.talla_cm ?? "");
@@ -91,7 +91,7 @@ export default function TriageForm({ stepId, stepStatus, existingData, onSaved }
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Triage registrado"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Triage registrado"); onSaved?.(); }
   };
 
   return (

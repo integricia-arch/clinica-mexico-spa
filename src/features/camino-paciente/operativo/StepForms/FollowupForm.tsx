@@ -11,9 +11,9 @@ import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-pacient
 import { syncFollowup } from "@/features/camino-paciente/services/consultationNoteSync";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
-export default function FollowupForm({ stepId, stepStatus, existingData, journeyInstanceId, patientId, onSaved }: StepFormProps) {
+export default function FollowupForm({ stepId, stepKey, stepStatus, existingData, journeyInstanceId, patientId, onSaved }: StepFormProps) {
   const { activeClinic } = useActiveClinic();
   const [tipo, setTipo] = useState(existingData.tipo ?? "llamada");
   const [fecha, setFecha] = useState(existingData.fecha ?? "");
@@ -49,7 +49,7 @@ export default function FollowupForm({ stepId, stepStatus, existingData, journey
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Seguimiento programado"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Seguimiento programado"); onSaved?.(); }
   };
 
   return (

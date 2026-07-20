@@ -11,6 +11,7 @@ import {
   saveJourneyStepData,
   closeJourneyStep,
 } from "@/features/camino-paciente/services/journeyEngine";
+import { toastStepClosed } from "./_shared";
 
 const arrivalSchema = z.object({
   motivo_consulta: z
@@ -41,6 +42,7 @@ export type ArrivalData = {
 
 interface ArrivalFormProps {
   stepId: string;
+  stepKey?: string;
   stepStatus: string;
   existingData: ArrivalData;
   onSaved?: () => void;
@@ -48,6 +50,7 @@ interface ArrivalFormProps {
 
 export default function ArrivalForm({
   stepId,
+  stepKey,
   stepStatus,
   existingData,
   onSaved,
@@ -153,7 +156,7 @@ export default function ArrivalForm({
     setClosing(false);
     if (!c.ok) toast.error(c.error ?? "Error al cerrar");
     else {
-      toast.success("Llegada confirmada. Siguiente hito abierto.");
+      toastStepClosed(stepKey, "Llegada confirmada");
       onSaved?.();
     }
   };
