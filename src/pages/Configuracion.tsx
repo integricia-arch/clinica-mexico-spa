@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/errors";
+import TrustedDevicesSection from "@/components/TrustedDevicesSection";
 
 type Seccion = { icon: any; titulo: string; descripcion: string; to?: string; adminOnly?: boolean; managerOk?: boolean };
 
@@ -301,6 +302,8 @@ export default function Configuracion() {
       </div>
 
       {isAdmin && <HorarioClinicaSection />}
+
+      <TrustedDevicesSection />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {secciones.filter((s) => !s.adminOnly || isAdmin || (s.managerOk && isManager)).map((s) => {
