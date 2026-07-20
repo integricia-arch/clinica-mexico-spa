@@ -1,6 +1,38 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 3, auditoría de acceso). Todo commiteado, mergeado a main y desplegado (integrika.mx verificado 200 OK). Pendiente real: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último) para terminar de validar el ciclo e2e completo. Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar). Necesita sesión con browser + cuenta admin logueada (esta sesión solo tenía `qa.pruebas` sin permisos en el tab de Chrome).
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 4). Todo commiteado, mergeado a main, desplegado y GitHub Actions con secrets completos (deploy automático confirmado funcionando). Pendiente real: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último) para terminar de validar el ciclo e2e completo. Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar). Necesita sesión con browser + cuenta admin logueada (esta sesión solo tenía `qa.pruebas` sin permisos en el tab de Chrome).
+
+## Sesión 2026-07-20 (parte 4) — fix permanente pantalla en blanco: GitHub Actions secrets
+
+Justo después de cerrar la parte 3 (merge a main + deploy manual), el push a `main` disparó
+`deploy-cloudflare.yml` sin los secrets `VITE_*` configurados — pantalla en blanco en
+integrika.mx (`Uncaught Error: [supabase/client] VITE_SUPABASE_URL y
+VITE_SUPABASE_PUBLISHABLE_KEY son requeridos`), exactamente el escenario ya documentado en
+CLAUDE.md ("Lovable Security Fix Protocol"). Esta vez se hizo el **fix permanente**, no solo
+el manual:
+
+1. Fix inmediato: `npm run build:all && wrangler deploy` con `.env` local — sitio restaurado,
+   verificado sin errores en consola.
+2. Fix permanente: Pablo configuró los 5 GitHub Secrets faltantes vía `gh secret set`
+   (terminal propia, valores nunca pasaron por el chat): `VITE_SUPABASE_URL`,
+   `VITE_SUPABASE_PROJECT_ID`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `CLOUDFLARE_API_TOKEN`
+   (token nuevo dedicado a CI, permiso `Workers Scripts:Edit` confirmado),
+   `CLOUDFLARE_ACCOUNT_ID`. Ya existían de antes (otro workflow): `SUPABASE_ACCESS_TOKEN`,
+   `SUPABASE_PROJECT_ID`, `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_CACHE_PURGE_TOKEN`,
+   `VITE_SENTRY_DSN`, `VITE_BETTERSTACK_TOKEN`, `VITE_GOOGLE_CLIENT_ID`,
+   `VITE_TURNSTILE_SITE_KEY` — solo faltaban los 5 del build de Supabase/deploy.
+3. Verificado: `gh workflow run deploy-cloudflare.yml --ref main` (workflow_dispatch, sin
+   necesidad de push real) → run exitoso en 1m16s, `curl` 200 OK en integrika.mx después.
+
+**Este problema no debería repetirse** — próximo push a `main` despliega solo con los
+secrets ya completos.
+
+**Costo de esta sesión completa (partes 3+4): ~$430**, muy por encima de lo normal. El
+salto grande fue en la parte 4 (de $61 a $423) por el ida-y-vuelta de configurar secrets de
+Cloudflare paso a paso con Pablo en vivo — cada mensaje de coordinación cuesta contexto
+acumulado. Aprendizaje: para guías de "hazlo tú en tu terminal", dar el checklist completo
+de una vez con todos los pasos y valores de dónde sacarlos, en vez de ida-y-vuelta mensaje
+por mensaje conforme Pablo va corriendo cada comando.
 
 ## Sesión 2026-07-20 (parte 3) — auditoría de acceso/privilegios/seguridad completa
 
