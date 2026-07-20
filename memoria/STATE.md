@@ -4641,6 +4641,44 @@ Fix (`20260720110000..110300_*.sql` + código):
   `notify-cxp`/`notify-new-user`→`notification_rules`, vista paciente enriquecida,
   DischargeForm mejorado: **todos ya estaban hechos**, STATE.md solo no se había
   actualizado. Ver sección "Features pendientes" arriba, ahora marcada.
-- Sigue pendiente de verdad: Twilio, texto legal Aviso Privacidad, DPA Supabase,
+- Sigue pendiente de verdad: Twilio (NO autorizado por Pablo — no tocar sin
+  confirmación explícita), texto legal Aviso Privacidad, DPA Supabase,
   oficial protección de datos, `VITE_GOOGLE_CLIENT_ID` — todo acción externa
   (dashboard/abogado), no tocable desde código.
+
+### Barrido de deuda técnica/seguridad — limpio ✅
+A petición de Pablo, barrido dirigido por los 5 patrones de riesgo ya documentados
+en este CLAUDE.md (no exhaustivo — grep + queries dirigidas, no revisión línea por
+línea de cada edge function):
+- `(async(){})()` fire-and-forget en edge functions: 0 encontrados.
+- `catch {}` vacío en src/supabase functions: 0 encontrados.
+- `console.log` fuera de lugar: solo en `src/instrument.ts` (init Sentry, legítimo).
+- Funciones `SECURITY DEFINER` sin `SET search_path`: 0.
+- Policies RLS con `USING(true)`: todas las `cmd=ALL` scopeadas a `service_role`
+  únicamente (rol que bypassea RLS de por sí, sin riesgo real); las `SELECT`-only
+  son catálogos/referencia pública intencional (doctors, rooms, servicios,
+  journey_templates, faq_items, manual_paginas, clinics, etc.) — no son huecos.
+
+**No se auditó** (quedó fuera por costo, sesión llegó a ~$97): `as any`/`as never`
+uno por uno, revisión completa línea por línea de edge functions individuales.
+Si se retoma "deuda técnica" en otra sesión, empezar por ahí — es lo único de
+los 5+1 frentes típicos que no se tocó todavía.
+
+---
+
+## ⏸ Pendientes para siguiente sesión (cierre 2026-07-20, sesión ~$97)
+
+### Código (opcional, sin urgencia — nada roto detectado)
+- [ ] Auditoría `as any`/`as never` en `src/` — no se hizo, alto volumen, revisar
+  con presupuesto dedicado si se quiere profundizar deuda técnica.
+- [ ] Revisión línea por línea de edge functions individuales (más allá del grep
+  de patrones ya limpio).
+
+### Externo (requiere Pablo/abogado, no tocar desde código sin autorización)
+- [ ] Twilio — **Pablo NO ha autorizado**, no configurar aunque aparezca en listas
+  viejas de pendientes.
+- [ ] Texto real Aviso de Privacidad (abogado, hoy es placeholder LFPDPPP)
+- [ ] Términos de Servicio con cláusula de arbitraje
+- [ ] DPA con Supabase Inc.
+- [ ] Designar oficial de protección de datos (LFPDPPP Art. 29)
+- [ ] `VITE_GOOGLE_CLIENT_ID` en `.env` local (bot GCal, botón "Conectar" en AdminUsuarios)
