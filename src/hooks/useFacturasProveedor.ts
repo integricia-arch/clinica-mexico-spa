@@ -180,6 +180,19 @@ export function useFacturasProveedor(clinicId: string | null) {
     }
 
     const folio = nextFolioFact(items.map((f) => f.folio_interno));
+
+    // Fecha límite de pronto pago = fecha_factura + días configurados en el proveedor.
+    // Sin esto el KPI kpi_descuento_pronto_pago nunca detecta pagos a tiempo (columna
+    // siempre NULL) aunque el proveedor sí tenga descuento configurado.
+    const { data: provData } = await untypedTable("proveedores")
+      .select("dias_pronto_pago")
+      .eq("id", input.proveedor_id)
+      .maybeSingle() as { data: { dias_pronto_pago: number | null } | null };
+    const diasProntoPago = provData?.dias_pronto_pago;
+    const fechaLimiteProntoPago = diasProntoPago && diasProntoPago > 0
+      ? new Date(new Date(input.fecha_factura).getTime() + diasProntoPago * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+      : null;
+
     const { data, error: cErr } = await untypedTable("facturas_proveedor")
       .insert({
         clinic_id: clinicId,
@@ -191,6 +204,7 @@ export function useFacturasProveedor(clinicId: string | null) {
         serie_folio_proveedor: input.serie_folio_proveedor.trim() || null,
         fecha_factura: input.fecha_factura,
         fecha_vencimiento: input.fecha_vencimiento,
+        fecha_limite_pronto_pago: fechaLimiteProntoPago,
         subtotal_centavos: input.subtotal_centavos,
         iva_centavos: input.iva_centavos,
         total_centavos: input.total_centavos,

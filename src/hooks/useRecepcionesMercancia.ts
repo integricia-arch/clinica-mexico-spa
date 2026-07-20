@@ -197,6 +197,16 @@ export function useRecepcionesMercancia(clinicId: string | null) {
         const subtotal = itemRows.reduce((sum, it) => sum + it.cantidad_recibida * it.precio_unitario_centavos, 0);
         const today = new Date().toISOString().split("T")[0];
         const vence = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+        const { data: provData } = await untypedTable("proveedores")
+          .select("dias_pronto_pago")
+          .eq("id", input.proveedor_id)
+          .maybeSingle() as { data: { dias_pronto_pago: number | null } | null };
+        const diasProntoPago = provData?.dias_pronto_pago;
+        const fechaLimiteProntoPago = diasProntoPago && diasProntoPago > 0
+          ? new Date(Date.now() + diasProntoPago * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+          : null;
+
         await untypedTable("facturas_proveedor").insert({
           clinic_id: clinicId,
           folio_interno: provFolio,
@@ -207,6 +217,7 @@ export function useRecepcionesMercancia(clinicId: string | null) {
           serie_folio_proveedor: null,
           fecha_factura: today,
           fecha_vencimiento: vence,
+          fecha_limite_pronto_pago: fechaLimiteProntoPago,
           subtotal_centavos: subtotal,
           iva_centavos: 0,
           total_centavos: subtotal,
