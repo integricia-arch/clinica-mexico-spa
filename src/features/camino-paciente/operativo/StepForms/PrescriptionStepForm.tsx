@@ -9,10 +9,10 @@ import { Loader2, Check, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
 export default function PrescriptionStepForm({
-  stepId, stepStatus, patientId, existingData, onSaved,
+  stepId, stepKey, stepStatus, patientId, existingData, onSaved,
 }: StepFormProps) {
   const [sinReceta, setSinReceta] = useState<boolean>(existingData.sin_receta ?? false);
   const [notas, setNotas] = useState(existingData.notas ?? "");
@@ -42,7 +42,7 @@ export default function PrescriptionStepForm({
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Etapa de receta cerrada"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Etapa de receta cerrada"); onSaved?.(); }
   };
 
   return (

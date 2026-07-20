@@ -10,7 +10,7 @@ import { Loader2, Check, ExternalLink, Pill } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import { supabase } from "@/integrations/supabase/client";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
 interface PrescriptionRow {
   id: string;
@@ -27,7 +27,7 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   cancelled: { label: "Cancelada",  cls: "bg-red-100 text-red-700" },
 };
 
-export default function PharmacyForm({ stepId, stepStatus, appointmentId, onSaved }: StepFormProps) {
+export default function PharmacyForm({ stepId, stepKey, stepStatus, appointmentId, onSaved }: StepFormProps) {
   const navigate = useNavigate();
   const [resultado, setResultado] = useState<string>("entregado");
   const [notas, setNotas] = useState("");
@@ -59,7 +59,7 @@ export default function PharmacyForm({ stepId, stepStatus, appointmentId, onSave
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Farmacia cerrada"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Farmacia cerrada"); onSaved?.(); }
   };
 
   return (

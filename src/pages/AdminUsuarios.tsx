@@ -71,6 +71,7 @@ interface DoctorRow {
   horario_inicio?: string;
   horario_fin?: string;
   duracion_cita_min?: number;
+  modo_cobro?: "clinica" | "directo";
 }
 
 type NurseCategoria = "licenciada" | "tecnica" | "auxiliar";
@@ -245,7 +246,7 @@ export default function AdminUsuarios() {
     setLoadingDoctors(true);
     const { data, error } = await (supabase as any)
       .from("doctors")
-      .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id, horario_inicio, horario_fin, duracion_cita_min")
+      .select("id, nombre, apellidos, especialidad, cedula_profesional, telefono, activo, user_id, horario_inicio, horario_fin, duracion_cita_min, modo_cobro")
       .order("apellidos");
     setLoadingDoctors(false);
     if (error) {
@@ -606,11 +607,12 @@ export default function AdminUsuarios() {
     horario_fin: string;
     duracion_cita_min: number;
     activo: boolean;
+    modo_cobro: "clinica" | "directo";
   };
   const emptyDoctor: DoctorForm = {
     nombre: "", apellidos: "", email: "", especialidad: "", cedula_profesional: "",
     telefono: "", horario_inicio: "08:00", horario_fin: "18:00",
-    duracion_cita_min: 30, activo: true,
+    duracion_cita_min: 30, activo: true, modo_cobro: "clinica",
   };
   const [doctorEdit, setDoctorEdit] = useState<DoctorRow | null>(null);
   const [doctorForm, setDoctorForm] = useState<DoctorForm>(emptyDoctor);
@@ -637,6 +639,7 @@ export default function AdminUsuarios() {
       horario_fin: (d.horario_fin ?? "18:00:00").slice(0, 5),
       duracion_cita_min: d.duracion_cita_min ?? 30,
       activo: d.activo,
+      modo_cobro: ((d as any).modo_cobro as "clinica" | "directo") ?? "clinica",
     });
     setDoctorDialogOpen(true);
   };
@@ -684,6 +687,7 @@ export default function AdminUsuarios() {
       horario_fin: doctorForm.horario_fin.slice(0, 5) + ":00",
       duracion_cita_min: doctorForm.duracion_cita_min,
       activo: doctorForm.activo,
+      modo_cobro: doctorForm.modo_cobro,
     };
     let error;
     if (doctorEdit) {
@@ -1459,6 +1463,20 @@ export default function AdminUsuarios() {
               <Label>Duración de cita (min) *</Label>
               <Input type="number" min={5} max={240} value={doctorForm.duracion_cita_min}
                 onChange={(e) => setDoctorForm({ ...doctorForm, duracion_cita_min: Number(e.target.value) })} />
+            </div>
+            <div>
+              <Label>Modelo de cobro *</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={doctorForm.modo_cobro}
+                onChange={(e) => setDoctorForm({ ...doctorForm, modo_cobro: e.target.value as "clinica" | "directo" })}
+              >
+                <option value="clinica">A la clínica (paga honorarios al doctor)</option>
+                <option value="directo">Directo al doctor (fuera de caja de la clínica)</option>
+              </select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                "Directo": el paciente le paga al doctor, no se genera ingreso/póliza en la clínica. Los insumos consumidos sí se registran igual.
+              </p>
             </div>
             <div className="flex items-end">
               <label className="inline-flex items-center gap-2 text-sm">

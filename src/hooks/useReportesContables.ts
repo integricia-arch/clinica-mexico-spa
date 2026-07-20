@@ -22,9 +22,12 @@ export interface LibroDiarioFila {
   fecha: string;
   concepto: string;
   estado: string;
+  uuid_cfdi: string | null;
+  reference_type: string | null;
   orden: number;
   cuenta_codigo: string;
   cuenta_nombre: string;
+  cuenta_tipo: string;
   debe_centavos: number;
   haber_centavos: number;
   descripcion: string | null;
@@ -46,6 +49,14 @@ export interface BalanceFila {
   nombre: string;
   tipo: string;
   saldo_centavos: number;
+}
+
+export interface EstadoResultadosFila {
+  cuenta_id: string;
+  codigo: string;
+  nombre: string;
+  tipo: string;
+  monto_centavos: number;
 }
 
 // ponytail: cuatro hooks casi idénticos (load/loading/error) — un solo hook
@@ -136,6 +147,27 @@ export function useReporteIva() {
     });
     if (err) setError(friendlyError(err));
     else setRows((data ?? []) as IvaFila[]);
+    setLoading(false);
+  }, [activeClinicId]);
+
+  return { rows, loading, error, load };
+}
+
+export function useEstadoResultados() {
+  const { activeClinicId } = useActiveClinic();
+  const [rows, setRows] = useState<EstadoResultadosFila[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (desde: string, hasta: string) => {
+    if (!activeClinicId || !desde || !hasta) return;
+    setLoading(true);
+    setError(null);
+    const { data, error: err } = await (supabase as any).rpc("estado_resultados", {
+      p_clinic_id: activeClinicId, p_desde: desde, p_hasta: hasta,
+    });
+    if (err) setError(friendlyError(err));
+    else setRows((data ?? []) as EstadoResultadosFila[]);
     setLoading(false);
   }, [activeClinicId]);
 

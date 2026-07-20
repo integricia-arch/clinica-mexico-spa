@@ -1,3 +1,92 @@
+# Task 2 Report: Regla de derivación de IVA (`ivaRules.ts`) — TDD
+
+## Summary
+
+Successfully implemented Task 2 following TDD discipline: write tests first (RED), implement module (GREEN), commit with exact message. All 10 tests pass. No issues or concerns.
+
+## What Was Implemented
+
+Created two files in the `feat/iva-automatico-regimen-fiscal` branch:
+
+1. **Test file:** `src/test/contabilidad/ivaRules.test.ts`
+   - 10 test cases covering REGIMEN_TIPO_PERSONA classification and deriveIvaTratamiento derivation logic
+   - Tests validate correct IVA treatment across regímenes, person types, and account codes
+
+2. **Implementation file:** `src/features/contabilidad/ivaRules.ts`
+   - Exports: `TipoPersona`, `IvaTratamiento`, `CodigoCuentaIngreso`, `REGIMEN_TIPO_PERSONA`, `deriveIvaTratamiento`
+   - Pure function (zero external dependencies)
+   - Exact implementation from brief specifications
+
+## TDD Evidence
+
+### RED Phase (Test Fails)
+```
+$ npx vitest run src/test/contabilidad/ivaRules.test.ts
+Error: Failed to resolve import "@/features/contabilidad/ivaRules" from "src/test/contabilidad/ivaRules.test.ts". 
+Does the file exist?
+  Test Files  1 failed (1)
+```
+✓ Confirmed: Tests fail as expected (module not found)
+
+### GREEN Phase (Tests Pass)
+```
+$ npx vitest run src/test/contabilidad/ivaRules.test.ts
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  15:36:53
+   Duration  2.36s
+```
+✓ Confirmed: All 10 tests pass
+
+## Files Changed
+
+- **Created:** `src/features/contabilidad/ivaRules.ts` (43 lines)
+- **Created:** `src/test/contabilidad/ivaRules.test.ts` (73 lines)
+
+## Commits Created
+
+```
+049f9c8 feat: regla de derivación de IVA por régimen fiscal y tipo de persona
+```
+
+## Self-Review Findings
+
+### Code Quality
+- ✓ No external dependencies (pure function)
+- ✓ Immutable data structures (REGIMEN_TIPO_PERSONA is const Record)
+- ✓ Type-safe exports (exact types match brief specifications)
+- ✓ Clear control flow in deriveIvaTratamiento
+- ✓ Comprehensive inline documentation
+
+### Test Quality
+- ✓ All test names follow brief exactly
+- ✓ 10/10 tests passing (100% coverage of requirements)
+- ✓ Tests cover edge cases:
+  - Ambiguous regímenes (null person type) → correct null returns
+  - ING_FARMACIA independence from person type
+  - Person type determination for ING_CONSULTAS (físico → exento, moral → tasa_general)
+  - ING_OTROS always tasa_general (16%)
+- ✓ No test interdependencies
+
+### Specification Compliance
+- ✓ Type exports match brief: `TipoPersona`, `IvaTratamiento`, `CodigoCuentaIngreso`
+- ✓ REGIMEN_TIPO_PERSONA maps all 17 regímenes with correct classifications
+- ✓ deriveIvaTratamiento signature matches brief exactly
+- ✓ Return type structure: `{ tratamiento: IvaTratamiento; tasaPct: number | null } | null`
+
+## Issues or Concerns
+
+**None.** Implementation is complete, tests pass, commit is done.
+
+## Next Steps (Not This Task)
+
+Task 3 (ConfiguracionCFDI.tsx refactor) will import these exports and use deriveIvaTratamiento to populate CatalogosTab UI.
+
+---
+
+## (Contenido previo de este archivo, de una ejecución anterior con distinto alcance — conservado por referencia histórica, no aplica a este run)
+
 # Task 2 report — devoluciones exigen PIN de supervisor
 
 ## Qué se hizo

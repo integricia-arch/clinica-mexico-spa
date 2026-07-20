@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Check } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
 interface DoctorRow { id: string; nombre: string; apellidos: string; }
 interface RoomRow { id: string; nombre: string; }
@@ -15,7 +15,7 @@ interface ServicioRow { id: string; nombre: string; }
 interface ApptIds { doctor_id: string | null; room_id: string | null; servicio_id: string | null; }
 
 export default function AssignmentForm({
-  stepId, stepStatus, appointmentId, existingData, onSaved,
+  stepId, stepKey, stepStatus, appointmentId, existingData, onSaved,
 }: StepFormProps) {
   const [doctors, setDoctors] = useState<DoctorRow[]>([]);
   const [rooms, setRooms] = useState<RoomRow[]>([]);
@@ -69,7 +69,7 @@ export default function AssignmentForm({
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error al cerrar");
-    else { toast.success("Asignación confirmada"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Asignación confirmada"); onSaved?.(); }
   };
 
   return (

@@ -40,6 +40,7 @@ CREATE POLICY "Admin/doctor can update expedientes" ON public.expedientes FOR UP
 CREATE POLICY "Admin can delete expedientes" ON public.expedientes FOR DELETE TO authenticated
   USING (public.has_role(auth.uid(),'admin'));
 
+DROP TRIGGER IF EXISTS trg_expedientes_updated_at ON public.expedientes;
 CREATE TRIGGER trg_expedientes_updated_at
   BEFORE UPDATE ON public.expedientes
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

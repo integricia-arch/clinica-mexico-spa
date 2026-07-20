@@ -67,13 +67,18 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Actualizar cita
+  // Actualizar cita. La confirmación del doctor también avanza el status
+  // general de la cita (Agenda, listados, filtros leen `status`, no
+  // `doctor_confirmation_status`) -- sin esto el toast decía "se movió a tu
+  // Agenda" pero la cita seguía apareciendo como "Solicitada" en todo el resto
+  // del sistema.
   const { error: eu } = await supabase
     .from("appointments")
     .update({
       doctor_confirmation_status: decision,
       doctor_confirmation_at: new Date().toISOString(),
       doctor_confirmation_reason: decision === "declined" ? reason!.trim() : null,
+      ...(decision === "confirmed" ? { status: "confirmada" } : {}),
     })
     .eq("id", apptId);
   if (eu) return json({ error: "no se pudo actualizar: " + eu.message }, 500);

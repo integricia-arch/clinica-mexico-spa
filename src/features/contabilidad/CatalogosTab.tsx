@@ -12,9 +12,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { untypedTable } from "@/lib/untypedTable";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { friendlyError } from "@/lib/errors";
-
-type IvaTratamiento = "sin_configurar" | "exento" | "tasa_0" | "tasa_general";
+import { deriveIvaTratamiento, type IvaTratamiento, type CodigoCuentaIngreso } from "@/features/contabilidad/ivaRules";
 
 interface CuentaContable {
   id: string;
@@ -41,6 +41,7 @@ const emptyForm = {
 };
 
 function CuentasCrud() {
+  const { activeClinicId } = useActiveClinic();
   const [cuentas, setCuentas] = useState<CuentaContable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +49,7 @@ function CuentasCrud() {
   const [editing, setEditing] = useState<CuentaContable | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [cfdiConfig, setCfdiConfig] = useState<{ regimen_fiscal: string; tipo_persona: "fisica" | "moral" | null } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -60,6 +62,18 @@ function CuentasCrud() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!activeClinicId) return;
+    untypedTable("cfdi_config")
+      .select("regimen_fiscal,tipo_persona")
+      .eq("clinic_id", activeClinicId)
+      .maybeSingle()
+      .then(({ data, error: err }) => {
+        if (err) { console.error("[CatalogosTab] cfdi_config", err); return; }
+        setCfdiConfig(data as typeof cfdiConfig);
+      });
+  }, [activeClinicId]);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (c: CuentaContable) => {
@@ -108,6 +122,16 @@ function CuentasCrud() {
     load();
   };
 
+  const aplicarSugerido = async (c: CuentaContable, sugerido: { tratamiento: IvaTratamiento; tasaPct: number | null }) => {
+    const { error: err } = await untypedTable("cuentas_contables").update({
+      iva_tratamiento: sugerido.tratamiento,
+      iva_tasa_pct: sugerido.tasaPct,
+    }).eq("id", c.id);
+    if (err) { toast.error(friendlyError(err)); return; }
+    toast.success(`IVA de ${c.nombre} actualizado`);
+    load();
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -145,9 +169,27 @@ function CuentasCrud() {
                     <td className="py-2 pr-4 text-muted-foreground">{c.codigo_agrupador_sat ?? "—"}</td>
                     <td className="py-2 pr-4">
                       {c.tipo === "ingreso" ? (
-                        <span className={c.iva_tratamiento === "sin_configurar" ? "text-amber-600" : "text-muted-foreground"}>
-                          {IVA_LABELS[c.iva_tratamiento]}{c.iva_tratamiento === "tasa_general" && c.iva_tasa_pct != null ? ` (${c.iva_tasa_pct}%)` : ""}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={c.iva_tratamiento === "sin_configurar" ? "text-amber-600" : "text-muted-foreground"}>
+                            {IVA_LABELS[c.iva_tratamiento]}{c.iva_tratamiento === "tasa_general" && c.iva_tasa_pct != null ? ` (${c.iva_tasa_pct}%)` : ""}
+                          </span>
+                          {(() => {
+                            if (!cfdiConfig || !["ING_CONSULTAS", "ING_FARMACIA", "ING_OTROS"].includes(c.codigo)) return null;
+                            const sugerido = deriveIvaTratamiento(cfdiConfig.regimen_fiscal, cfdiConfig.tipo_persona, c.codigo as CodigoCuentaIngreso);
+                            if (!sugerido) {
+                              return <span className="text-xs text-muted-foreground">Define tipo de persona en Facturación</span>;
+                            }
+                            if (sugerido.tratamiento === c.iva_tratamiento && sugerido.tasaPct === c.iva_tasa_pct) return null;
+                            return (
+                              <Button
+                                size="sm" variant="outline" className="h-6 px-2 text-xs"
+                                onClick={() => aplicarSugerido(c, sugerido)}
+                              >
+                                Aplicar: {IVA_LABELS[sugerido.tratamiento]}{sugerido.tasaPct ? ` (${sugerido.tasaPct}%)` : ""}
+                              </Button>
+                            );
+                          })()}
+                        </div>
                       ) : "—"}
                     </td>
                     <td className="py-2 pr-4">{c.activo ? "Activo" : "Inactivo"}</td>

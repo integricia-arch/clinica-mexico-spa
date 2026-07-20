@@ -8,10 +8,10 @@ import { toast } from "sonner";
 import { Loader2, Check } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
 export default function RecordForm({
-  stepId, stepStatus, patientId, existingData, onSaved,
+  stepId, stepKey, stepStatus, patientId, existingData, onSaved,
 }: StepFormProps) {
   const [alergias, setAlergias] = useState(existingData.alergias ?? "");
   const [tipoSangre, setTipoSangre] = useState(existingData.tipo_sangre ?? "");
@@ -48,7 +48,7 @@ export default function RecordForm({
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Expediente actualizado"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Expediente actualizado"); onSaved?.(); }
   };
 
   return (

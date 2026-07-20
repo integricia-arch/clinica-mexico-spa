@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface PendingAppt {
 interface Props { doctorId: string | null }
 
 export function DoctorConfirmationPanel({ doctorId }: Props) {
+  const navigate = useNavigate();
   const [items, setItems] = useState<PendingAppt[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -62,13 +64,18 @@ export function DoctorConfirmationPanel({ doctorId }: Props) {
   }, [doctorId]);
 
   const decide = async (apptId: string, decision: "confirmed" | "declined", motivo?: string) => {
+    const appt = items.find((a) => a.id === apptId);
     setProcessing(apptId);
     const { error } = await supabase.functions.invoke("notify-doctor-confirmation", {
       body: { appointment_id: apptId, decision, reason: motivo },
     });
     setProcessing(null);
     if (error) { toast.error("No se pudo guardar: " + error.message); return false; }
-    toast.success(decision === "confirmed" ? "Cita confirmada" : "Cita rechazada — recepción notificada");
+    const fecha = appt ? new Date(appt.fecha_inicio).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }) : "";
+    toast.success(
+      decision === "confirmed" ? `Cita confirmada — se movió a tu Agenda del ${fecha}` : "Cita rechazada — recepción notificada",
+      { action: { label: "Ver en Agenda", onClick: () => navigate("/agenda") } },
+    );
     setItems((prev) => prev.filter((a) => a.id !== apptId));
     return true;
   };

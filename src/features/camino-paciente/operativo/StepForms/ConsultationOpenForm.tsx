@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import { Loader2, Check } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
-export default function ConsultationOpenForm({ stepId, stepStatus, existingData, onSaved }: StepFormProps) {
+export default function ConsultationOpenForm({ stepId, stepKey, stepStatus, existingData, onSaved }: StepFormProps) {
   const [motivo, setMotivo] = useState(existingData.motivo ?? "");
   const [saving, setSaving] = useState(false);
   const closed = isClosed(stepStatus);
@@ -23,7 +23,7 @@ export default function ConsultationOpenForm({ stepId, stepStatus, existingData,
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Consulta iniciada"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Consulta iniciada"); onSaved?.(); }
   };
 
   return (

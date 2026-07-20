@@ -409,6 +409,7 @@ export default function CaminoPaciente() {
                       return (
                         <StepForm
                           stepId={activeStep.id}
+                          stepKey={activeStep.step_key}
                           stepStatus={activeStep.status}
                           journeyInstanceId={instance.id}
                           patientId={instance.patient_id ?? null}

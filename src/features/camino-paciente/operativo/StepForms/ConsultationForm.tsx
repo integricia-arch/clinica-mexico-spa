@@ -12,6 +12,7 @@ import {
   closeJourneyStep,
 } from "@/features/camino-paciente/services/journeyEngine";
 import { syncConsultationNote } from "@/features/camino-paciente/services/consultationNoteSync";
+import { toastStepClosed } from "./_shared";
 
 const consultationSchema = z.object({
   anamnesis: z.string().trim().min(10, "La anamnesis debe tener al menos 10 caracteres").max(3000, "Máximo 3000 caracteres"),
@@ -34,6 +35,7 @@ export type ConsultationData = {
 
 interface Props {
   stepId: string;
+  stepKey?: string;
   stepStatus: string;
   existingData: ConsultationData;
   appointmentId?: string | null;
@@ -41,7 +43,7 @@ interface Props {
   onSaved?: () => void;
 }
 
-export default function ConsultationForm({ stepId, stepStatus, existingData, appointmentId, patientId, onSaved }: Props) {
+export default function ConsultationForm({ stepId, stepKey, stepStatus, existingData, appointmentId, patientId, onSaved }: Props) {
   const [anamnesis, setAnamnesis] = useState(existingData.anamnesis ?? "");
   const [subjetivo, setSubjetivo] = useState(existingData.subjetivo ?? "");
   const [objetivo, setObjetivo] = useState(existingData.objetivo ?? "");
@@ -162,7 +164,7 @@ export default function ConsultationForm({ stepId, stepStatus, existingData, app
     setClosing(false);
     if (!c.ok) toast.error(c.error ?? "Error al cerrar");
     else {
-      toast.success("Consulta cerrada. Nota persistida en expediente.");
+      toastStepClosed(stepKey, "Consulta cerrada. Nota persistida en expediente.");
       onSaved?.();
     }
   };

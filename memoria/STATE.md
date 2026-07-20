@@ -1,6 +1,94 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: módulo contable CERRADO (fases 1-9 completas). Backlog sin fecha: control de activos fijos (investigado, no construido) + import/export UI + conexión API con celulas-madre-ventas (ver abajo).
+## PRÓXIMA ACCIÓN: commitear todo lo de esta sesión (deploys ya en prod pero SIN commit — ver CLAUDE.md "Edge function changes must be deployed AND committed"). Terminar de completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último) y confirmar que la póliza real (no la de prueba manual con rollback) también se generó bien cuando se complete desde la UI real. PR #19 con CI atorado en "queued" — reintentar merge cuando termine. Pendiente aplicar el hallazgo de UX de los 10 StepForms (ver abajo). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+
+## Sesión 2026-07-20 (parte 2) — prueba e2e reserva→salida vía browser real + 3 bugs de producción encontrados y corregidos
+
+**Deploy del fix de toast (`DoctorConfirmationPanel.tsx`) YA HECHO** (`npm run build:all && wrangler deploy`, Version ID `7fce8741`). Verificado en prod: al confirmar cita aparece "Cita confirmada — se movió a tu Agenda del [fecha]" + botón "Ver en Agenda".
+
+### Bugs reales encontrados por la prueba end-to-end (no hipotéticos — reproducidos y corregidos en prod)
+
+1. **`notify-doctor-confirmation` nunca avanzaba `appointments.status`.** Solo actualizaba `doctor_confirmation_status`. El toast decía "se movió a tu Agenda" pero la cita seguía como "Solicitada" en Agenda/Citas/todo el resto del sistema. Fix desplegado (v2): ahora también hace `status: 'confirmada'` cuando `decision === 'confirmed'`.
+
+2. **RLS de `journey_instances` rompía "Iniciar camino" para TODO usuario, incluido admin.** La policy `journey_instances_clinic_scoped` se auto-referenciaba (`user_can_access_journey_instance(id)` busca la fila en la propia tabla) — funciona para UPDATE/DELETE de filas existentes pero es imposible de satisfacer en INSERT (la fila no existe aún) y también rompía el `RETURNING` que `supabase-js` siempre agrega tras `.insert().select()`. Ningún camino de paciente podía crearse desde la UI, para ninguna clínica. Fix: nueva función `user_can_access_patient_clinic(patient_id)` (valida por clinic_memberships/is_global_admin usando la columna `patient_id` que sí viene en la fila nueva, sin auto-referenciar) + policy reescrita. Migración `20260720000000_fix_journey_instances_insert_rls.sql`, aplicada y verificada en prod.
+
+3. **Bug corregido — "Cobro" en Camino del Paciente ahora sí genera póliza.** `BillingForm.tsx` solo guardaba el monto como nota libre en `journey_instance_step_data`, nunca tocaba `movimientos`. Fix: RPC nueva `camino_registrar_cobro()` (SECURITY DEFINER, valida acceso vía `user_can_access_patient_clinic`) inserta en `movimientos` con `estado='pagado'`, dispara el trigger existente (`contab_movimiento_caja` → `movimientos_contables` + póliza partida doble). Verificado en prod: folio de póliza generado correctamente para cobro de prueba.
+
+   **Extensión pedida por Pablo en la misma sesión — modelo de cobro por doctor:** columna nueva `doctors.modo_cobro` (`'clinica'` default | `'directo'`). En `'clinica'` (comportamiento de siempre): paciente paga a la clínica, se genera ingreso/póliza, la clínica después paga honorarios al doctor (`doctor_honorarios_config`) y se queda con el margen de insumos. En `'directo'`: paciente paga honorarios+insumos directo al doctor, **no se genera ingreso/póliza en la clínica** (decisión explícita de Pablo) — pero el costo de insumos consumidos SÍ se sigue registrando igual (trigger `trg_contab_consumo_insumo`, independiente del cobro, no tocado). `camino_registrar_cobro()` consulta `modo_cobro` del doctor de la cita y retorna `NULL` sin tocar `movimientos` si es `'directo'`; el frontend (`BillingForm.tsx`) distingue el caso y muestra un toast distinto ("cobro directo al doctor, no se aplica en caja de la clínica"). Selector agregado en AdminUsuarios → editar doctor → "Modelo de cobro". Migraciones `20260720010000_camino_registrar_cobro_rpc.sql` y `20260720020000_doctors_modo_cobro.sql`, aplicadas y verificadas en prod (ambos modos probados con rollback).
+
+   Regla general que Pablo pidió dejar explícita: **toda operación administrativa que cause un ingreso o egreso se registra contablemente, forzosamente** — el modo `'directo'` no es una excepción a esta regla, es que ese ingreso específico nunca fue dinero de la clínica (es del doctor), por eso no aplica ahí; lo que sí es de la clínica (el insumo consumido) se sigue registrando siempre.
+
+### Verificado con éxito en prod (browser real, paciente `PRUEBA-E2E Ciclo Completo`)
+Reserva (Nueva cita) → confirmación doctor (toast correcto) → Iniciar camino → Llegada → Asignación doctor/consultorio → Apertura atención → Identificación/consentimiento → Expediente → Triage → Consulta (SOAP + diagnóstico) → Receta → Farmacia → Cobro ($500, sin póliza — bug #3) → llegó hasta "Salida/alta" (11/13 hitos, no se completó el último paso por decidir primero el gap de pólizas).
+
+### Otro hallazgo — bug pre-existente no relacionado a esta sesión, corregido de paso
+Migración `20260508213818` creaba `trg_expedientes_updated_at` sin `DROP TRIGGER IF EXISTS`, duplicado con `20260508000001` — rompía el check "Apply migrations to ephemeral DB" del PR #19 (CI de DB limpia, no afecta prod donde ya estaba aplicado una sola vez). Corregido y pusheado a la rama del PR.
+
+### Hallazgo de UX (Task explorer) — pendiente aplicar
+Mismo patrón "acción desaparece sin decir a dónde fue" que motivó el fix de `DoctorConfirmationPanel` está repetido en **los 10 StepForms de `src/features/camino-paciente/operativo/StepForms/`** — cada uno usa `onSaved={reload}` que hace saltar el Kanban a la siguiente columna sin decir cuál. Raíz común: el toast genérico podría centralizarse en un solo lugar compartido (`_shared.ts`) en vez de repetir el fix 10 veces. No aplicado aún — pendiente.
+
+
+## Sesión 2026-07-20 — validación ciclo contable completo + pólizas manuales + activos fijos
+
+**Costo de sesión muy alto ($142+) por exploración extensa de schema en vivo — próxima sesión: ir directo a lo pendiente, evitar re-explorar lo ya mapeado aquí.**
+
+### Hecho y desplegado a prod (kyfkvdyxpvpiacyymldc + integrika.mx)
+1. **Fix `notify-doctor-confirmation`**: función escrita en repo pero nunca desplegada — botón "Confirmar" en Panel del doctor fallaba con "Failed to send a request to the Edge Function". Desplegada (v1, verify_jwt=true, roles admin/doctor).
+2. **Reportes contables ampliados** (`ReportesTab.tsx`): Libro Diario agrupado por póliza (header folio/tipo/fecha/concepto/UUID CFDI + líneas cargo/abono + badge Cuadra/DESCUADRE), Libro Mayor (nuevo, por cuenta con saldo acumulado naturaleza-aware), Estado de Resultados (nuevo, usa RPC `estado_resultados` que ya existía sin UI). `libro_diario` RPC extendido con `uuid_cfdi`, `reference_type`, `cuenta_tipo` (2 migraciones, ambas con DROP FUNCTION primero por cambio de return type).
+3. **Validé el ciclo contable completo con datos reales marcados PRUEBA** (no en branch, directo en prod, con autorización explícita):
+   - Ciclo compra: solicitud→OC→recepción (lotes+movimientos_inventario)→factura (trigger genera póliza automática)→pago (trigger salda factura→póliza automática). 2 pólizas, cuadran.
+   - Ciclo cita: honorarios doctor (config 40%)→cita→insumos (`registrar_insumos_cita`)→cobro caja (tabla `movimientos`, trigger genera póliza)→devengo honorario (cron `contab_devengar_honorarios()`)→pago honorario (llamada directa, sin tabla dedicada aún). 4 pólizas, cuadran.
+   - **Gaps reales encontrados y corregidos con migraciones permanentes** (no solo parches de la prueba):
+     - Faltaba regla `honorario_pago` en `contab_reglas_asiento` (existía el devengo, no el pago) — migración `20260719200000_regla_honorario_pago.sql`.
+     - `appointment_insumos` nunca generaba póliza de consumo (costo de insumo usado en cita no llegaba a contabilidad) — trigger nuevo `trg_contab_consumo_insumo` (`20260719210000_trigger_consumo_insumo.sql`), corre automático para toda cita futura.
+   - Registros PRUEBA-* (proveedor, SC/OC/GR/factura/pago, cita, honorarios) **siguen en prod, sin borrar** — pendiente decidir con Pablo si se quedan o se limpian.
+4. **Pólizas manuales**: botón "Nueva póliza" (`NuevaPolizaDialog.tsx`, valida cargo=abono antes de dejar guardar, llama `crear_poliza()`) + botón "Cancelar" por póliza contabilizada (llama `cancelar_poliza()`, reversa — nunca UPDATE/DELETE, decisión explícita de Pablo de no permitir edición directa).
+5. **Activos fijos** (tab nueva en Contabilidad): cuenta `130` "Mobiliario y equipo" nueva, tabla `activos_fijos` (sin depreciación — deliberado, pendiente tasa confirmada por contador), RPC `registrar_activo_fijo()` (cargo 130 / abono 102 Bancos o 201 Proveedores, elegible), UI simple alta+lista. Migración `20260719220000_activos_fijos.sql`.
+6. **Insumos desde Panel del doctor**: reutilizado `InsumosCitaSection.tsx` (ya existía, NO se duplicó) dentro de `PatientClinicalContext.tsx` — el doctor saca insumos directo desde la cita seleccionada, descuenta stock y (gracias al trigger del punto 3) genera póliza automática.
+
+### Hecho, código listo, PENDIENTE DE DEPLOY
+- **`DoctorConfirmationPanel.tsx`**: al confirmar/rechazar cita, el toast ahora dice explícito "se movió a tu Agenda del [fecha]" + botón acción "Ver en Agenda" (antes solo desaparecía la tarjeta sin explicar a dónde fue — Pablo reportó esto como patrón a evitar en general: **toda acción debe dejar claro qué pasó y dónde verlo**). Falta `npm run build:all && wrangler deploy`.
+
+### Pendiente para siguiente sesión (prioridad sugerida)
+1. Deploy del fix de toast (arriba) — 2 comandos, nada de exploración.
+2. Decidir con Pablo: ¿borrar registros PRUEBA-* de prod o dejarlos?
+3. Aplicar el principio "no se pierdan procesos/trámites" de forma más amplia — Pablo pidió esto como regla general de UX, no solo para el botón de confirmar cita. Candidatos a revisar: cualquier acción que remueve una tarjeta/fila de una lista sin decir a dónde fue (revisar patrón en todo el módulo doctor/recepción).
+4. PR #19 (IVA automático) sigue esperando merge — independiente de todo lo de arriba.
+5. Activos fijos: falta depreciación (tasas LISR Art. 34 ya investigadas en `modulo-contable-memoria-tecnica.md` §11, falta confirmar con contador antes de construir).
+6. Import/export UI + conexión API con celulas-madre-ventas — solo anotado, sin diseño (ver sesión 2026-07-19 abajo).
+
+---
+
+
+## PR #19 abierto — IVA automático por régimen fiscal (2026-07-19, sesión posterior)
+
+En vez de esperar respuesta manual del contador cuenta por cuenta, Pablo pidió que el
+sistema derive el tratamiento IVA aplicando la normatividad vigente según lo que se
+seleccione. Construido vía brainstorming → spec → plan → subagent-driven-development:
+
+- Spec: `docs/superpowers/specs/2026-07-19-iva-automatico-regimen-fiscal-design.md`
+- Plan: `docs/superpowers/plans/2026-07-19-iva-automatico-regimen-fiscal.md`
+- PR: https://github.com/integricia-arch/clinica-mexico-spa/pull/19 (branch `feat/iva-automatico-regimen-fiscal`)
+
+**Qué hace:** columna nueva `cfdi_config.tipo_persona` (física/moral) + función pura
+`deriveIvaTratamiento()` (`src/features/contabilidad/ivaRules.ts`, 10 tests) que deriva
+el tratamiento de `ING_CONSULTAS`/`ING_FARMACIA`/`ING_OTROS` a partir de régimen fiscal +
+tipo de persona: `ING_FARMACIA` siempre tasa 0% (Art. 2-A LIVA), `ING_CONSULTAS` exento
+si física / 16% si moral (Art. 15-XIV LIVA), `ING_OTROS` siempre 16%. Selector
+`tipo_persona` en Facturación (auto-bloqueado si el régimen no es ambiguo; editable en
+los 4 regímenes que aplican a ambos — 610/622/624/626 RESICO). En Catálogos, sugerencia
++ botón "Aplicar" — **ninguna escritura automática sin click explícito**. Sin RPC ni RLS
+nueva, reutiliza el UPDATE admin-only que ya existía para `cuentas_contables`.
+
+151/151 tests pasan, tsc limpio, migración ya aplicada y verificada en prod
+(`kyfkvdyxpvpiacyymldc`). Review final de rama: 1 hallazgo Important (query de
+`cfdi_config` sin `clinic_id` en Catálogos, gap del plan no del implementador) corregido
+antes del PR.
+
+**Pendiente:** merge del PR (Pablo revisa) + verificación manual en `/configuracion/facturacion`
+y Catálogos con datos reales antes de dar por cerrado el punto 5 del backlog de fase 9.
+Punto 1 de activos fijos sigue bloqueado — misma pregunta de tasa fiscal de equipo médico,
+sin resolver, no cubierta por esta feature.
 
 **Sesión 2026-07-19 (sonnet) — Fase 9, IVA y preparación fiscal:**
 - Hallazgo: IVA acreditable (compras) y catálogo con código SAT ya estaban listos desde
@@ -29,7 +117,10 @@
   usuario final, y una conexión API hacia `celulas-madre-ventas` (proyecto separado,
   Supabase distinto — validar stack completo por la máxima de cambio de proyecto en
   CLAUDE.md global antes de tocar nada ahí). Sin diseño aún, siguiente sesión: definir
-  alcance con Pablo antes de tocar código.
+  alcance con Pablo antes de tocar código. **Comparativo completo Aspel/Contpaqi
+  (qué reportes/import-export maneja el software contable estándar mexicano vs lo
+  nuestro) guardado en `memoria/proyectos/comparativo-aspel-contpaqi-import-export.md`
+  — no se pierde entre sesiones.**
 
 ---
 

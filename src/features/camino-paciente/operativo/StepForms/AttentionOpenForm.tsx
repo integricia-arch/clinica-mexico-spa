@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import { Loader2, Check } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
 export default function AttentionOpenForm({
-  stepId, stepStatus, existingData, onSaved,
+  stepId, stepKey, stepStatus, existingData, onSaved,
 }: StepFormProps) {
   const [notas, setNotas] = useState(existingData.notas ?? "");
   const [saving, setSaving] = useState(false);
@@ -25,7 +25,7 @@ export default function AttentionOpenForm({
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Paciente llamado a sala"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Paciente llamado a sala"); onSaved?.(); }
   };
 
   return (

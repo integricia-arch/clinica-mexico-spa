@@ -8,14 +8,14 @@ import { toast } from "sonner";
 import { Loader2, Check } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
 import type { StepFormProps } from "./_shared";
-import { isClosed } from "./_shared";
+import { isClosed, toastStepClosed } from "./_shared";
 
 // Validación tolerante: 18 caracteres alfanuméricos en mayúsculas.
 // El formato estricto NOM (AAAA######HoMXXXXX##) se valida en backend si se requiere.
 const CURP_RE = /^[A-Z0-9]{18}$/;
 
 export default function IdentificationForm({
-  stepId, stepStatus, patientId, existingData, onSaved,
+  stepId, stepKey, stepStatus, patientId, existingData, onSaved,
 }: StepFormProps) {
   const [curp, setCurp] = useState(existingData.curp ?? "");
   const [ineFolio, setIneFolio] = useState(existingData.ine_folio ?? "");
@@ -61,7 +61,7 @@ export default function IdentificationForm({
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Identidad y consentimiento registrados"); onSaved?.(); }
+    else { toastStepClosed(stepKey, "Identidad y consentimiento registrados"); onSaved?.(); }
   };
 
   return (

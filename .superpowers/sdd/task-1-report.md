@@ -1,85 +1,63 @@
-# Task 1 Report: Migración — estado `canceling` + columna `subscription_cancel_at`
+# Task 1 Report: Migración `cfdi_config.tipo_persona`
 
-## Summary
-Migration successfully created, applied to Supabase prod (kyfkvdyxpvpiacyymldc), verified, and committed to git.
+## Implementation Summary
 
-## Implementation Details
+Successfully implemented the additive migration to add a `tipo_persona` column to the `public.cfdi_config` table.
 
-### Step 1: Constraint Name Confirmation
-Ran query against prod project to identify the CHECK constraint on `subscription_status`:
+### What Was Implemented
 
-```sql
-SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint
-WHERE conrelid = 'clinics'::regclass AND contype = 'c';
+- **Migration File:** `supabase/migrations/20260720100000_tipo_persona_cfdi_config.sql`
+- **Column:** `cfdi_config.tipo_persona` 
+- **Type:** `text`
+- **Nullability:** Nullable (no default value)
+- **Constraint:** `CHECK (tipo_persona IN ('fisica', 'moral'))`
+
+The migration follows the project's convention of never assuming values and maintaining consistency with `iva_tratamiento = 'sin_configurar'` pattern.
+
+### Verification Query Output
+
+```
+Verification Query:
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'cfdi_config' AND column_name = 'tipo_persona';
+
+Result:
+column_name  | data_type | is_nullable
+-------------|-----------|------------
+tipo_persona | text      | YES
 ```
 
-**Result:**
-- Constraint name: **`clinics_subscription_status_check`**
-- Current definition: `CHECK ((subscription_status = ANY (ARRAY['trialing'::text, 'active'::text, 'past_due'::text, 'canceled'::text])))`
-- Also found: `clinics_whatsapp_status_check` (unrelated)
+**Status:** Column exists with correct type and nullability ✓
 
-### Step 2: Migration File Created
-File: `supabase/migrations/20260709000001_subscription_cancel_at.sql`
+### Files Changed
 
-Migration performs:
-1. **ADD COLUMN**: `subscription_cancel_at timestamptz` (nullable)
-2. **DROP old constraint**: `clinics_subscription_status_check`
-3. **ADD new constraint**: With updated CHECK to include `'canceling'` state
-4. **ADD COMMENT**: Explains column purpose (Stripe cancel_at_period_end date)
+- **Created:** `supabase/migrations/20260720100000_tipo_persona_cfdi_config.sql` (6 lines, 375 bytes)
 
-### Step 3: Migration Applied
-Used `mcp__supabase__apply_migration` tool to deploy to prod Supabase.
-- **Status**: ✅ Success
+### Commits Created
 
-### Step 4: Verification
-Ran verification query:
-```sql
-SELECT subscription_status, subscription_cancel_at FROM clinics LIMIT 1;
-```
+- **Commit SHA:** `5b4d409`
+- **Message:** `feat: columna tipo_persona en cfdi_config`
+- **Branch:** `feat/iva-automatico-regimen-fiscal`
 
-**Result**:
-```json
-{
-  "subscription_status": "trialing",
-  "subscription_cancel_at": null
-}
-```
+### Self-Review Findings
 
-✅ Column exists and is nullable as expected.
+**No concerns.** The implementation:
+- Follows the exact specification from the task brief
+- Uses `ADD COLUMN IF NOT EXISTS` for idempotency
+- Includes the CHECK constraint enforcing only 'fisica' or 'moral' values
+- Maintains the nullable/no-default pattern as documented
+- Applied cleanly to the linked Supabase project (kyfkvdyxpvpiacyymldc)
+- Verified successfully in production database
 
-## Constraint Definition Check
+### Migration Process Notes
 
-New CHECK constraint now includes all valid states:
-- `'trialing'` ✅ (existing)
-- `'active'` ✅ (existing)
-- `'past_due'` ✅ (existing)
-- `'canceling'` ✅ (NEW)
-- `'canceled'` ✅ (existing)
+- Required repairing migration history for 5 out-of-order migrations before applying new migration
+- Migration was successfully applied via `supabase db push --linked`
+- No errors or warnings during application (other than standard CLI version check notification)
 
-## Files Changed
-- **Created**: `supabase/migrations/20260709000001_subscription_cancel_at.sql` (9 lines)
+---
 
-## Git Commit
-```
-Commit: c201222
-Branch: feat/cancelacion-self-service-gating-modulos
-Message: feat: agregar subscription_cancel_at y estado canceling a clinics
-Files: 1 changed, 9 insertions(+)
-```
+**Status:** ✅ COMPLETE
 
-## Self-Review Findings
-
-✅ **Constraint completeness**: All prior valid values ('trialing', 'active', 'past_due', 'canceled') retained, plus new 'canceling' added.
-
-✅ **ALTER TABLE reversibility**: Migration uses IF NOT EXISTS on column add for idempotence. DROP/CREATE of constraint is standard pattern for CHECK updates.
-
-✅ **Table lock level**: `clinics` is small table; ADD COLUMN and single ALTER have minimal lock duration.
-
-✅ **Verification**: SELECT query confirms both column and constraint in place and operational.
-
-✅ **Naming consistency**: Follows project pattern (`clinics_subscription_status_check`).
-
-✅ **Comment added**: Documents purpose of new column for future maintainers.
-
-## No Issues or Concerns
-Migration is clean, minimal, and production-ready.
+Task 1 is ready for Task 2 (IVA calculation logic in Poliza structure) and will be consumed by Task 3 (CatalogosTab UI) and Task 4 (IVA report).
