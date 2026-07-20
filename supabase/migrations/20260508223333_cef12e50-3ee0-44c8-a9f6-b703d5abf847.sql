@@ -1,6 +1,9 @@
 
 -- Enums
-CREATE TYPE public.movimiento_tipo AS ENUM ('entrada', 'salida', 'ajuste');
+DO $$ BEGIN
+  CREATE TYPE public.movimiento_tipo AS ENUM ('entrada', 'salida', 'ajuste');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Medicamentos
 CREATE TABLE public.medicamentos (

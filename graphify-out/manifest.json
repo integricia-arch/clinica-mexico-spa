@@ -585,19 +585,19 @@
     "semantic_hash": "b1da469ed776d3b614cc7774a0bb02f1"
   },
   "src/features/camino-paciente/operativo/StepForms/ArrivalForm.tsx": {
-    "mtime": 1779975703.6128194,
-    "ast_hash": "0434d75103ebe86b1bd2da64422ed393",
-    "semantic_hash": "0434d75103ebe86b1bd2da64422ed393"
+    "mtime": 1784514641.1927521,
+    "ast_hash": "1fb3e8084ca19dbe7aca1285872fb94c",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/AssignmentForm.tsx": {
-    "mtime": 1783355146.356928,
-    "ast_hash": "72bea4ff124f88b8bfbac271ae663637",
-    "semantic_hash": "72bea4ff124f88b8bfbac271ae663637"
+    "mtime": 1784514690.1623077,
+    "ast_hash": "85191155a6c53ba4d9999f09b4fbd4cb",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/AttentionOpenForm.tsx": {
-    "mtime": 1779975703.6164155,
-    "ast_hash": "10af32c84a9b82eeb3108d99e025aab1",
-    "semantic_hash": "10af32c84a9b82eeb3108d99e025aab1"
+    "mtime": 1784514709.702481,
+    "ast_hash": "e9be8e5da07212d85b8c2aefaaf682d8",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/BillingForm.tsx": {
     "mtime": 1784514077.2098393,
@@ -605,54 +605,54 @@
     "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/ConsultationForm.tsx": {
-    "mtime": 1781532788.713864,
-    "ast_hash": "2311469c0f956331bb63b05744ae5a00",
-    "semantic_hash": "2311469c0f956331bb63b05744ae5a00"
+    "mtime": 1784514758.5354874,
+    "ast_hash": "6c229e3c60fb7685fea7646559b6b66b",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/ConsultationOpenForm.tsx": {
-    "mtime": 1779975703.6209836,
-    "ast_hash": "835c876ac9cbeb4e5cecfe98b3553f42",
-    "semantic_hash": "835c876ac9cbeb4e5cecfe98b3553f42"
+    "mtime": 1784514727.3147156,
+    "ast_hash": "3d3bff62d989bd82ca1ac48030876bd8",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/DischargeForm.tsx": {
-    "mtime": 1784436373.5685663,
-    "ast_hash": "33aeb9c527f01ba426499e9fc6753b6a",
+    "mtime": 1784514834.1616595,
+    "ast_hash": "abb4c70df33d7774054c402620439506",
     "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/FollowupForm.tsx": {
-    "mtime": 1782156412.0218475,
-    "ast_hash": "8491ce6031d42876b726bd32a1e38023",
-    "semantic_hash": "8491ce6031d42876b726bd32a1e38023"
+    "mtime": 1784514826.5193675,
+    "ast_hash": "3a24bdfce539709a63b2892af07a5e93",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/IdentificationForm.tsx": {
-    "mtime": 1783355146.3602376,
-    "ast_hash": "100d0fad32b05c4ac521b32822a9da15",
-    "semantic_hash": "100d0fad32b05c4ac521b32822a9da15"
+    "mtime": 1784514792.0838609,
+    "ast_hash": "5e1855088702b485ee74cef120ef5a4b",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/PharmacyForm.tsx": {
-    "mtime": 1781532073.7721374,
-    "ast_hash": "45fe77d10a132af595657a1b955c8db6",
-    "semantic_hash": "45fe77d10a132af595657a1b955c8db6"
+    "mtime": 1784514820.8580444,
+    "ast_hash": "c3b030f42fbb914ffa94cf58ab190f08",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/PrescriptionStepForm.tsx": {
-    "mtime": 1783355146.3626244,
-    "ast_hash": "35db9dfa27809a18434ab4354250289d",
-    "semantic_hash": "35db9dfa27809a18434ab4354250289d"
+    "mtime": 1784514813.3823097,
+    "ast_hash": "6aa16e139ff23072c1897b3bef6dfbf2",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/RecordForm.tsx": {
-    "mtime": 1783355146.365038,
-    "ast_hash": "2027950b686c62dabcf88aa072b5a813",
-    "semantic_hash": "2027950b686c62dabcf88aa072b5a813"
+    "mtime": 1784514798.4316044,
+    "ast_hash": "cdc24edba50f50fc23e6413bb96cad5b",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/TriageForm.tsx": {
-    "mtime": 1783355146.3674715,
-    "ast_hash": "1253cf54b7ae3adf8c97821e405a12f9",
-    "semantic_hash": "1253cf54b7ae3adf8c97821e405a12f9"
+    "mtime": 1784514807.3288503,
+    "ast_hash": "71cae20b6ee230333fcb136ad2a0fcd1",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/_shared.ts": {
-    "mtime": 1779975703.633424,
-    "ast_hash": "1034f113e9c32d34be29a6ef5154e73a",
-    "semantic_hash": "1034f113e9c32d34be29a6ef5154e73a"
+    "mtime": 1784514602.0934925,
+    "ast_hash": "f7dc7e7badaa78de73c255b7c3066012",
+    "semantic_hash": ""
   },
   "src/features/camino-paciente/operativo/StepForms/registry.ts": {
     "mtime": 1779975703.6345234,
@@ -1470,9 +1470,9 @@
     "semantic_hash": ""
   },
   "src/pages/CaminoPaciente.tsx": {
-    "mtime": 1781532141.5575328,
-    "ast_hash": "08e29b8f4658d0707b45346fa2824d53",
-    "semantic_hash": "08e29b8f4658d0707b45346fa2824d53"
+    "mtime": 1784514586.0994437,
+    "ast_hash": "0abfc8f558151466621ea8a5c7dc4b9a",
+    "semantic_hash": ""
   },
   "src/pages/Citas.tsx": {
     "mtime": 1783355146.5114553,
