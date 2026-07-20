@@ -2225,9 +2225,9 @@
     "semantic_hash": "ba7711e2a2590991b8628c301a928a20"
   },
   "supabase/migrations/20260508223333_cef12e50-3ee0-44c8-a9f6-b703d5abf847.sql": {
-    "mtime": 1779032575.9987655,
-    "ast_hash": "5e64e1f457265c2b3bb77f1a862a8d3f",
-    "semantic_hash": "5e64e1f457265c2b3bb77f1a862a8d3f"
+    "mtime": 1784554593.4975803,
+    "ast_hash": "caf1e8ca3445e91c6735715b15ed95ac",
+    "semantic_hash": ""
   },
   "supabase/migrations/20260508223643_9caca42f-9c6c-49cf-8f59-3d1fc7215f88.sql": {
     "mtime": 1779032575.9987655,

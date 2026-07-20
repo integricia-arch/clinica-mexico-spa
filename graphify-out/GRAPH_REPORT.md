@@ -1,7 +1,7 @@
-# Graph Report - clinica-mexico-spa  (2026-07-19)
+# Graph Report - clinica-mexico-spa  (2026-07-20)
 
 ## Corpus Check
-- 936 files · ~786,403 words
+- 936 files · ~786,413 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b92469bf`
+- Built from commit: `0eb35fa5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -3198,7 +3198,7 @@ Nodes (3): Completado (Jun 12, 2026), DB local SQL Server — schema sync, Git /
   public/placeholder.svg · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **4413 isolated node(s):** `arrivalSchema`, `ArrivalData`, `ArrivalFormProps`, `DoctorRow`, `RoomRow` (+4408 more)
+- **4413 isolated node(s):** `public.medicamentos`, `arrivalSchema`, `ArrivalData`, `ArrivalFormProps`, `DoctorRow` (+4408 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **876 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -3214,8 +3214,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `dependencies` connect `package` to `package`, `package`, `package`, `package`, `package`, `package`, `package`, `permissions.ts`, `TurnoGuard.tsx`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `src/integrations/lovable`, `src/lib/activeClinic`, `HelpChatWidget.tsx`, `HelpChatWidget.tsx`, `package`?**
   _High betweenness centrality (0.029) - this node is a cross-community bridge._
 - **Why does `qrcode` connect `HelpChatWidget.tsx` to `package`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **What connects `arrivalSchema`, `ArrivalData`, `ArrivalFormProps` to the rest of the system?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **What connects `public.medicamentos`, `arrivalSchema`, `ArrivalData` to the rest of the system?**
   _4413 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `src/pages/ajustes` be split into smaller, more focused modules?**
   _Cohesion score 0.05472636815920398 - nodes in this community are weakly interconnected._
