@@ -1,6 +1,6 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 5). Árbol de cuentas + fix de reset de contraseña con MFA, commiteado/pusheado/desplegado. Pendiente real sin cambios: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 5). Árbol de cuentas + fix de reset de contraseña con MFA, commiteado/pusheado/desplegado, **verificado en vivo por Pablo en localhost** (login propio, tab Catálogos → "Ver árbol de cuentas" → expand/collapse y saldos por rama funcionando, incluye `115 Inventario - Almacén` como cuenta de mayor sumando `115.01`/`115.02`). Pendiente real sin cambios: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
 
 ## Sesión 2026-07-20 (parte 5) — árbol de cuentas contables + fix reset de contraseña bloqueado por MFA
 
