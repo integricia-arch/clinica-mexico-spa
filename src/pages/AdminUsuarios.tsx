@@ -366,6 +366,11 @@ export default function AdminUsuarios() {
     });
   }, [users, unlinkedDoctorRows, unlinkedNurseRows, doctorByUserId, nurseByUserId, query, roleFilter]);
 
+  const pendingAccessCount = useMemo(
+    () => users.filter((u) => u.roles.length === 0).length,
+    [users],
+  );
+
   const roleCounts = useMemo(() => {
     const c: Record<string, number> = {
       all: users.length + unlinkedDoctorRows.length + unlinkedNurseRows.length,
@@ -959,6 +964,11 @@ export default function AdminUsuarios() {
         <TabsList>
           <TabsTrigger value="usuarios" className="gap-1.5">
             <UsersIcon className="h-4 w-4" /> Cuentas de usuario ({users.length})
+            {pendingAccessCount > 0 && (
+              <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                {pendingAccessCount}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="medicos" className="gap-1.5">
             <Stethoscope className="h-4 w-4" /> Médicos del registro ({doctors.length})
@@ -980,6 +990,21 @@ export default function AdminUsuarios() {
 
         {/* TAB: Usuarios */}
         <TabsContent value="usuarios" className="space-y-4 mt-4">
+          {pendingAccessCount > 0 && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>
+                  {pendingAccessCount} cuenta{pendingAccessCount === 1 ? "" : "s"} confirmada
+                  {pendingAccessCount === 1 ? "" : "s"} sin ningún rol asignado — entraron a la app
+                  pero no tienen acceso a nada hasta que se les asigne un rol.
+                </span>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setRoleFilter("patient")}>
+                Ver cuentas sin rol
+              </Button>
+            </div>
+          )}
           <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

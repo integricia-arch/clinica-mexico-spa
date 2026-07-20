@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useMfaEnforcement } from "@/hooks/useMfaEnforcement";
+import { useMfaEnforcement, registerTrustedDevice } from "@/hooks/useMfaEnforcement";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -56,6 +56,9 @@ export default function MfaEnrollmentGate({ children }: { children: React.ReactN
     if (!fId || !cId) return;
     const { error } = await supabase.auth.mfa.verify({ factorId: fId, challengeId: cId, code });
     if (error) { setErrorMsg(error.message); return; }
+    // Marca este dispositivo como confiable — no se volverá a pedir TOTP aquí,
+    // solo en un dispositivo nuevo/distinto.
+    await registerTrustedDevice();
     await refresh();
   }
 

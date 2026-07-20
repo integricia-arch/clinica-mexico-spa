@@ -120,8 +120,8 @@
     "semantic_hash": "6989880b1e604af3ed42859759268818"
   },
   "src/components/MfaEnrollmentGate.tsx": {
-    "mtime": 1784221175.6556742,
-    "ast_hash": "ffdb5163ae490ece570e8b5526e44d0e",
+    "mtime": 1784560494.914104,
+    "ast_hash": "8f207089e995188a240f45ca22290a70",
     "semantic_hash": ""
   },
   "src/components/ModuloNoContratadoScreen.tsx": {
@@ -1220,9 +1220,9 @@
     "semantic_hash": "d42d293f84b2c0cf4a5ca9f25d640e6b"
   },
   "src/hooks/useFacturasProveedor.ts": {
-    "mtime": 1783355146.463361,
-    "ast_hash": "082ca48f4fa21aa8b1f12d51bf09dd33",
-    "semantic_hash": "082ca48f4fa21aa8b1f12d51bf09dd33"
+    "mtime": 1784561210.4752774,
+    "ast_hash": "9c6bb022b94f471fc4814b9599fa6900",
+    "semantic_hash": ""
   },
   "src/hooks/useFieldErrors.ts": {
     "mtime": 1781476206.2514029,
@@ -1260,9 +1260,9 @@
     "semantic_hash": "d87d1bf4d3adc576ffbe577511ea816a"
   },
   "src/hooks/useMfaEnforcement.ts": {
-    "mtime": 1783797043.104293,
-    "ast_hash": "04972bdd01cd69083132678d49aa8097",
-    "semantic_hash": "04972bdd01cd69083132678d49aa8097"
+    "mtime": 1784560483.2104602,
+    "ast_hash": "432bb88cd3d55064d3940b0d62260f1e",
+    "semantic_hash": ""
   },
   "src/hooks/useModulosActivos.ts": {
     "mtime": 1783717969.4907942,
@@ -1295,9 +1295,9 @@
     "semantic_hash": "30e2baaa4e74bf4875f4e4c38c50075b"
   },
   "src/hooks/useRecepcionesMercancia.ts": {
-    "mtime": 1783355146.4685645,
-    "ast_hash": "2411ca12124abea19c22dc01e87fede9",
-    "semantic_hash": "2411ca12124abea19c22dc01e87fede9"
+    "mtime": 1784561224.1278346,
+    "ast_hash": "d44fd16ad5d8ec7a10c6c470ef269197",
+    "semantic_hash": ""
   },
   "src/hooks/useServicios.ts": {
     "mtime": 1783355146.4705632,
@@ -1330,8 +1330,8 @@
     "semantic_hash": "0fb1c2f93bbd98c27173887739ba4220"
   },
   "src/integrations/supabase/types.ts": {
-    "mtime": 1784219216.2676263,
-    "ast_hash": "cb8347bb46c8822c6072a8a7ae19a437",
+    "mtime": 1784560554.377517,
+    "ast_hash": "1ebf86afd9745bf382af16a4260cace5",
     "semantic_hash": ""
   },
   "src/lib/activeClinic.ts": {
@@ -1485,8 +1485,8 @@
     "semantic_hash": "1510e19ffb08a7b224048e491f001e1d"
   },
   "src/pages/Configuracion.tsx": {
-    "mtime": 1784436373.5771346,
-    "ast_hash": "81f2ebcb8a90b649de70c437dc022b21",
+    "mtime": 1784560905.0678198,
+    "ast_hash": "e5bc41fecade5614dc71c9cbd8fb407c",
     "semantic_hash": ""
   },
   "src/pages/Dashboard.tsx": {
@@ -2225,8 +2225,8 @@
     "semantic_hash": "ba7711e2a2590991b8628c301a928a20"
   },
   "supabase/migrations/20260508223333_cef12e50-3ee0-44c8-a9f6-b703d5abf847.sql": {
-    "mtime": 1784554593.4975803,
-    "ast_hash": "caf1e8ca3445e91c6735715b15ed95ac",
+    "mtime": 1784556827.4569724,
+    "ast_hash": "d3ea704e334f413b50180b21182797f4",
     "semantic_hash": ""
   },
   "supabase/migrations/20260508223643_9caca42f-9c6c-49cf-8f59-3d1fc7215f88.sql": {
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784514301.5501885,
-    "ast_hash": "c6ca5bf3dddd6f6e7168711b4033cb3c",
+    "mtime": 1784561413.6177974,
+    "ast_hash": "7599ceadb622cd30f0ffee825804d97c",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4782,6 +4782,31 @@
   "supabase/migrations/20260720020000_doctors_modo_cobro.sql": {
     "mtime": 1784514205.2779548,
     "ast_hash": "41e5be68782b0453211e181885054c01",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720110000_mfa_new_users_trusted_devices.sql": {
+    "mtime": 1784560442.8896127,
+    "ast_hash": "9f11b72970e8803efd07ba03d9a784df",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720110100_mfa_trusted_devices_revoke_direct_grants.sql": {
+    "mtime": 1784560593.645264,
+    "ast_hash": "c69b41c3977ea729482a31b7bea4312a",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720110200_profiles_protect_mfa_flag.sql": {
+    "mtime": 1784560622.0014958,
+    "ast_hash": "a259df166d06c1cf26d083751449a5ea",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720110300_mfa_functions_revoke_anon.sql": {
+    "mtime": 1784560674.3247302,
+    "ast_hash": "4da863dc8c7c2da52c5195405457a970",
+    "semantic_hash": ""
+  },
+  "src/components/TrustedDevicesSection.tsx": {
+    "mtime": 1784560896.2918286,
+    "ast_hash": "e0c0470bfb4158a2b97d2121603c7aa5",
     "semantic_hash": ""
   }
 }

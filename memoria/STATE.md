@@ -1,6 +1,39 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: commitear todo lo de esta sesión (deploys ya en prod pero SIN commit — ver CLAUDE.md "Edge function changes must be deployed AND committed"). Terminar de completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último) y confirmar que la póliza real (no la de prueba manual con rollback) también se generó bien cuando se complete desde la UI real. PR #19 con CI atorado en "queued" — reintentar merge cuando termine. Pendiente aplicar el hallazgo de UX de los 10 StepForms (ver abajo). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20. Todo commiteado, pusheado y desplegado. PR #19 mergeado a main (admin override — ver nota de deuda técnica abajo). Pendiente real: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último) para terminar de validar el ciclo e2e completo. Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+
+### Deuda técnica nueva — migraciones viejas duplicadas rompen CI en cascada
+`Apply migrations to ephemeral DB` del repo falló 3 veces seguidas en PR #19, cada vez por un objeto distinto duplicado sin guard (`trg_expedientes_updated_at`, `movimiento_tipo` enum, tablas `medicamentos`/`lotes_medicamento`/`movimientos_inventario` completas) entre `20260508000002_farmacia.sql` y `20260508223333_cef12e50...sql` (mismo día, ~2h14min de diferencia — probable migración duplicada de Lovable). Los 3 se corrigieron con `IF NOT EXISTS`/`DROP...IF EXISTS`/`DO $$ EXCEPTION`, pero **no se garantiza que sea la última duplicación en ese archivo o en otros migrados ese mismo día** — si un futuro PR vuelve a fallar en este check, revisar `20260508223333_cef12e50-3ee0-44c8-a9f6-b703d5abf847.sql` contra las demás migraciones `20260508*` completas, no solo el error puntual. PR #19 se mergeó con `gh pr merge --admin` saltando este check (typecheck y deploys reales sí pasaron) porque el código del PR estaba correcto — la falla era 100% deuda vieja no relacionada.
+
+### Costo de sesión — alerta
+Esta sesión (2026-07-20, browser e2e + fixes) costó **$789+** — muy por encima de lo normal, la mayoría en iteraciones de CI/migraciones y browser automation con muchos tool calls repetidos. Próxima sesión: si se repite un patrón de "arreglo un duplicado, aparece otro" en el mismo archivo de migración, leer el archivo completo una sola vez y arreglar todo de un jalón (como se hizo al final) en vez de iterar check-por-check.
+
+### Texto para pegar al inicio de la siguiente sesión
+
+```
+Sigo con clinica-mexico-spa. Lee memoria/STATE.md primero (sesión 2026-07-20).
+
+Pendiente único: completar el hito "Salida/alta" del paciente PRUEBA-E2E
+Ciclo Completo (journey_instance_id f5bb9206-f134-4425-93a5-4f9961691123,
+appointment_id 58fae536-929b-4a59-9127-2ddc858e2b8d) — está en 11/13 hitos,
+solo falta ese último paso para terminar de validar el ciclo e2e completo
+reserva→salida.
+
+Contexto ya resuelto esa sesión (NO re-explorar):
+- 3 bugs críticos de producción corregidos y desplegados: status de cita no
+  avanzaba al confirmar, RLS de journey_instances bloqueaba iniciar camino
+  para todo usuario, cobro en Camino del Paciente no generaba póliza.
+- Nuevo: doctors.modo_cobro (clinica/directo) con RPC camino_registrar_cobro().
+- Fix UX: toast genérico en 10 StepForms, ahora dice a qué hito avanza
+  (helper toastStepClosed en _shared.ts).
+- PR #19 (IVA automático) YA MERGEADO a main (admin override — el check de
+  CI de migraciones seguía roto por deuda vieja no relacionada, ya
+  documentada en STATE.md, typecheck y deploys reales sí pasaron).
+
+Ojo con el costo: sesión anterior llegó a $789 por iteración lenta en
+CI/migraciones y browser automation. Si algo similar se repite, leer todo
+de un jalón en vez de iterar check-por-check.
+```
 
 ## Sesión 2026-07-20 (parte 2) — prueba e2e reserva→salida vía browser real + 3 bugs de producción encontrados y corregidos
 
@@ -4533,12 +4566,16 @@ Migration `20260701130000_cxp_bi_proveedores.sql` (PENDIENTE: `supabase db push 
 - [ ] **Oficial protección de datos** — designar (LFPDPPP Art. 29)
 
 ### Features pendientes (código — para siguiente sesión)
-- [ ] **BI fase 2** — top 10 productos farmacia por ingresos, heatmap citas por hora/día, tasa retención pacientes (% regresan < 90d)
-- [ ] **Vista paciente enriquecida** — historial completo (citas, recetas, pagos, caminos) en PacientesLista
-- [ ] **DischargeForm mejorado** — diagnóstico final, documentos entregados en alta
-- [ ] **Bot GCal** — `VITE_GOOGLE_CLIENT_ID` pendiente en `.env` local (botón "Conectar" en AdminUsuarios)
-- [ ] **notify-cxp/notify-new-user** → `notification_rules` (patrón ya existe, migración pendiente — LOW priority)
+- [x] **BI fase 2** — top10Farmacia + heatmap hora/día + tasaRetencion, todo en `useBI.ts`/`BI.tsx`. Label ya corregido a "Pac. frecuentes ≥2 citas/período" (es intra-período por diseño, no bug). Confirmado hecho 2026-07-20 — nada pendiente.
+- [x] **Vista paciente enriquecida** — hecho Jun 28 (`PacienteHistorialDrawer`).
+- [x] **DischargeForm mejorado** — hecho, ya tiene diagnóstico final + documentos entregados + próxima cita + restricciones.
+- [ ] **Bot GCal** — `VITE_GOOGLE_CLIENT_ID` pendiente en `.env` local (botón "Conectar" en AdminUsuarios) — sigue pendiente, requiere acción externa.
+- [x] **notify-cxp/notify-new-user** → `notification_rules` — ya migrado (`20260622000000_notification_rules.sql`), ambas edge functions ya lo usan.
 - [x] **Wizard apertura turno** — fix: acta arqueo ahora usa `full_name ?? email` para cajero (97a5a8b, 2026-06-28)
+- [x] **Form proveedores enriquecido (CxP BI)** — ya completo en `inventario.tsx` (clasificación ABC, límite crédito, días crédito, descuento/días pronto pago, CLABE, banco).
+- [x] **`fecha_limite_pronto_pago` nunca se poblaba** — bug real encontrado y corregido 2026-07-20 (`63c69f4`): se calcula en los 2 puntos de insert de `facturas_proveedor` (manual + accrual provisional) como `fecha_factura + proveedores.dias_pronto_pago`. Backfill aplicado a facturas existentes.
+
+> Nota 2026-07-20: esta lista llevaba 3 semanas sin auditar contra el código real — la mayoría de los ítems ya estaban resueltos en sesiones posteriores sin marcarse aquí. Revisar el código antes de asumir "pendiente" cuando STATE.md tiene más de unos días.
 
 ---
 
@@ -4563,3 +4600,85 @@ Migration `20260701130000_cxp_bi_proveedores.sql` (PENDIENTE: `supabase db push 
 - `supabase/migrations/_tmp_fix_turno_close_fallback.sql` — turno_close fallback pharmacy shift
 - `supabase/migrations/_tmp_fix_pharmacy_iva.sql` — IVA en pharmacy_register_sale
 - `supabase/migrations/_tmp_fix_pharmacy_shift_lifecycle.sql` — ciclo completo open/close shifts
+
+---
+
+## Completado (Jul 20, 2026 — cierre ciclo E2E + MFA nuevos usuarios + auditoría pendientes)
+
+### Ciclo E2E completo reserva→salida ✅
+Hito "Salida/alta" (`discharge`) del paciente PRUEBA-E2E cerrado. `journey_instance_id`
+`f5bb9206-f134-4425-93a5-4f9961691123`: 12/13 hitos, `current_step_key: followup`.
+Cerrado directo en BD (mismo efecto que `saveJourneyStepData`+`closeJourneyStep`+
+`update_journey_progress` del cliente) porque la cuenta QA quedó bloqueada por el
+gate de MFA nuevo (ver abajo) antes de arreglarlo.
+
+### MFA — solo usuarios NUEVOS + dispositivos de confianza ✅ (`c7a4e53`, `7660c40`)
+Problema encontrado: `useMfaEnforcement` exigía TOTP a **todos** los admins en cada
+sesión nueva (`hasRole("admin")` sin distinguir antiguos/nuevos) — rompió el login
+de la cuenta QA y bloqueaba al admin principal.
+
+Fix (`20260720110000..110300_*.sql` + código):
+- `profiles.mfa_enrollment_required` (default false) — trigger en `user_roles` marca
+  solo **altas nuevas** de rol admin. Admins ya existentes quedan grandfathered.
+- `mfa_trusted_devices` — tras un TOTP verify exitoso se registra el dispositivo
+  (token random en localStorage, hash SHA-256 en BD, ventana 60 días). Sesiones
+  siguientes desde el mismo dispositivo saltan el challenge.
+- Trigger `profiles_protect_mfa_flag` — bloquea que el propio usuario apague su
+  flag vía `update` directo a `profiles` (la policy `own_update` lo permitía).
+- `anon` tenía EXECUTE en las 6 funciones nuevas pese a `REVOKE...FROM PUBLIC`
+  (Supabase aplica default privileges por rol en cada `CREATE` — hallazgo de
+  `get_advisors`, revocado explícito por rol).
+- UI self-service en `/configuracion`: `TrustedDevicesSection.tsx` lista/revoca
+  dispositivos propios.
+- Cuenta QA (`qa.pruebas@...`) y admin principal confirmados con
+  `mfa_enrollment_required = false` — flujo E2E documentado restaurado.
+
+### Auditoría de pendientes viejos (Jun 28/Jul 1) — la mayoría ya estaban resueltos
+- [x] `fecha_limite_pronto_pago` nunca se poblaba al crear factura — bug real,
+  corregido (`63c69f4`): calculado en los 2 puntos de insert de `facturas_proveedor`
+  + backfill de facturas existentes.
+- Form proveedores CxP BI, BI fase 2 (top10 farmacia/heatmap/retención),
+  `notify-cxp`/`notify-new-user`→`notification_rules`, vista paciente enriquecida,
+  DischargeForm mejorado: **todos ya estaban hechos**, STATE.md solo no se había
+  actualizado. Ver sección "Features pendientes" arriba, ahora marcada.
+- Sigue pendiente de verdad: Twilio (NO autorizado por Pablo — no tocar sin
+  confirmación explícita), texto legal Aviso Privacidad, DPA Supabase,
+  oficial protección de datos, `VITE_GOOGLE_CLIENT_ID` — todo acción externa
+  (dashboard/abogado), no tocable desde código.
+
+### Barrido de deuda técnica/seguridad — limpio ✅
+A petición de Pablo, barrido dirigido por los 5 patrones de riesgo ya documentados
+en este CLAUDE.md (no exhaustivo — grep + queries dirigidas, no revisión línea por
+línea de cada edge function):
+- `(async(){})()` fire-and-forget en edge functions: 0 encontrados.
+- `catch {}` vacío en src/supabase functions: 0 encontrados.
+- `console.log` fuera de lugar: solo en `src/instrument.ts` (init Sentry, legítimo).
+- Funciones `SECURITY DEFINER` sin `SET search_path`: 0.
+- Policies RLS con `USING(true)`: todas las `cmd=ALL` scopeadas a `service_role`
+  únicamente (rol que bypassea RLS de por sí, sin riesgo real); las `SELECT`-only
+  son catálogos/referencia pública intencional (doctors, rooms, servicios,
+  journey_templates, faq_items, manual_paginas, clinics, etc.) — no son huecos.
+
+**No se auditó** (quedó fuera por costo, sesión llegó a ~$97): `as any`/`as never`
+uno por uno, revisión completa línea por línea de edge functions individuales.
+Si se retoma "deuda técnica" en otra sesión, empezar por ahí — es lo único de
+los 5+1 frentes típicos que no se tocó todavía.
+
+---
+
+## ⏸ Pendientes para siguiente sesión (cierre 2026-07-20, sesión ~$97)
+
+### Código (opcional, sin urgencia — nada roto detectado)
+- [ ] Auditoría `as any`/`as never` en `src/` — no se hizo, alto volumen, revisar
+  con presupuesto dedicado si se quiere profundizar deuda técnica.
+- [ ] Revisión línea por línea de edge functions individuales (más allá del grep
+  de patrones ya limpio).
+
+### Externo (requiere Pablo/abogado, no tocar desde código sin autorización)
+- [ ] Twilio — **Pablo NO ha autorizado**, no configurar aunque aparezca en listas
+  viejas de pendientes.
+- [ ] Texto real Aviso de Privacidad (abogado, hoy es placeholder LFPDPPP)
+- [ ] Términos de Servicio con cláusula de arbitraje
+- [ ] DPA con Supabase Inc.
+- [ ] Designar oficial de protección de datos (LFPDPPP Art. 29)
+- [ ] `VITE_GOOGLE_CLIENT_ID` en `.env` local (bot GCal, botón "Conectar" en AdminUsuarios)
