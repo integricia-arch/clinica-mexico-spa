@@ -1,6 +1,48 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 4). Todo commiteado, mergeado a main, desplegado y GitHub Actions con secrets completos (deploy automático confirmado funcionando). Pendiente real: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último) para terminar de validar el ciclo e2e completo. Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar). Necesita sesión con browser + cuenta admin logueada (esta sesión solo tenía `qa.pruebas` sin permisos en el tab de Chrome).
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 5). Árbol de cuentas + fix de reset de contraseña con MFA, commiteado/pusheado/desplegado. Pendiente real sin cambios: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+
+## Sesión 2026-07-20 (parte 5) — árbol de cuentas contables + fix reset de contraseña bloqueado por MFA
+
+**Feature nueva:** `ArbolCuentasDialog.tsx` — vista jerárquica expandible/colapsable del catálogo
+de cuentas (`cuentas_contables.cuenta_padre_id`/`nivel`, ya existía desde fase 6A, sin UI hasta
+ahora). Saldo por rama = acumulación recursiva de hijas vía `balanza_comprobacion` (rango de
+fechas editable). Marca cuentas con hijas como "cuenta de mayor". Botón "Ver árbol de cuentas"
+en tab Catálogos, visible a cualquier rol (solo lectura). Requisito pendiente registrado (NO
+implementado): alta de cuenta al vuelo desde `NuevaPolizaDialog` con validación de jerarquía —
+ver `memoria/proyectos/modulo-contable-memoria-tecnica.md` sección "Pendiente — alta de cuenta
+al vuelo".
+
+**Bug real encontrado y corregido — reset de contraseña roto para cuentas con MFA.** Pablo no
+recordaba su contraseña, intentó reset y el formulario fallaba con mensaje genérico ("Ocurrió
+un error. Por favor intenta de nuevo.") sin decir por qué. Causa raíz (encontrada iterando el
+mensaje de error hasta que mostró el código crudo): `insufficient_aal` — el link de recovery de
+Supabase da sesión AAL1; `auth.updateUser()` rechaza cambios de contraseña sin AAL2 cuando la
+cuenta tiene MFA activo (`profiles.mfa_enrollment_required`). El flujo de `ResetPassword.tsx`
+nunca contemplaba MFA — no tenía forma de subir a AAL2.
+
+Fix en 3 commits:
+1. `src/lib/errors.ts` — agregó mapeo de códigos de Supabase Auth (`same_password`,
+   `weak_password`, `session_not_found`, etc.) que antes caían todos al fallback genérico.
+2. `ResetPassword.tsx` — toast de error ahora muestra mensaje+código crudo de Supabase cuando
+   no hay mapeo conocido (en vez de esconder el detalle) — así se encontró `insufficient_aal`.
+3. `ResetPassword.tsx` — nuevo estado `mfa-challenge`: si `getAuthenticatorAssuranceLevel()`
+   dice que hace falta subir a AAL2, arma un challenge TOTP (reutiliza el patrón de
+   `MfaEnrollmentGate.tsx`) y pide el código de 6 dígitos ANTES de mostrar el formulario de
+   nueva contraseña. Sin esto, cualquier cuenta con MFA quedaba sin forma de recuperar
+   contraseña vía el flujo normal.
+
+Los 3 commits deployados uno por uno con `npm run build && wrangler deploy` (build:all solo en
+el primero, manual-site no cambió en los siguientes). Pusheados a `main` al cierre de sesión
+(`ba3b47d`).
+
+**Costo de sesión: ~$80** — la mayor parte en intentos fallidos de probar visualmente en
+browser (Chrome MCP): navegar a localhost pierde la sesión de auth (localStorage por origen,
+no se comparte con prod), y el flujo de Google OAuth redirige a prod incluso desde localhost
+(`redirect_to` fijo). **Aprendizaje: para verificar cambios de UI que requieren sesión
+autenticada, no hay forma barata de probarlos en localhost sin credenciales — mejor ir directo
+a deploy a prod (barato, ~10s con wrangler) y que Pablo confirme visualmente ahí, en vez de
+iterar con browser automation intentando loguear en local.**
 
 ## Sesión 2026-07-20 (parte 4) — fix permanente pantalla en blanco: GitHub Actions secrets
 
