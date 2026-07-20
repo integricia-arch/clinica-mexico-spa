@@ -1,6 +1,27 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20. Todo commiteado, pusheado y desplegado. PR #19 mergeado a main (admin override — ver nota de deuda técnica abajo). Pendiente real: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último) para terminar de validar el ciclo e2e completo. Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 3, auditoría de acceso). Todo commiteado, mergeado a main y desplegado (integrika.mx verificado 200 OK). Pendiente real: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último) para terminar de validar el ciclo e2e completo. Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar). Necesita sesión con browser + cuenta admin logueada (esta sesión solo tenía `qa.pruebas` sin permisos en el tab de Chrome).
+
+## Sesión 2026-07-20 (parte 3) — auditoría de acceso/privilegios/seguridad completa
+
+Arrancó investigando por qué `qa.pruebas@clinica-mexico-spa.test` veía "Cuenta pendiente de activación" al entrar — **no era bug**, la cuenta nunca tuvo rol asignado (comportamiento correcto, deny-by-default). Pablo pidió aprovechar y auditar a fondo acceso/privilegios/seguridad de toda la plataforma.
+
+**Hallazgo de proceso real:** 2 cuentas reales (`joseshugy@gmail.com`, `cochelavallarta@gmail.com`) se registraron con Google semanas atrás y quedaron huérfanas sin rol — la notificación (`notify_new_user_signup`) sí se dispara pero nadie la vio, sin panel que la resalte.
+
+**Auditoría `get_advisors(security)` — deuda preexistente, no de código nuevo:**
+- 60 funciones `SECURITY DEFINER` ejecutables por `anon` (dinero/caja/inventario/reportes/RLS-predicados/FAQ). **Bug propio encontrado en el fix**: `REVOKE EXECUTE ... FROM PUBLIC` no bastaba — Supabase otorga EXECUTE explícito a `anon`/`authenticated`/`service_role` aparte del pseudo-rol PUBLIC (mismo patrón ya documentado tras el incidente de `reporte_iva`). Corregido con `REVOKE ... FROM anon` explícito. Verificado con `aclexplode(proacl)`: 0 funciones SECURITY DEFINER ejecutables por anon al cierre.
+- 2 policies `USING/WITH CHECK(true)`: `arco_requests_public_insert` (dejaba escribir `status`/`notas_internas`/`respuesta`/`folio`/`resolved_at` desde INSERT anónimo — cerrado con defaults forzados) y `pos_error_logs` "Insert propio" (cualquier authenticated insertaba a nombre de cualquier user_id — cerrado con scope a `auth.uid()`).
+- 15 funciones trigger sin `search_path` fijo — cerrado.
+- 11 tablas RLS-sin-policy: revisadas, todas backend-only (Edge Functions/RPCs), deny-all correcto por diseño, sin acción.
+- Pendiente manual (no vía SQL): activar "Leaked Password Protection" en Supabase Dashboard → Auth → Settings. Mover extensión `pg_net` fuera de `public` (bajo, riesgo/beneficio no justifica ahora).
+
+**8 migraciones aplicadas y verificadas en prod** (`kyfkvdyxpvpiacyymldc`): `20260720120000` a `20260720120700`.
+
+**UI:** `AdminUsuarios.tsx` — badge ámbar en tab "Cuentas de usuario" + banner cuando hay cuentas confirmadas sin rol, con botón directo al filtro. Reutiliza `toggleRole` ya existente (escribe `user_roles`+`clinic_memberships`), sin RPC nueva. Typecheck limpio, build limpio.
+
+**Merge + deploy:** feature branch `feat/iva-automatico-regimen-fiscal` (que traía 8 commits de sesiones previas sin mergear desde el PR #19) mergeado a `main` sin conflictos, pusheado, `npm run build:all && wrangler deploy` — Version ID `44140389-bb39-456d-a2d7-e49a3ded7111`, verificado `curl` 200 OK en integrika.mx.
+
+**Costo de sesión:** ~$43 — subagent para parsear `get_advisors` (478K/403K chars, 2 veces) fue el mayor gasto individual. Próxima vez: pedir al subagent un resumen aún más comprimido en el primer prompt, o usar `grep`/`python` directo sobre el archivo guardado en vez de un agente completo cuando solo se necesita contar/filtrar por título de lint.
 
 ### Deuda técnica nueva — migraciones viejas duplicadas rompen CI en cascada
 `Apply migrations to ephemeral DB` del repo falló 3 veces seguidas en PR #19, cada vez por un objeto distinto duplicado sin guard (`trg_expedientes_updated_at`, `movimiento_tipo` enum, tablas `medicamentos`/`lotes_medicamento`/`movimientos_inventario` completas) entre `20260508000002_farmacia.sql` y `20260508223333_cef12e50...sql` (mismo día, ~2h14min de diferencia — probable migración duplicada de Lovable). Los 3 se corrigieron con `IF NOT EXISTS`/`DROP...IF EXISTS`/`DO $$ EXCEPTION`, pero **no se garantiza que sea la última duplicación en ese archivo o en otros migrados ese mismo día** — si un futuro PR vuelve a fallar en este check, revisar `20260508223333_cef12e50-3ee0-44c8-a9f6-b703d5abf847.sql` contra las demás migraciones `20260508*` completas, no solo el error puntual. PR #19 se mergeó con `gh pr merge --admin` saltando este check (typecheck y deploys reales sí pasaron) porque el código del PR estaba correcto — la falla era 100% deuda vieja no relacionada.
