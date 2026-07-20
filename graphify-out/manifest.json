@@ -1060,9 +1060,9 @@
     "semantic_hash": "799b9660dde4b6ab0de9ce3f589c00dd"
   },
   "src/features/panel-doctor/components/DoctorConfirmationPanel.tsx": {
-    "mtime": 1780251512.175882,
-    "ast_hash": "a32ecc7fe4cdc2960ff28e909b736bd4",
-    "semantic_hash": "a32ecc7fe4cdc2960ff28e909b736bd4"
+    "mtime": 1784510777.2426586,
+    "ast_hash": "3bce92037a153b0ea62d4bad466986f6",
+    "semantic_hash": ""
   },
   "src/features/panel-doctor/components/DoctorPatientQueue.tsx": {
     "mtime": 1779975703.679361,
@@ -1075,9 +1075,9 @@
     "semantic_hash": "e276a33e2cbd2d01b6ffab98c173a59b"
   },
   "src/features/panel-doctor/components/PatientClinicalContext.tsx": {
-    "mtime": 1779975703.684082,
-    "ast_hash": "c544b8575bf79515692a4bf3459e765a",
-    "semantic_hash": "c544b8575bf79515692a4bf3459e765a"
+    "mtime": 1784510147.4273942,
+    "ast_hash": "f05e63448892a8ab1cbb0d9b99768836",
+    "semantic_hash": ""
   },
   "src/features/panel-doctor/components/RequestStudyDrawer.tsx": {
     "mtime": 1782135001.6932611,
@@ -2210,9 +2210,9 @@
     "semantic_hash": "21ae492a0c4a2d5698cbb09aea8230c4"
   },
   "supabase/migrations/20260508213818_b5e0c65d-12a0-4793-92a0-2778f112a72c.sql": {
-    "mtime": 1779032575.9965417,
-    "ast_hash": "f1e25e88a6c5dab0e5563732153f541b",
-    "semantic_hash": "f1e25e88a6c5dab0e5563732153f541b"
+    "mtime": 1784511247.5563905,
+    "ast_hash": "f76efef3acbab171e7e17486c3709b51",
+    "semantic_hash": ""
   },
   "supabase/migrations/20260508214034_7f3e245f-a439-4a43-9b8c-5d9bc56b73b5.sql": {
     "mtime": 1779032575.99776,
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784497989.173392,
-    "ast_hash": "c4b37ca54621ef9952c0c124980108d8",
+    "mtime": 1784510884.0820024,
+    "ast_hash": "8f7dc267aa1e6f83bcd0122b42a8a384",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4450,8 +4450,8 @@
     "semantic_hash": ""
   },
   "src/features/contabilidad/PolizasTab.tsx": {
-    "mtime": 1784436890.576808,
-    "ast_hash": "e76011485086264539fe2fa2a0b69101",
+    "mtime": 1784508200.294868,
+    "ast_hash": "48faa73dc5646fe11aed5a78b21af2c2",
     "semantic_hash": ""
   },
   "src/features/contabilidad/RegistrarEgresoModal.tsx": {
@@ -4480,8 +4480,8 @@
     "semantic_hash": ""
   },
   "src/pages/Contabilidad.tsx": {
-    "mtime": 1784489381.8736312,
-    "ast_hash": "771c634eab68cd5978ac7f67b1d77458",
+    "mtime": 1784510369.2517724,
+    "ast_hash": "1cf8155ecbfe43092786926038a9b710",
     "semantic_hash": ""
   },
   "supabase/functions/mfa-reset/index.ts": {
@@ -4635,8 +4635,8 @@
     "semantic_hash": ""
   },
   "src/features/contabilidad/ReportesTab.tsx": {
-    "mtime": 1784493345.9738748,
-    "ast_hash": "f5b1142af0e364a4ca7098b29001a825",
+    "mtime": 1784510257.5682473,
+    "ast_hash": "a81584664ec811177a488890af39c59c",
     "semantic_hash": ""
   },
   "src/features/contabilidad/exportReporteCsv.ts": {
@@ -4645,8 +4645,8 @@
     "semantic_hash": ""
   },
   "src/hooks/useReportesContables.ts": {
-    "mtime": 1784493227.3447268,
-    "ast_hash": "41c4399e700ad6948f5093df278bfc14",
+    "mtime": 1784507648.883321,
+    "ast_hash": "04a8517a7d9e67654e9f90fc3b67aed1",
     "semantic_hash": ""
   },
   "supabase/migrations/20260719140000_fase6c_reportes_partida_doble.sql": {
@@ -4732,6 +4732,41 @@
   "src/test/contabilidad/ivaRules.test.ts": {
     "mtime": 1784496983.5093157,
     "ast_hash": "818a5718836371dee4fb2251b1e79540",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/ActivosFijosTab.tsx": {
+    "mtime": 1784510343.1179876,
+    "ast_hash": "4bbbb6c13e61e3c4e196c9d042d41c75",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/NuevaPolizaDialog.tsx": {
+    "mtime": 1784510183.8373015,
+    "ast_hash": "db86993e4c3aef15d9a3004736f6c6f5",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719190000_libro_diario_uuid_cfdi.sql": {
+    "mtime": 1784507500.1177256,
+    "ast_hash": "da9062efbd7c5739eaa74cd94f4ff57d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719191500_libro_diario_cuenta_tipo.sql": {
+    "mtime": 1784507609.1992,
+    "ast_hash": "c25f73a832ccca1630d09ff49f80c038",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719200000_regla_honorario_pago.sql": {
+    "mtime": 1784509539.3180878,
+    "ast_hash": "7399b1ada5e0eba2f6af64837eec39cf",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719210000_trigger_consumo_insumo.sql": {
+    "mtime": 1784509783.8316114,
+    "ast_hash": "0e64d3e36ee61de2806b20b6d41ec9e6",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260719220000_activos_fijos.sql": {
+    "mtime": 1784510287.4026656,
+    "ast_hash": "0e8613306dfc47b2ebf6cffc36ee39f7",
     "semantic_hash": ""
   }
 }

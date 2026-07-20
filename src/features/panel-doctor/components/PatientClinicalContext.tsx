@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import PatientJourneyLine from "@/features/camino-paciente/components/PatientJourneyLine";
 import { useJourneyInstance } from "@/features/camino-paciente/hooks/useJourneyInstance";
 import DoctorActionPanel from "./DoctorActionPanel";
+import InsumosCitaSection from "@/features/camino-paciente/operativo/StepForms/InsumosCitaSection";
 import type { DoctorQueueItem } from "../hooks/useDoctorQueue";
 import type { PatientSnapshot } from "../hooks/usePatientClinicalSnapshot";
 
@@ -122,6 +123,8 @@ export default function PatientClinicalContext({ item, snapshot, doctorId }: Pro
       </Card>
 
       {doctorId && <DoctorActionPanel item={item} doctorId={doctorId} snapshot={snapshot} />}
+
+      <InsumosCitaSection appointmentId={item.appointment_id} closed={false} />
 
       {/* Tabs clínicos */}
       <Card className="flex-1 overflow-hidden">

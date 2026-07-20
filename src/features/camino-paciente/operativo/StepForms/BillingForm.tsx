@@ -10,13 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Loader2, Check, ExternalLink } from "lucide-react";
 import { saveJourneyStepData, closeJourneyStep } from "@/features/camino-paciente/services/journeyEngine";
+import { supabase } from "@/integrations/supabase/client";
 import type { StepFormProps } from "./_shared";
 import { isClosed } from "./_shared";
 
 const METODOS = ["Efectivo", "Tarjeta débito", "Tarjeta crédito", "Transferencia", "Cortesía"];
 const USOS_CFDI = ["G03 - Gastos en general", "D01 - Honorarios médicos", "P01 - Por definir", "S01 - Sin efectos fiscales"];
 
-export default function BillingForm({ stepId, stepStatus, existingData, onSaved }: StepFormProps) {
+export default function BillingForm({ stepId, stepStatus, journeyInstanceId, existingData, onSaved }: StepFormProps) {
   const navigate = useNavigate();
   const [monto, setMonto] = useState(existingData.monto ?? "");
   const [metodo, setMetodo] = useState(existingData.metodo_pago ?? "Efectivo");
@@ -39,10 +40,37 @@ export default function BillingForm({ stepId, stepStatus, existingData, onSaved 
       notas, cobrado_en: new Date().toISOString(),
     });
     if (!s.ok) { setSaving(false); toast.error(s.error ?? "Error"); return; }
+
+    // Registrar el cobro real en caja (movimientos) -- genera automáticamente
+    // el movimiento contable y la póliza vía trigger. Sin esto, el paso solo
+    // quedaba como nota de texto sin ningún rastro financiero.
+    const { data: movimientoId, error: cobroError } = await supabase.rpc("camino_registrar_cobro" as never, {
+      p_journey_instance_id: journeyInstanceId,
+      p_monto: Number(monto),
+      p_metodo_pago: metodo,
+      p_folio: folio || null,
+      p_notas: notas || null,
+    } as never);
+    if (cobroError) {
+      setSaving(false);
+      toast.error("No se pudo registrar el cobro contable: " + cobroError.message);
+      return;
+    }
+    // movimientoId nulo = doctor con modo_cobro "directo": el paciente le
+    // paga a él, no a la clínica -- no se genera movimiento/póliza de caja.
+    const cobroDirecto = !movimientoId;
+
     const c = await closeJourneyStep(stepId);
     setSaving(false);
     if (!c.ok) toast.error(c.error ?? "Error");
-    else { toast.success("Pago registrado"); onSaved?.(); }
+    else {
+      toast.success(
+        cobroDirecto
+          ? "Pago registrado — cobro directo al doctor, no se aplica en caja de la clínica"
+          : "Pago registrado y aplicado en caja/pólizas",
+      );
+      onSaved?.();
+    }
   };
 
   return (

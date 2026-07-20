@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
-import { Download, FileDown } from "lucide-react";
+import { Download, FileDown, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { untypedTable } from "@/lib/untypedTable";
 import { exportReporteCsv } from "@/features/contabilidad/exportReporteCsv";
 import { exportarCatalogoCuentasAnexo24, exportarBalanzaAnexo24 } from "@/features/contabilidad/exportAnexo24";
+import { NuevaPolizaDialog } from "@/features/contabilidad/NuevaPolizaDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { friendlyError } from "@/lib/errors";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import {
   useBalanzaComprobacion, useLibroDiario, useAuxiliaresCuenta, useBalanceGeneral, useReporteIva,
+  useEstadoResultados, type LibroDiarioFila,
 } from "@/hooks/useReportesContables";
 
 function fmtMXN(centavos: number) {
@@ -111,12 +115,36 @@ function BalanzaTab() {
   );
 }
 
-function LibroDiarioTab() {
+const TIPO_POLIZA_LABELS: Record<string, string> = { diario: "Diario", ingreso: "Ingreso", egreso: "Egreso" };
+const TIPO_CUENTA_LABELS: Record<string, string> = { activo: "Activo", pasivo: "Pasivo", capital: "Capital", ingreso: "Ingreso", egreso: "Egreso" };
+
+export function LibroDiarioTab() {
   const [desde, setDesde] = useState(inicioMes);
   const [hasta, setHasta] = useState(finMes);
-  const { rows, loading, error, load } = useLibroDiario();
+  const [tipoPoliza, setTipoPoliza] = useState<string>("todos");
+  const [tipoCuenta, setTipoCuenta] = useState<string>("todos");
+  const [tipoMovimiento, setTipoMovimiento] = useState<string>("todos");
+  const [nuevaOpen, setNuevaOpen] = useState(false);
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
+  const { rows: allRows, loading, error, load } = useLibroDiario();
 
   useEffect(() => { load(desde, hasta); }, [load, desde, hasta]);
+
+  const handleCancelar = async (polizaId: string) => {
+    if (!confirm("¿Cancelar esta póliza? Se genera una póliza de reversa, no se borra.")) return;
+    setCancelandoId(polizaId);
+    const { error: err } = await (supabase as any).rpc("cancelar_poliza", { p_poliza_id: polizaId });
+    setCancelandoId(null);
+    if (err) { toast.error(friendlyError(err, "No se pudo cancelar la póliza.")); return; }
+    toast.success("Póliza cancelada (reversa generada)");
+    load(desde, hasta);
+  };
+
+  const rows = allRows.filter((r) =>
+    (tipoPoliza === "todos" || r.tipo === tipoPoliza) &&
+    (tipoCuenta === "todos" || r.cuenta_tipo === tipoCuenta) &&
+    (tipoMovimiento === "todos" || (tipoMovimiento === "cargo" ? r.debe_centavos > 0 : r.haber_centavos > 0))
+  );
 
   return (
     <div className="space-y-4">
@@ -130,12 +158,258 @@ function LibroDiarioTab() {
             <Label htmlFor="field-diario-hasta" className="text-xs">Hasta</Label>
             <Input id="field-diario-hasta" type="date" className="h-8 w-36" value={hasta} onChange={(e) => setHasta(e.target.value)} />
           </div>
+          <div>
+            <Label className="text-xs">Tipo de póliza</Label>
+            <Select value={tipoPoliza} onValueChange={setTipoPoliza}>
+              <SelectTrigger className="h-8 w-36 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {Object.entries(TIPO_POLIZA_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Tipo de cuenta</Label>
+            <Select value={tipoCuenta} onValueChange={setTipoCuenta}>
+              <SelectTrigger className="h-8 w-36 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas</SelectItem>
+                {Object.entries(TIPO_CUENTA_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Movimiento</Label>
+            <Select value={tipoMovimiento} onValueChange={setTipoMovimiento}>
+              <SelectTrigger className="h-8 w-32 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="cargo">Cargo</SelectItem>
+                <SelectItem value="abono">Abono</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             size="sm" variant="outline" className="h-8 gap-1.5" disabled={rows.length === 0}
             onClick={() => exportReporteCsv(
               "libro_diario",
-              ["Folio", "Tipo", "Fecha", "Concepto", "Estado", "Cuenta", "Debe", "Haber", "Descripción"],
-              rows.map((r) => [r.folio, r.tipo, r.fecha, r.concepto, r.estado, `${r.cuenta_codigo} ${r.cuenta_nombre}`, (r.debe_centavos / 100).toFixed(2), (r.haber_centavos / 100).toFixed(2), r.descripcion ?? ""]),
+              ["Folio", "Tipo", "Fecha", "Concepto", "Estado", "UUID CFDI", "Cuenta", "Tipo cuenta", "Cargo", "Abono", "Descripción"],
+              rows.map((r) => [r.folio, r.tipo, r.fecha, r.concepto, r.estado, r.uuid_cfdi ?? "", `${r.cuenta_codigo} ${r.cuenta_nombre}`, r.cuenta_tipo, (r.debe_centavos / 100).toFixed(2), (r.haber_centavos / 100).toFixed(2), r.descripcion ?? ""]),
+            )}
+          >
+            <Download className="h-3.5 w-3.5" /> Exportar CSV
+          </Button>
+          <Button size="sm" className="h-8 gap-1.5" onClick={() => setNuevaOpen(true)}>
+            <Plus className="h-3.5 w-3.5" /> Nueva póliza
+          </Button>
+        </CardContent>
+      </Card>
+
+      <NuevaPolizaDialog open={nuevaOpen} onOpenChange={setNuevaOpen} onCreated={() => load(desde, hasta)} />
+
+      {error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">Error: {error}</div>}
+
+      {loading ? <Skeleton className="h-40 w-full rounded-xl" /> : rows.length === 0 ? (
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground py-4 text-center">Sin pólizas con estos filtros</p></CardContent></Card>
+      ) : (
+        <div className="space-y-3">
+          {agruparPorPoliza(rows).map((p) => {
+            const cuadra = p.debe === p.haber;
+            return (
+              <Card key={p.poliza_id} className={cuadra ? undefined : "border-destructive"}>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
+                    <p className="text-sm font-medium">
+                      {p.tipo.slice(0, 3).toUpperCase()}-{p.folio} — {TIPO_POLIZA_LABELS[p.tipo] ?? p.tipo} · {p.fecha}
+                      <span className="text-muted-foreground font-normal"> · {p.concepto}</span>
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cuadra ? "bg-emerald-100 text-emerald-700" : "bg-destructive/15 text-destructive"}`}>
+                        {cuadra ? "Cuadra" : "DESCUADRE"}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{p.estado}</span>
+                      {p.estado === "contabilizada" && (
+                        <Button
+                          size="sm" variant="outline" className="h-7 text-xs"
+                          disabled={cancelandoId === p.poliza_id}
+                          onClick={() => handleCancelar(p.poliza_id)}
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {p.uuid_cfdi && <p className="text-xs text-muted-foreground pb-2">UUID CFDI: {p.uuid_cfdi}</p>}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-left">
+                          <th className="pb-1.5 pr-4 font-medium text-muted-foreground">Cuenta</th>
+                          <th className="pb-1.5 pr-4 font-medium text-muted-foreground">Descripción</th>
+                          <th className="pb-1.5 pr-4 font-medium text-muted-foreground text-right">Cargo</th>
+                          <th className="pb-1.5 font-medium text-muted-foreground text-right">Abono</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {p.lineas.map((l) => (
+                          <tr key={`${p.poliza_id}-${l.orden}`} className="border-b border-border/40 last:border-0">
+                            <td className="py-1.5 pr-4">{l.cuenta_codigo} {l.cuenta_nombre}</td>
+                            <td className="py-1.5 pr-4 text-muted-foreground">{l.descripcion ?? "—"}</td>
+                            <td className="py-1.5 pr-4 text-right">{l.debe_centavos > 0 ? fmtMXN(l.debe_centavos) : "—"}</td>
+                            <td className="py-1.5 text-right">{l.haber_centavos > 0 ? fmtMXN(l.haber_centavos) : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-border font-medium">
+                          <td className="py-1.5 pr-4" colSpan={2}>Total</td>
+                          <td className="py-1.5 pr-4 text-right">{fmtMXN(p.debe)}</td>
+                          <td className="py-1.5 text-right">{fmtMXN(p.haber)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function agruparPorPoliza(rows: LibroDiarioFila[]) {
+  const grupos = new Map<string, { poliza_id: string; folio: number; tipo: string; fecha: string; concepto: string; uuid_cfdi: string | null; estado: string; lineas: LibroDiarioFila[]; debe: number; haber: number }>();
+  for (const r of rows) {
+    let g = grupos.get(r.poliza_id);
+    if (!g) {
+      g = { poliza_id: r.poliza_id, folio: r.folio, tipo: r.tipo, fecha: r.fecha, concepto: r.concepto, uuid_cfdi: r.uuid_cfdi, estado: r.estado, lineas: [], debe: 0, haber: 0 };
+      grupos.set(r.poliza_id, g);
+    }
+    g.lineas.push(r);
+    g.debe += r.debe_centavos;
+    g.haber += r.haber_centavos;
+  }
+  return Array.from(grupos.values()).sort((a, b) => a.fecha.localeCompare(b.fecha) || a.folio - b.folio);
+}
+
+function MayorTab() {
+  const [desde, setDesde] = useState(inicioMes);
+  const [hasta, setHasta] = useState(finMes);
+  const { rows: balanza, loading: loadingBalanza, error: errorBalanza, load: loadBalanza } = useBalanzaComprobacion();
+  const { rows: diario, loading: loadingDiario, error: errorDiario, load: loadDiario } = useLibroDiario();
+
+  useEffect(() => { loadBalanza(desde, hasta); loadDiario(desde, hasta); }, [loadBalanza, loadDiario, desde, hasta]);
+
+  const loading = loadingBalanza || loadingDiario;
+  const error = errorBalanza || errorDiario;
+
+  // Libro Mayor: mayorización de cada cuenta con movimiento — detalle cronológico
+  // + saldo acumulado (naturaleza-aware, arranca en el saldo inicial de la balanza).
+  const porCuenta = balanza.map((cta) => {
+    const movs = diario
+      .filter((d) => d.cuenta_codigo === cta.codigo)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.orden - b.orden);
+    let saldo = cta.saldo_inicial_centavos;
+    const filas = movs.map((m) => {
+      saldo += cta.naturaleza === "deudora" ? m.debe_centavos - m.haber_centavos : m.haber_centavos - m.debe_centavos;
+      return { ...m, saldo_acumulado: saldo };
+    });
+    return { cuenta: cta, filas };
+  }).filter((c) => c.filas.length > 0 || c.cuenta.saldo_inicial_centavos !== 0);
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <Label htmlFor="field-mayor-desde" className="text-xs">Desde</Label>
+            <Input id="field-mayor-desde" type="date" className="h-8 w-36" value={desde} onChange={(e) => setDesde(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="field-mayor-hasta" className="text-xs">Hasta</Label>
+            <Input id="field-mayor-hasta" type="date" className="h-8 w-36" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {error && <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">Error: {error}</div>}
+
+      {loading ? <Skeleton className="h-40 w-full rounded-xl" /> : porCuenta.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">Sin movimientos en el período</p>
+      ) : (
+        <div className="space-y-3">
+          {porCuenta.map(({ cuenta, filas }) => (
+            <Card key={cuenta.cuenta_id}>
+              <CardContent className="p-4">
+                <p className="text-sm font-medium pb-2">{cuenta.codigo} — {cuenta.nombre} <span className="text-xs text-muted-foreground capitalize">({cuenta.naturaleza})</span></p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left">
+                        <th className="pb-2 pr-4 font-medium text-muted-foreground">Fecha</th>
+                        <th className="pb-2 pr-4 font-medium text-muted-foreground">Concepto</th>
+                        <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Cargo</th>
+                        <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Abono</th>
+                        <th className="pb-2 font-medium text-muted-foreground text-right">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-border/40">
+                        <td className="py-1.5 pr-4 text-muted-foreground" colSpan={4}>Saldo inicial</td>
+                        <td className="py-1.5 text-right">{fmtMXN(cuenta.saldo_inicial_centavos)}</td>
+                      </tr>
+                      {filas.map((f) => (
+                        <tr key={`${f.poliza_id}-${f.orden}`} className="border-b border-border/40 last:border-0">
+                          <td className="py-1.5 pr-4">{f.fecha}</td>
+                          <td className="py-1.5 pr-4 text-muted-foreground">{f.concepto}</td>
+                          <td className="py-1.5 pr-4 text-right">{f.debe_centavos > 0 ? fmtMXN(f.debe_centavos) : "—"}</td>
+                          <td className="py-1.5 pr-4 text-right">{f.haber_centavos > 0 ? fmtMXN(f.haber_centavos) : "—"}</td>
+                          <td className="py-1.5 text-right font-medium">{fmtMXN(f.saldo_acumulado)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EstadoResultadosTab() {
+  const [desde, setDesde] = useState(inicioMes);
+  const [hasta, setHasta] = useState(finMes);
+  const { rows, loading, error, load } = useEstadoResultados();
+
+  useEffect(() => { load(desde, hasta); }, [load, desde, hasta]);
+
+  const ingresos = rows.filter((r) => r.tipo === "ingreso").reduce((s, r) => s + r.monto_centavos, 0);
+  const egresos = rows.filter((r) => r.tipo === "egreso").reduce((s, r) => s + r.monto_centavos, 0);
+  const utilidad = ingresos - egresos;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <Label htmlFor="field-er-desde" className="text-xs">Desde</Label>
+            <Input id="field-er-desde" type="date" className="h-8 w-36" value={desde} onChange={(e) => setDesde(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="field-er-hasta" className="text-xs">Hasta</Label>
+            <Input id="field-er-hasta" type="date" className="h-8 w-36" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+          </div>
+          <Button
+            size="sm" variant="outline" className="h-8 gap-1.5" disabled={rows.length === 0}
+            onClick={() => exportReporteCsv(
+              "estado_resultados",
+              ["Código", "Cuenta", "Tipo", "Monto"],
+              rows.map((r) => [r.codigo, r.nombre, r.tipo, (r.monto_centavos / 100).toFixed(2)]),
             )}
           >
             <Download className="h-3.5 w-3.5" /> Exportar CSV
@@ -148,32 +422,36 @@ function LibroDiarioTab() {
       <Card>
         <CardContent className="p-4">
           {loading ? <Skeleton className="h-40 w-full rounded-xl" /> : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Sin pólizas en el período</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">Sin movimientos en el período</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left">
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Folio</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Fecha</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Concepto</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Código</th>
                     <th className="pb-2 pr-4 font-medium text-muted-foreground">Cuenta</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Debe</th>
-                    <th className="pb-2 font-medium text-muted-foreground text-right">Haber</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Tipo</th>
+                    <th className="pb-2 font-medium text-muted-foreground text-right">Monto</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={`${r.poliza_id}-${r.orden}`} className="border-b border-border/40 last:border-0">
-                      <td className="py-2 pr-4">{r.tipo.slice(0, 3).toUpperCase()}-{r.folio}</td>
-                      <td className="py-2 pr-4">{r.fecha}</td>
-                      <td className="py-2 pr-4 text-muted-foreground">{r.concepto}</td>
-                      <td className="py-2 pr-4">{r.cuenta_codigo} {r.cuenta_nombre}</td>
-                      <td className="py-2 pr-4 text-right">{r.debe_centavos > 0 ? fmtMXN(r.debe_centavos) : "—"}</td>
-                      <td className="py-2 text-right">{r.haber_centavos > 0 ? fmtMXN(r.haber_centavos) : "—"}</td>
+                    <tr key={r.cuenta_id} className="border-b border-border/40 last:border-0">
+                      <td className="py-2 pr-4">{r.codigo}</td>
+                      <td className="py-2 pr-4">{r.nombre}</td>
+                      <td className="py-2 pr-4 capitalize text-muted-foreground">{r.tipo}</td>
+                      <td className="py-2 text-right font-medium">{fmtMXN(r.monto_centavos)}</td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-border font-medium">
+                    <td className="py-2 pr-4" colSpan={3}>Ingresos {fmtMXN(ingresos)} − Egresos {fmtMXN(egresos)}</td>
+                    <td className={`py-2 text-right ${utilidad >= 0 ? "" : "text-red-600"}`}>
+                      {utilidad >= 0 ? "Utilidad" : "Pérdida"} {fmtMXN(Math.abs(utilidad))}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}
@@ -446,13 +724,17 @@ export function ReportesTab() {
       <TabsList>
         <TabsTrigger value="balanza">Balanza</TabsTrigger>
         <TabsTrigger value="diario">Libro diario</TabsTrigger>
+        <TabsTrigger value="mayor">Libro mayor</TabsTrigger>
         <TabsTrigger value="auxiliares">Auxiliares</TabsTrigger>
-        <TabsTrigger value="balance">Balance</TabsTrigger>
+        <TabsTrigger value="resultados">Estado de resultados</TabsTrigger>
+        <TabsTrigger value="balance">Balance general</TabsTrigger>
         <TabsTrigger value="iva">IVA</TabsTrigger>
       </TabsList>
       <TabsContent value="balanza" className="pt-4"><BalanzaTab /></TabsContent>
       <TabsContent value="diario" className="pt-4"><LibroDiarioTab /></TabsContent>
+      <TabsContent value="mayor" className="pt-4"><MayorTab /></TabsContent>
       <TabsContent value="auxiliares" className="pt-4"><AuxiliaresTab /></TabsContent>
+      <TabsContent value="resultados" className="pt-4"><EstadoResultadosTab /></TabsContent>
       <TabsContent value="balance" className="pt-4"><BalanceGeneralTab /></TabsContent>
       <TabsContent value="iva" className="pt-4"><IvaTab /></TabsContent>
     </Tabs>
