@@ -2,12 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView, MotionConfig } from "motion/react";
 import Logo from "@/components/Logo";
-import testimonioMariaPhoto from "@/assets/testimonios/testimonio-1.jpg";
 import {
   MessageCircle, Calendar, Bell, Shield, Users, Stethoscope,
   Pill, Receipt, Inbox as InboxIcon, ClipboardCheck, Bot, Clock,
   CheckCircle2, ArrowRight, Sparkles, Lock, Activity, Zap,
-  TrendingUp, Database, Menu, X, UserCheck, Star,
+  TrendingUp, Database, Menu, X, UserCheck,
   ShoppingCart, BarChart3, Package, FileText, CreditCard,
   Building2, ScanLine, AlertTriangle, ChevronDown, ChevronUp,
   Banknote, Globe, FlaskConical, Info,
@@ -243,24 +242,24 @@ const pricing = [
   },
 ];
 
-const testimonials = [
+const escenarios = [
   {
-    name: "Dra. María Rodríguez",
-    role: "Directora Médica · Guadalajara",
-    quote: "Antes perdíamos 8-10 citas a la semana por no-shows. Con los recordatorios automáticos bajamos a menos de 2. El bot funciona de noche y los domingos, eso no tiene precio.",
-    photo: testimonioMariaPhoto,
+    icon: Bell,
+    title: "Menos citas perdidas",
+    quote: "Una clínica que pierde 8-10 citas a la semana por no-shows puede bajar a 2 o menos con recordatorios automáticos y un bot que confirma de noche y en domingo.",
+    base: "Basado en tasas de no-show reportadas del 22-35% en consultorios sin recordatorios.",
   },
   {
-    name: "Dr. Jorge Mendoza",
-    role: "Médico General · CDMX",
-    quote: "Lo que más me sorprendió fue que entiende RFC, CURP y CFDI desde el día uno. En 48 horas estábamos operando y el contador ya no nos cobra extra por facturar.",
-    photo: "https://images.unsplash.com/photo-1758691463384-771db2f192b3?q=80&w=200&auto=format&fit=crop&crop=face",
+    icon: Receipt,
+    title: "Facturación sin contador extra",
+    quote: "RFC, CURP y CFDI 4.0 integrados desde el día uno: una clínica puede estar operando y timbrando en 48 horas, sin pagar aparte por cada factura.",
+    base: "Basado en el flujo de onboarding y el módulo CFDI nativo de la plataforma.",
   },
   {
-    name: "Lic. Ana Lozano",
-    role: "Administradora · Monterrey",
-    quote: "El corte de caja con conteo ciego detectó una diferencia de $3,200 el primer mes. El sistema se pagó solo. El módulo de compras con 3-Way Match es extraordinario.",
-    photo: "https://images.unsplash.com/photo-1625134673337-519d4d10b313?q=80&w=200&auto=format&fit=crop&crop=face",
+    icon: Banknote,
+    title: "Caja bajo control",
+    quote: "El corte de caja con conteo ciego está diseñado para detectar diferencias desde el primer mes — una sola diferencia de $3,200 encontrada a tiempo paga el sistema.",
+    base: "Basado en el diseño de conteo ciego y 3-Way Match del módulo de caja y compras.",
   },
 ];
 
@@ -1160,29 +1159,31 @@ export default function Pitch() {
         </div>
       </section>
 
-      {/* TESTIMONIALES */}
+      {/* ESCENARIOS ILUSTRATIVOS */}
       <section style={{ padding: "96px 0", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
-          <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ textAlign: "center", maxWidth: 500, margin: "0 auto 52px" }}>
-            <div className="pr-label" style={{ marginBottom: 14 }}>Testimonios</div>
+          <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ textAlign: "center", maxWidth: 560, margin: "0 auto 52px" }}>
+            <div className="pr-label" style={{ marginBottom: 14 }}>Escenarios</div>
             <h2 className="pr-h" style={{ fontSize: "clamp(26px,4vw,40px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, color: "#0f172a" }}>
-              Lo que dicen los médicos que ya lo usan.
+              Resultados que buscamos para tu clínica.
             </h2>
+            <p style={{ marginTop: 12, fontSize: 13, color: SLATE }}>
+              Escenarios ilustrativos basados en el diseño de la plataforma y datos públicos del sector — no son testimonios de clientes.
+            </p>
           </motion.div>
           <div className="pr-testi-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
-            {testimonials.map((t, i) => (
-              <motion.div key={t.name} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}>
+            {escenarios.map((e, i) => (
+              <motion.div key={e.title} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}>
                 <div className="pr-card" style={{ padding: 26, height: "100%", display: "flex", flexDirection: "column" }}>
-                  <div style={{ display: "flex", gap: 3, marginBottom: 14 }}>
-                    {Array.from({ length: 5 }).map((_, j) => <Star key={j} size={13} fill={TEAL} color={TEAL} />)}
-                  </div>
-                  <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.75, fontStyle: "italic", flex: 1 }}>"{t.quote}"</p>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 18, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                    <img src={t.photo} alt={t.name} style={{ width: 96, height: 96, borderRadius: "50%", border: `2px solid ${TEAL}30`, flexShrink: 0, objectFit: "cover" }} loading="lazy" />
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{t.name}</div>
-                      <div style={{ fontSize: 11, color: SLATE }}>{t.role}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: `${TEAL}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <e.icon size={19} color={TEAL} />
                     </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{e.title}</div>
+                  </div>
+                  <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.75, flex: 1 }}>{e.quote}</p>
+                  <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid #f1f5f9", fontSize: 11, color: SLATE }}>
+                    {e.base}
                   </div>
                 </div>
               </motion.div>
