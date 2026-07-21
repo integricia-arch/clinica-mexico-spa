@@ -1,6 +1,25 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 7). Catálogo de cuentas unificado a numérico puro (401-403/503-504/601-604) + 5 cuentas mínimas agregadas (131/210/211/605/606) — **aplicado y desplegado a prod**, tests pasan, pero **NO verificado visualmente en browser tras el remapeo** (pólizas, reportes, árbol de cuentas — confirmar que todo sigue mostrando bien con los códigos nuevos). Plan de trazabilidad (reporte↔trámite) sigue en `memoria/proyectos/plan-trazabilidad-contable-almacen.md`, sin implementar, retomar en sesión nueva. Pendiente real sin cambios: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar). **Costo sesión 2026-07-20 parte 7: ~$244 — dividir en sesiones más cortas por sub-tema la próxima vez, no acumular todo en una sola sesión larga.**
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-21. Verificación visual en browser del remapeo de códigos (pendiente de sesión anterior) — HECHA, todo bien (pólizas, árbol de cuentas, catálogo). Corrector de huecos contables construido y verificado en vivo (ver sesión abajo). Fase 0+1 de trazabilidad hechas; Fase 2/3 BLOQUEADAS — requieren rutas `:id` de detalle (cita/venta/compra) que no existen, decidir alcance con Pablo antes de retomar. Pendiente sin cambios: hito "Salida/alta" paciente PRUEBA-E2E (11/13). **Costo sesión 2026-07-21: ~$60+ — el patrón de "sesión larga multi-tema" se repitió pese a la nota de la sesión anterior; dividir de verdad la próxima vez.**
+
+## Sesión 2026-07-21 — corrector de huecos contables + Fase 0/1 trazabilidad
+
+**Verificación visual post-remapeo (pendiente de sesión anterior):** confirmado en browser con login admin — pólizas, detalle de póliza, catálogo (100% numérico), árbol de cuentas (ya no se encima), balanza. Todo bien.
+
+**Corrector de huecos contables** (spec: `docs/superpowers/specs/2026-07-21-corrector-huecos-contables-design.md`, plan: `docs/superpowers/plans/2026-07-21-corrector-huecos-contables.md`): `ValidadorCuadreDialog` ahora diagnostica y corrige huecos `sin_poliza` con un clic — nueva RPC `contab_diagnosticar_hueco` reusa el motor de reglas ya existente (`contab_reglas_asiento`/`contab_resolver_regla`), muestra la póliza propuesta con justificación normativa (NIF A-2/C-1) y la aplica vía `contab_generar_poliza_evento` (se le agregó GRANT a `authenticated`). Componente nuevo `PropuestaCorreccionCard.tsx`.
+
+**2 bugs reales encontrados y corregidos al verificar en vivo** (no hipotéticos):
+1. `contab_diagnosticar_hueco` usaba `movimientos_contables.evento` (siempre `'devengo'`/`'cancelacion'`) como si fuera la clave de negocio de las reglas — corregido para derivarla de `reference_type` antes de commitear.
+2. **Bug preexistente de fase 7** en `contab_auditoria_huecos`: comparaba `polizas.evento` (`'registro'`/`'cancelacion'`) contra `movimientos_contables.evento` (`'devengo'`/`'cancelacion'`) sin mapear — `'registro' ≠ 'devengo'` nunca cuadra, así que **cualquier póliza ya generada (por trigger o manual) se reportaba como hueco para siempre**. Llevaba así desde el 19 de julio sin que nadie lo notara. Fix: `20260721130000_fix_contab_auditoria_huecos_evento_mismatch.sql`.
+
+Verificado en vivo: diagnosticar honorario devengado $320 → propuesta correcta (504/205.01) → aplicar → póliza folio 3 generada → re-validar → hueco desaparece de la lista.
+
+**Pendiente sin aplicar:** honorario $800, 2 cobros caja del período 2026-07 (mismo flujo Diagnosticar→Aplicar cuando se quiera). Factura proveedor PRUEBA-FAC no soportada (multi-línea, fuera de alcance v1) — requiere póliza manual.
+
+**Trazabilidad reporte↔trámite** (`memoria/proyectos/plan-trazabilidad-contable-almacen.md`):
+- **Fase 0 (auditoría contra BD real):** el mapa original del plan estaba desactualizado — 2 `reference_type` no documentados (`factura_proveedor_pago`, `honorario_pago_manual`) y una asimetría (`appointment_insumo` vive solo en `polizas`, nunca en `movimientos_contables`). Detalle completo en el plan, sección 7.
+- **Fase 1 (hecho):** `contab_resolver_asiento(reference_type, reference_id)` resuelve el asiento (póliza o movimiento_contable) o `NULL` limpio. Migración `20260721140000_contab_resolver_asiento.sql`.
+- **Fases 2/3 NO construidas — bloqueo real:** el plan asumía botones "Ver trámite"/"Ver asiento contable" navegando a pantallas de detalle existentes por `id`. Verificado contra `App.tsx`: **no existen rutas `:id`** para cita/venta/compra individual — `/expedientes`, `/farmacia`, `/compras` son listas sin deep-link. Construir esto bien es alcance nuevo (páginas de detalle), no "cableado de botones" como asumía el plan. Ver sección 9 del plan para las 2 opciones a decidir con Pablo (rutas nuevas vs `?highlight=id` sobre la lista existente).
 
 ## Sesión 2026-07-20 (parte 7) — accesos admin Alan/Aldo, fix captcha prod, landing /pitch a11y, catálogo cuentas 100% numérico
 
