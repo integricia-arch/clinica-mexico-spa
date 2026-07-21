@@ -8,7 +8,11 @@ de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
 Plan de avance (análisis Fable 2026-07-21): #1 testimonios, #2 S4 pen-test y #3 S1
 rate limiting HECHOS. SIGUIENTE = tarea #4 N3 unit economics + N2 pricing + N4
-matriz tiers (Fable 5, sesión de negocio). Ver plan-avance-ejecucion.md.
+matriz tiers (Fable 5, sesión de negocio). Handoff YA preparado (Sonnet verificó
+precios reales de Pitch.tsx, confirmó que N4 enforcement ya existe en RLS, listó
+qué costos externos falta que Pablo confirme) en
+memoria/proyectos/N2-N3-N4-pricing-handoff.md — pegar ESE archivo completo en la
+sesión nueva de Fable, no re-derivar desde cero.
 
 Cerrado sesión 2026-07-21 (quinta parte, Sonnet 5):
 - **S1 rate limiting** — 5 Edge Functions expuestas a abuso (anon sin auth o
