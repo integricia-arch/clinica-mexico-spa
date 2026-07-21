@@ -8,6 +8,7 @@ import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import {
   useBalanzaComprobacion, useBalanceGeneral, useAuditoriaHuecos, useConciliaCortes,
 } from "@/hooks/useReportesContables";
+import { PropuestaCorreccionCard } from "@/features/contabilidad/PropuestaCorreccionCard";
 
 function fmtMXN(centavos: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(centavos / 100);
@@ -109,14 +110,21 @@ export function ValidadorCuadreDialog({ open, onOpenChange }: { open: boolean; o
               <Resultado ok={huecos.rows.length === 0}>
                 <p className="font-medium">Huecos entre devengo simple y partida doble</p>
                 {huecos.rows.length === 0 ? <p>Sin huecos detectados en el período.</p> : (
-                  <ul className="mt-1 space-y-1 list-disc pl-4">
+                  <div className="mt-2 space-y-2">
                     {huecos.rows.slice(0, 20).map((h, i) => (
-                      <li key={i}>
-                        <span className="font-mono text-xs">{h.tipo_hueco}</span> — {h.fecha} — {h.descripcion} — {fmtMXN(h.monto_centavos)}
-                      </li>
+                      h.tipo_hueco === "sin_poliza" ? (
+                        <PropuestaCorreccionCard key={h.origen_id} hueco={h} onAplicado={() => validar()} />
+                      ) : (
+                        <div key={i} className="rounded-lg border p-3 text-sm">
+                          <span className="font-mono text-xs">{h.tipo_hueco}</span> — {h.fecha} — {h.descripcion} — {fmtMXN(h.monto_centavos)}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Póliza sin reference_type — requiere revisión manual (no hay dato suficiente para inferir el origen).
+                          </p>
+                        </div>
+                      )
                     ))}
-                    {huecos.rows.length > 20 && <li>… y {huecos.rows.length - 20} más</li>}
-                  </ul>
+                    {huecos.rows.length > 20 && <p>… y {huecos.rows.length - 20} más</p>}
+                  </div>
                 )}
               </Resultado>
 
