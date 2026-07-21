@@ -80,8 +80,8 @@
     "semantic_hash": "9965bb421dab910f32dbf9e2cf859e4a"
   },
   "src/App.tsx": {
-    "mtime": 1784436373.5654674,
-    "ast_hash": "d60b4e45527cf95e0148280c152498d4",
+    "mtime": 1784659088.1560254,
+    "ast_hash": "784f2ed9e993f3fe11901c73a1379623",
     "semantic_hash": ""
   },
   "src/assets/lottie/online-health-report.json": {
@@ -1390,9 +1390,9 @@
     "semantic_hash": "b74912e670fda595662ecdea8f05a4a5"
   },
   "src/pages/AdminDashboard.tsx": {
-    "mtime": 1782157373.7129617,
-    "ast_hash": "23f2a423419991b8b4ad0607a3fd5519",
-    "semantic_hash": "23f2a423419991b8b4ad0607a3fd5519"
+    "mtime": 1784658863.8870044,
+    "ast_hash": "ff3164218e6af13610ce4516c1af89af",
+    "semantic_hash": ""
   },
   "src/pages/AdminDiagnosticoMulticlinica.tsx": {
     "mtime": 1783355146.4849646,
@@ -1450,9 +1450,9 @@
     "semantic_hash": "2ee0d0a0dd1087dbe8e20c63a675fdda"
   },
   "src/pages/BI.tsx": {
-    "mtime": 1783103703.8897803,
-    "ast_hash": "c12b76c73d5c0eef411e9d6f210453a3",
-    "semantic_hash": "c12b76c73d5c0eef411e9d6f210453a3"
+    "mtime": 1784663596.042676,
+    "ast_hash": "bc7b54cea11d3957274e403f1b3396c6",
+    "semantic_hash": ""
   },
   "src/pages/Caja.tsx": {
     "mtime": 1781476206.2739973,
@@ -1465,8 +1465,8 @@
     "semantic_hash": "c09b83d40bc956b2530465b50989ae0c"
   },
   "src/pages/CajaTurno.tsx": {
-    "mtime": 1784247235.3930922,
-    "ast_hash": "d21d00da4662985356c5e921e4326e7e",
+    "mtime": 1784663389.6626346,
+    "ast_hash": "75e7dfb1686a2f6ec9ccee0db7313de7",
     "semantic_hash": ""
   },
   "src/pages/CaminoPaciente.tsx": {
@@ -1575,8 +1575,8 @@
     "semantic_hash": "9aa2d8cecac59186182a21b69bb9f438"
   },
   "src/pages/Pitch.tsx": {
-    "mtime": 1784652208.220541,
-    "ast_hash": "fa0d8fb1e837fa249a98dd943de9f8d7",
+    "mtime": 1784659489.5235152,
+    "ast_hash": "065a5a90785cccf02968cc361c003843",
     "semantic_hash": ""
   },
   "src/pages/RecepcionDashboard.tsx": {
@@ -1685,9 +1685,9 @@
     "semantic_hash": "db9e1584de69340a01212950a9374e7d"
   },
   "src/pages/configuracion/CaminoPaciente.tsx": {
-    "mtime": 1783355146.5544567,
-    "ast_hash": "d2048dfd6632e5dd8d9ae77c5a3b8d21",
-    "semantic_hash": "d2048dfd6632e5dd8d9ae77c5a3b8d21"
+    "mtime": 1784661869.2681081,
+    "ast_hash": "650f8bed0c068fe461048bf7d500edec",
+    "semantic_hash": ""
   },
   "src/pages/configuracion/ConfiguracionCFDI.tsx": {
     "mtime": 1784565298.891465,
@@ -1930,8 +1930,8 @@
     "semantic_hash": "a15e5ece7ac6a68376a8cc612ca73ee2"
   },
   "supabase/functions/cfdi-timbrar/index.ts": {
-    "mtime": 1784658028.8377075,
-    "ast_hash": "850eb724aee2400299b6deeef960ff10",
+    "mtime": 1784658321.807491,
+    "ast_hash": "495a76f06b7b7eadbf0aaffd1f2f173c",
     "semantic_hash": ""
   },
   "supabase/functions/confirmar-cita/clinic-access.test.ts": {
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784655274.5273557,
-    "ast_hash": "d858ec5c2ac8a2549bc5ad208f0b3426",
+    "mtime": 1784661473.1089044,
+    "ast_hash": "734bb6c2cb7e172c5e57507f5610a2ea",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784657971.2554746,
-    "ast_hash": "5f4e0acb1dd32f538a18f3b393f25d52",
+    "mtime": 1784660186.7244306,
+    "ast_hash": "df89bacf87847e5799e3f64c250056b1",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5102,6 +5102,146 @@
   "memoria/proyectos/N2-N3-N4-decision-unit-economics.md": {
     "mtime": 1784655197.8971827,
     "ast_hash": "4e08efdff7c7223db55c11e5d9d3032a",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260721150000_agenda_core_incluido_cosmetico.sql": {
+    "mtime": 1784658586.341822,
+    "ast_hash": "6dc44dfd8d2063853f481504f9aee9e8",
+    "semantic_hash": ""
+  },
+  "src/features/centro-control/components/OnboardingChecklistCard.tsx": {
+    "mtime": 1784658832.729789,
+    "ast_hash": "535b25fb069810925a2f41eb28585875",
+    "semantic_hash": ""
+  },
+  "src/hooks/useOnboardingChecklist.ts": {
+    "mtime": 1784658822.8917654,
+    "ast_hash": "4ebcbf5ad07aa76103a8fbc163eeab8b",
+    "semantic_hash": ""
+  },
+  "src/pages/pitch/FaqSection.tsx": {
+    "mtime": 1784659438.2727306,
+    "ast_hash": "f759a566f4447ed5f6d9d97a0ba91d7b",
+    "semantic_hash": ""
+  },
+  "src/pages/pitch/RoiCalculatorSection.tsx": {
+    "mtime": 1784659410.5926454,
+    "ast_hash": "40d54e94bf7b837795dfb4714ba7b689",
+    "semantic_hash": ""
+  },
+  "src/pages/pitch/pitchShared.tsx": {
+    "mtime": 1784659357.237637,
+    "ast_hash": "84d3adcf0ee762628978f911f2f5d100",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/caminoPaciente/CatalogsPanel.tsx": {
+    "mtime": 1784661761.5379162,
+    "ast_hash": "5ecf49f6f603fdadf43cfb885132593a",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/caminoPaciente/FieldsPanel.tsx": {
+    "mtime": 1784661748.7992797,
+    "ast_hash": "60153b971a48a9df8538491f372e8160",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/caminoPaciente/FlujoPacientePanel.tsx": {
+    "mtime": 1784661709.4791224,
+    "ast_hash": "5201fa77ca5f59058e067a49d5f2e28c",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/caminoPaciente/NewTemplateDialog.tsx": {
+    "mtime": 1784661834.6462357,
+    "ast_hash": "43aca5138f63d51c1deac98abe8a1ed8",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/caminoPaciente/RulesPanel.tsx": {
+    "mtime": 1784661781.759113,
+    "ast_hash": "d40bfabe765499d4c33f9343d13ea3ba",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/caminoPaciente/SimulatorDialog.tsx": {
+    "mtime": 1784661815.357046,
+    "ast_hash": "ec0b175e02ae527608faeb8e5c99caa0",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/caminoPaciente/StepEditorSheet.tsx": {
+    "mtime": 1784661731.6143703,
+    "ast_hash": "a287943be1e141942c3648138c90e491",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/caminoPaciente/VersionsPanel.tsx": {
+    "mtime": 1784661801.6295073,
+    "ast_hash": "5c1ec6f79c3d34f702d3caab604517f8",
+    "semantic_hash": ""
+  },
+  "src/pages/cajaTurno/CloseTurnoDialog.tsx": {
+    "mtime": 1784663300.6374352,
+    "ast_hash": "47ad02dc001d4e562781cb50ceef5ddc",
+    "semantic_hash": ""
+  },
+  "src/pages/cajaTurno/CorteXDialog.tsx": {
+    "mtime": 1784663332.712517,
+    "ast_hash": "d2649ad2e1408cd8960c5c78e198972d",
+    "semantic_hash": ""
+  },
+  "src/pages/cajaTurno/FondoMovimientoDialog.tsx": {
+    "mtime": 1784663317.460439,
+    "ast_hash": "e9006337bf8e44f16a184406e8cdc301",
+    "semantic_hash": ""
+  },
+  "src/pages/cajaTurno/HistorialTurnos.tsx": {
+    "mtime": 1784663351.0797715,
+    "ast_hash": "951b3b0a0a5854f724182d135972f4a6",
+    "semantic_hash": ""
+  },
+  "src/pages/cajaTurno/shared.tsx": {
+    "mtime": 1784663264.6044705,
+    "ast_hash": "e77d0844af952581f862f0d3733d195e",
+    "semantic_hash": ""
+  },
+  "src/pages/cajaTurno/types.ts": {
+    "mtime": 1784663255.45142,
+    "ast_hash": "6eb960e7d7c14ea5dd726ef0192a386d",
+    "semantic_hash": ""
+  },
+  "src/pages/bi/CitasHeatmap.tsx": {
+    "mtime": 1784663475.0096598,
+    "ast_hash": "31255d68681e44723ef486ca159c9bdb",
+    "semantic_hash": ""
+  },
+  "src/pages/bi/TabAgenda.tsx": {
+    "mtime": 1784663517.4438834,
+    "ast_hash": "6fd1b9348f87c807a24b7643e7d55df8",
+    "semantic_hash": ""
+  },
+  "src/pages/bi/TabCompras.tsx": {
+    "mtime": 1784663578.4164171,
+    "ast_hash": "0c47e6a3496f4916b150cfc595d13569",
+    "semantic_hash": ""
+  },
+  "src/pages/bi/TabFarmacia.tsx": {
+    "mtime": 1784663535.7906046,
+    "ast_hash": "dce9eab0537b1e6665de7af37b3ea804",
+    "semantic_hash": ""
+  },
+  "src/pages/bi/TabFinanzas.tsx": {
+    "mtime": 1784663567.1724935,
+    "ast_hash": "5fb1e34fb3cc4573b0d9a8dcde83ae5a",
+    "semantic_hash": ""
+  },
+  "src/pages/bi/TabInventario.tsx": {
+    "mtime": 1784663551.031463,
+    "ast_hash": "92bf5596a31a8975b7cf5aa0e4057e2e",
+    "semantic_hash": ""
+  },
+  "src/pages/bi/TabResumen.tsx": {
+    "mtime": 1784663500.1794186,
+    "ast_hash": "d17ab22804160cec363f1fbf3e8d9e7f",
+    "semantic_hash": ""
+  },
+  "src/pages/bi/shared.tsx": {
+    "mtime": 1784663463.0567303,
+    "ast_hash": "f9bbd89714b0c8a8c9d292afbc8e4932",
     "semantic_hash": ""
   }
 }
