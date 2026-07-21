@@ -259,7 +259,7 @@ export default function Citas() {
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-col items-start gap-1.5">
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          Cobro: <VerAsientoContableButton referenceType="consulta" referenceId={c.id} />
+                          Cobro: <VerAsientoContableButton referenceType="cita_cobro" referenceId={c.id} />
                         </div>
                         {c.doctor_id && (
                           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">

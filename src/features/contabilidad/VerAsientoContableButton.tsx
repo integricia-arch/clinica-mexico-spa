@@ -39,9 +39,12 @@ export function VerAsientoContableButton({ referenceType, referenceId }: { refer
   const abrir = async () => {
     setLoading(true);
     setSinAsiento(false);
-    const { data: resuelto, error: errResolver } = await (supabase as any).rpc("contab_resolver_asiento", {
-      p_reference_type: referenceType, p_reference_id: referenceId,
-    });
+    // "cita_cobro" es un caso especial: el trigger de cobro guarda reference_type=
+    // 'movimiento_caja' con reference_id = movimientos.id (la fila de caja), no el
+    // id de la cita — contab_resolver_cobro_cita hace el puente desde appointment_id.
+    const { data: resuelto, error: errResolver } = referenceType === "cita_cobro"
+      ? await (supabase as any).rpc("contab_resolver_cobro_cita", { p_appointment_id: referenceId })
+      : await (supabase as any).rpc("contab_resolver_asiento", { p_reference_type: referenceType, p_reference_id: referenceId });
     if (errResolver) { setLoading(false); toast.error(friendlyError(errResolver, "No se pudo resolver el asiento contable.")); return; }
     if (!resuelto) { setLoading(false); setSinAsiento(true); return; }
 
