@@ -6,6 +6,12 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
+Sesión anterior cerrada por aviso de costo CRÍTICO ($84.63, salto desde $15.40).
+Nada roto ni a medias: git status limpio, todo commiteado y pusheado a main
+antes de cerrar. CaminoPaciente.tsx config solo se LEYÓ (estructura de funciones,
+líneas 1-75) para planear el split, cero cambios hechos ahí — empezar de cero
+si se retoma.
+
 Plan de avance: #1-#7 HECHAS, #8 PARCIAL (ver detalle abajo). Siguiente en la
 cola: terminar #8 (4 archivos grandes restantes) o pasar a #9 (M2 SEO + M1
 caso de estudio) — ver plan-avance-ejecucion.md.
