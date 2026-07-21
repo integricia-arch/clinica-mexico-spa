@@ -1,6 +1,18 @@
 # S4 — Pen-test onboarding tenants (2026-07-21)
 
-Alcance: create-tenant, verify-tenant-code, provision-users-from-queue, platform_staff_pending. Read-only, sin fixes aplicados (esperan aprobación).
+Alcance: create-tenant, verify-tenant-code, provision-users-from-queue, platform_staff_pending.
+
+## Estado (2026-07-21)
+- **H1 capa 1** — CERRADO. verify-tenant-code quema el código tras validación (deployed v13).
+- **H1 capa 2** — CERRADO. RLS `clinics` SELECT scopeado por membership + is_global_admin
+  (migración `20260721230000_scope_clinics_select_rls_h1_capa2.sql`). Se eligió row-scoping (a)
+  sobre revoke por columna (b): los 4 reads del front van scoped por membership o gated a
+  isGlobalAdmin; `getActiveClinicId` fallback es código muerto. Verificado a nivel lógica RLS
+  (miembro ve su clínica, no otras). Falta confirmación con login real en browser (bloqueado
+  por caída de prod no relacionada — env vars Lovable; resuelta con deploy manual).
+- **H2** — CERRADO. provision-users-from-queue scopeado: admin de clínica solo procesa
+  entities (doctors/nurses) de sus clínicas; platform staff/service_role global (deployed v4).
+- **H3/H4** — LOW, anotados abajo, sin atacar.
 
 ## Hallazgos
 
