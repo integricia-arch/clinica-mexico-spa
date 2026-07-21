@@ -89,3 +89,5 @@ SELECT cron.schedule('nombre-job', '0 2 * * *', $$ ... $$);
 - **CSP vive en `public/_headers`.** Todo script/widget de terceros nuevo debe agregarse ahí o queda bloqueado silenciosamente. Turnstile requiere `https://challenges.cloudflare.com` en `script-src` Y `frame-src`. Ojo: /login puede tardar ~1 min en reflejar headers nuevos por cache de edge. <!-- /aprende 2026-07-18 -->
 - **`supabase.functions.invoke` NO lanza excepción.** Siempre revisar `{ data, error }` del retorno; un try/catch alrededor nunca detecta el fallo (bug real corregido en AdminUsuarios). <!-- /aprende 2026-07-18 -->
 - **Staff de plataforma nuevo = `INSERT INTO platform_staff_pending (email) VALUES ('<email en minúsculas>')`.** Se promueve solo a `platform_staff` en su primer login Google (trigger JIT). Doctores/enfermeras: alta con email en AdminUsuarios y entran con Google, cero pasos manuales. <!-- /aprende 2026-07-18 -->
+
+- **Landing `/pitch`: prohibido testimonios ficticios o claims sin sustento** (riesgo publicidad engañosa / PROFECO). Presentar métricas como "escenarios ilustrativos" con su base declarada, nunca como clientes reales con nombre/foto. <!-- /aprende 2026-07-21 -->
