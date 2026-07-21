@@ -1523,9 +1523,5 @@
   "1521": "Completado (Jun 17, 2026 — notification_rules + .env local file server)",
   "1522": "autoprefixer",
   "1523": "prism-react-renderer",
-  "1524": "lucide-react",
-  "1525": "@radix-ui/react-accordion",
-  "1526": "react-dom",
-  "1527": "tailwindcss-animate",
   "1528": "20260720190000_catalogo_minimo_cuentas_faltantes.sql"
 }
