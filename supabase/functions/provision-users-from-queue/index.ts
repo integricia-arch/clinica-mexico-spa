@@ -25,6 +25,10 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const token = authHeader.replace(/^Bearer\s+/i, "");
 
+    // scopeClinicIds === null → procesa la cola global (service_role o platform staff).
+    // Set → admin de clínica: solo procesa filas cuyo entity pertenece a SUS clínicas.
+    let scopeClinicIds: Set<string> | null = null;
+
     // service_role (cron/backend) pasa directo; cualquier otro JWT debe ser admin
     if (token !== SUPABASE_SERVICE_KEY) {
       const supaUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -32,12 +36,30 @@ Deno.serve(async (req) => {
       });
       const { data: userData, error: userErr } = await supaUser.auth.getUser();
       if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
+      const callerId = userData.user.id;
 
       const { data: isAdmin } = await admin.rpc("has_role", {
-        _user_id: userData.user.id,
+        _user_id: callerId,
         _role: "admin",
       });
       if (!isAdmin) return json({ error: "Admin role required" }, 403);
+
+      // H2: sin scoping, un admin de la clínica A disparaba el provisioning de la
+      // cola de TODAS las clínicas. Platform staff sí procesa global; un admin de
+      // clínica queda restringido a los entities de sus propias clínicas.
+      const { data: isGlobal } = await admin.rpc("is_global_admin", { _user_id: callerId });
+      if (!isGlobal) {
+        const { data: memberships, error: mErr } = await admin
+          .from("clinic_memberships")
+          .select("clinic_id")
+          .eq("user_id", callerId)
+          .eq("status", "active");
+        if (mErr) throw mErr;
+        scopeClinicIds = new Set((memberships ?? []).map((m) => m.clinic_id as string));
+        if (scopeClinicIds.size === 0) {
+          return json({ ok: true, processed: 0, message: "No clinics in scope" });
+        }
+      }
     }
 
     const { data: queue, error: queueErr } = await admin
@@ -52,9 +74,18 @@ Deno.serve(async (req) => {
       return json({ ok: true, processed: 0, message: "No pending users" });
     }
 
+    // Filtrar la cola al scope del caller resolviendo la clínica de cada entity
+    // (la cola no guarda clinic_id; vive en doctors/nurses).
+    const scopedQueue = scopeClinicIds === null
+      ? queue
+      : await scopeQueueToClinics(admin, queue, scopeClinicIds);
+    if (scopedQueue.length === 0) {
+      return json({ ok: true, processed: 0, message: "No pending users in scope" });
+    }
+
     const results = { processed: 0, failed: 0, errors: [] as string[] };
 
-    for (const item of queue) {
+    for (const item of scopedQueue) {
       try {
         const email = item.email.trim().toLowerCase();
 
@@ -117,6 +148,31 @@ Deno.serve(async (req) => {
     return json({ error: (err as Error)?.message || "Unknown error" }, 500);
   }
 });
+
+// Resuelve la clínica de cada entity (doctors/nurses) y descarta las filas
+// que no pertenezcan a las clínicas del caller. La cola no guarda clinic_id.
+// deno-lint-ignore no-explicit-any
+async function scopeQueueToClinics(admin: any, queue: any[], allowed: Set<string>) {
+  const idsByType: Record<string, string[]> = { doctor: [], nurse: [] };
+  for (const it of queue) {
+    if (idsByType[it.entity_type]) idsByType[it.entity_type].push(it.entity_id);
+  }
+  const entityClinic = new Map<string, string>(); // entity_id -> clinic_id
+  const tableByType: Record<string, string> = { doctor: "doctors", nurse: "nurses" };
+  for (const [type, ids] of Object.entries(idsByType)) {
+    if (ids.length === 0) continue;
+    const { data, error } = await admin
+      .from(tableByType[type])
+      .select("id, clinic_id")
+      .in("id", ids);
+    if (error) throw error;
+    for (const row of data ?? []) entityClinic.set(row.id as string, row.clinic_id as string);
+  }
+  return queue.filter((it) => {
+    const clinic = entityClinic.get(it.entity_id);
+    return clinic != null && allowed.has(clinic);
+  });
+}
 
 // Password aleatorio criptográficamente seguro. Nunca se comunica: la entrada
 // real del usuario es Google OAuth (o "olvidé mi contraseña" si la necesita).
