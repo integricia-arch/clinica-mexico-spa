@@ -11,6 +11,15 @@ GRANT EXECUTE ON FUNCTION public.contab_generar_poliza_evento(
 -- 2. Diagnóstico de un hueco puntual: dado un movimiento_contables sin póliza,
 --    resuelve qué póliza le correspondería según el motor de reglas ya existente
 --    (contab_reglas_asiento / contab_resolver_regla), sin escribir nada.
+--
+--    v_mov.evento es siempre 'devengo'/'cancelacion' (columna genérica de
+--    movimientos_contables), NO la clave de negocio que usan las reglas
+--    (contab_reglas_asiento.evento: 'cobro_caja_consulta', 'venta_farmacia',
+--    'honorario_devengo', etc). Hay que derivarla desde reference_type, igual
+--    que lo hace cada trigger (contab_movimiento_caja/contab_pharmacy_sale/
+--    contab_devengar_honorarios). factura_proveedor queda fuera (multi-línea:
+--    subtotal+IVA+proveedores, no un simple cargo/abono) — se reporta como
+--    "requiere corrección manual", cubierto por el fallback de abajo.
 CREATE OR REPLACE FUNCTION public.contab_diagnosticar_hueco(p_movimiento_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -19,6 +28,7 @@ SET search_path = public
 AS $function$
 DECLARE
   v_mov public.movimientos_contables%ROWTYPE;
+  v_evento_regla text;
   v_regla record;
   v_cargo record;
   v_abono record;
@@ -35,10 +45,23 @@ BEGIN
     RAISE EXCEPTION 'forbidden';
   END IF;
 
-  SELECT * INTO v_regla FROM public.contab_resolver_regla(v_mov.clinic_id, v_mov.evento);
+  v_evento_regla := CASE v_mov.reference_type
+    WHEN 'movimiento_caja' THEN
+      (SELECT CASE WHEN m.appointment_id IS NOT NULL THEN 'cobro_caja_consulta' ELSE 'cobro_caja_otros' END
+       FROM public.movimientos m WHERE m.id = v_mov.reference_id)
+    WHEN 'pharmacy_sale' THEN 'venta_farmacia'
+    WHEN 'honorario_appointment' THEN 'honorario_devengo'
+    ELSE NULL
+  END;
+
+  IF v_evento_regla IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sin_mapeo_para_reference_type', 'evento', v_mov.reference_type);
+  END IF;
+
+  SELECT * INTO v_regla FROM public.contab_resolver_regla(v_mov.clinic_id, v_evento_regla);
 
   IF v_regla.cuenta_cargo_id IS NULL OR v_regla.cuenta_abono_id IS NULL THEN
-    RETURN jsonb_build_object('ok', false, 'motivo', 'regla_no_encontrada', 'evento', v_mov.evento);
+    RETURN jsonb_build_object('ok', false, 'motivo', 'regla_no_encontrada', 'evento', v_evento_regla);
   END IF;
 
   SELECT id, codigo, nombre INTO v_cargo FROM public.cuentas_contables WHERE id = v_regla.cuenta_cargo_id;
@@ -48,7 +71,7 @@ BEGIN
     'ok', true,
     'movimiento_id', v_mov.id,
     'clinic_id', v_mov.clinic_id,
-    'evento', v_mov.evento,
+    'evento', v_evento_regla,
     'reference_type', v_mov.reference_type,
     'reference_id', v_mov.reference_id,
     'monto_centavos', abs(v_mov.monto_centavos),
