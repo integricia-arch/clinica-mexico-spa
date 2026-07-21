@@ -1150,9 +1150,9 @@
     "semantic_hash": "b11daea29977597a85e1da32dbd6c32d"
   },
   "src/hooks/useActiveClinic.tsx": {
-    "mtime": 1783550823.2693243,
-    "ast_hash": "1cd069e6b6a204980fd9d75bcfa96f50",
-    "semantic_hash": "1cd069e6b6a204980fd9d75bcfa96f50"
+    "mtime": 1784597316.1981435,
+    "ast_hash": "6be33cb8dce0ee4566dd8dba8ae7174c",
+    "semantic_hash": ""
   },
   "src/hooks/useAuditLog.ts": {
     "mtime": 1783355146.4449615,
@@ -1575,9 +1575,9 @@
     "semantic_hash": "9aa2d8cecac59186182a21b69bb9f438"
   },
   "src/pages/Pitch.tsx": {
-    "mtime": 1783774359.6921113,
-    "ast_hash": "b0e2132d575c328925d2081ddf164e1b",
-    "semantic_hash": "b0e2132d575c328925d2081ddf164e1b"
+    "mtime": 1784600392.265453,
+    "ast_hash": "f95ed104b0fd56597577ed04a3fb6652",
+    "semantic_hash": ""
   },
   "src/pages/RecepcionDashboard.tsx": {
     "mtime": 1783355146.539442,
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784578501.854894,
-    "ast_hash": "ed7d216acf3659e57e4f8cedec9b8982",
+    "mtime": 1784581995.8302798,
+    "ast_hash": "06bd99f37dfef36490633fc6eb6b612e",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4445,8 +4445,8 @@
     "semantic_hash": ""
   },
   "src/features/contabilidad/CatalogosTab.tsx": {
-    "mtime": 1784576173.4119802,
-    "ast_hash": "fe7283d672a3b9b3bc8779c35969b923",
+    "mtime": 1784613479.3429756,
+    "ast_hash": "958043beb3c25d2c4480fb03a73cad4d",
     "semantic_hash": ""
   },
   "src/features/contabilidad/PolizasTab.tsx": {
@@ -4620,8 +4620,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/modulo-contable-memoria-tecnica.md": {
-    "mtime": 1784575933.9270663,
-    "ast_hash": "2c828f318727af2430eb849eb4b17899",
+    "mtime": 1784580534.3921764,
+    "ast_hash": "8fb0cdab5f687b29594fa42bb3656916",
     "semantic_hash": ""
   },
   "memoria/referencias/contabilidad-marco-legal-mx.md": {
@@ -4635,8 +4635,8 @@
     "semantic_hash": ""
   },
   "src/features/contabilidad/ReportesTab.tsx": {
-    "mtime": 1784565298.8684037,
-    "ast_hash": "016e9d3acae0098279087b4a5d088aff",
+    "mtime": 1784581350.8719878,
+    "ast_hash": "0ab224ad9bb2be3a833b28b8086b2b74",
     "semantic_hash": ""
   },
   "src/features/contabilidad/exportReporteCsv.ts": {
@@ -4645,8 +4645,8 @@
     "semantic_hash": ""
   },
   "src/hooks/useReportesContables.ts": {
-    "mtime": 1784565298.8800013,
-    "ast_hash": "45be8254523c8997c3b023e1b4be39c9",
+    "mtime": 1784581312.4735713,
+    "ast_hash": "55c194188887dd4773ff3df41d8d2786",
     "semantic_hash": ""
   },
   "supabase/migrations/20260719140000_fase6c_reportes_partida_doble.sql": {
@@ -4725,13 +4725,13 @@
     "semantic_hash": ""
   },
   "src/features/contabilidad/ivaRules.ts": {
-    "mtime": 1784565298.8703814,
-    "ast_hash": "645354a2c21995b702d078067f7d3a58",
+    "mtime": 1784613473.593791,
+    "ast_hash": "3eee91530bc086a695fa7702d33935f2",
     "semantic_hash": ""
   },
   "src/test/contabilidad/ivaRules.test.ts": {
-    "mtime": 1784565298.8944225,
-    "ast_hash": "2faa701ce4bd40f7761fd06627185679",
+    "mtime": 1784614439.2697623,
+    "ast_hash": "11ccfe38aa791e73e2df100b563f27ee",
     "semantic_hash": ""
   },
   "src/features/contabilidad/ActivosFijosTab.tsx": {
@@ -4850,8 +4850,123 @@
     "semantic_hash": ""
   },
   "src/features/contabilidad/ArbolCuentasDialog.tsx": {
-    "mtime": 1784576157.0081246,
-    "ast_hash": "ec52830f3b0c757f0d78717e4143e685",
+    "mtime": 1784600647.0516703,
+    "ast_hash": "a50349b201bd19a6ec92a7ee8e3f3c45",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/PolizaDetalleDialog.tsx": {
+    "mtime": 1784581086.3693843,
+    "ast_hash": "1ae4d759b4e6297ed3937014719fcf8a",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/ValidadorCuadreDialog.tsx": {
+    "mtime": 1784581337.7544463,
+    "ast_hash": "ea0b261d0277c767c1236ec8a9530b9c",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720170000_fusion_catalogo_cuentas_duplicado.sql": {
+    "mtime": 1784580483.2849834,
+    "ast_hash": "71eff44d5b4ac0d3d2b399eff3417fed",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/README.md": {
+    "mtime": 1784579963.7829196,
+    "ast_hash": "1a13205115f5fbda0454f81ec3a6ec59",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/markdown/LISR_vigente.md": {
+    "mtime": 1784579892.8824086,
+    "ast_hash": "19d2b56985f0115f9abe138061e03ad9",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/markdown/LIVA_vigente.md": {
+    "mtime": 1784579917.028864,
+    "ast_hash": "5d8d03dc2774b335dfc1c31044e65ce7",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/markdown/NIF_A2_postulados_basicos.md": {
+    "mtime": 1784579920.704005,
+    "ast_hash": "1aaaeada104d265e78df7d7768252026",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/markdown/NIF_B2_flujos_efectivo.md": {
+    "mtime": 1784579923.3746166,
+    "ast_hash": "a024353a4779ace1278b85cc6bae3d96",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/markdown/NIF_B3_resultado_integral.md": {
+    "mtime": 1784579930.8035953,
+    "ast_hash": "0ce1929d3cd8b857af60301ccb7d9e48",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/markdown/NIF_C6_propiedades_planta_equipo.md": {
+    "mtime": 1784579933.4471035,
+    "ast_hash": "11e217ef9d8f0e605496e8436e4952c8",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/markdown/NIF_MarcoConceptual_SerieA.md": {
+    "mtime": 1784579936.2544236,
+    "ast_hash": "8f14119181497befe49fbe591fea748e",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/markdown/Reglamento_LIVA.md": {
+    "mtime": 1784579940.2051418,
+    "ast_hash": "60183d42e6a50f82e142ec125edf9dd9",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/plan-trazabilidad-contable-almacen.md": {
+    "mtime": 1784581845.9654782,
+    "ast_hash": "c9d697c9d76783444be3f9215a6f7225",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/fuente-pdf/LISR_vigente.pdf": {
+    "mtime": 1784579816.770407,
+    "ast_hash": "146b3627e9d6533e849c3620bf3af1cd",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/fuente-pdf/LIVA_vigente.pdf": {
+    "mtime": 1784579817.4118388,
+    "ast_hash": "db93f78bbea1122835e1c126ee120155",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/fuente-pdf/NIF_A2_postulados_basicos.pdf": {
+    "mtime": 1784579831.8193073,
+    "ast_hash": "55a42dca0b7b378fbf0e2540584698de",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/fuente-pdf/NIF_B2_flujos_efectivo.pdf": {
+    "mtime": 1784579834.790403,
+    "ast_hash": "752f47589eb1a28a11fe2637b751862e",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/fuente-pdf/NIF_B3_resultado_integral.pdf": {
+    "mtime": 1784579837.3290994,
+    "ast_hash": "217c532075833923b154c628ad6891ea",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/fuente-pdf/NIF_C6_propiedades_planta_equipo.pdf": {
+    "mtime": 1784579838.9909732,
+    "ast_hash": "21dd5002b124fe313f8f3c45252e4805",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/fuente-pdf/NIF_MarcoConceptual_SerieA.pdf": {
+    "mtime": 1784579832.4832785,
+    "ast_hash": "0de230451a1e473057b3eb888217566a",
+    "semantic_hash": ""
+  },
+  "docs/normatividad-contable/fuente-pdf/Reglamento_LIVA.pdf": {
+    "mtime": 1784579817.7387514,
+    "ast_hash": "45228d2dd157e0f7ccb73ee0ea728179",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720180000_unificar_codigos_numericos_catalogo.sql": {
+    "mtime": 1784612791.566043,
+    "ast_hash": "53a6e185a3844b84efeed87aa1d8eaa0",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260720190000_catalogo_minimo_cuentas_faltantes.sql": {
+    "mtime": 1784612854.0820353,
+    "ast_hash": "c1077ece4b746282642c2b0a3d063270",
     "semantic_hash": ""
   }
 }

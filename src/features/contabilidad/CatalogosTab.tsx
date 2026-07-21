@@ -254,7 +254,7 @@ function CuentasCrud() {
                             {IVA_LABELS[c.iva_tratamiento]}{c.iva_tratamiento === "tasa_general" && c.iva_tasa_pct != null ? ` (${c.iva_tasa_pct}%)` : ""}
                           </span>
                           {(() => {
-                            if (!cfdiConfig || !["ING_CONSULTAS", "ING_FARMACIA", "ING_OTROS"].includes(c.codigo)) return null;
+                            if (!cfdiConfig || !["401", "402", "403"].includes(c.codigo)) return null;
                             const sugerido = deriveIvaTratamiento(cfdiConfig.regimen_fiscal, cfdiConfig.tipo_persona, c.codigo as CodigoCuentaIngreso);
                             if (!sugerido) {
                               return <span className="text-xs text-muted-foreground">Define tipo de persona en Facturación</span>;

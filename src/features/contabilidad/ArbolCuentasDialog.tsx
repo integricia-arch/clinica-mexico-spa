@@ -71,8 +71,8 @@ function TreeNode({
         >
           {esMayor ? (abierto ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : null}
         </button>
-        <span className="font-mono text-xs text-muted-foreground w-16 shrink-0">{nodo.codigo}</span>
-        <span className={`text-sm truncate ${esMayor ? "font-medium" : ""}`}>{nodo.nombre}</span>
+        <span className="font-mono text-xs text-muted-foreground w-24 shrink-0 truncate" title={nodo.codigo}>{nodo.codigo}</span>
+        <span className={`text-sm truncate min-w-0 flex-1 ${esMayor ? "font-medium" : ""}`} title={nodo.nombre}>{nodo.nombre}</span>
         <Badge variant="outline" className="text-[10px] shrink-0">{TIPO_LABELS[nodo.tipo] ?? nodo.tipo}</Badge>
         <Badge variant="secondary" className="text-[10px] shrink-0">{nodo.naturaleza === "deudora" ? "Deudora" : "Acreedora"}</Badge>
         {esMayor ? (

@@ -102,7 +102,17 @@ export function ActiveClinicProvider({ children }: { children: ReactNode }) {
 
       // dedupe por id
       const dedup = Array.from(new Map(clinics.map((c) => [c.id, c])).values());
-      let finalList = dedup;
+      // Clínicas donde el usuario es admin van primero -- evita que una
+      // membresía no-admin más antigua (ej. doctor en otra clínica) quede
+      // como clínica activa por defecto y oculte el panel de administrador.
+      const adminClinicIds = new Set(
+        rawMemberships.filter((m) => m.role === "admin").map((m) => m.clinic_id),
+      );
+      let finalList = [...dedup].sort((a, b) => {
+        const aAdmin = adminClinicIds.has(a.id) ? 1 : 0;
+        const bAdmin = adminClinicIds.has(b.id) ? 1 : 0;
+        return bAdmin - aAdmin;
+      });
 
       // Si es admin global y no tiene clínicas, usar la default
       if (finalList.length === 0 && isGlobalAdmin) {

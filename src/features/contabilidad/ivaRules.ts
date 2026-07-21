@@ -1,7 +1,8 @@
 export type TipoPersona = "fisica" | "moral";
 export type IvaTratamiento = "sin_configurar" | "exento" | "tasa_0" | "tasa_general";
 
-export type CodigoCuentaIngreso = "ING_CONSULTAS" | "ING_FARMACIA" | "ING_OTROS";
+/** Códigos numéricos del catálogo de cuentas: 401=consultas, 402=farmacia, 403=otros ingresos. */
+export type CodigoCuentaIngreso = "401" | "402" | "403";
 
 /**
  * Clasificación de los 17 regímenes fiscales de REGIMENES (ConfiguracionCFDI.tsx)
@@ -33,18 +34,18 @@ export function deriveIvaTratamiento(
   tipoPersona: TipoPersona | null,
   codigoCuenta: CodigoCuentaIngreso
 ): { tratamiento: IvaTratamiento; tasaPct: number | null } | null {
-  if (codigoCuenta === "ING_FARMACIA") {
+  if (codigoCuenta === "402") {
     return { tratamiento: "tasa_0", tasaPct: 0 };
   }
 
   if (tipoPersona === null) return null;
 
-  if (codigoCuenta === "ING_CONSULTAS") {
+  if (codigoCuenta === "401") {
     return tipoPersona === "fisica"
       ? { tratamiento: "exento", tasaPct: null }
       : { tratamiento: "tasa_general", tasaPct: 16 };
   }
 
-  // ING_OTROS
+  // 403 = Otros ingresos
   return { tratamiento: "tasa_general", tasaPct: 16 };
 }

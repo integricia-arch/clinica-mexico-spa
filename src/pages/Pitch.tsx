@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion, useInView } from "motion/react";
+import { motion, useInView, MotionConfig } from "motion/react";
 import Logo from "@/components/Logo";
 import testimonioMariaPhoto from "@/assets/testimonios/testimonio-1.jpg";
 import {
@@ -508,6 +508,7 @@ export default function Pitch() {
   ];
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="pr">
       <style>{PITCH_STYLES}</style>
       <ScrollProgress />
@@ -538,7 +539,7 @@ export default function Pitch() {
               <button className="pr-btn pr-btn-p" style={{ padding: "10px 20px", fontSize: 13 }}>Pedir demo <ArrowRight size={13} /></button>
             </a>
             <button className="pr-mob-btn"
-              style={{ background: "transparent", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: "#0f172a" }}
+              style={{ background: "transparent", border: "1px solid #e2e8f0", borderRadius: 8, padding: "13px 15px", cursor: "pointer", color: "#0f172a", minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
               aria-expanded={mobileOpen}
@@ -548,9 +549,9 @@ export default function Pitch() {
           </div>
         </div>
         {mobileOpen && (
-          <div style={{ borderTop: "1px solid #e2e8f0", background: "#fff", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ borderTop: "1px solid #e2e8f0", background: "#fff", padding: "8px 24px 16px", display: "flex", flexDirection: "column" }}>
             {navLinks.map((l) => (
-              <a key={l.href} href={l.href} style={{ color: "#475569", textDecoration: "none", fontSize: 15, fontWeight: 500 }} onClick={() => setMobileOpen(false)}>{l.label}</a>
+              <a key={l.href} href={l.href} style={{ color: "#475569", textDecoration: "none", fontSize: 15, fontWeight: 500, padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center" }} onClick={() => setMobileOpen(false)}>{l.label}</a>
             ))}
           </div>
         )}
@@ -904,9 +905,9 @@ export default function Pitch() {
           <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ marginTop: 24 }}>
             <div style={{ borderRadius: 16, background: TEAL, padding: "24px 28px", display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginBottom: 4 }}>ROI neto estimado vs. Plan {planName} ({formatCurrency(planSeleccionado)} MXN/mes)</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,.95)", marginBottom: 4 }}>ROI neto estimado vs. Plan {planName} ({formatCurrency(planSeleccionado)} MXN/mes)</div>
                 <div className="pr-h" style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>+{formatCurrency(totalROI)} / mes</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginTop: 4 }}>Solo con no-shows + farmacia + vs. secretaria extra</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,.95)", marginTop: 4 }}>Solo con no-shows + farmacia + vs. secretaria extra</div>
               </div>
               <a href={whatsappRoiHref} target="_blank" rel="noopener noreferrer">
                 <button className="pr-btn" style={{ background: "#fff", color: TEAL, fontWeight: 700, padding: "14px 24px" }}>
@@ -1330,7 +1331,7 @@ export default function Pitch() {
             <h2 className="pr-h" style={{ fontSize: "clamp(30px,5vw,52px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.06, marginBottom: 18, color: "#fff" }}>
               ¿Listo para que tu clínica funcione sola?
             </h2>
-            <p style={{ fontSize: 17, color: "rgba(255,255,255,.8)", marginBottom: 38, lineHeight: 1.75 }}>
+            <p style={{ fontSize: 17, color: "rgba(255,255,255,.95)", marginBottom: 38, lineHeight: 1.75 }}>
               Demo de 30 minutos con tu clínica real. Sin instalación. Sin tarjeta de crédito. Operando en 48 horas.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 14, justifyContent: "center", marginBottom: 32 }}>
@@ -1341,10 +1342,10 @@ export default function Pitch() {
                 <button className="pr-btn" style={{ background: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,.4)", fontSize: 15, padding: "16px 32px" }}>Escribir por WhatsApp</button>
               </a>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 22, fontSize: 13, color: "rgba(255,255,255,.7)" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 22, fontSize: 13, color: "rgba(255,255,255,.95)" }}>
               {["Sin tarjeta de crédito", "Onboarding incluido", "14 días de prueba gratis", "Datos en México"].map((t) => (
                 <div key={t} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircle2 size={12} color="rgba(255,255,255,.7)" /> {t}
+                  <CheckCircle2 size={12} color="rgba(255,255,255,.95)" /> {t}
                 </div>
               ))}
             </div>
@@ -1361,13 +1362,13 @@ export default function Pitch() {
               <span className="pr-h" style={{ fontWeight: 800, fontSize: 15, color: "#0f172a", letterSpacing: "-0.03em" }}>IntegriKa</span>
               <span style={{ fontSize: 12, color: "#64748b" }}>· Sistema Operativo de Clínica · México</span>
             </div>
-            <div style={{ display: "flex", gap: 20 }}>
+            <div style={{ display: "flex", gap: 8 }}>
               {[
                 { href: "/aviso-privacidad", label: "Privacidad" },
                 { href: "/terminos", label: "Términos" },
                 { href: "mailto:contacto@integrika.mx", label: "Contacto" },
               ].map(({ href, label }) => (
-                <a key={label} href={href} style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}
+                <a key={label} href={href} style={{ fontSize: 13, color: "#64748b", textDecoration: "none", padding: "12px 8px", minHeight: 44, display: "flex", alignItems: "center" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = TEAL)}
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#64748b")}
                 >{label}</a>
@@ -1380,5 +1381,6 @@ export default function Pitch() {
         </div>
       </footer>
     </div>
+    </MotionConfig>
   );
 }

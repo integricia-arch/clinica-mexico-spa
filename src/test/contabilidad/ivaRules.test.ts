@@ -24,32 +24,32 @@ describe("REGIMEN_TIPO_PERSONA", () => {
 
 describe("deriveIvaTratamiento", () => {
   it("ING_FARMACIA siempre es tasa_0, sin importar tipo de persona", () => {
-    expect(deriveIvaTratamiento("601", "moral", "ING_FARMACIA")).toEqual({ tratamiento: "tasa_0", tasaPct: 0 });
-    expect(deriveIvaTratamiento("612", "fisica", "ING_FARMACIA")).toEqual({ tratamiento: "tasa_0", tasaPct: 0 });
+    expect(deriveIvaTratamiento("601", "moral", "402")).toEqual({ tratamiento: "tasa_0", tasaPct: 0 });
+    expect(deriveIvaTratamiento("612", "fisica", "402")).toEqual({ tratamiento: "tasa_0", tasaPct: 0 });
   });
 
   it("ING_FARMACIA es tasa_0 incluso si tipoPersona es null (no depende de persona)", () => {
-    expect(deriveIvaTratamiento("626", null, "ING_FARMACIA")).toEqual({ tratamiento: "tasa_0", tasaPct: 0 });
+    expect(deriveIvaTratamiento("626", null, "402")).toEqual({ tratamiento: "tasa_0", tasaPct: 0 });
   });
 
   it("ING_CONSULTAS es exento para persona física (Art. 15-XIV LIVA)", () => {
-    expect(deriveIvaTratamiento("612", "fisica", "ING_CONSULTAS")).toEqual({ tratamiento: "exento", tasaPct: null });
+    expect(deriveIvaTratamiento("612", "fisica", "401")).toEqual({ tratamiento: "exento", tasaPct: null });
   });
 
   it("ING_CONSULTAS es tasa_general 16% para persona moral", () => {
-    expect(deriveIvaTratamiento("601", "moral", "ING_CONSULTAS")).toEqual({ tratamiento: "tasa_general", tasaPct: 16 });
+    expect(deriveIvaTratamiento("601", "moral", "401")).toEqual({ tratamiento: "tasa_general", tasaPct: 16 });
   });
 
   it("ING_CONSULTAS retorna null si tipoPersona es null (régimen ambiguo sin resolver)", () => {
-    expect(deriveIvaTratamiento("626", null, "ING_CONSULTAS")).toBeNull();
+    expect(deriveIvaTratamiento("626", null, "401")).toBeNull();
   });
 
   it("ING_OTROS siempre es tasa_general 16%, sin importar tipo de persona", () => {
-    expect(deriveIvaTratamiento("612", "fisica", "ING_OTROS")).toEqual({ tratamiento: "tasa_general", tasaPct: 16 });
-    expect(deriveIvaTratamiento("601", "moral", "ING_OTROS")).toEqual({ tratamiento: "tasa_general", tasaPct: 16 });
+    expect(deriveIvaTratamiento("612", "fisica", "403")).toEqual({ tratamiento: "tasa_general", tasaPct: 16 });
+    expect(deriveIvaTratamiento("601", "moral", "403")).toEqual({ tratamiento: "tasa_general", tasaPct: 16 });
   });
 
   it("ING_OTROS retorna null si tipoPersona es null", () => {
-    expect(deriveIvaTratamiento("610", null, "ING_OTROS")).toBeNull();
+    expect(deriveIvaTratamiento("610", null, "403")).toBeNull();
   });
 });

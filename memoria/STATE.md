@@ -1,6 +1,25 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 6). Módulo contable: normatividad local + fusión catálogo duplicado + UI pólizas (detalle/export) + export/import catálogo + botón "Validar cuadre" — **commiteado, NO desplegado a prod, NO verificado visualmente por Pablo**. Plan de trazabilidad (reporte↔trámite) quedó en `memoria/proyectos/plan-trazabilidad-contable-almacen.md`, sin implementar, retomar en sesión nueva. Pendiente real sin cambios: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar).
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-20 (parte 7). Catálogo de cuentas unificado a numérico puro (401-403/503-504/601-604) + 5 cuentas mínimas agregadas (131/210/211/605/606) — **aplicado y desplegado a prod**, tests pasan, pero **NO verificado visualmente en browser tras el remapeo** (pólizas, reportes, árbol de cuentas — confirmar que todo sigue mostrando bien con los códigos nuevos). Plan de trazabilidad (reporte↔trámite) sigue en `memoria/proyectos/plan-trazabilidad-contable-almacen.md`, sin implementar, retomar en sesión nueva. Pendiente real sin cambios: completar el hito "Salida/alta" del paciente PRUEBA-E2E (11/13 → falta el último). Registros PRUEBA-* se quedan en prod (decisión de Pablo, no limpiar). **Costo sesión 2026-07-20 parte 7: ~$244 — dividir en sesiones más cortas por sub-tema la próxima vez, no acumular todo en una sola sesión larga.**
+
+## Sesión 2026-07-20 (parte 7) — accesos admin Alan/Aldo, fix captcha prod, landing /pitch a11y, catálogo cuentas 100% numérico
+
+**Accesos admin (demo):** Alan (`alan.calderon.biomed@gmail.com`) y Aldo (`alomeli19@aspv.edu.mx`) creados directo en `auth.users`/`auth.identities` (sin service role key local, insert SQL con `crypt()`), rol admin en `user_roles`+`clinic_memberships` (Salud Integral MX). Bug encontrado y corregido: `platform_staff` (admin de plataforma SaaS) NO es lo mismo que `user_roles`/`clinic_memberships` (admin de clínica) — Alan tenía una membresía `doctor` vieja en clínica basura "p" que quedaba primera por orden de creación y ocultaba el Panel principal. Fix de código en `useActiveClinic.tsx`: clínica activa por defecto ahora prioriza donde el usuario es `admin`, evita que se repita con otros usuarios.
+
+**Fix captcha roto en prod:** `VITE_TURNSTILE_SITE_KEY` no estaba en GitHub Actions secrets → build de prod sin key → Supabase exige captcha server-side → login bloqueado para TODOS. Deploy manual + `gh secret set` para fix permanente.
+
+**Landing `/pitch` — auditoría UI/UX (skill ui-ux-pro-max instalada vía `npx skills add`):** ya existía landing completa (cyan/verde, Figtree+Inter) — se mejoró en vez de reconstruir. 4 fixes: `MotionConfig reducedMotion="user"` (ninguna animación respetaba `prefers-reduced-motion`), botón hamburguesa móvil 34×38px→44×44px, contraste roto `rgba(255,255,255,.7)` sobre teal (ratio real 2.64:1, needed 4.5:1) en banner ROI y CTA final, padding en links de menú móvil/footer.
+
+**Árbol de cuentas — bug de encimado corregido:** `ArbolCuentasDialog.tsx` tenía columna de código con `w-16` fijo sin overflow-hidden — códigos largos (`EGR_HONORARIOS`, `EGR_NOMINA`) se encimaban visualmente con el nombre de cuenta. Fix: `w-24 truncate` + nombre `flex-1 min-w-0 truncate`.
+
+**Catálogo de cuentas 100% numérico (pedido explícito: "aplica norma y manuales contables"):** el catálogo tenía dos esquemas mezclados (numérico 101-502 de partida doble, texto `EGR_*`/`ING_*` de devengo simple) — mismo bug de origen que la fusión de la sesión anterior, no había quedado resuelto del todo. Renumerado siguiendo NIF C (4xx=ingreso, 5xx=costo de ventas directo, 6xx=gasto de operación):
+- `ING_CONSULTAS`→401, `ING_FARMACIA`→402, `ING_OTROS`→403
+- `EGR_COMPRAS`→503, `EGR_HONORARIOS`→504 (costo directo)
+- `EGR_NOMINA`→601, `EGR_RENTA`→602, `EGR_SERVICIOS`→603, `EGR_OTROS`→604 (gasto operación)
+
+6 funciones SQL en prod (`contab_devengar_honorarios`, `contab_factura_proveedor`, `contab_movimiento_caja`, `contab_pharmacy_sale`, `kpis_dashboard`, `pnl_mensual`) tenían el código de texto hardcodeado en `cuenta_contable_id('ING_CONSULTAS')` / `cc.codigo = 'EGR_COMPRAS'` etc. — actualizadas en la misma migración (`20260720180000_unificar_codigos_numericos_catalogo.sql`). `ivaRules.ts` (`CodigoCuentaIngreso` type), `CatalogosTab.tsx` y `ivaRules.test.ts` actualizados a juego (10/10 tests pasan).
+
+**5 cuentas mínimas agregadas** (`20260720190000_catalogo_minimo_cuentas_faltantes.sql`) — huecos reales contra operaciones ya modeladas sin cuenta donde registrarse: `131` Depreciación acumulada mobiliario (NIF C-6, ya citada en `docs/normatividad-contable/`), `210` ISR retenido por pagar, `211` IMSS/INFONAVIT por pagar (hay nómina, cero cuenta de retención), `605` Comisiones bancarias/financieras (Stripe cobra 3.6%+$3, no había dónde registrarlo), `606` Depreciación (gasto, pareja de 131). Solo alta de catálogo — lógica de retención/depreciación automática sigue sin construir (activos fijos: investigado, no implementado, ver memoria técnica §11).
 
 ## Sesión 2026-07-20 (parte 6) — normatividad contable local + fusión catálogo + UI pólizas + validador de cuadre
 
