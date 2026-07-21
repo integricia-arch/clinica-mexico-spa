@@ -6,9 +6,24 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Plan de avance: tareas #1-#7 HECHAS (ver detalle abajo). Siguiente en la cola:
-#8 E3 code-splitting + E2 partir archivos (Sonnet/Haiku, 2 cortas) — ver
-plan-avance-ejecucion.md.
+Plan de avance: #1-#7 HECHAS, #8 PARCIAL (ver detalle abajo). Siguiente en la
+cola: terminar #8 (4 archivos grandes restantes) o pasar a #9 (M2 SEO + M1
+caso de estudio) — ver plan-avance-ejecucion.md.
+
+#8 E3+E2 (octava parte, 2026-07-21) — E3 HECHO completo: App.tsx, todas las
+rutas a React.lazy salvo Login, un solo Suspense boundary. Bundle inicial
+3.38MB → 676KB (commit bd3a2ed, pusheado). E2 PARCIAL: solo Pitch.tsx partido
+(1387→723 líneas) a src/pages/pitch/{pitchShared,RoiCalculatorSection,
+FaqSection}.tsx, sin cambio de lógica/JSX (commit 0dd610e, pusheado).
+Pendiente de E2 (próxima sesión, cada uno con la misma lectura cuidadosa
+antes de cortar — NO mecánico a ciegas):
+- AdminUsuarios.tsx (2037 líneas) — SALTADO A PROPÓSITO esta sesión: es un
+  solo componente monolítico (no varias funciones separables), superficie
+  sensible (gestión usuarios/roles). Requiere sesión dedicada, no apurarse.
+- src/pages/configuracion/CaminoPaciente.tsx (1148)
+- src/pages/CajaTurno.tsx (971)
+- src/pages/BI.tsx (954)
+- src/pages/Expedientes.tsx (934)
 
 #7 U4 onboarding primer uso — CERRADO 2026-07-21 (octava parte): checklist de
 activación en AdminDashboard (doctor → servicio → primera cita), derivado de

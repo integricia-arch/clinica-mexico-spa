@@ -17,7 +17,7 @@ Convención modelos: **Haiku 4.5** mecánico/copy · **Sonnet** dev principal ·
 | 5 | E1 tests CI (smoke E2E + RPCs contables) | Sonnet | 🟡 PARCIAL (2026-07-21) — vitest (151 tests, 21 files) ya corre en CI (`typecheck.yml`). Falta: tests de smoke E2E y de RPCs contables (`crear_poliza`, `contab_generar_poliza_evento`) — no existen aún, cortar aquí por costo de sesión |
 | 6 | U1 farmacia responsive (plan listo) | Sonnet | ✅ HECHO — ya estaba implementado en sesión previa (commits 48035ba, 5080680), las 11 tasks del plan estaban [x]. Verificado por grep 2026-07-21 (octava parte) |
 | 7 | U4 onboarding primer uso | Sonnet | ✅ HECHO (2026-07-21) — checklist derivado de datos reales (doctors/servicios/appointments), commit e85f3cc, pusheado (deploy auto vía GitHub Actions) |
-| 8 | E3 code-splitting + E2 partir archivos | Sonnet / Haiku | pendiente (2 cortas) |
+| 8 | E3 code-splitting + E2 partir archivos | Sonnet / Haiku | 🟡 PARCIAL (2026-07-21) — E3 HECHO: todas las rutas lazy-loaded, bundle inicial 3.38MB→676KB (commit bd3a2ed). E2 PARCIAL: Pitch.tsx partido 1387→723 líneas (commit 0dd610e). Pendiente: AdminUsuarios.tsx (2037, saltado a propósito — componente monolítico sensible, requiere sesión dedicada), CaminoPaciente config (1148), CajaTurno (971), BI (954), Expedientes (934) |
 | 9 | M2 SEO + M1 caso de estudio | Sonnet setup / Haiku copy | pendiente (2 cortas) |
 | 10 | S2 warnings advisors + S3 deps | Sonnet / Haiku | pendiente (corta) |
 | 11 | U2 chat ayuda humano | Sonnet | pendiente (media) |
