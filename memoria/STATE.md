@@ -6,14 +6,35 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Plan de avance (análisis Fable 2026-07-21): #1 testimonios, #2 S4 pen-test y #3 S1
-rate limiting HECHOS. SIGUIENTE = tarea #4 N3 unit economics + N2 pricing + N4
-matriz tiers (Fable 5, sesión de negocio). Handoff YA preparado (Sonnet verificó
-precios reales de Pitch.tsx, confirmó que N4 enforcement ya existe en RLS, listó
-qué costos externos falta que Pablo confirme) en
-memoria/proyectos/N2-N3-N4-pricing-handoff.md — pegar ESE archivo completo en la
-sesión nueva de Fable, no re-derivar desde cero.
+Plan de avance: tareas #1-#4 HECHAS. #4 (N2/N3/N4 pricing, Fable 5 2026-07-21)
+cerrada con decisión escrita en memoria/proyectos/N2-N3-N4-decision-unit-economics.md
+— leer ESE doc, no re-derivar. Resumen: márgenes ≥83% en todos los tiers incluso
+a escala (Pro + WhatsApp + n8n); decisión N2 = híbrido (tiers self-serve +
+add-ons de catalogo_modulos como venta asistida — catálogo YA tenía precios y
+stripe_price_ids activos, no estaba en ceros); N4 confirmado con gaps.
 
+SIGUIENTE (Sonnet, acciones del doc de decisión):
+1. cfdi-timbrar Edge Function: agregar check clinic_has_modulo_access(clinic_id,
+   'facturacion_cfdi') al inicio del handler — hoy corre con service role y
+   bypassa el RLS gating (gap severidad alta).
+2. Gate de módulo BI en RPC kpis_dashboard (o documentar aceptación de riesgo).
+3. Cosmético: marcar 'agenda' como core-incluido en catalogo_modulos.
+
+Bloqueantes de negocio (Pablo, no código): contratar PAC de timbrado (NO hay
+proveedor — CFDI/Profesional no vendible hasta entonces; Facturama = cero
+retrabajo de código); al activar WhatsApp (Meta Cloud API directo, ya integrado,
+0 clínicas verificadas): NO incluirlo en Básico, cap de msgs por tier +
+enforcement en la función de envío + sumarla al rate limiting S1; decidir n8n
+Cloud (~US$26) vs self-host (~US$10 VPS); trámite verificación negocio Meta
+tarda semanas — empezar antes de vender la feature.
+
+Cerrado sesión 2026-07-21 (sexta parte, Fable 5):
+- **#4 N2/N3/N4** — unit economics con escenario a 5/20/50 clínicas, decisión
+  N2 híbrido, auditoría N4 (RLS cubre farmacia/pos_farmacia/almacen/compras/
+  facturacion_cfdi; gaps: cfdi-timbrar sin check de módulo, BI solo UI, agenda
+  con precio pero sin gate). Sin código ejecutado (regla del handoff).
+
+--- histórico previo ---
 Cerrado sesión 2026-07-21 (quinta parte, Sonnet 5):
 - **S1 rate limiting** — 5 Edge Functions expuestas a abuso (anon sin auth o
   auth-gated pero costosas) ahora limitadas: `arco-request` 3/h·IP,
@@ -88,7 +109,9 @@ Menor: dual-write de aprendizajes a AGENTS.md del proyecto sigue sin hacerse
 (solo CLAUDE.md) — por costo, no por decisión.
 ```
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).
+## PRÓXIMA ACCIÓN: tarea #4 (N2/N3/N4 pricing) CERRADA 2026-07-21 (Fable 5). Decisión y unit economics en `memoria/proyectos/N2-N3-N4-decision-unit-economics.md`. Siguiente para Sonnet: check de módulo en `cfdi-timbrar` (gap alta), gate BI en `kpis_dashboard`, marcar agenda como core en catálogo. Bloqueante de negocio: contratar PAC de timbrado antes de vender CFDI.
+
+## PRÓXIMA ACCIÓN (histórica): sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).
 
 ## PRÓXIMA ACCIÓN (sesión anterior, 2026-07-21 original): sesión cerrada 2026-07-21. Trazabilidad reporte↔trámite COMPLETA Y VERIFICADA EN BROWSER (Fases 0-3). Corrector de huecos contables construido y verificado. **Bug bloqueante de `crear_poliza()` (perdió bypass service_role en fase 7) ENCONTRADO Y ARREGLADO** — migración `20260721180000`, commit `6a10001`. **Los 5 honorarios devengados sin póliza desde junio YA SE APLICARON** (movimientos↔pólizas 7=7, sin duplicados, verificado por SQL). Quedan puntos 3-6 (ver abajo) para sesión nueva. **Costo sesión 2026-07-21: ~$650+ — por MUCHO el más caro del proyecto (anterior récord ~$244), casi 3x. Causa: se mezcló verificación+feature nueva+auditoría+feature grande+3 subagentes+debugging en vivo+fix de bug crítico en una sola sesión, ignorando 10+ avisos de costo crítico del hook. Próxima sesión: cortar por tema DE VERDAD — un hook de costo crítico repetido es señal de parar la sesión, no de seguir con más agentes. Aprendizajes guardados en memoria (`~/.claude/projects/.../memory/`), 4 lessons + 1 project nuevas fechadas 2026-07-21.**
 
