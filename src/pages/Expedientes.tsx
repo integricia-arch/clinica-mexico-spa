@@ -6,53 +6,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, Plus, FileText, ChevronDown, ChevronUp, Pencil, Stethoscope, FlaskConical, ExternalLink, Users, Trash2 } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { Search, Plus, FileText } from "lucide-react";
 import NotaConsultaModal from "@/components/NotaConsultaModal";
 import PrescriptionEditorModal from "@/features/recetas/components/PrescriptionEditorModal";
-import { FileCheck2 } from "lucide-react";
-import { listStudiesByPatient, getStudyFileUrl, isStoragePath, type PatientStudy } from "@/features/panel-doctor/services/studiesService";
+import { listStudiesByPatient, type PatientStudy } from "@/features/panel-doctor/services/studiesService";
 import StudyResultDrawer from "@/features/panel-doctor/components/StudyResultDrawer";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 
-interface PersonaMini { id: string; nombre: string; apellidos: string; }
-interface DoctorMini extends PersonaMini { especialidad?: string; }
-interface PatientMini extends PersonaMini { tipo_sangre?: string | null; alergias?: string | null; }
-interface NotaConsulta {
-  id: string;
-  fecha_consulta: string;
-  subjetivo?: string | null;
-  objetivo?: string | null;
-  analisis?: string | null;
-  plan?: string | null;
-  diagnostico_principal?: string | null;
-  doctors?: { nombre: string; apellidos: string } | null;
-}
-interface Expediente {
-  id: string;
-  patient_id: string;
-  doctor_id: string;
-  tipo: string;
-  updated_at: string;
-  patients?: PatientMini | null;
-  doctors?: DoctorMini | null;
-}
-
-interface ExpPermRow {
-  id: string;
-  expediente_id: string;
-  doctor_id: string;
-  permission: "view" | "edit";
-  doctors?: { nombre: string; apellidos: string } | null;
-}
-
-const TIPO_LABELS: Record<string, string> = {
-  primera_vez: "Primera vez", seguimiento: "Seguimiento",
-  urgencia: "Urgencia", cirugia: "Cirugía", cronico: "Crónico",
-};
+import type { PersonaMini, DoctorMini, Expediente, NotaConsulta, ExpPermRow } from "./expedientes/types";
+import { ExpedienteCard } from "./expedientes/ExpedienteCard";
+import { NewExpedienteDialog } from "./expedientes/NewExpedienteDialog";
+import { EditExpedienteDialog } from "./expedientes/EditExpedienteDialog";
+import { PermissionsDialog } from "./expedientes/PermissionsDialog";
 
 export default function Expedientes() {
   const { hasRole, user } = useAuth();
@@ -425,373 +390,91 @@ export default function Expedientes() {
       ) : (
         <div className="space-y-3">
           {filtered.map((exp) => (
-            <div key={exp.id} className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
-              <div className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => toggleExpand(exp.id, exp.patient_id)}>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                  {exp.patients?.nombre?.[0]}{exp.patients?.apellidos?.[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-card-foreground truncate">
-                    {exp.patients?.apellidos}, {exp.patients?.nombre}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Dr(a). {exp.doctors?.nombre} {exp.doctors?.apellidos} · {exp.doctors?.especialidad}
-                  </p>
-                </div>
-                <div className="hidden sm:flex items-center gap-2">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                    {TIPO_LABELS[exp.tipo] ?? exp.tipo}
-                  </span>
-                  {exp.patients?.tipo_sangre && (
-                    <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-                      {exp.patients.tipo_sangre}
-                    </span>
-                  )}
-                </div>
-                <p className="hidden lg:block text-xs text-muted-foreground whitespace-nowrap">
-                  {format(new Date(exp.updated_at), "dd/MM/yyyy", { locale: es })}
-                </p>
-                {/* Action buttons — stopPropagation prevents accordion toggle */}
-                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  {canManagePerms(exp) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title="Gestionar acceso"
-                      onClick={() => {
-                        setPermTarget(exp);
-                        setExpPermissions([]);
-                        setNewPermDoctorId("");
-                        setNewPermLevel("view");
-                        setPermModal(true);
-                        loadExpPermissions(exp.id);
-                      }}
-                    >
-                      <Users className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  {canEditExp(exp) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title="Editar expediente"
-                      onClick={() => openEditModal(exp)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  {canDeleteExp(exp) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      title="Eliminar expediente"
-                      onClick={() => handleDelete(exp)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-                {(() => {
-                  const pending = (estudios[exp.id] ?? []).filter(
-                    (s) => s.status === "solicitado" || s.status === "recibido"
-                  ).length;
-                  return pending > 0 ? (
-                    <span className="flex items-center gap-1 rounded-full bg-warning/20 px-2 py-0.5 text-xs font-medium text-warning">
-                      <FlaskConical className="h-3 w-3" />
-                      {pending}
-                    </span>
-                  ) : null;
-                })()}
-                {expanded === exp.id
-                  ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
-                  : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
-              </div>
-
-              {expanded === exp.id && (
-                <div className="border-t border-border px-5 py-4 space-y-4 bg-muted/20">
-                  {exp.patients?.alergias && (
-                    <div className="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-warning font-medium">
-                      ⚠ Alergias: {exp.patients.alergias}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-foreground">Notas de consulta (SOAP)</p>
-                    {canWrite && (
-                      <Button size="sm" variant="outline" onClick={() => openNota(exp.id, exp.doctor_id)}>
-                        <Stethoscope className="mr-1.5 h-3.5 w-3.5" />Nueva nota
-                      </Button>
-                    )}
-                  </div>
-                  {!notas[exp.id] ? (
-                    <p className="text-xs text-muted-foreground">Cargando...</p>
-                  ) : notas[exp.id].length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Sin notas registradas</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {notas[exp.id].map((n) => (
-                        <div key={n.id} className="rounded-lg border border-border bg-card p-4 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-xs font-semibold text-foreground">
-                                {format(new Date(n.fecha_consulta), "dd/MM/yyyy HH:mm", { locale: es })}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Dr(a). {n.doctors?.nombre} {n.doctors?.apellidos}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {n.diagnostico_principal && (
-                                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                  {n.diagnostico_principal}
-                                </span>
-                              )}
-                              {canWrite && (
-                                <>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Generar receta"
-                                    onClick={() => {
-                                      setRxContext({
-                                        patientId: exp.patient_id,
-                                        doctorId: exp.doctor_id,
-                                        expedienteId: exp.id,
-                                        consultationNoteId: n.id,
-                                        diagnosis: n.diagnostico_principal ?? "",
-                                      });
-                                      setRxModal(true);
-                                    }}>
-                                    <FileCheck2 className="h-3.5 w-3.5 text-primary" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7"
-                                    onClick={() => openNota(exp.id, exp.doctor_id, n)}>
-                                    <Pencil className="h-3 w-3" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            {n.subjetivo && <SoapField label="S" color="text-primary" text={n.subjetivo} />}
-                            {n.objetivo && <SoapField label="O" color="text-blue-600" text={n.objetivo} />}
-                            {n.analisis && <SoapField label="A" color="text-orange-600" text={n.analisis} />}
-                            {n.plan && <SoapField label="P" color="text-green-600" text={n.plan} />}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Estudios / Laboratorio */}
-                  <div className="border-t border-border pt-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                        <FlaskConical className="h-4 w-4 text-muted-foreground" />
-                        Estudios / Laboratorio
-                      </p>
-                    </div>
-                    {!estudios[exp.id] ? (
-                      <p className="text-xs text-muted-foreground">Cargando...</p>
-                    ) : estudios[exp.id].length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Sin estudios solicitados</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {estudios[exp.id].map((study) => (
-                          <StudyRow
-                            key={study.id}
-                            study={study}
-                            canRegister={hasRole("admin") || hasRole("receptionist")}
-                            onRegister={() => {
-                              setStudySelected(study);
-                              setCurrentExpPatientId(exp.patient_id);
-                              setStudyResultOpen(true);
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <ExpedienteCard
+              key={exp.id}
+              exp={exp}
+              expanded={expanded === exp.id}
+              notas={notas[exp.id]}
+              estudios={estudios[exp.id]}
+              canWrite={canWrite}
+              canManagePerms={canManagePerms(exp)}
+              canEditExp={canEditExp(exp)}
+              canDeleteExp={canDeleteExp(exp)}
+              canRegisterStudy={hasRole("admin") || hasRole("receptionist")}
+              onToggle={() => toggleExpand(exp.id, exp.patient_id)}
+              onManagePerms={() => {
+                setPermTarget(exp);
+                setExpPermissions([]);
+                setNewPermDoctorId("");
+                setNewPermLevel("view");
+                setPermModal(true);
+                loadExpPermissions(exp.id);
+              }}
+              onEdit={() => openEditModal(exp)}
+              onDelete={() => handleDelete(exp)}
+              onNewNota={() => openNota(exp.id, exp.doctor_id)}
+              onEditNota={(n) => openNota(exp.id, exp.doctor_id, n)}
+              onGenerateRx={(n) => {
+                setRxContext({
+                  patientId: exp.patient_id,
+                  doctorId: exp.doctor_id,
+                  expedienteId: exp.id,
+                  consultationNoteId: n.id,
+                  diagnosis: n.diagnostico_principal ?? "",
+                });
+                setRxModal(true);
+              }}
+              onRegisterStudy={(study) => {
+                setStudySelected(study);
+                setCurrentExpPatientId(exp.patient_id);
+                setStudyResultOpen(true);
+              }}
+            />
           ))}
         </div>
       )}
 
-      <Dialog open={newExpModal} onOpenChange={(v) => !v && setNewExpModal(false)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Nuevo expediente</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Paciente *</label>
-              <Select value={newExpForm.patient_id} onValueChange={(v) => setNewExpForm((f) => ({ ...f, patient_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
-                <SelectContent>
-                  {patients.map((p) => <SelectItem key={p.id} value={p.id}>{p.apellidos}, {p.nombre}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Médico responsable *</label>
-              <Select value={newExpForm.doctor_id} onValueChange={(v) => setNewExpForm((f) => ({ ...f, doctor_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
-                <SelectContent>
-                  {doctors.map((d) => <SelectItem key={d.id} value={d.id}>Dr(a). {d.nombre} {d.apellidos}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Tipo</label>
-              <Select value={newExpForm.tipo} onValueChange={(v) => setNewExpForm((f) => ({ ...f, tipo: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(TIPO_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewExpModal(false)}>Cancelar</Button>
-            <Button onClick={handleCreateExpediente} disabled={saving}>
-              {saving ? "Creando..." : "Crear expediente"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NewExpedienteDialog
+        open={newExpModal}
+        onClose={() => setNewExpModal(false)}
+        patients={patients}
+        doctors={doctors}
+        form={newExpForm}
+        onFormChange={setNewExpForm}
+        saving={saving}
+        onCreate={handleCreateExpediente}
+      />
 
-      <Dialog open={editModal} onOpenChange={(v) => !v && setEditModal(false)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Editar expediente</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            {editTarget && canEditExp(editTarget) && (
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Tipo</label>
-                <Select value={editForm.tipo} onValueChange={(v) => setEditForm((f) => ({ ...f, tipo: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(TIPO_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {editTarget && canReassign(editTarget) && (
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Médico responsable</label>
-                <Select value={editForm.doctor_id} onValueChange={(v) => setEditForm((f) => ({ ...f, doctor_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar médico" /></SelectTrigger>
-                  <SelectContent>
-                    {doctors.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>Dr(a). {d.nombre} {d.apellidos}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {editTarget && editForm.doctor_id !== editTarget.doctor_id && (
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={keepPrevAccess}
-                  onChange={(e) => setKeepPrevAccess(e.target.checked)}
-                  className="rounded"
-                />
-                Mantener acceso de edición al médico anterior
-              </label>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditModal(false)} disabled={saving}>Cancelar</Button>
-            <Button onClick={handleSaveEdit} disabled={saving}>
-              {saving ? "Guardando..." : "Guardar cambios"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditExpedienteDialog
+        open={editModal}
+        onClose={() => setEditModal(false)}
+        editTarget={editTarget}
+        canEdit={!!editTarget && canEditExp(editTarget)}
+        canReassign={!!editTarget && canReassign(editTarget)}
+        doctors={doctors}
+        form={editForm}
+        onFormChange={setEditForm}
+        keepPrevAccess={keepPrevAccess}
+        onKeepPrevAccessChange={setKeepPrevAccess}
+        saving={saving}
+        onSave={handleSaveEdit}
+      />
 
-      <Dialog open={permModal} onOpenChange={(v) => { if (!v) { setPermModal(false); setPermTarget(null); setExpPermissions([]); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Gestionar acceso — {permTarget?.patients?.apellidos}, {permTarget?.patients?.nombre}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {/* Current grants */}
-            {expPermissions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin permisos adicionales asignados</p>
-            ) : (
-              <div className="space-y-2">
-                {expPermissions.map((perm) => (
-                  <div key={perm.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
-                    <p className="text-sm font-medium">
-                      Dr(a). {perm.doctors?.nombre} {perm.doctors?.apellidos}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={perm.permission}
-                        onValueChange={(v) => handleChangePermLevel(perm.id, v as "view" | "edit")}
-                      >
-                        <SelectTrigger className="h-7 w-24 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="view">Solo ver</SelectItem>
-                          <SelectItem value="edit">Editar</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => handleRemovePerm(perm.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add new grant */}
-            <div className="border-t border-border pt-3 space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Añadir médico</p>
-              <div className="flex gap-2">
-                <Select value={newPermDoctorId} onValueChange={setNewPermDoctorId}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Seleccionar médico" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {doctors
-                      .filter((d) => d.id !== permTarget?.doctor_id && !expPermissions.some((p) => p.doctor_id === d.id))
-                      .map((d) => (
-                        <SelectItem key={d.id} value={d.id}>Dr(a). {d.nombre} {d.apellidos}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <Select value={newPermLevel} onValueChange={(v) => setNewPermLevel(v as "view" | "edit")}>
-                  <SelectTrigger className="w-28">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="view">Solo ver</SelectItem>
-                    <SelectItem value="edit">Editar</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                className="w-full"
-                disabled={!newPermDoctorId || permSaving}
-                onClick={handleAddPerm}
-              >
-                {permSaving ? "Añadiendo..." : "Añadir acceso"}
-              </Button>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setPermModal(false); setPermTarget(null); setExpPermissions([]); }}>
-              Cerrar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PermissionsDialog
+        open={permModal}
+        onClose={() => { setPermModal(false); setPermTarget(null); setExpPermissions([]); }}
+        permTarget={permTarget}
+        expPermissions={expPermissions}
+        doctors={doctors}
+        newPermDoctorId={newPermDoctorId}
+        onNewPermDoctorIdChange={setNewPermDoctorId}
+        newPermLevel={newPermLevel}
+        onNewPermLevelChange={setNewPermLevel}
+        permSaving={permSaving}
+        onAdd={handleAddPerm}
+        onRemove={handleRemovePerm}
+        onChangeLevel={handleChangePermLevel}
+      />
 
       <NotaConsultaModal
         open={notaModal}
@@ -826,109 +509,6 @@ export default function Expedientes() {
           }
         }}
       />
-    </div>
-  );
-}
-
-function SoapField({ label, color, text }: { label: string; color: string; text: string }) {
-  return (
-    <div className="rounded bg-muted/50 p-2">
-      <span className={`font-bold ${color}`}>{label}: </span>
-      <span className="text-foreground">{text}</span>
-    </div>
-  );
-}
-
-const STUDY_STATUS_COLORS: Record<string, string> = {
-  solicitado: "bg-warning/10 text-warning",
-  recibido: "bg-blue-500/10 text-blue-600",
-  revisado: "bg-success/10 text-success",
-  reutilizado: "bg-muted text-muted-foreground",
-  descartado: "bg-muted text-muted-foreground",
-};
-
-const STUDY_STATUS_LABELS: Record<string, string> = {
-  solicitado: "Pendiente",
-  recibido: "Resultado recibido",
-  revisado: "Revisado",
-  reutilizado: "Reutilizado",
-  descartado: "Descartado",
-};
-
-const STUDY_TIPO_LABELS: Record<string, string> = {
-  lab: "Lab",
-  imagen: "Imagen",
-  otro: "Otro",
-};
-
-function StudyRow({
-  study,
-  canRegister,
-  onRegister,
-}: {
-  study: PatientStudy;
-  canRegister: boolean;
-  onRegister: () => void;
-}) {
-  const handleOpenFile = async () => {
-    if (!study.archivo_url) return;
-    try {
-      const url = await getStudyFileUrl(study.archivo_url);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch {
-      /* silently ignore — UI shows no error for read-only view */
-    }
-  };
-
-  return (
-    <div className="rounded-lg border border-border bg-card p-3 flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-card-foreground truncate">{study.nombre}</p>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase">
-            {STUDY_TIPO_LABELS[study.tipo] ?? study.tipo}
-          </span>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${STUDY_STATUS_COLORS[study.status] ?? "bg-muted text-muted-foreground"}`}
-          >
-            {STUDY_STATUS_LABELS[study.status] ?? study.status}
-          </span>
-        </div>
-        {study.motivo && (
-          <p className="text-xs text-muted-foreground truncate">{study.motivo}</p>
-        )}
-        <p className="text-[10px] text-muted-foreground">
-          Solicitado: {format(new Date(study.solicitado_at), "dd/MM/yyyy HH:mm", { locale: es })}
-          {study.prioridad !== "rutina" && (
-            <span className="ml-2 font-semibold text-destructive uppercase">{study.prioridad}</span>
-          )}
-        </p>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {study.archivo_url && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title={isStoragePath(study.archivo_url) ? "Ver archivo (nube)" : "Ver archivo"}
-            onClick={handleOpenFile}
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Button>
-        )}
-        {canRegister && study.status === "solicitado" && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs"
-            onClick={onRegister}
-          >
-            Registrar resultado
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
