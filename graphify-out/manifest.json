@@ -3405,13 +3405,13 @@
     "semantic_hash": "f7fbe75edb7752d658e1365512dacad2"
   },
   "AGENTS.md": {
-    "mtime": 1784414507.4346542,
-    "ast_hash": "64db31e3f148c0e708ed649183905039",
+    "mtime": 1784652861.8978045,
+    "ast_hash": "a89b1c7c0061c43cb81144044cec71d4",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784618419.4057412,
-    "ast_hash": "36f3edf988e8026185862e93b6cad543",
+    "mtime": 1784652861.896252,
+    "ast_hash": "db8805c270b26858aa3f0f900f5e95a6",
     "semantic_hash": ""
   },
   "DEPLOY.md": {
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784650599.8492038,
-    "ast_hash": "76c0af0259ae043c45faf17d00e4aec4",
+    "mtime": 1784653840.6411006,
+    "ast_hash": "168cd843c92dc96969ddd8e5170ca5f0",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4490,8 +4490,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/provision-users-from-queue/index.ts": {
-    "mtime": 1784393007.5267825,
-    "ast_hash": "b7dcf7f68368d782213c274723b61114",
+    "mtime": 1784653332.621831,
+    "ast_hash": "ae18f8b17239fa2795416090919b75e3",
     "semantic_hash": ""
   },
   "supabase/migrations/20260709000006_subscription_cancel_at.sql": {
@@ -5055,8 +5055,28 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/seguridad-S4-onboarding-tenants-2026-07-21.md": {
-    "mtime": 1784652482.0817454,
-    "ast_hash": "c3e661280a0241cd73832c981f7121b6",
+    "mtime": 1784653594.9938912,
+    "ast_hash": "203f6bb75a5ac249352cd73bc8304c95",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260721230000_scope_clinics_select_rls_h1_capa2.sql": {
+    "mtime": 1784653453.01193,
+    "ast_hash": "0858e49bb406e76dc91867ffa46e713d",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/plan-avance-ejecucion.md": {
+    "mtime": 1784653825.1238933,
+    "ast_hash": "955b2497c08f58eb4e80c86b79e29278",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/S1-rate-limiting-diseno.md": {
+    "mtime": 1784654070.1949277,
+    "ast_hash": "f2fbbd949de3fc7265b48fa88d664755",
+    "semantic_hash": ""
+  },
+  "plan-fable-analisis-integral.txt": {
+    "mtime": 1784653902.3501444,
+    "ast_hash": "e8fd15b64cdc99033ef9b4ac85c3710f",
     "semantic_hash": ""
   }
 }
