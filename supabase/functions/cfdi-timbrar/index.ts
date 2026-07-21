@@ -119,6 +119,20 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Para tipo E (nota de crédito) se requiere cfdi_relacionado_uuid (UUID SAT del CFDI de ingreso)" }, 400);
     }
 
+    // Gating de módulo: la función corre con service role (bypassa RLS), así que el
+    // gate de suscripción debe aplicarse aquí explícitamente.
+    const { data: hasModulo, error: moduloErr } = await svc.rpc("clinic_has_modulo_access", {
+      p_clinic_id: clinic_id,
+      p_modulo_slug: "facturacion_cfdi",
+    });
+    if (moduloErr) {
+      console.error("[cfdi-timbrar] modulo check error:", moduloErr.message);
+      return json({ error: "Error interno al verificar módulo" }, 500);
+    }
+    if (!hasModulo) {
+      return json({ error: "La clínica no tiene activo el módulo Facturación CFDI" }, 403);
+    }
+
     // Cargar config CFDI de la clínica
     const { data: cfg } = await svc
       .from("cfdi_config")
