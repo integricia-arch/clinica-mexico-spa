@@ -125,6 +125,59 @@ Este documento es solo el plan — nada implementado. Antes de construir, decidi
 1. ¿Empezar por Fase 0 (auditoría) para confirmar supuestos, o saltar directo a Fase 1 asumiendo que este mapa ya es correcto?
 2. ¿Alcance de Fase 4 (farmacia COGS) entra en este esfuerzo o se mantiene como deuda aparte (como ya estaba documentado)?
 
+## 7. Fase 0 — Hallazgos (2026-07-21, auditoría contra BD real)
+
+Corrida: `SELECT reference_type, count(*) FROM movimientos_contables GROUP BY 1` y
+`SELECT reference_type, evento, count(*) FROM polizas GROUP BY 1,2` contra prod
+(kyfkvdyxpvpiacyymldc).
+
+| `reference_type` | en `movimientos_contables` | en `polizas` | Nota |
+|---|---|---|---|
+| `factura_proveedor` | 1 | 1 | Coincide con el mapa original. |
+| `honorario_appointment` | 6 | 1 | Desfase real — 5 sin póliza (huecos, ver corrector de huecos contables, sesión 2026-07-21). |
+| `movimiento_caja` | 2 | 2 | Coincide. |
+| `appointment_insumo` | 0 | 1 | **Asimetría no documentada en el mapa original**: consumo de insumo (fase 10) genera póliza directo, nunca pasa por `movimientos_contables` — el sistema de devengo simple nunca ve este evento. |
+| `factura_proveedor_pago` | 0 | 1 | **`reference_type` nuevo, no estaba en el mapa original** — pago de una factura de proveedor (trigger `contab_factura_proveedor`, rama UPDATE). |
+| `honorario_pago_manual` | 0 | 1 | **`reference_type` nuevo, no estaba en el mapa original** — pago manual de honorario (no localizado su trigger en esta auditoría, pendiente de rastrear en Fase 1). |
+| `farmacia`/`pharmacy_sale` | 0 | 0 | Sin datos — no se ha ejercido una venta de farmacia en este ambiente. El gap de COGS (memoria técnica §5.1) sigue sin poder confirmarse con datos reales; queda como supuesto documentado, no verificado. |
+
+**Conclusión:** el mapa de la sección 2 de este plan está desactualizado — tiene 2
+`reference_type` faltantes y 1 asimetría de arquitectura no anotada. Fase 1
+(`contab_resolver_asiento`) debe cubrir los 6 `reference_type` reales encontrados
+arriba (más `poliza_reversa` y `movimiento_manual` de la sección 2, aunque sin
+datos en este momento), no solo los 9 originales de la tabla de la sección 2.
+
+**Decisión tomada para continuar (2026-07-21):** Fase 4 (farmacia COGS) se mantiene
+como deuda aparte — no se confirmó con datos reales en esta sesión, no bloquea
+Fases 1-3, y ya estaba documentada desde antes. Se procede a Fase 1.
+
+## 8. Fase 1 — Hecho (2026-07-21)
+
+`contab_resolver_asiento(reference_type, reference_id) RETURNS jsonb` — busca primero en
+`polizas` (evento='registro'), si no encuentra busca en `movimientos_contables`
+(evento='devengo'), regresa `{tipo, id}` o `NULL` limpio. Check de membership antes de
+regresar cualquier dato (multi-tenant). Migración:
+`supabase/migrations/20260721140000_contab_resolver_asiento.sql`.
+
+## 9. Bloqueo real encontrado — Fases 2/3 requieren más alcance del planeado
+
+La sección 3 de este plan asumía que "Ver trámite" navega a una pantalla de detalle
+existente (Expediente, POS venta, Compra/factura) por `id`. **Verificado contra
+`App.tsx`: no existen rutas `:id` para cita/venta/compra individual** —
+`/expedientes`, `/farmacia`, `/compras` son listas sin deep-link a un registro
+puntual. Construir el botón "Ver trámite" correctamente requiere primero construir
+esas páginas/rutas de detalle — alcance nuevo, no el "cableado de botones en
+pantallas que ya existen" que asumía la sección 3.2.
+
+**No se construyó Fase 2/3 en esta sesión** (2026-07-21) por este hallazgo + costo de
+sesión. Antes de retomar, decidir con Pablo:
+1. ¿Vale la pena construir rutas `:id` de detalle solo para este caso, o hay un uso
+   más amplio que las justifique (ej. compartir link directo a una cita)?
+2. Alternativa más barata: en vez de ruta nueva, la lista existente acepta
+   `?highlight=<id>` y hace scroll+resalta la fila — cubre el caso de uso sin
+   construir una página nueva, pero es menos "trámite completo" que lo que pedía
+   el plan original.
+
 ## Relaciones
 
 - [[modulo-contable-memoria-tecnica]] — mapa de datos y fórmulas base
