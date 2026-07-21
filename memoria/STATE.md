@@ -1,17 +1,19 @@
 # Estado del Proyecto — clinica-mexico-spa
 
-## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-21. Trazabilidad reporte↔trámite COMPLETA Y VERIFICADA EN BROWSER (Fases 0-3) — construida con query param `?highlight=id` en vez de rutas `:id` nuevas (no existían). Corrector de huecos contables construido y verificado. **BLOQUEANTE nuevo encontrado sin arreglar: `crear_poliza()` en prod perdió el bypass de `auth.uid() IS NULL` de fase 6B — ahora exige membership siempre, probablemente rompe el cron `contab_devengar_honorarios`.** Ver detalle y pendientes 1-6 abajo. **Costo sesión 2026-07-21: ~$587 — por MUCHO el más caro del proyecto (anterior récord ~$244), casi 2.5x el récord anterior. Causa: se mezcló verificación+feature nueva+auditoría+feature grande+3 subagentes+debugging en vivo+fix de bug de drift en una sola sesión, ignorando 10+ avisos de costo crítico del hook porque el usuario insistió repetidamente en terminar todo. Próxima sesión: cortar por tema DE VERDAD — un hook de costo crítico repetido es señal de parar la sesión, no de seguir con más agentes. Aprendizajes guardados en memoria (`~/.claude/projects/.../memory/`), ver 4 lessons + 1 project nuevas fechadas 2026-07-21.**
+## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-21. Trazabilidad reporte↔trámite COMPLETA Y VERIFICADA EN BROWSER (Fases 0-3). Corrector de huecos contables construido y verificado. **Bug bloqueante de `crear_poliza()` (perdió bypass service_role en fase 7) ENCONTRADO Y ARREGLADO** — migración `20260721180000`, commit `6a10001`. **Los 5 honorarios devengados sin póliza desde junio YA SE APLICARON** (movimientos↔pólizas 7=7, sin duplicados, verificado por SQL). Quedan puntos 3-6 (ver abajo) para sesión nueva. **Costo sesión 2026-07-21: ~$650+ — por MUCHO el más caro del proyecto (anterior récord ~$244), casi 3x. Causa: se mezcló verificación+feature nueva+auditoría+feature grande+3 subagentes+debugging en vivo+fix de bug crítico en una sola sesión, ignorando 10+ avisos de costo crítico del hook. Próxima sesión: cortar por tema DE VERDAD — un hook de costo crítico repetido es señal de parar la sesión, no de seguir con más agentes. Aprendizajes guardados en memoria (`~/.claude/projects/.../memory/`), 4 lessons + 1 project nuevas fechadas 2026-07-21.**
 
-## PENDIENTES para próxima sesión (numerados, en orden de prioridad)
+## PENDIENTES para próxima sesión (puntos 1-2 ya cerrados hoy)
 
-1. **`crear_poliza()` bloqueante — arreglar primero.** Perdió el bypass `auth.uid() IS NOT NULL AND` antes del check de membership (fase 6B lo tenía a propósito para cron/service_role). Sin esto, no se puede aplicar ningún hueco vía SQL directo ni confirmar si el cron de honorarios corre. Ver `project_crear-poliza-perdio-bypass-service-role.md` en memoria para el diagnóstico completo y el fix sugerido.
-2. **Aplicar 5 huecos de honorario pendientes** (una vez arreglado #1): `honorario_appointment` sin póliza en fechas 2026-06-14 ($4,500), 2026-06-22 ($500), 2026-06-29 ×2 ($500 c/u), 2026-07-17 ($800) — todos evento `honorario_devengo`, mapeo simple 504/205.01. Usar el corrector ya construido (Diagnosticar→Aplicar en Validar cuadre) o `contab_generar_poliza_evento` directo una vez el bypass esté restaurado.
+1. ~~`crear_poliza()` bloqueante~~ — **HECHO** 2026-07-21, migración `20260721180000_fix_crear_poliza_restaurar_bypass_service_role.sql`, commit `6a10001`.
+2. ~~Aplicar 5 huecos de honorario pendientes~~ — **HECHO** 2026-07-21, aplicados vía `contab_generar_poliza_evento` directo tras el fix de #1. Verificado: 7 movimientos honorario_appointment ↔ 7 pólizas, sin duplicados.
 3. **Factura proveedor multi-línea** — sin caso pendiente ahora mismo, el corrector v1 no la soporta si aparece uno nuevo (requiere póliza manual).
 4. **Farmacia COGS** (costo de medicamento vendido) — nunca genera póliza, gap documentado desde antes (memoria técnica §5.1), no atacado.
 5. **`honorario_pago_manual`** — reference_type encontrado en la auditoría de Fase 0, trigger no rastreado ni verificado.
 6. Paciente PRUEBA-E2E — falta hito "Salida/alta" (11/13), sin cambios de hace varias sesiones.
 
 Menor: dual-write de aprendizajes a `AGENTS.md` del proyecto no se hizo esta sesión (solo `CLAUDE.md`) — pendiente por costo, no por decisión.
+
+**Importante para la próxima sesión:** ahora que `crear_poliza()` está arreglado, correr `mcp__supabase__get_advisors(type="security")` para confirmar que el fix no abrió ningún hueco de seguridad nuevo — no se corrió en esta sesión por costo.
 
 ## Sesión 2026-07-21 — corrector de huecos contables + Fase 0/1 trazabilidad
 
