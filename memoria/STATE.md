@@ -1,8 +1,86 @@
 # Estado del Proyecto — clinica-mexico-spa
 
+## TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN
+
+```
+Sigo con clinica-mexico-spa. Lee memoria/STATE.md primero (sesión 2026-07-21,
+tercera parte).
+
+Cerrado esta sesión:
+- **PENDIENTE #1 (Optimus/mcp-sentinel) — VERIFICADO, ya estaba resuelto, sin
+  código nuevo.** El hook LIVE (`~/.claude/skills/mcp-sentinel/hooks/optimus_preflight.py`)
+  ya tiene el fix que STATE.md marcaba pendiente: `check_sensitive_env` sí
+  respeta `allowlist.env_vars` (antes no lo revisaba, bug real). Probado con 8
+  casos de uso reales del proyecto (curl POST a edge function prod, git push
+  origin, supabase db push --include-all, supabase migration repair, wrangler
+  tail, gh secret set, curl localhost, código con `Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`)
+  → todos `allow`. Control negativo (`curl|bash`, lectura `~/.ssh/id_rsa`) →
+  siguen bloqueados, la guardia de seguridad sigue intacta. Riesgo residual
+  SIN acción posible: las copias fuente en `C:\Users\pablo\optimus-prime-carosIA\`
+  son un clone de repo de TERCEROS (github.com/carosiafrancisco-svg) sin el
+  fix — si algún día se reinstala/actualiza el skill desde ahí, puede
+  regresionar. No es nuestro repo, no se toca/pushea. Solo queda anotado para
+  reaplicar el fix si se detecta regresión.
+
+Cerrado sesión anterior (puntos 3-6, TODOS resueltos):
+- Factura proveedor multi-línea: investigado, límite documentado a propósito,
+  sin caso real, sin código nuevo.
+- Farmacia COGS: trigger + regla contable + fix pnl_mensual/kpis_dashboard
+  (migración 20260721190000_farmacia_cogs.sql). Advisors limpio.
+- honorario_pago_manual: flujo completo nuevo — tabla honorario_pagos_manual,
+  RPCs honorarios_saldo_por_doctor()/honorario_registrar_pago(), tab
+  "Honorarios" en Contabilidad (migraciones 20260721210000 + 20260721211500).
+- Paciente PRUEBA-E2E: hito real pendiente era followup (no discharge, ya
+  cerrado antes) — journey f5bb9206-f134-4425-93a5-4f9961691123 en 13/13,
+  status completado. Cerrado directo en BD (cuenta QA sin clinic_memberships
+  real, "Administrador" en header es solo texto default) — cuenta QA quedó
+  deshabilitada de nuevo al terminar.
+
+PENDIENTE #2 (único pendiente real que queda) — Commit `2786c18` está local, NO pusheado a origin/main. Decidir
+con Pablo si pushear (dispara deploy Cloudflare vía GitHub Actions).
+
+DEUDA — `update_journey_progress(uuid)` tiene el mismo bug que tenía
+`crear_poliza()` antes del fix: exige `auth.uid()` real, sin bypass
+service_role/cron. No es bloqueante hoy (solo se llama desde el cliente
+autenticado), pero si algún día un cron/Edge Function necesita cerrar un
+journey sin sesión de usuario, va a fallar igual. Revisar si aplica el mismo
+fix.
+
+Menor: dual-write de aprendizajes a AGENTS.md del proyecto sigue sin hacerse
+(solo CLAUDE.md) — por costo, no por decisión.
+```
+
 ## PRÓXIMA ACCIÓN: sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).
 
 ## PRÓXIMA ACCIÓN (sesión anterior, 2026-07-21 original): sesión cerrada 2026-07-21. Trazabilidad reporte↔trámite COMPLETA Y VERIFICADA EN BROWSER (Fases 0-3). Corrector de huecos contables construido y verificado. **Bug bloqueante de `crear_poliza()` (perdió bypass service_role en fase 7) ENCONTRADO Y ARREGLADO** — migración `20260721180000`, commit `6a10001`. **Los 5 honorarios devengados sin póliza desde junio YA SE APLICARON** (movimientos↔pólizas 7=7, sin duplicados, verificado por SQL). Quedan puntos 3-6 (ver abajo) para sesión nueva. **Costo sesión 2026-07-21: ~$650+ — por MUCHO el más caro del proyecto (anterior récord ~$244), casi 3x. Causa: se mezcló verificación+feature nueva+auditoría+feature grande+3 subagentes+debugging en vivo+fix de bug crítico en una sola sesión, ignorando 10+ avisos de costo crítico del hook. Próxima sesión: cortar por tema DE VERDAD — un hook de costo crítico repetido es señal de parar la sesión, no de seguir con más agentes. Aprendizajes guardados en memoria (`~/.claude/projects/.../memory/`), 4 lessons + 1 project nuevas fechadas 2026-07-21.**
+
+## Sesión 2026-07-21 (tercera parte) — Optimus/mcp-sentinel verificado, sin código nuevo
+
+**PENDIENTE #1 cerrado por verificación, no requería construir nada.** El hook
+LIVE (`C:\Users\pablo\.claude\skills\mcp-sentinel\hooks\optimus_preflight.py`)
+ya tenía el fix que este mismo archivo marcaba como pendiente sesiones atrás:
+`check_sensitive_env(tool_input, iocs, allowlist)` sí filtra por
+`allowlist.get("env_vars", [])` antes de bloquear — la versión vieja (aún
+presente en `C:\Users\pablo\optimus-prime-carosIA\hooks\optimus_preflight.py`,
+clone de terceros github.com/carosiafrancisco-svg) no lo hacía.
+
+Probado simulando 8 llamadas reales del proyecto contra el hook vía stdin:
+curl POST a edge function prod, `git push origin main`, `supabase db push
+--linked --include-all`, `supabase migration repair`, `wrangler tail`, `gh
+secret set`, curl a localhost, y código con
+`Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")` — **los 8 dieron `allow`**.
+Control negativo: `curl ... | bash` y lectura de `~/.ssh/id_rsa` — **siguen
+bloqueados**, la guardia de seguridad no se relajó.
+
+`.security/optimus-allowlist.json` (repo) y `~/.claude/optimus-allowlist.json`
+(global) no necesitaron cambios — ya cubrían env_vars, domains y commands
+suficientes.
+
+**Riesgo residual anotado, sin acción posible hoy:** las copias en
+`optimus-prime-carosIA/` (repo ajeno, no nuestro, no se toca/pushea) siguen
+con la versión sin fix. Si el skill se reinstala/actualiza desde ese repo en
+el futuro, el bug puede regresar — revisar `check_sensitive_env` en el hook
+live si algún bloqueo de env var vuelve a aparecer sin motivo.
 
 ## PENDIENTES — TODOS CERRADOS (puntos 1-6, sesión 2026-07-21 continuación)
 
