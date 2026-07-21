@@ -1,6 +1,7 @@
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 import { exportReporteCsv } from "@/features/contabilidad/exportReporteCsv";
 import type { LibroDiarioFila } from "@/hooks/useReportesContables";
 
@@ -12,10 +13,25 @@ export interface PolizaAgrupada {
   concepto: string;
   uuid_cfdi: string | null;
   estado: string;
+  reference_type: string | null;
+  reference_id: string | null;
   lineas: LibroDiarioFila[];
   debe: number;
   haber: number;
 }
+
+// ponytail: no existen rutas /expedientes/:id, /farmacia/:id, /compras/:id (verificado
+// contra App.tsx, sesión 2026-07-21) — en vez de construirlas, navega a la lista con
+// ?highlight=<reference_id> para que esa pantalla resalte/haga scroll al registro.
+// Si el negocio pide más adelante una vista de detalle propia, esto se reemplaza ahí.
+const TRAMITE_POR_REFERENCE_TYPE: Record<string, { ruta: string; label: string }> = {
+  consulta: { ruta: "/citas", label: "Ver cita" },
+  honorario_appointment: { ruta: "/citas", label: "Ver cita" },
+  farmacia: { ruta: "/farmacia", label: "Ver venta" },
+  pharmacy_sale: { ruta: "/farmacia", label: "Ver venta" },
+  compra: { ruta: "/compras", label: "Ver compra" },
+  factura_proveedor: { ruta: "/compras", label: "Ver compra" },
+};
 
 const TIPO_POLIZA_LABELS: Record<string, string> = { diario: "Diario", ingreso: "Ingreso", egreso: "Egreso" };
 
@@ -29,7 +45,9 @@ export function PolizaDetalleDialog({ poliza, onOpenChange, onCancelar, cancelan
   onCancelar: (polizaId: string) => void;
   cancelando: boolean;
 }) {
+  const navigate = useNavigate();
   const cuadra = poliza ? poliza.debe === poliza.haber : true;
+  const tramite = poliza?.reference_type ? TRAMITE_POR_REFERENCE_TYPE[poliza.reference_type] : undefined;
 
   const exportar = () => {
     if (!poliza) return;
@@ -106,6 +124,14 @@ export function PolizaDetalleDialog({ poliza, onOpenChange, onCancelar, cancelan
                   onClick={() => onCancelar(poliza.poliza_id)}
                 >
                   Cancelar póliza
+                </Button>
+              )}
+              {tramite && poliza.reference_id && (
+                <Button
+                  variant="outline" className="gap-1.5"
+                  onClick={() => navigate(`${tramite.ruta}?highlight=${poliza.reference_id}`)}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> {tramite.label}
                 </Button>
               )}
               <Button variant="outline" className="gap-1.5" onClick={exportar}>

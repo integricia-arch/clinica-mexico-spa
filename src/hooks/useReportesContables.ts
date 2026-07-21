@@ -24,6 +24,7 @@ export interface LibroDiarioFila {
   estado: string;
   uuid_cfdi: string | null;
   reference_type: string | null;
+  reference_id: string | null;
   orden: number;
   cuenta_codigo: string;
   cuenta_nombre: string;

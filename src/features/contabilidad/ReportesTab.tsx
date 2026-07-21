@@ -274,11 +274,11 @@ export function LibroDiarioTab() {
 }
 
 function agruparPorPoliza(rows: LibroDiarioFila[]) {
-  const grupos = new Map<string, { poliza_id: string; folio: number; tipo: string; fecha: string; concepto: string; uuid_cfdi: string | null; estado: string; lineas: LibroDiarioFila[]; debe: number; haber: number }>();
+  const grupos = new Map<string, { poliza_id: string; folio: number; tipo: string; fecha: string; concepto: string; uuid_cfdi: string | null; estado: string; reference_type: string | null; reference_id: string | null; lineas: LibroDiarioFila[]; debe: number; haber: number }>();
   for (const r of rows) {
     let g = grupos.get(r.poliza_id);
     if (!g) {
-      g = { poliza_id: r.poliza_id, folio: r.folio, tipo: r.tipo, fecha: r.fecha, concepto: r.concepto, uuid_cfdi: r.uuid_cfdi, estado: r.estado, lineas: [], debe: 0, haber: 0 };
+      g = { poliza_id: r.poliza_id, folio: r.folio, tipo: r.tipo, fecha: r.fecha, concepto: r.concepto, uuid_cfdi: r.uuid_cfdi, estado: r.estado, reference_type: r.reference_type, reference_id: r.reference_id, lineas: [], debe: 0, haber: 0 };
       grupos.set(r.poliza_id, g);
     }
     g.lineas.push(r);
