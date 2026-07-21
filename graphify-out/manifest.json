@@ -1875,9 +1875,9 @@
     "semantic_hash": "fd5b4a98647dff88edb13add2d0cac2c"
   },
   "supabase/functions/arco-request/index.ts": {
-    "mtime": 1782172146.1023521,
-    "ast_hash": "afa185c73b2dbc7003e2f01753028012",
-    "semantic_hash": "afa185c73b2dbc7003e2f01753028012"
+    "mtime": 1784654341.0446115,
+    "ast_hash": "33d2231cc555ac5d12cd3bb12782463a",
+    "semantic_hash": ""
   },
   "supabase/functions/auto-reorder/index.ts": {
     "mtime": 1781565169.5672126,
@@ -1930,9 +1930,9 @@
     "semantic_hash": "a15e5ece7ac6a68376a8cc612ca73ee2"
   },
   "supabase/functions/cfdi-timbrar/index.ts": {
-    "mtime": 1781480384.8047733,
-    "ast_hash": "a46f98b502008a8ca43bde88cfa3d627",
-    "semantic_hash": "a46f98b502008a8ca43bde88cfa3d627"
+    "mtime": 1784654366.5849636,
+    "ast_hash": "d38c56c28e9a62f292660176cd9d15d1",
+    "semantic_hash": ""
   },
   "supabase/functions/confirmar-cita/clinic-access.test.ts": {
     "mtime": 1783797043.146986,
@@ -2000,9 +2000,9 @@
     "semantic_hash": "957439f704f97d2de4e7d5d90e25688f"
   },
   "supabase/functions/help-chat-ai/index.ts": {
-    "mtime": 1781741435.1807504,
-    "ast_hash": "4828fa885efff7194e7fe62a7ec3fd17",
-    "semantic_hash": "4828fa885efff7194e7fe62a7ec3fd17"
+    "mtime": 1784654358.4758544,
+    "ast_hash": "ed9569d753041a3886b07a17731d9e9c",
+    "semantic_hash": ""
   },
   "supabase/functions/lock-expired-grace-clinics/index.ts": {
     "mtime": 1783550823.298698,
@@ -2120,9 +2120,9 @@
     "semantic_hash": "4ebaff2bf97a0da838af99f087e08217"
   },
   "supabase/functions/stripe-checkout/index.ts": {
-    "mtime": 1781476206.3419478,
-    "ast_hash": "11535c84251110ca5a23e5e08bf5349e",
-    "semantic_hash": "11535c84251110ca5a23e5e08bf5349e"
+    "mtime": 1784654350.222872,
+    "ast_hash": "cf2ada51a208ccd943db2403313c1ae1",
+    "semantic_hash": ""
   },
   "supabase/functions/stripe-payment-intent/clinic-access.test.ts": {
     "mtime": 1783797043.169464,
@@ -2130,9 +2130,9 @@
     "semantic_hash": "fafdae04f511562a80963093e6092009"
   },
   "supabase/functions/stripe-payment-intent/index.ts": {
-    "mtime": 1783797043.1729965,
-    "ast_hash": "d2ba57b789642a996a8dae4ea23ed703",
-    "semantic_hash": "d2ba57b789642a996a8dae4ea23ed703"
+    "mtime": 1784654373.462255,
+    "ast_hash": "df405ea9ace188eec543fb96905e1b91",
+    "semantic_hash": ""
   },
   "supabase/functions/stripe-webhook-saas/index.test.ts": {
     "mtime": 1783717969.513921,
@@ -3480,9 +3480,9 @@
     "semantic_hash": "8fc048ae7dd32ad51ca5dc22d19c2f90"
   },
   "docs/edge-functions-auth.md": {
-    "mtime": 1782072442.9051752,
-    "ast_hash": "60433cb954fe3fd3fd5321e09b24cf56",
-    "semantic_hash": "60433cb954fe3fd3fd5321e09b24cf56"
+    "mtime": 1784654527.2580993,
+    "ast_hash": "7d11c5c96e0b40f3668402808e66f8c6",
+    "semantic_hash": ""
   },
   "docs/edge-functions-service-role-audit.md": {
     "mtime": 1783809075.8402076,
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784653840.6411006,
-    "ast_hash": "168cd843c92dc96969ddd8e5170ca5f0",
+    "mtime": 1784654552.6317165,
+    "ast_hash": "3865ac153091bc0dfa9652e976c6108e",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784653825.1238933,
-    "ast_hash": "955b2497c08f58eb4e80c86b79e29278",
+    "mtime": 1784654541.3619921,
+    "ast_hash": "954b5d8bd571e6e480df19703a293f09",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5077,6 +5077,21 @@
   "plan-fable-analisis-integral.txt": {
     "mtime": 1784653902.3501444,
     "ast_hash": "e8fd15b64cdc99033ef9b4ac85c3710f",
+    "semantic_hash": ""
+  },
+  "supabase/functions/_shared/rateLimit.ts": {
+    "mtime": 1784654333.7138155,
+    "ast_hash": "7fb569b6ad8c063b570a507fcae84443",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260721233000_rate_limits_s1.sql": {
+    "mtime": 1784654323.8550825,
+    "ast_hash": "33c4a334cca845815dd6443316449c84",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260721233500_rate_limits_s1_revoke_anon_authenticated.sql": {
+    "mtime": 1784654569.1975827,
+    "ast_hash": "4f24f07364e3b6fe255b0bf5833eb1a8",
     "semantic_hash": ""
   }
 }
