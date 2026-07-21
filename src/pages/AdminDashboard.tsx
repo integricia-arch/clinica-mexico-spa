@@ -21,10 +21,13 @@ import { useDashboardData } from "@/features/centro-control/hooks/useDashboardDa
 import { useFinancialDashboardData } from "@/features/centro-control/hooks/useFinancialDashboardData";
 import FinancialOperationsPanel from "@/features/centro-control/components/FinancialOperationsPanel";
 import { getKanbanColumnFor, getPatientOperationalRisk, minutesSince } from "@/features/centro-control/lib/journeyHelpers";
+import OnboardingChecklistCard from "@/features/centro-control/components/OnboardingChecklistCard";
+import { useActiveClinic } from "@/hooks/useActiveClinic";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { hasRole, user } = useAuth();
+  const { activeClinicId } = useActiveClinic();
   const canViewClinical = hasRole("admin") || hasRole("doctor") || hasRole("nurse");
 
   const [filters, setFilters] = useState<DashboardFiltersState>({
@@ -219,6 +222,8 @@ export default function AdminDashboard() {
           Vista operativa en tiempo real de citas, pacientes, médicos, consultorios y camino del paciente
         </p>
       </div>
+
+      <OnboardingChecklistCard clinicId={activeClinicId} />
 
       <DashboardFilters
         value={filters}
