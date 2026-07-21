@@ -6,28 +6,28 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Plan de avance: tareas #1-#4 HECHAS. #4 (N2/N3/N4 pricing, Fable 5 2026-07-21)
-cerrada con decisión escrita en memoria/proyectos/N2-N3-N4-decision-unit-economics.md
-— leer ESE doc, no re-derivar. Resumen: márgenes ≥83% en todos los tiers incluso
-a escala (Pro + WhatsApp + n8n); decisión N2 = híbrido (tiers self-serve +
-add-ons de catalogo_modulos como venta asistida — catálogo YA tenía precios y
-stripe_price_ids activos, no estaba en ceros); N4 confirmado con gaps.
+Plan de avance: tareas #1-#6 HECHAS (ver detalle abajo). Siguiente en la cola:
+#7 U4 onboarding primer uso (Sonnet, prioridad media) — ver plan-avance-ejecucion.md.
 
-SIGUIENTE (Sonnet):
-1. cfdi-timbrar: scoping de admin POR CLÍNICA. El check actual de user_roles es
-   global — admin de clínica A puede timbrar a nombre de clínica B. Patrón ya
-   ubicado: igual que provision-users-from-queue/index.ts:50-56 —
-   rpc is_global_admin(_user_id) y si no, clinic_memberships con
-   user_id + clinic_id + status='active'. Insertar el check después de validar
-   clinic_id en el body. Deploy vía CLI (supabase functions deploy cfdi-timbrar)
-   + commit.
-2. Gate de módulo BI: NO hay slug 'bi' en catalogo_modulos → no se puede gatear
-   con clinic_has_modulo_access sin ampliar catálogo. Decidir: aceptar como
-   feature soft (documentar) o agregar slug. Recomendación Fable: aceptar soft.
-3. Cosmético: marcar 'agenda' como core-incluido (columna descripcion en
-   catalogo_modulos existe; basta UPDATE con nota en migración).
-4. #6 del plan: U1 farmacia responsive (plan 11 tasks en
-   docs/superpowers/plans/2026-06-09-farmacia-responsive.md, empezar Task 1).
+SIGUIENTE bloque (sesión Sonnet 2026-07-21, octava parte) — las 4 quedaron CERRADAS:
+1. ✅ cfdi-timbrar scoping por clínica (commit 7c8f0e9) — is_global_admin +
+   clinic_memberships, deploy vía CLI verificado.
+2. ✅ BI (/inteligencia) confirmado sin requiredModulo/gate — decisión: aceptar
+   feature soft (rec. Fable), no ampliar catalogo_modulos. Sin cambio de código.
+3. ✅ 'agenda' marcada "Core incluido" en catalogo_modulos.descripcion — aplicado
+   en prod vía execute_sql (push de migration falló por drift de historial
+   preexistente, archivo queda documentado en repo). Commit bf11e7f.
+4. ✅ U1 farmacia responsive — **YA ESTABA HECHO** desde sesión previa (commits
+   48035ba, 5080680), plan de 11 tasks en
+   docs/superpowers/plans/2026-06-09-farmacia-responsive.md todas [x]. STATE.md
+   tenía info vieja pidiendo "empezar Task 1" — corregido aquí. Verificado por
+   grep: useIsTablet, useSidebarState, xl:grid-cols en PuntoDeVenta.tsx existen.
+
+⚠️ Deuda técnica pendiente (no bloqueante, mencionar si se toca supabase db push):
+drift de historial de migrations — `supabase db push --linked --include-all`
+falla pidiendo repair de 17 versiones remotas sin archivo local
+(20260721054854...20260721172020). No reparado, requiere sesión dedicada
+revisando cada versión antes de `migration repair --status reverted`.
 
 HECHO en sesión Fable (sexta+séptima parte 2026-07-21):
 - Gap alta N4 CERRADO: cfdi-timbrar ahora valida
