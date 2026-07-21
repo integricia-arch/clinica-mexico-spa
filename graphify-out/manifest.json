@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784654831.9582841,
-    "ast_hash": "a81027c31bd8d0f79ad8708c022e4f9a",
+    "mtime": 1784655274.5273557,
+    "ast_hash": "d858ec5c2ac8a2549bc5ad208f0b3426",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -5097,6 +5097,11 @@
   "memoria/proyectos/N2-N3-N4-pricing-handoff.md": {
     "mtime": 1784654819.31667,
     "ast_hash": "612f5ce2f7e2bc4beda8421794a7789b",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/N2-N3-N4-decision-unit-economics.md": {
+    "mtime": 1784655197.8971827,
+    "ast_hash": "4e08efdff7c7223db55c11e5d9d3032a",
     "semantic_hash": ""
   }
 }

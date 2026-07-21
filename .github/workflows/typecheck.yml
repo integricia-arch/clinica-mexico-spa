@@ -44,6 +44,9 @@ jobs:
       - name: Type-check (tsc --noEmit)
         run: npx tsc -p tsconfig.app.json --noEmit
 
+      - name: Unit tests (vitest)
+        run: npm run test -- --run
+
       - name: Build (vite)
         run: npm run build
         env:
