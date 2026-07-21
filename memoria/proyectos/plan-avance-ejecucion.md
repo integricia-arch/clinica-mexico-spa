@@ -16,7 +16,7 @@ Convención modelos: **Haiku 4.5** mecánico/copy · **Sonnet** dev principal ·
 | 4 | N3 unit economics + N2 pricing + N4 matriz tiers | Fable 5 | ✅ HECHO (2026-07-21) — commit `e1728fe` |
 | 5 | E1 tests CI (smoke E2E + RPCs contables) | Sonnet | 🟡 PARCIAL (2026-07-21) — vitest (151 tests, 21 files) ya corre en CI (`typecheck.yml`). Falta: tests de smoke E2E y de RPCs contables (`crear_poliza`, `contab_generar_poliza_evento`) — no existen aún, cortar aquí por costo de sesión |
 | 6 | U1 farmacia responsive (plan listo) | Sonnet | ✅ HECHO — ya estaba implementado en sesión previa (commits 48035ba, 5080680), las 11 tasks del plan estaban [x]. Verificado por grep 2026-07-21 (octava parte) |
-| **7** | **U4 onboarding primer uso** | **Sonnet** | **⬅️ SIGUIENTE (media)** |
+| 7 | U4 onboarding primer uso | Sonnet | ✅ HECHO (2026-07-21) — checklist derivado de datos reales (doctors/servicios/appointments), commit e85f3cc, pusheado (deploy auto vía GitHub Actions) |
 | 8 | E3 code-splitting + E2 partir archivos | Sonnet / Haiku | pendiente (2 cortas) |
 | 9 | M2 SEO + M1 caso de estudio | Sonnet setup / Haiku copy | pendiente (2 cortas) |
 | 10 | S2 warnings advisors + S3 deps | Sonnet / Haiku | pendiente (corta) |

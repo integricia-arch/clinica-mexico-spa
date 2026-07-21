@@ -6,8 +6,17 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Plan de avance: tareas #1-#6 HECHAS (ver detalle abajo). Siguiente en la cola:
-#7 U4 onboarding primer uso (Sonnet, prioridad media) — ver plan-avance-ejecucion.md.
+Plan de avance: tareas #1-#7 HECHAS (ver detalle abajo). Siguiente en la cola:
+#8 E3 code-splitting + E2 partir archivos (Sonnet/Haiku, 2 cortas) — ver
+plan-avance-ejecucion.md.
+
+#7 U4 onboarding primer uso — CERRADO 2026-07-21 (octava parte): checklist de
+activación en AdminDashboard (doctor → servicio → primera cita), derivado de
+counts reales (doctors/servicios/appointments por clinic_id), se oculta solo
+al 100%. Archivos: src/hooks/useOnboardingChecklist.ts,
+src/features/centro-control/components/OnboardingChecklistCard.tsx. Commit
+e85f3cc, pusheado a main (deploy automático GH Actions — verificar
+integrika.mx tras el deploy).
 
 SIGUIENTE bloque (sesión Sonnet 2026-07-21, octava parte) — las 4 quedaron CERRADAS:
 1. ✅ cfdi-timbrar scoping por clínica (commit 7c8f0e9) — is_global_admin +
