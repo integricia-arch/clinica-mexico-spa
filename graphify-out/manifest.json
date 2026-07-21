@@ -1575,8 +1575,8 @@
     "semantic_hash": "9aa2d8cecac59186182a21b69bb9f438"
   },
   "src/pages/Pitch.tsx": {
-    "mtime": 1784600392.265453,
-    "ast_hash": "f95ed104b0fd56597577ed04a3fb6652",
+    "mtime": 1784652208.220541,
+    "ast_hash": "fa0d8fb1e837fa249a98dd943de9f8d7",
     "semantic_hash": ""
   },
   "src/pages/RecepcionDashboard.tsx": {
@@ -2160,9 +2160,9 @@
     "semantic_hash": "1988c4be569e1c63db9d8fcef2d3576b"
   },
   "supabase/functions/verify-tenant-code/index.ts": {
-    "mtime": 1783573382.371471,
-    "ast_hash": "588c1ef6b6c86f439efd1ae13e5bf8ca",
-    "semantic_hash": "588c1ef6b6c86f439efd1ae13e5bf8ca"
+    "mtime": 1784652603.244151,
+    "ast_hash": "7bd82a671f2674fcb619f48c4d1c6ad9",
+    "semantic_hash": ""
   },
   "supabase/functions/whatsapp-audit-mensajes/index.ts": {
     "mtime": 1783526178.4387074,
@@ -5047,6 +5047,16 @@
   "supabase/migrations/20260721220000_fix_update_journey_progress_bypass_service_role.sql": {
     "mtime": 1784650554.4061909,
     "ast_hash": "ed59c8a0507e3fbaf8ec61d4793f68b5",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/analisis-integral-2026-07-21.md": {
+    "mtime": 1784651866.8910556,
+    "ast_hash": "e8fd15b64cdc99033ef9b4ac85c3710f",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/seguridad-S4-onboarding-tenants-2026-07-21.md": {
+    "mtime": 1784652482.0817454,
+    "ast_hash": "c3e661280a0241cd73832c981f7121b6",
     "semantic_hash": ""
   }
 }
