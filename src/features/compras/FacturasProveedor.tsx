@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import VerAsientoContableButton from "@/features/contabilidad/VerAsientoContableButton";
+import { VerAsientoContableButton } from "@/features/contabilidad/VerAsientoContableButton";
 import { untypedTable } from "@/lib/untypedTable";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useProveedores } from "@/hooks/useProveedores";

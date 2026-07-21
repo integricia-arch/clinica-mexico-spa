@@ -16,6 +16,7 @@ import { ReportesTab } from "@/features/contabilidad/ReportesTab";
 import { CierreTab } from "@/features/contabilidad/CierreTab";
 import { BancosTab } from "@/features/contabilidad/BancosTab";
 import { ActivosFijosTab } from "@/features/contabilidad/ActivosFijosTab";
+import { HonorariosTab } from "@/features/contabilidad/HonorariosTab";
 
 function fmtMXN(centavos: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(centavos / 100);
@@ -74,6 +75,7 @@ export default function Contabilidad() {
           <TabsTrigger value="polizas">Pólizas</TabsTrigger>
           <TabsTrigger value="reportes">Reportes</TabsTrigger>
           <TabsTrigger value="cierre">Cierre</TabsTrigger>
+          <TabsTrigger value="honorarios">Honorarios</TabsTrigger>
           <TabsTrigger value="bancos">Bancos</TabsTrigger>
           <TabsTrigger value="catalogos">Catálogos</TabsTrigger>
           <TabsTrigger value="activos">Activos fijos</TabsTrigger>
@@ -239,6 +241,10 @@ export default function Contabilidad() {
 
         <TabsContent value="cierre">
           <CierreTab />
+        </TabsContent>
+
+        <TabsContent value="honorarios">
+          <HonorariosTab />
         </TabsContent>
 
         <TabsContent value="bancos">
