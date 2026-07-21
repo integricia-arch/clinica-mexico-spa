@@ -3,6 +3,7 @@
 // Solo admin. Requiere cfdi_config con PAC configurado.
 // =================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { enforceRateLimit, rateLimitResponse } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,6 +104,9 @@ Deno.serve(async (req: Request) => {
   if (!(roles ?? []).some((r: { role: string }) => r.role === "admin")) {
     return json({ error: "Forbidden" }, 403);
   }
+
+  const okRate = await enforceRateLimit(svc, `timbrar:${userData.user.id}`, 60, 3600);
+  if (!okRate) return rateLimitResponse(corsHeaders, 3600);
 
   try {
     const body: TimbrarRequest = await req.json();

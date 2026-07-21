@@ -8,17 +8,26 @@
 
 Nine edge functions have JWT verification disabled. This table documents each function's alternative authentication mechanism and security posture.
 
-| # | Function | HTTP Method | Auth Mechanism | Verification | Status | Notes |
-|---|----------|-------------|----------------|--------------|--------|-------|
-| 1 | `telegram-webhook` | POST | `X-Telegram-Bot-Api-Secret-Token` header | Token comparison against `TELEGRAM_WEBHOOK_SECRET` env | ✅ Implemented | Webhook tokens are bearer-like; secret must match |
-| 2 | `stripe-webhook` | POST | `X-Stripe-Signature` (HMAC-SHA256) | `Stripe.webhooks.constructEvent()` validates signature | ✅ Implemented | Industry standard; Stripe handles HMAC verification |
-| 3 | `stripe-checkout` | POST | **Public endpoint** | None — uses Stripe session IDs for idempotency | ✅ Acceptable | Amounts calculated server-side; no secrets in request |
-| 4 | `enviar-recordatorios` | POST | Bearer token (service role or user JWT) | Manual JWT validation via `supabase.auth.getUser()` OR service role key | ✅ Implemented | Cron-triggered; uses Bearer service_role key |
-| 5 | `notify-cxp-vencimiento` | POST | Bearer token | Compared against `NOTIFY_CXP_CRON_SECRET` env | ✅ Implemented | Internal cron endpoint; shared secret auth |
-| 6 | `auto-reorder` | POST | Bearer token | Compared against `AUTO_REORDER_CRON_SECRET` env | ✅ Implemented | Internal cron endpoint; shared secret auth |
-| 7 | `cfdi-parse` | POST | Bearer token | **Header-only check** (presence, no value validation) | ⚠️ Incomplete | Currently only checks `Authorization` header exists; does NOT validate token value |
-| 8 | `confirmar-cita` | POST | Bearer token | Supabase JWT validated via `supabase.auth.getUser()` + API schema permissions | ✅ Implemented | User confirmation flow; real Supabase JWT |
-| 9 | `google-oauth-callback` | GET | OAuth 2.0 state param | Base64-decoded state = `doctorId:clinicId` (routing, not auth) | ⚠️ Minimal | Callback routing only; relies on Google `code` verification + PKCE equivalent |
+| # | Function | HTTP Method | Auth Mechanism | Verification | Status | Rate limit | Notes |
+|---|----------|-------------|----------------|--------------|--------|-----------|-------|
+| 1 | `telegram-webhook` | POST | `X-Telegram-Bot-Api-Secret-Token` header | Token comparison against `TELEGRAM_WEBHOOK_SECRET` env | ✅ Implemented | — | Webhook tokens are bearer-like; secret must match |
+| 2 | `stripe-webhook` | POST | `X-Stripe-Signature` (HMAC-SHA256) | `Stripe.webhooks.constructEvent()` validates signature | ✅ Implemented | — | Industry standard; Stripe handles HMAC verification |
+| 3 | `stripe-checkout` | POST | **Public endpoint** | None — uses Stripe session IDs for idempotency | ✅ Acceptable | 10/h por IP | Amounts calculated server-side; no secrets in request |
+| 4 | `enviar-recordatorios` | POST | Bearer token (service role or user JWT) | Manual JWT validation via `supabase.auth.getUser()` OR service role key | ✅ Implemented | — | Cron-triggered; uses Bearer service_role key |
+| 5 | `notify-cxp-vencimiento` | POST | Bearer token | Compared against `NOTIFY_CXP_CRON_SECRET` env | ✅ Implemented | — | Internal cron endpoint; shared secret auth |
+| 6 | `auto-reorder` | POST | Bearer token | Compared against `AUTO_REORDER_CRON_SECRET` env | ✅ Implemented | — | Internal cron endpoint; shared secret auth |
+| 7 | `cfdi-parse` | POST | Bearer token | **Header-only check** (presence, no value validation) | ⚠️ Incomplete | — | Currently only checks `Authorization` header exists; does NOT validate token value |
+| 8 | `confirmar-cita` | POST | Bearer token | Supabase JWT validated via `supabase.auth.getUser()` + API schema permissions | ✅ Implemented | — | User confirmation flow; real Supabase JWT |
+| 9 | `google-oauth-callback` | GET | OAuth 2.0 state param | Base64-decoded state = `doctorId:clinicId` (routing, not auth) | ⚠️ Minimal | — | Callback routing only; relies on Google `code` verification + PKCE equivalent |
+
+> **S1 (2026-07-21):** `arco-request` (público, sin JWT, no listado en la tabla de 9 arriba —
+> ver `supabase/functions/arco-request`) y las 4 funciones marcadas arriba con límite ahora
+> pasan por `check_rate_limit()` (tabla `rate_limits`, ventana fija Postgres, fail-open si la
+> RPC falla). `arco-request`: 3/h por IP. `help-chat-ai`: 30/h por user. `cfdi-timbrar`: 60/h
+> por user. `stripe-payment-intent`: 20/h por user. Diseño completo en
+> `memoria/proyectos/S1-rate-limiting-diseno.md`. Excede el límite → `429` +
+> `Retry-After`. Webhooks (fila 1-2) y crons con secreto (fila 4-6) no lo requieren — ya
+> validan antes de trabajo pesado.
 
 ---
 

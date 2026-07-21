@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enforceRateLimit, rateLimitResponse } from "../_shared/rateLimit.ts";
 
 const ANTHROPIC_KEY     = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const SUPABASE_URL      = Deno.env.get("SUPABASE_URL") ?? "";
@@ -78,6 +79,10 @@ Deno.serve(async (req) => {
   const { data: { user }, error: authErr } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
     .auth.getUser(authHeader.replace("Bearer ", ""));
   if (authErr || !user) return new Response(JSON.stringify({ ok: false, error: "No autorizado" }), { status: 401 });
+
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const okRate = await enforceRateLimit(admin, `help:${user.id}`, 30, 3600);
+  if (!okRate) return rateLimitResponse(cors, 3600);
 
   const body: RequestBody = await req.json();
   const { sesion_id, mensaje, manual_contexto, ruta_activa, clinic_id, user_role } = body;

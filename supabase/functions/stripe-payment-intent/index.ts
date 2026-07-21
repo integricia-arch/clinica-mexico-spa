@@ -3,6 +3,7 @@
 // STRIPE_SECRET_KEY debe estar en Supabase Secrets (nunca en BD).
 // =================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { enforceRateLimit, rateLimitResponse } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,6 +65,9 @@ Deno.serve(async (req: Request) => {
     .from("user_roles").select("role").eq("user_id", userData.user.id);
   const allowed = (roles ?? []).some((r: { role: string }) => ["admin", "receptionist"].includes(r.role));
   if (!allowed) return json({ error: "Forbidden" }, 403);
+
+  const okRate = await enforceRateLimit(svc, `pi:${userData.user.id}`, 20, 3600);
+  if (!okRate) return rateLimitResponse(corsHeaders, 3600);
 
   try {
     const body: PIRequest = await req.json();

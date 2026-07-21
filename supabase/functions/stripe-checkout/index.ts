@@ -6,6 +6,9 @@
 // Requiere STRIPE_SECRET_KEY en Supabase Secrets.
 // =================================================================
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { enforceRateLimit, rateLimitResponse, clientIp } from "../_shared/rateLimit.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -13,6 +16,9 @@ const corsHeaders = {
 };
 
 const STRIPE_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // Precios en centavos MXN — nunca confiar en montos del cliente.
 const PLANS: Record<string, { name: string; amount: number }> = {
@@ -36,6 +42,10 @@ Deno.serve(async (req: Request) => {
   if (!STRIPE_KEY) {
     return json({ error: "STRIPE_SECRET_KEY no configurada en el servidor" }, 500);
   }
+
+  const ip = clientIp(req);
+  const okRate = await enforceRateLimit(admin, `checkout:${ip}`, 10, 3600);
+  if (!okRate) return rateLimitResponse(corsHeaders, 3600);
 
   let plan = "";
   try {

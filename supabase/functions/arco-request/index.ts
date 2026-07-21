@@ -2,6 +2,7 @@
 // LFPDPPP Arts. 21-34: derecho de acceso, rectificación, cancelación, oposición
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { enforceRateLimit, rateLimitResponse, clientIp } from "../_shared/rateLimit.ts";
 
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -72,6 +73,11 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
+
+  const corsHeaders = { "Access-Control-Allow-Origin": "*" };
+  const ip = clientIp(req);
+  const okRate = await enforceRateLimit(supabase, `arco:${ip}`, 3, 3600);
+  if (!okRate) return rateLimitResponse(corsHeaders, 3600);
 
   let body: Record<string, string>;
   try {

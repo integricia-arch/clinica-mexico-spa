@@ -6,9 +6,26 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Plan de avance (análisis Fable 2026-07-21): #1 testimonios y #2 S4 pen-test HECHOS.
-SIGUIENTE = tarea #3 S1 rate limiting (Opus diseño / Sonnet implementa). Ver
-plan-avance-ejecucion.md para el detalle e indicación de arranque.
+Plan de avance (análisis Fable 2026-07-21): #1 testimonios, #2 S4 pen-test y #3 S1
+rate limiting HECHOS. SIGUIENTE = tarea #4 N3 unit economics + N2 pricing + N4
+matriz tiers (Fable 5, sesión de negocio). Ver plan-avance-ejecucion.md.
+
+Cerrado sesión 2026-07-21 (quinta parte, Sonnet 5):
+- **S1 rate limiting** — 5 Edge Functions expuestas a abuso (anon sin auth o
+  auth-gated pero costosas) ahora limitadas: `arco-request` 3/h·IP,
+  `stripe-checkout` 10/h·IP, `help-chat-ai` 30/h·user, `cfdi-timbrar` 60/h·user,
+  `stripe-payment-intent` 20/h·user. Mecanismo: tabla `rate_limits` + RPC
+  `check_rate_limit()` (SECURITY DEFINER, ventana fija, fail-open si la BD falla),
+  helper compartido `_shared/rateLimit.ts`. Migraciones 20260721233000 +
+  20260721233500 (segunda fue necesaria porque Supabase da grant EXECUTE directo
+  a anon/authenticated además de PUBLIC — REVOKE FROM PUBLIC solo no bastó,
+  advisors lo marcó). Deploy vía `supabase functions deploy` (CLI, no MCP —
+  MCP deploy_edge_function no resuelve imports relativos a `_shared/` igual de
+  simple). Test burst real contra prod confirmó 429 en la 4ª request de
+  `arco-request`; filas de prueba en `arco_requests` y el bucket de rate_limits
+  se borraron después (no se dejó basura ni folios ARCO falsos en producción).
+  Doc actualizado: `docs/edge-functions-auth.md`. Diseño completo en
+  `memoria/proyectos/S1-rate-limiting-diseno.md`.
 
 Cerrado sesión 2026-07-21 (cuarta parte, Opus 4.8):
 - **S4 H1 capa 2** — RLS SELECT de `clinics` era USING(true) → fuga PII/billing
