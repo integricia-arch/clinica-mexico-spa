@@ -1,5 +1,7 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import VerAsientoContableButton from "@/features/contabilidad/VerAsientoContableButton";
 import { untypedTable } from "@/lib/untypedTable";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { useProveedores } from "@/hooks/useProveedores";
@@ -49,6 +51,8 @@ export default function FacturasProveedor() {
   const { toast } = useToast();
   const { items: proveedores } = useProveedores(activeClinicId);
   const { items, loading, error, pendientes, vencidas, create, registrarPago, getPagos, confirmarProvisional, refresh } = useFacturasProveedor(activeClinicId);
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedPagos, setExpandedPagos] = useState<Record<string, PagoProveedor[]>>({});
@@ -206,6 +210,16 @@ export default function FacturasProveedor() {
     }
   };
 
+  // Si la factura resaltada no está en el filtro actual, mostrar todas para que aparezca.
+  useEffect(() => {
+    if (highlightId) setFiltro("todas");
+  }, [highlightId]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    document.getElementById(`factura-${highlightId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId, items]);
+
   const displayed = filtro === "todas" ? items : filtro === "vencidas" ? vencidas : pendientes;
 
   const diasVencimiento = (f: FacturaProveedor) => differenceInDays(new Date(f.fecha_vencimiento), new Date());
@@ -265,7 +279,11 @@ export default function FacturasProveedor() {
           const diasVenc = diasVencimiento(f);
           const isOpen = expanded === f.id;
           return (
-            <div key={f.id} className="rounded-lg border bg-card">
+            <div
+              key={f.id}
+              id={`factura-${f.id}`}
+              className={`rounded-lg border bg-card${f.id === highlightId ? " ring-2 ring-primary" : ""}`}
+            >
               <div
                 className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/40 transition-colors"
                 onClick={() => toggleExpand(f.id)}
@@ -291,6 +309,9 @@ export default function FacturasProveedor() {
                 <div className="text-right shrink-0">
                   <p className="text-sm font-semibold">{formatMXN(f.saldo_pendiente_centavos)}</p>
                   <p className="text-xs text-muted-foreground">de {formatMXN(f.total_centavos)}</p>
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <VerAsientoContableButton referenceType="factura_proveedor" referenceId={f.id} />
                 </div>
                 {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </div>
