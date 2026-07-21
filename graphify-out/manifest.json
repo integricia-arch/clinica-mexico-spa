@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784654552.6317165,
-    "ast_hash": "3865ac153091bc0dfa9652e976c6108e",
+    "mtime": 1784654831.9582841,
+    "ast_hash": "a81027c31bd8d0f79ad8708c022e4f9a",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784654541.3619921,
-    "ast_hash": "954b5d8bd571e6e480df19703a293f09",
+    "mtime": 1784654824.7497275,
+    "ast_hash": "e550f9bb37f57bd9602c10605cdec84d",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5092,6 +5092,11 @@
   "supabase/migrations/20260721233500_rate_limits_s1_revoke_anon_authenticated.sql": {
     "mtime": 1784654569.1975827,
     "ast_hash": "4f24f07364e3b6fe255b0bf5833eb1a8",
+    "semantic_hash": ""
+  },
+  "memoria/proyectos/N2-N3-N4-pricing-handoff.md": {
+    "mtime": 1784654819.31667,
+    "ast_hash": "612f5ce2f7e2bc4beda8421794a7789b",
     "semantic_hash": ""
   }
 }

@@ -1,16 +1,16 @@
 # Graph Report - clinica-mexico-spa  (2026-07-21)
 
 ## Corpus Check
-- 989 files · ~1,127,502 words
+- 990 files · ~1,128,174 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 7739 nodes · 11281 edges · 1534 communities (662 shown, 872 thin omitted)
+- 7746 nodes · 11287 edges · 1514 communities (641 shown, 873 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 42 edges (avg confidence: 0.65)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5966fa46`
+- Built from commit: `b387aabe`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -153,7 +153,6 @@
 - C:/Users
 - C:/Users
 - C:/Users
-- src/features/recetas
 - vercel
 - src/components/HelpChatWidget
 - src/lib/restClient
@@ -164,7 +163,6 @@
 - src/features/panel-doctor
 - src/hooks/useSolicitudesCompra
 - supabase/functions/cfdi-email
-- supabase/functions/help-chat-ai
 - supabase/functions/stripe-webhook-saas
 - supabase/migrations/20260617000002_create_faq_chat_sistema
 - C:/Users
@@ -184,7 +182,6 @@
 - supabase/functions/auto-reorder
 - supabase/functions/enviar-mensaje-humano
 - supabase/functions/notify-appointment-assigned
-- supabase/functions/stripe-payment-intent
 - supabase/migrations/20260530033746_6cb5a09d-c7f8-4d69-86b8-c11c21dd41f2
 - supabase/migrations/20260709000002_ciclo_compras_triggers
 - C:/Users
@@ -215,12 +212,10 @@
 - scripts/setup-betterstack-monitors
 - src/features/camino-paciente
 - src/features/centro-control
-- src/features/centro-control
 - src/features/compras
 - supabase/functions/cfdi-cancelar
 - supabase/functions/create-tenant
 - supabase/functions/loyalty-welcome
-- supabase/functions/stripe-checkout
 - supabase/migrations/20260508000001_expedientes
 - supabase/migrations/20260617000000_enfermera_asignacion
 - supabase/migrations/20260624100001_drop_hardcoded_clinic_defaults
@@ -237,11 +232,8 @@
 - C:/Users
 - src/components/ui
 - src/features/centro-control
-- src/features/compras
-- usePipelineCompras.ts
 - src/lib/activeClinic
 - src/pages/Citas
-- supabase/functions/arco-request
 - supabase/functions/cfdi-download
 - supabase/functions/notify-doctor-confirmation
 - supabase/functions/notify-new-user
@@ -292,13 +284,9 @@
 - supabase/scripts/diagnostics
 - package
 - package
-- package
 - C:/Users
 - C:/Users
 - menubar.tsx
-- package
-- package
-- package
 - package
 - package
 - package
@@ -478,7 +466,6 @@
 - availability.ts
 - Completado (Jun 17, 2026 — Chat IA verificado + archivos locales)
 - checkoutService.ts
-- ManualButton.tsx
 - Completado (Jun 15, 2026 — sesión 19)
 - Completado (Jun 15, 2026 — sesión 21)
 - Completado (Jun 15, 2026 — sesión 22)
@@ -677,12 +664,8 @@
 - Fix: loyalty miembros infinite loop (useCallback deps)
 - Optimus Prime CarosIA hook (antivirus preflight)
 - Ponytail plugin installed
-- LibroControlControlados
-- react-dom
 - tailwindcss-animate
 - @radix-ui/react-avatar
-- @radix-ui/react-dropdown-menu
-- react-hook-form
 - zod
 - Loyalty PWA deployment (Vercel, loyalty.integrika.mx)
 - Pattern assertClinicAccess() (manage-subscription)
@@ -1327,7 +1310,6 @@
 - Table: solicitudes_insumos
 - SYNC_WORKFLOW.md — Workflow Sincronizacion Lovable <-> Local
 - Normatividad Contable — Fuente Local
-- SubscriptionGateBanner.tsx
 - Sesión 2026-07-20 (parte 2) — prueba e2e reserva→salida vía browser real + 3 bugs de producción encontrados y corregidos
 - Contabilidad.tsx
 - Sesión 2026-07-20 — validación ciclo contable completo + pólizas manuales + activos fijos
@@ -1335,7 +1317,6 @@
 - Completado (Jun 12, 2026)
 - 20260720100000_tipo_persona_cfdi_config.sql
 - Completado (Jun 15, 2026 — sesión 24)
-- ThreeWayMatchPanel.tsx
 - 20260719220000_activos_fijos.sql
 - 20260720020000_doctors_modo_cobro.sql
 - react-day-picker
@@ -1345,7 +1326,6 @@
 - Completado (Jun 17, 2026 — Chat IA verificado + archivos locales)
 - useChecklists.ts
 - useDoctores.ts
-- useInventarioCiclico.ts
 - 20260720170000_fusion_catalogo_cuentas_duplicado.sql
 - Completado (Jun 17, 2026 — notification_rules + .env local file server)
 - @hookform/resolvers
@@ -1407,35 +1387,35 @@
 - **Auditoría de seguridad Supabase: hallazgo, cierre P1/P2/P3, checklist SECURITY DEFINER** — memoria_diario_2026_07_04_sesion18, memoria_diario_2026_07_04_sesion18_cierre, memoria_diario_2026_07_04_sesion18_security_definer_audit [EXTRACTED 0.90]
 - **Pipeline CFDI: parseo, matching y 4-way match anti-fraude** — memoria_proyectos_investigacion-cfdi-xml-4way-match-antirobo_cfdi_parse_edge_function, memoria_proyectos_investigacion-cfdi-xml-4way-match-antirobo_matching_cascada, memoria_proyectos_investigacion-cfdi-xml-4way-match-antirobo_4way_match_engine [EXTRACTED 0.95]
 
-## Communities (1534 total, 872 thin omitted)
+## Communities (1514 total, 873 thin omitted)
 
 ### Community 0 - "src/pages/ajustes"
-Cohesion: 0.11
-Nodes (20): SheetContent, SheetContentProps, SheetDescription, SheetHeader(), SheetOverlay, sheetVariants, buildPhiAccessLogArgs(), logPhiAccess() (+12 more)
+Cohesion: 0.16
+Nodes (14): buildPhiAccessLogArgs(), logPhiAccess(), Appointment, apptStatusColor(), JourneyInstance, journeyStatusColor(), NotaConsulta, PacienteHistorialDrawer() (+6 more)
 
 ### Community 1 - "src/features/facturacion"
-Cohesion: 0.04
-Nodes (60): ALL, BILLETES, DenomBreakdown, DenominacionCounter(), DenomRow(), fmtDenom(), fmtMXN(), MONEDAS (+52 more)
+Cohesion: 0.05
+Nodes (49): ALL, BILLETES, DenomBreakdown, DenominacionCounter(), DenomRow(), fmtDenom(), fmtMXN(), MONEDAS (+41 more)
 
 ### Community 2 - "supabase/functions/telegram-webhook"
 Cohesion: 0.05
 Nodes (109): BusySlot, createCalendarEvent(), deleteCalendarEvent(), DoctorCalendar, getDoctorCalendar(), getFreeBusy(), refreshAccessToken(), supabase (+101 more)
 
 ### Community 3 - "src/features/camino-paciente"
-Cohesion: 0.09
-Nodes (51): Checkbox, ArrivalData, ArrivalForm(), ArrivalFormProps, arrivalSchema, ApptIds, AssignmentForm(), DoctorRow (+43 more)
+Cohesion: 0.07
+Nodes (64): Checkbox, RadioGroup, RadioGroupItem, ArrivalData, ArrivalForm(), ArrivalFormProps, arrivalSchema, ApptIds (+56 more)
 
 ### Community 4 - "src/pages/DetalleCita"
-Cohesion: 0.09
-Nodes (31): CardBrand, CardPayment, CardType, emptyBreakdown(), formatMXN(), looksLikeFullCardNumber(), Method, onlyDigits() (+23 more)
+Cohesion: 0.04
+Nodes (61): CorteCaja(), CorteRow, FondoMovimiento, formatMXN(), Payment, Sale, SaleItem, CardBrand (+53 more)
 
 ### Community 5 - "src/features/lealtad"
-Cohesion: 0.04
-Nodes (69): HelpChatWidget(), loadManual(), MANUAL_MODULES, Mensaje, RUTA_MANUAL, Sesion, slugForRuta(), ManualButton() (+61 more)
+Cohesion: 0.05
+Nodes (48): AlertasCxpPanel(), SEVERIDAD_BADGE, TIPO_LABEL, BitacoraTemperaturaPanel(), ZONA_LABELS, ComprasTabsInner(), Medicamento, classifyDiff() (+40 more)
 
 ### Community 6 - "src/features/almacen"
-Cohesion: 0.09
-Nodes (19): Lote, Medicamento, Props, logPosError(), CompositeTypes, Constants, DatabaseWithoutInternals, DefaultSchema (+11 more)
+Cohesion: 0.40
+Nodes (3): Lote, Medicamento, Props
 
 ### Community 7 - "src/hooks/useBI"
 Cohesion: 0.10
@@ -1446,12 +1426,12 @@ Cohesion: 0.04
 Nodes (44): Auditoría claude-db completada, Auditoría seguridad `memoria/`, `auto-reorder` v3 test post-fix, Bot, Bug 1: "Cancelar" → "No tienes citas próximas registradas", Bug 2: Link GCal mostraba 2:30 PM en vez de 8:30 AM (paciente), Bug 3: Evento del doctor en GCal a hora incorrecta, cfdi-parse auth fix (commit `86c4caa`, deployed) (+36 more)
 
 ### Community 9 - "src/features/compras"
-Cohesion: 0.24
-Nodes (9): RegistrarEgresoModal(), today(), nextFolioRec(), Recepcion, RecepcionInput, RecepcionItem, RecepcionRow, toRecepcion() (+1 more)
+Cohesion: 0.05
+Nodes (42): Badge(), BadgeProps, badgeVariants, DropdownMenuContent, DropdownMenuItem, ActasMerma(), EMPTY_ITEM(), ESTATUS_BADGE (+34 more)
 
 ### Community 10 - "src/features/compras"
-Cohesion: 0.07
-Nodes (48): EMPTY, NotaConsultaModal(), Props, SheetFooter(), SheetTitle, Textarea, TextareaProps, advancePatientJourneyFromClinicalEvent() (+40 more)
+Cohesion: 0.08
+Nodes (32): NotaConsultaModal(), audit(), QuickPatientDialog(), splitName(), buildUrl(), getHeaders(), restInsert(), restSelect() (+24 more)
 
 ### Community 11 - "src/components/ui"
 Cohesion: 0.21
@@ -1462,8 +1442,8 @@ Cohesion: 0.33
 Nodes (6): index.html — ClínicaMX / IntegriKa entrypoint, IntegriKa (marca, integrika.mx), Noscript pitch: bot Telegram, POS FEFO, CFDI 4.0, multi-clínica RLS, $2,499 MXN/mes, Umami analytics script, Mapa de módulos SaaS médico 360°, Tesis: pérdidas invisibles por procesos desconectados
 
 ### Community 13 - "src/pages/Recetas"
-Cohesion: 0.17
-Nodes (15): AgingBucket, emptyBucket(), fmt(), PagoRow, pct(), ProveedorRow, ReporteAgingCxP(), FacturaInput (+7 more)
+Cohesion: 0.06
+Nodes (40): DashboardCompras(), ESTATUS_COLOR, ESTATUS_LABEL, fmt(), DevolucionesProveedor(), fmtMXN(), AgingBucket, emptyBucket() (+32 more)
 
 ### Community 14 - "src/features/camino-paciente"
 Cohesion: 0.23
@@ -1474,20 +1454,20 @@ Cohesion: 0.08
 Nodes (25): 1. Problem Statement, 2. Sidebar Responsive (AppLayout.tsx), 3. POS Grid Layout (PuntoDeVenta.tsx), 4. Carrito + Cobro Panel, 5. Turno Header Bar (PuntoDeVenta.tsx), 6. Touch Targets & Typography, 7. Files Changed, 8. Out of Scope (+17 more)
 
 ### Community 17 - "src/pages/CajaTurno"
-Cohesion: 0.07
-Nodes (41): useActiveClinic(), useRequiredClinicId(), EMPTY, GeneralForm, IANA_TO_TZ, TZ_TO_IANA, useClinicGeneral(), UseClinicGeneralResult (+33 more)
+Cohesion: 0.05
+Nodes (57): exportCSV(), ReporteCOFEPRIS(), exportCSV(), ReporteRotacionABC(), EnviarEmailCFDIDialog(), fmt(), newConcepto(), TimbrarCFDIDialog() (+49 more)
 
 ### Community 18 - "src/components/ui"
-Cohesion: 0.14
-Nodes (14): fmt(), fmtDate(), LibroControlControlados(), ETIQUETAS_CONTROL, LibroControl, LibroInput, LibroMovimiento, LibroRow (+6 more)
+Cohesion: 0.18
+Nodes (11): ETIQUETAS_CONTROL, LibroControl, LibroInput, LibroMovimiento, LibroRow, MovimientoEntradaInput, MovimientoSalidaInput, TipoControl (+3 more)
 
 ### Community 19 - "src/features/camino-paciente"
 Cohesion: 0.09
 Nodes (33): fmtMXN(), PolizaAgrupada, PolizaDetalleDialog(), TIPO_POLIZA_LABELS, TRAMITE_POR_REFERENCE_TYPE, agruparPorPoliza(), AuxiliaresTab(), BalanceGeneralTab() (+25 more)
 
 ### Community 20 - "src/hooks/useDashboardHoy"
-Cohesion: 0.10
-Nodes (23): StatCardProps, ACCION_LABEL, ActividadItem, AuditRow, CitaHoy, CONFIRMED_STATUSES, DashboardHoyData, formatHora() (+15 more)
+Cohesion: 0.13
+Nodes (19): StatCardProps, ACCION_LABEL, ActividadItem, AuditRow, CitaHoy, CONFIRMED_STATUSES, DashboardHoyData, formatHora() (+11 more)
 
 ### Community 21 - "src/components/ui"
 Cohesion: 0.07
@@ -1510,8 +1490,8 @@ Cohesion: 0.13
 Nodes (15): Backend — extender `manage-subscription`, Panel de suscripción self-service + archivado + vista de canceladas — diseño, Estado actual verificado (2026-07-10), Frontend — `AdminTenants.tsx`, Frontend — `AdminTenants.tsx`, Frontend — `ConfiguracionPagos.tsx`, sección "Tu suscripción", Fuera de alcance (deliberado), Manejo de errores (las 3 piezas) (+7 more)
 
 ### Community 26 - "src/features/inbox"
-Cohesion: 0.12
-Nodes (20): DashboardCompras(), ESTATUS_COLOR, ESTATUS_LABEL, fmt(), PuntoReorden(), calcTotales(), nextFolio(), OrdenCompra (+12 more)
+Cohesion: 0.25
+Nodes (7): Breadcrumb, BreadcrumbEllipsis(), BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator()
 
 ### Community 27 - "src/hooks/useChecklists"
 Cohesion: 0.05
@@ -1522,16 +1502,16 @@ Cohesion: 0.08
 Nodes (26): DOM, DOM.Iterable, ES2020, vitest/globals, compilerOptions, allowImportingTsExtensions, isolatedModules, jsx (+18 more)
 
 ### Community 29 - "src/hooks/useClinicGeneral"
-Cohesion: 0.11
-Nodes (15): App(), LoyaltyApp, queryClient, Toaster(), ToasterProps, ActiveClinicProvider(), AuthProvider(), dsn (+7 more)
+Cohesion: 0.09
+Nodes (18): App(), LoyaltyApp, queryClient, Toaster(), ToasterProps, ActiveClinicProvider(), AuthProvider(), dsn (+10 more)
 
 ### Community 30 - "supabase/functions/manage-subscription"
 Cohesion: 0.14
 Nodes (13): ActionBody, assertClinicAccess(), buildSummary(), canManageOwnSubscription(), corsHeaders, diffModulos(), isSelfServiceActionForbidden(), json() (+5 more)
 
 ### Community 31 - "src/integrations/supabase"
-Cohesion: 0.25
-Nodes (14): EntregaDB, EntregaTurno(), ESTADO_BADGE, NurseOption, PRIORIDAD_BADGE, RoomOption, Turno, TURNO_LABEL (+6 more)
+Cohesion: 0.42
+Nodes (8): EntregaDB, EntregaTurno(), defaultPacienteRow(), defaultPendienteRow(), filterValidPacientes(), filterValidPendientes(), PacienteRow, PendienteRow
 
 ### Community 32 - "src/hooks/useOrdenesCompra"
 Cohesion: 0.05
@@ -1579,7 +1559,7 @@ Nodes (8): ErrorBoundary, Props, State, enrich(), initGlobalErrorCapture(), LogC
 
 ### Community 44 - "src/pages/PacientesLista"
 Cohesion: 0.06
-Nodes (37): Alert, AlertDescription, AlertTitle, alertVariants, CardContent, ScrollArea, ScrollBar, AppointmentContext (+29 more)
+Nodes (48): Alert, AlertDescription, AlertTitle, alertVariants, AppointmentContext, JourneyInstanceFull, JourneyStep, PatientContext (+40 more)
 
 ### Community 45 - "src/pages/Pitch"
 Cohesion: 0.15
@@ -1598,24 +1578,24 @@ Cohesion: 0.22
 Nodes (9): aplicaQuickFilter(), CatalogoMedicamentos(), formatMXN(), matchTolerante(), distanciaLevenshtein(), normalizarTexto(), Lote, med() (+1 more)
 
 ### Community 49 - "src/hooks/useFacturasProveedor"
-Cohesion: 0.23
-Nodes (13): ActivosFijosTab(), fmtMXN(), BalanzaRow, cargarEmisor(), CuentaRow, download(), EmisorFiscal, exportarBalanzaAnexo24() (+5 more)
+Cohesion: 0.09
+Nodes (30): HelpChatWidget(), loadManual(), slugForRuta(), InsumosCitaSection(), ActivosFijosTab(), fmtMXN(), BalanzaRow, cargarEmisor() (+22 more)
 
 ### Community 50 - "src/features/enfermeria"
-Cohesion: 0.05
-Nodes (53): PacienteModal(), ActasMerma(), EMPTY_ITEM(), fmt(), FaltantesPanel(), InventarioCiclico(), BitacoraTemperaturaPanel(), ZONA_LABELS (+45 more)
+Cohesion: 0.04
+Nodes (65): MANUAL_MODULES, Mensaje, RUTA_MANUAL, Sesion, EMPTY_FORM, FormState, PacienteModal(), Patient (+57 more)
 
 ### Community 51 - "src/pages/Auditoria"
 Cohesion: 0.15
-Nodes (15): CancelarSuscripcionModal(), Props, InvoicesTable(), TERMINOS_CANCELACION, DialogDescription, supabaseUrl, AdminTenantDetail(), EMPTY (+7 more)
+Nodes (14): CancelarSuscripcionModal(), InvoicesTable(), TERMINOS_CANCELACION, supabaseUrl, AdminTenantDetail(), ConfiguracionPagos(), EMPTY, METODOS (+6 more)
 
 ### Community 52 - "src/features/camino-paciente"
-Cohesion: 0.11
-Nodes (23): cardVariants, listItemVariants, overlayVariants, RegisterResult, Props, Props, LoyaltyConfig, LoyaltyMember (+15 more)
+Cohesion: 0.06
+Nodes (52): cardVariants, listItemVariants, overlayVariants, spring, Props, LOYALTY_TOKENS, NIVEL_COLORS, NIVEL_ICON (+44 more)
 
 ### Community 53 - "src/components/ui"
-Cohesion: 0.08
-Nodes (20): Badge(), BadgeProps, badgeVariants, Card, DoctorLoad, STATE_LABEL, AlertLevel, LEVEL (+12 more)
+Cohesion: 0.31
+Nodes (8): clamp(), EvaluacionProveedores(), fmtPct(), ProvKPI, rating(), RATING_UI, ScoreBar(), W
 
 ### Community 54 - "src/features/recetas"
 Cohesion: 0.21
@@ -1691,19 +1671,19 @@ Nodes (31): Bitácora de implementación (Jun 16, 2026), Estudio: panel de confi
 
 ### Community 73 - "src/features/centro-control"
 Cohesion: 0.07
-Nodes (49): CardDescription, CardFooter, CardHeader, CardTitle, Switch, Table, TableBody, TableCaption (+41 more)
+Nodes (58): AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay, AlertDialogTitle (+50 more)
 
 ### Community 74 - "src/features/almacen"
 Cohesion: 0.29
 Nodes (8): centavosToPesos(), exportContabilidadCsv(), FlujoMes, KpisContables, PeriodoContable, PnlMes, rangoFechas(), useContabilidad()
 
 ### Community 75 - "src/features/compras"
-Cohesion: 0.16
-Nodes (18): ComparativaTable(), CotizacionesPanel(), fmt(), FORM_EMPTY, NuevaCotizacionForm(), NuevaForm, Proveedor, SolicitudOption (+10 more)
+Cohesion: 0.04
+Nodes (72): ComprasCtx, ComprasNavContext, ComprasNavProvider(), ComprasNavState, useComprasNav(), ComparativaTable(), CotizacionesPanel(), fmt() (+64 more)
 
 ### Community 76 - "src/features/recetas"
-Cohesion: 0.16
-Nodes (13): audit(), createJourneyFromAppointment(), openJourneyStepByKey(), Props, QuickArrivalModal(), ConversationActionPanel(), LastAttempt, LatestAppt (+5 more)
+Cohesion: 0.25
+Nodes (7): DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut(), DropdownMenuSubContent, DropdownMenuSubTrigger
 
 ### Community 77 - "src/pages/Expedientes"
 Cohesion: 0.14
@@ -1735,7 +1715,7 @@ Nodes (35): 1.1 Tipos de Comprobante (`TipoDeComprobante`), 1.2 Datos del Emisor
 
 ### Community 85 - "src/components/ProtectedRoute"
 Cohesion: 0.21
-Nodes (13): DashboardFiltersState, KanbanRow, PatientJourneyKanban(), Props, Props, RoomStatus, Props, STATUS_LABEL (+5 more)
+Nodes (9): buttonVariants, Calendar(), CalendarProps, PopoverContent, APPT_STATUSES, DashboardFilters(), DashboardFiltersState, Props (+1 more)
 
 ### Community 86 - "src/components/ui"
 Cohesion: 0.17
@@ -1754,8 +1734,8 @@ Cohesion: 0.12
 Nodes (15): Contabilidad, Cómo capturar una póliza (asiento contable formal), Cómo cerrar el mes contable, Cómo conciliar el banco (pestaña Bancos), Cómo configurar el IVA de un ingreso (consultas, farmacia, otros), Cómo entender cada KPI (indicador clave), Cómo registrar un egreso manual (renta, luz, servicios, etc.), Cómo ver el estado financiero (ingresos, gastos, ganancia) del mes (+7 more)
 
 ### Community 90 - "src/hooks/useLibroControlControlados"
-Cohesion: 0.14
-Nodes (10): getAvailableOptionsForStep(), CatalogItemRow, CatalogRow, CatalogsPanel(), FieldsPanel(), RuleRow, RulesPanel(), StepEditorSheet() (+2 more)
+Cohesion: 0.07
+Nodes (38): ConfigHealthBadge(), JourneyStep, JourneyTemplate, JourneyVersion, useJourneyTemplates(), useJourneyVersion(), getAvailableOptionsForStep(), OPTIONS_BY_STEP (+30 more)
 
 ### Community 91 - "C:/Users"
 Cohesion: 0.15
@@ -1786,20 +1766,20 @@ Cohesion: 0.18
 Nodes (7): ChartConfig, ChartContainer, ChartContext, ChartContextProps, ChartLegendContent, ChartTooltipContent, THEMES
 
 ### Community 101 - "src/components/ui"
-Cohesion: 0.20
-Nodes (9): OPTIONS_BY_STEP, StepOption, APP_ROLES, AppRole, CriticalStepKey, FIELD_TYPE_LABELS, STEP_KEY_LABELS, STEP_TYPE_LABELS (+1 more)
+Cohesion: 0.29
+Nodes (6): ScrollArea, ScrollBar, DoctorPatientQueue(), Props, STEP_LABELS, STEP_TONE
 
 ### Community 102 - "src/hooks/useActasMerma"
 Cohesion: 0.40
 Nodes (5): Auditoría de pendientes viejos (Jun 28/Jul 1) — la mayoría ya estaban resueltos, Barrido de deuda técnica/seguridad — limpio ✅, Ciclo E2E completo reserva→salida ✅, Completado (Jul 20, 2026 — cierre ciclo E2E + MFA nuevos usuarios + auditoría pendientes), MFA — solo usuarios NUEVOS + dispositivos de confianza ✅ (`c7a4e53`, `7660c40`)
 
 ### Community 103 - "src/features/centro-control"
-Cohesion: 0.06
-Nodes (37): CLAVES_PROD_SERV, Concepto, FacturaGlobalDialog(), fmt(), MESES, MESES_LABEL, newConcepto(), PERIODICIDADES (+29 more)
+Cohesion: 0.29
+Nodes (6): Entregable esperado de la sesión Fable, Handoff para Fable 5 — N3 unit economics + N2 pricing + N4 matriz tiers, N2 — esquema de precios, N3 — unit economics: costos NO están en código, son de proveedores externos, N4 — ya NO está abierto como se pensó, Pricing actual real (verificado en `src/pages/Pitch.tsx:175-243`)
 
 ### Community 104 - "src/hooks/useDevolucionesProveedor"
-Cohesion: 0.24
-Nodes (8): MODULO_LABELS, ModuloNoContratadoScreen(), Props, AppRole, Props, ProtectedRoute(), ROLE_HOME, useModulosActivos()
+Cohesion: 0.33
+Nodes (5): ToggleGroup, ToggleGroupContext, ToggleGroupItem, Toggle, toggleVariants
 
 ### Community 105 - "supabase/functions/cfdi-timbrar"
 Cohesion: 0.07
@@ -1842,16 +1822,12 @@ Cohesion: 0.20
 Nodes (10): scripts, build, build:all, build:dev, build:manual, dev, lint, preview (+2 more)
 
 ### Community 117 - "src/components/ui"
-Cohesion: 0.19
-Nodes (15): fmt(), TrustedDevicesSection(), InsumosCitaSection(), UseClinicSettingsFormResult, Insumo, InsumoInput, InsumoRow, toInsumo() (+7 more)
+Cohesion: 0.09
+Nodes (26): fmt(), TrustedDevicesSection(), EMPTY, GeneralForm, IANA_TO_TZ, TZ_TO_IANA, UseClinicGeneralResult, UseClinicSettingsFormResult (+18 more)
 
 ### Community 118 - "supabase/functions/enviar-recordatorios"
 Cohesion: 0.31
 Nodes (7): isClinicAccessForbidden(), construirMensaje(), corsHeaders, enviarTelegram(), procesarRecordatorios(), procesarUno(), supabase
-
-### Community 119 - "BitacoraTemperaturaPanel.tsx"
-Cohesion: 0.25
-Nodes (8): AlertChipProps, elapsedLabel(), FinancialOperationsPanel(), fmtMXN(), Props, EMPTY, FinancialDashboardData, TurnoActivo
 
 ### Community 121 - "C:/Users"
 Cohesion: 0.20
@@ -1905,17 +1881,13 @@ Nodes (41): 10. Base de Datos — Cambios Requeridos, 11. Archivos a Modificar, 
 Cohesion: 0.29
 Nodes (6): Advisors finales (Task 8, Step 5), Estado de memoria, No ejecutado en este entorno, Pendiente para la próxima sesión, Qué se hizo, Sesión 24 — Jul 8, 2026 — Fase B pagos SaaS: Tasks 3-8 (continuación de sesión 23/inicio de sesión 24)
 
-### Community 138 - "src/features/recetas"
-Cohesion: 0.17
-Nodes (16): useLoyaltyConfig(), useLoyaltyMember(), LoyaltyAfiliacionModal(), LoyaltyMiembros(), MemberDrawer(), MemberDrawerProps, SortDir, SortKey (+8 more)
-
 ### Community 139 - "vercel"
 Cohesion: 0.25
 Nodes (7): iad1, buildCommand, framework, headers, outputDirectory, regions, rewrites
 
 ### Community 141 - "src/lib/restClient"
-Cohesion: 0.15
-Nodes (20): useFieldErrors(), cleanItems(), Kit, kitFields(), KitInput, KitItem, KitItemInput, KitItemRow (+12 more)
+Cohesion: 0.11
+Nodes (28): useFieldErrors(), Insumo, InsumoInput, InsumoRow, toInsumo(), toRow(), useInsumos(), cleanItems() (+20 more)
 
 ### Community 142 - "src/components/PasswordStrengthMeter"
 Cohesion: 0.20
@@ -1944,10 +1916,6 @@ Nodes (26): Backward compatibility, Bot Mejoras + Horario Clínica + Google Cale
 ### Community 148 - "supabase/functions/cfdi-email"
 Cohesion: 0.25
 Nodes (3): corsHeaders, EmailRequest, TIPO_LABEL
-
-### Community 149 - "supabase/functions/help-chat-ai"
-Cohesion: 0.25
-Nodes (6): DrawerContent, DrawerDescription, DrawerFooter(), DrawerHeader(), DrawerOverlay, DrawerTitle
 
 ### Community 150 - "supabase/functions/stripe-webhook-saas"
 Cohesion: 0.32
@@ -1990,8 +1958,8 @@ Cohesion: 0.39
 Nodes (7): calcScore(), COMMON_PASSWORDS, LEVELS, PasswordStrengthMeter(), PasswordStrengthMeterProps, Rule, RULES
 
 ### Community 165 - "src/hooks/useDoctores"
-Cohesion: 0.08
-Nodes (27): AppLayout(), AppRole, FOCUS_ROUTES, NAV_ITEMS, NavItem, ROLE_LABELS, LockScreen(), Props (+19 more)
+Cohesion: 0.07
+Nodes (30): AppLayout(), AppRole, FOCUS_ROUTES, NAV_ITEMS, NavItem, ROLE_LABELS, LockScreen(), MfaEnrollmentGate() (+22 more)
 
 ### Community 166 - "src/hooks/useInsumos"
 Cohesion: 0.08
@@ -2008,10 +1976,6 @@ Nodes (4): isConversationClinicAccessForbidden(), corsHeaders(), json(), supabas
 ### Community 169 - "supabase/functions/notify-appointment-assigned"
 Cohesion: 0.43
 Nodes (4): isClinicAccessForbidden(), cors(), json(), supabase
-
-### Community 170 - "supabase/functions/stripe-payment-intent"
-Cohesion: 0.29
-Nodes (7): JourneyStep, JourneyTemplate, JourneyVersion, useJourneyTemplates(), useJourneyVersion(), validateJourneyConfiguration(), CaminoPacienteConfig()
 
 ### Community 171 - "supabase/migrations/20260530033746_6cb5a09d-c7f8-4d69-86b8-c11c21dd41f2"
 Cohesion: 0.43
@@ -2093,21 +2057,13 @@ Nodes (4): createMonitor(), listExisting(), main(), MONITORS
 Cohesion: 0.67
 Nodes (3): Completado (Jun 15, 2026 — sesión 21), Dashboard de Compras ✅, Estado final Farmacia.tsx — tab Compras
 
-### Community 201 - "src/features/centro-control"
-Cohesion: 0.25
-Nodes (7): Scenario, SCENARIO_LABELS, simulateJourney(), SimulationResult, SimulationStep, StepLite, SimulatorDialog()
-
 ### Community 202 - "src/features/centro-control"
-Cohesion: 0.14
-Nodes (19): useTurno(), TabsContent, TabsList, TabsTrigger, getStepForm(), authorizeStepOverride(), blockJourneyStep(), openJourneyStep() (+11 more)
+Cohesion: 0.20
+Nodes (12): GuardState, Props, TurnoContext, TurnoContextValue, TurnoGuard(), useTurno(), TabsContent, TabsList (+4 more)
 
 ### Community 203 - "src/features/compras"
 Cohesion: 0.08
 Nodes (24): 2A — Indicador de stock en `PrescriptionEditorModal.tsx`, 2B — Lista de recetas pendientes en `SurtirReceta.tsx`, 3A — Migración SQL, 3B — Lógica al emitir receta (`prescriptionService.ts`), 3C — Resolución al surtir (`SurtirReceta.tsx`), 3D — Sub-tab "Faltantes" en `Farmacia.tsx` › tab Inventario, Archivos modificados por fase, `Configuracion.tsx` (+16 more)
-
-### Community 207 - "supabase/functions/stripe-checkout"
-Cohesion: 0.32
-Nodes (7): ActaMerma, ActaMermaInput, ActaMermaItem, ActaRow, nextFolio(), toActa(), useActasMerma()
 
 ### Community 208 - "supabase/migrations/20260508000001_expedientes"
 Cohesion: 0.50
@@ -2149,25 +2105,13 @@ Nodes (12): Asignación enfermera por cita (Jun 16), BI — mejoras fase 2 ✅ C
 Cohesion: 0.20
 Nodes (9): Estado (2026-07-21), H1 — HIGH · Fuga multi-tenant en tabla `clinics` (`USING(true)`), H2 — MEDIUM · provision-users-from-queue procesa la cola GLOBAL con rol admin de cualquier clínica, H3 — LOW · Sin límite de intentos en verify-tenant-code (código 6 díg.), H4 — LOW · CORS `*` en las 3 functions, Hallazgos, Recomendación de orden, S4 — Pen-test onboarding tenants (2026-07-21) (+1 more)
 
-### Community 224 - "src/features/compras"
-Cohesion: 0.10
-Nodes (19): ComprasCtx, ComprasNavContext, ComprasNavProvider(), ComprasNavState, useComprasNav(), formatMXN(), OrdenesCompra(), formatMXN() (+11 more)
-
-### Community 225 - "usePipelineCompras.ts"
-Cohesion: 0.24
-Nodes (7): Antecedentes, calcEdad(), EMPTY_ANT(), ExpedienteElectronico(), NotaConsulta, Patient, Prescripcion
-
 ### Community 226 - "src/lib/activeClinic"
 Cohesion: 0.67
 Nodes (3): Completado (Jun 16, 2026 — cuenta QA + verificación en browser), Cuenta de pruebas QA permanente, Verificación real en browser de todas las features de enfermería de hoy
 
 ### Community 227 - "src/pages/Citas"
-Cohesion: 0.07
-Nodes (33): Logo(), LogoProps, sizeMap, Breadcrumb, BreadcrumbEllipsis(), BreadcrumbItem, BreadcrumbLink, BreadcrumbList (+25 more)
-
-### Community 228 - "supabase/functions/arco-request"
-Cohesion: 0.33
-Nodes (5): ConfigHealthBadge(), CRITICAL_STEP_KEYS, RuleLite, ValidationIssue, ValidationResult
+Cohesion: 0.09
+Nodes (24): Logo(), LogoProps, sizeMap, ButtonProps, DrawerContent, DrawerDescription, DrawerFooter(), DrawerHeader() (+16 more)
 
 ### Community 230 - "supabase/functions/notify-doctor-confirmation"
 Cohesion: 0.67
@@ -2237,10 +2181,6 @@ Nodes (3): public.fondos_movimientos, public.turno_corte_x(), public.turno_fondo
 Cohesion: 1.00
 Nodes (3): undraw_docusaurus_mountain.svg (asset template), undraw_docusaurus_react.svg (asset template), undraw_docusaurus_tree.svg (asset template)
 
-### Community 283 - "package"
-Cohesion: 0.18
-Nodes (12): DevolucionesProveedor(), fmtMXN(), DevEstatus, DevMotivo, DevolucionInput, DevolucionItem, DevolucionItemInput, DevolucionProveedor (+4 more)
-
 ### Community 285 - "C:/Users"
 Cohesion: 0.25
 Nodes (8): Stripe Checkout Tenant Onboarding (plan), Global Constraints, Post-Implementation, Stripe Checkout Tenant Onboarding — Implementation Plan, Task 1: Idempotency table — `stripe_webhook_events`, Task 2: Shrink `verify-tenant-code` to Checkout-Session-only, Task 3: `stripe-webhook-saas` — provisioning on `checkout.session.completed`, Task 4: Frontend — `AdminTenants.tsx` redirect + status banner
@@ -2249,33 +2189,21 @@ Nodes (8): Stripe Checkout Tenant Onboarding (plan), Global Constraints, Post-Im
 Cohesion: 0.17
 Nodes (11): Menubar, MenubarCheckboxItem, MenubarContent, MenubarItem, MenubarLabel, MenubarRadioItem, MenubarSeparator, MenubarShortcut() (+3 more)
 
-### Community 288 - "package"
-Cohesion: 0.29
-Nodes (8): AlertasCxpPanel(), SEVERIDAD_BADGE, TIPO_LABEL, ComprasTabsInner(), AlertaRow, CxpAlerta, toAlerta(), useCxpAlertas()
-
 ### Community 289 - "package"
 Cohesion: 0.18
 Nodes (11): Completado (Jun 21-24, 2026 — auditoría DB — PLAN COMPLETO ✅), Fase 0 — RLS crítico, Fase 1 — Seguridad, Fase 2 — Integridad de datos, Fase 3 — Higiene, Fase 4 — Concurrencia, Fase 5 — Performance, Fase 6 — Ops (+3 more)
-
-### Community 291 - "package"
-Cohesion: 0.33
-Nodes (6): AuditLogPanel(), OP_COLOR, TABLA_LABELS, AuditEntry, AuditFilters, useAuditLog()
-
-### Community 293 - "package"
-Cohesion: 0.47
-Nodes (4): fmt(), PaymentForm(), StripePaymentModalProps, SuccessView()
 
 ### Community 294 - "package"
 Cohesion: 0.33
 Nodes (6): 4.2 Segregación de Funciones Requerida, 4.3 Controles Preventivos vs. Detectivos, 4.4 Vulnerabilidades de Control Interno en el Flujo Actual, 4. Control Interno COSO 2013 Aplicado al Ciclo de Compras, Controles Detectivos (identifican el fraude después de ocurrido), Controles Preventivos (evitan que el fraude ocurra)
 
 ### Community 295 - "package"
-Cohesion: 0.13
-Nodes (15): Agenda(), Bloqueo, BloqueoDialog(), BloqueoFormProps, Cita, Doctor, fmtHora(), getHoraSlot() (+7 more)
+Cohesion: 0.09
+Nodes (23): addMinutes(), Doctor, DURACIONES, NuevaCitaDialog(), Nurse, NURSE_CATEGORIA_LABEL, nurseLabel(), Patient (+15 more)
 
 ### Community 297 - "CardContent"
-Cohesion: 0.29
-Nodes (14): PatientJourneyCard(), Props, PatientOperationalDrawer(), TodayAppointmentsTable(), getJourneyStageColor(), getJourneyStageLabel(), getPatientNextAction(), getPatientOperationalRisk() (+6 more)
+Cohesion: 0.06
+Nodes (56): SheetContentProps, SheetDescription, SheetOverlay, sheetVariants, PatientJourneyLine(), Props, STATUS_STYLE, buildJourneyLineSteps() (+48 more)
 
 ### Community 299 - "package"
 Cohesion: 0.13
@@ -2326,8 +2254,8 @@ Cohesion: 0.22
 Nodes (8): File Structure, Global Constraints, IVA automático por régimen fiscal — Implementation Plan, Self-Review, Task 1: Migración `cfdi_config.tipo_persona`, Task 2: Regla de derivación de IVA (`ivaRules.ts`) — TDD, Task 3: Selector `tipo_persona` en Facturación (`ConfiguracionCFDI.tsx`), Task 4: Sugerencia + aplicar en Catálogos (`CatalogosTab.tsx`)
 
 ### Community 348 - "package"
-Cohesion: 0.18
-Nodes (11): CANAL_META, CanalTipo, Conversacion, ConvStatus, formatRelative(), IdentidadCanal, Inbox(), Mensaje (+3 more)
+Cohesion: 0.16
+Nodes (12): ConversationActionPanel(), CANAL_META, CanalTipo, Conversacion, ConvStatus, formatRelative(), IdentidadCanal, Inbox() (+4 more)
 
 ### Community 349 - "useProveedores"
 Cohesion: 0.08
@@ -2342,8 +2270,8 @@ Cohesion: 0.40
 Nodes (4): Bloqueos humanos (Pablo), Detalle tarea #3 (siguiente) — S1 rate limiting · Opus 4.8, Orden de ejecución + estado, Plan de avance — ejecución del Análisis Integral (Fable, 2026-07-21)
 
 ### Community 365 - "toggle-group.tsx"
-Cohesion: 0.06
-Nodes (22): NavLink, NavLinkCompatProps, AccordionContent, AccordionItem, AccordionTrigger, Avatar, AvatarFallback, AvatarImage (+14 more)
+Cohesion: 0.09
+Nodes (15): NavLink, NavLinkCompatProps, AccordionContent, AccordionItem, AccordionTrigger, Avatar, AvatarFallback, AvatarImage (+7 more)
 
 ### Community 446 - "C:/Users"
 Cohesion: 0.22
@@ -2546,8 +2474,8 @@ Cohesion: 0.67
 Nodes (3): Actas de Merma ✅, Completado (Jun 15, 2026 — sesión 20), Estado final Farmacia.tsx — tab Inventario
 
 ### Community 612 - "entregaTurnoHelpers.ts"
-Cohesion: 0.06
-Nodes (47): AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay, AlertDialogTitle (+39 more)
+Cohesion: 0.04
+Nodes (64): SelectContent, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectTrigger, Skeleton() (+56 more)
 
 ### Community 613 - "Completado (Jun 16, 2026 — resync completo BD local + backups)"
 Cohesion: 0.67
@@ -2566,12 +2494,8 @@ Cohesion: 0.50
 Nodes (4): 🔴 BLOQUEADOS (HIGH PRIORITY), 📊 Cambios no committeados, ✅ COMPLETADO, Sesión 2026-07-18: Grafo + Migraciones SECURITY_INVOKER
 
 ### Community 617 - "checkoutService.ts"
-Cohesion: 0.04
-Nodes (124): Props, MANUAL_MODULES, ManualPagina, ManualPaginaRow, EMPTY_FORM, FormState, Patient, Props (+116 more)
-
-### Community 618 - "ManualButton.tsx"
-Cohesion: 0.18
-Nodes (12): CorteCaja(), CorteRow, FondoMovimiento, formatMXN(), Payment, Sale, SaleItem, Shift (+4 more)
+Cohesion: 0.03
+Nodes (121): Props, Props, MANUAL_MODULES, ManualButton(), ManualPagina, ManualPaginaRow, paraUsuarioFinal(), EMPTY (+113 more)
 
 ### Community 619 - "Completado (Jun 15, 2026 — sesión 19)"
 Cohesion: 0.67
@@ -2582,8 +2506,8 @@ Cohesion: 0.67
 Nodes (3): Completado (Jun 15, 2026 — sesión 22), Módulo Almacén/Compras/Proveedores — COMPLETO ✅, Notificaciones CxP vencimiento ✅
 
 ### Community 623 - "@supabase/supabase-js"
-Cohesion: 0.05
-Nodes (37): MfaEnrollmentGate(), exportCSV(), LoteControlado, MedControlado, MovimientoControlado, ReporteCOFEPRIS(), ClaseABC, CLASES (+29 more)
+Cohesion: 0.06
+Nodes (35): TrustedDevice, Button, CorteTurno(), CorteZ, formatMXN(), TurnoRow, addPrescriptionItem(), createPrescriptionFromConsultation() (+27 more)
 
 ### Community 624 - "Completado (Jun 17, 2026 — Flujo completo tab + security fix)"
 Cohesion: 0.67
@@ -3209,33 +3133,13 @@ Nodes (3): 10. Semáforos visuales, Ejemplos de semáforos, Semáforos sugeridos
 Cohesion: 0.67
 Nodes (3): 3. Qué NO debe prometerse, No decir, Sí decir
 
-### Community 819 - "LibroControlControlados"
-Cohesion: 0.21
-Nodes (14): PatientJourneyLine(), Props, STATUS_STYLE, buildJourneyLineSteps(), FALLBACK_STEPS, JourneyLineStep, journeyProgress(), ROUTE_BY_KEY (+6 more)
-
-### Community 821 - "react-dom"
-Cohesion: 0.28
-Nodes (5): spring, Props, LOYALTY_TOKENS, NIVEL_COLORS, NIVEL_ICON
-
 ### Community 822 - "tailwindcss-animate"
 Cohesion: 0.17
 Nodes (11): Cierre, Implementación (Sonnet — orden), Inventario: 39 functions activas, clasificadas por superficie de abuso, Límites sugeridos (ajustables), Mecanismo propuesto: tabla `rate_limits` en Postgres (NO KV Cloudflare), NO requieren (auth por secreto/service_role o cron dedicado), PRIORIDAD 1 — anon, sin auth, trabajo costoso (rate limit YA), PRIORIDAD 2 — autenticado pero costoso por identidad (rate limit por user) (+3 more)
 
-### Community 824 - "@radix-ui/react-dropdown-menu"
-Cohesion: 0.21
-Nodes (11): addMinutes(), Doctor, DURACIONES, NuevaCitaDialog(), Nurse, NURSE_CATEGORIA_LABEL, nurseLabel(), Patient (+3 more)
-
-### Community 825 - "react-hook-form"
-Cohesion: 0.24
-Nodes (8): isValidNivel(), normalizeMember(), VALID_NIVELES, LoyaltyMovimiento, LoyaltyNivel, NuevoMiembroInput, RedeemResult, RegisterSaleResult
-
 ### Community 1482 - "Normatividad Contable — Fuente Local"
 Cohesion: 0.40
 Nodes (4): Actualizar, Contenido, Cuándo usarlos (proceso obligatorio), Normatividad Contable — Fuente Local
-
-### Community 1483 - "SubscriptionGateBanner.tsx"
-Cohesion: 0.29
-Nodes (7): formatMXN(), MedicamentoProveedoresPanel(), MedicamentoProveedor, MedicamentoProveedorInput, MpRow, toMp(), useMedicamentoProveedores()
 
 ### Community 1484 - "Sesión 2026-07-20 (parte 2) — prueba e2e reserva→salida vía browser real + 3 bugs de producción encontrados y corregidos"
 Cohesion: 0.40
@@ -3257,25 +3161,17 @@ Nodes (3): Completado (Jun 12, 2026), DB local SQL Server — schema sync, Git /
 Cohesion: 0.67
 Nodes (3): Completado (Jun 15, 2026 — sesión 24), Dashboard clínico — Panel financiero operativo ✅, Expediente clínico — Sync SOAP + Followup a BD real ✅
 
-### Community 1491 - "ThreeWayMatchPanel.tsx"
-Cohesion: 0.39
-Nodes (7): classifyDiff(), fmt(), MatchLine, pct(), Props, STATUS_UI, ThreeWayMatchPanel()
-
 ### Community 1504 - "Completado (Jun 17, 2026 — Chat IA verificado + archivos locales)"
 Cohesion: 0.67
 Nodes (3): Chat IA (help-chat-ai) — VERIFICADO FUNCIONANDO ✅, Completado (Jun 17, 2026 — Chat IA verificado + archivos locales), Servidor local de archivos (`scripts/local-file-server.cjs`) ✅
 
 ### Community 1507 - "useChecklists.ts"
-Cohesion: 0.38
-Nodes (6): Checklist, ChecklistInput, ChecklistRow, toChecklist(), toRow(), useChecklists()
+Cohesion: 0.32
+Nodes (7): Checklist, ChecklistInput, ChecklistRow, toChecklist(), toRow(), useChecklists(), SectionChecklists()
 
 ### Community 1508 - "useDoctores.ts"
 Cohesion: 0.36
-Nodes (8): Doctor, DoctorInput, toDoctor(), toRow(), trimTime(), useDoctores(), EMPTY, SectionDoctores()
-
-### Community 1509 - "useInventarioCiclico.ts"
-Cohesion: 0.38
-Nodes (6): Conteo, ConteoItem, ConteoRow, nextFolioConteo(), toConteo(), useInventarioCiclico()
+Nodes (7): Doctor, DoctorInput, toDoctor(), toRow(), trimTime(), useDoctores(), SectionDoctores()
 
 ### Community 1521 - "Completado (Jun 17, 2026 — notification_rules + .env local file server)"
 Cohesion: 0.67
@@ -3294,9 +3190,9 @@ Nodes (14): agrupar(), fmtMXN(), MovimientoSimple, VerAsientoContableButton(), C
   public/placeholder.svg · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **4505 isolated node(s):** `Summary`, `1. `telegram-webhook` ✅ Secure`, `2. `stripe-webhook` ✅ Secure`, `3. `stripe-checkout` ✅ Acceptable (Public, but safe)`, `4. `enviar-recordatorios` ✅ Secure` (+4500 more)
+- **4510 isolated node(s):** `TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN`, `PRÓXIMA ACCIÓN: sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).`, `PRÓXIMA ACCIÓN (sesión anterior, 2026-07-21 original): sesión cerrada 2026-07-21. Trazabilidad reporte↔trámite COMPLETA Y VERIFICADA EN BROWSER (Fases 0-3). Corrector de huecos contables construido y verificado. **Bug bloqueante de `crear_poliza()` (perdió bypass service_role en fase 7) ENCONTRADO Y ARREGLADO** — migración `20260721180000`, commit `6a10001`. **Los 5 honorarios devengados sin póliza desde junio YA SE APLICARON** (movimientos↔pólizas 7=7, sin duplicados, verificado por SQL). Quedan puntos 3-6 (ver abajo) para sesión nueva. **Costo sesión 2026-07-21: ~$650+ — por MUCHO el más caro del proyecto (anterior récord ~$244), casi 3x. Causa: se mezcló verificación+feature nueva+auditoría+feature grande+3 subagentes+debugging en vivo+fix de bug crítico en una sola sesión, ignorando 10+ avisos de costo crítico del hook. Próxima sesión: cortar por tema DE VERDAD — un hook de costo crítico repetido es señal de parar la sesión, no de seguir con más agentes. Aprendizajes guardados en memoria (`~/.claude/projects/.../memory/`), 4 lessons + 1 project nuevas fechadas 2026-07-21.**`, `Sesión 2026-07-21 (tercera parte) — Optimus/mcp-sentinel verificado, sin código nuevo`, `PENDIENTES — TODOS CERRADOS (puntos 1-6, sesión 2026-07-21 continuación)` (+4505 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **872 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **873 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -3311,7 +3207,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **Why does `qrcode` connect `src/features/centro-control` to `package`?**
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
-- **What connects `Summary`, `1. `telegram-webhook` ✅ Secure`, `2. `stripe-webhook` ✅ Secure` to the rest of the system?**
-  _4505 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `src/pages/ajustes` be split into smaller, more focused modules?**
-  _Cohesion score 0.11333333333333333 - nodes in this community are weakly interconnected._
+- **What connects `TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN`, `PRÓXIMA ACCIÓN: sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).`, `PRÓXIMA ACCIÓN (sesión anterior, 2026-07-21 original): sesión cerrada 2026-07-21. Trazabilidad reporte↔trámite COMPLETA Y VERIFICADA EN BROWSER (Fases 0-3). Corrector de huecos contables construido y verificado. **Bug bloqueante de `crear_poliza()` (perdió bypass service_role en fase 7) ENCONTRADO Y ARREGLADO** — migración `20260721180000`, commit `6a10001`. **Los 5 honorarios devengados sin póliza desde junio YA SE APLICARON** (movimientos↔pólizas 7=7, sin duplicados, verificado por SQL). Quedan puntos 3-6 (ver abajo) para sesión nueva. **Costo sesión 2026-07-21: ~$650+ — por MUCHO el más caro del proyecto (anterior récord ~$244), casi 3x. Causa: se mezcló verificación+feature nueva+auditoría+feature grande+3 subagentes+debugging en vivo+fix de bug crítico en una sola sesión, ignorando 10+ avisos de costo crítico del hook. Próxima sesión: cortar por tema DE VERDAD — un hook de costo crítico repetido es señal de parar la sesión, no de seguir con más agentes. Aprendizajes guardados en memoria (`~/.claude/projects/.../memory/`), 4 lessons + 1 project nuevas fechadas 2026-07-21.**` to the rest of the system?**
+  _4510 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `src/features/facturacion` be split into smaller, more focused modules?**
+  _Cohesion score 0.054098360655737705 - nodes in this community are weakly interconnected._
