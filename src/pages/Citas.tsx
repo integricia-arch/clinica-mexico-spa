@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Globe, Send, MessageCircle, Phone, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import NuevaCitaDialog from "@/components/agenda/NuevaCitaDialog";
+import { VerAsientoContableButton } from "@/features/contabilidad/VerAsientoContableButton";
 
 type Status = "solicitada" | "confirmada" | "cancelada" | "recordatorio_enviado";
 const STATUSES: Status[] = ["solicitada", "confirmada", "recordatorio_enviado", "cancelada"];
@@ -66,6 +67,9 @@ function ymd(d: Date) { return d.toISOString().slice(0, 10); }
 
 export default function Citas() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
   const today = new Date();
   const in7 = new Date(); in7.setDate(in7.getDate() + 7);
 
@@ -109,6 +113,11 @@ export default function Citas() {
     () => citas.filter((c) => statusFilter.has(c.status)),
     [citas, statusFilter],
   );
+
+  useEffect(() => {
+    if (!highlightId) return;
+    rowRefs.current.get(highlightId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId, filtered]);
 
   const toggleStatus = (s: Status) => {
     const n = new Set(statusFilter);
@@ -207,22 +216,27 @@ export default function Citas() {
                 <th className="text-left px-4 py-3">Fecha y hora</th>
                 <th className="text-left px-4 py-3">Status</th>
                 <th className="text-left px-4 py-3">Origen</th>
+                <th className="text-left px-4 py-3">Contabilidad</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Cargando…</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Cargando…</td></tr>
               )}
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Sin citas en el rango seleccionado</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Sin citas en el rango seleccionado</td></tr>
               )}
               {filtered.map((c) => {
                 const O = ORIGEN_META[c.origen] ?? { Icon: Globe, cls: "text-muted-foreground" };
                 return (
                   <tr
                     key={c.id}
+                    ref={(el) => { if (el) rowRefs.current.set(c.id, el); else rowRefs.current.delete(c.id); }}
                     onClick={() => setSelected(c)}
-                    className="border-t border-border hover:bg-muted/40 cursor-pointer"
+                    className={cn(
+                      "border-t border-border hover:bg-muted/40 cursor-pointer",
+                      highlightId === c.id && "ring-2 ring-primary ring-inset",
+                    )}
                   >
                     <td className="px-4 py-3 font-medium">
                       {c.patients ? `${c.patients.nombre} ${c.patients.apellidos}` : "—"}
@@ -241,6 +255,18 @@ export default function Citas() {
                         <span className="capitalize">{c.origen}</span>
                         {c.creada_por_bot && <span className="text-[10px] text-muted-foreground">(bot)</span>}
                       </span>
+                    </td>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col items-start gap-1.5">
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          Cobro: <VerAsientoContableButton referenceType="consulta" referenceId={c.id} />
+                        </div>
+                        {c.doctor_id && (
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            Honorario: <VerAsientoContableButton referenceType="honorario_appointment" referenceId={c.id} />
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
