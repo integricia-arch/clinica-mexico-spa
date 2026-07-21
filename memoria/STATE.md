@@ -3,8 +3,27 @@
 ## TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN
 
 ```
-Sigo con clinica-mexico-spa. Lee memoria/STATE.md primero (sesión 2026-07-21,
-tercera parte).
+Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
+de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
+
+Plan de avance (análisis Fable 2026-07-21): #1 testimonios y #2 S4 pen-test HECHOS.
+SIGUIENTE = tarea #3 S1 rate limiting (Opus diseño / Sonnet implementa). Ver
+plan-avance-ejecucion.md para el detalle e indicación de arranque.
+
+Cerrado sesión 2026-07-21 (cuarta parte, Opus 4.8):
+- **S4 H1 capa 2** — RLS SELECT de `clinics` era USING(true) → fuga PII/billing
+  cross-tenant (verification_code, pending_admin_email, rfc, stripe_*) a cualquier
+  authenticated. Fix: USING(is_global_admin OR EXISTS membership). Migración
+  20260721230000. Verificado en browser (dashboard carga clínica, cero errores RLS).
+- **S4 H2** — provision-users-from-queue procesaba cola GLOBAL con rol admin de
+  cualquier clínica. Scopeado: admin de clínica solo procesa entities (doctors/
+  nurses) de sus clínicas; platform staff/service_role global. Deployed v4.
+- **Prod estaba CAÍDO** (pantalla blanca, env vars VITE_* undefined en bundle — modo
+  Lovable documentado). Resuelto con deploy manual (build:all + wrangler). Levantado.
+- Commits 02f103b, 5b6caee. Costo sesión llegó a crítico ($67) — se cortó.
+
+--- histórico previo ---
+Lee memoria/STATE.md primero (sesión 2026-07-21, tercera parte).
 
 Cerrado esta sesión:
 - **PENDIENTE #1 (Optimus/mcp-sentinel) — VERIFICADO, ya estaba resuelto, sin
