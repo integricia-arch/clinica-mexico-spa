@@ -119,6 +119,33 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Para tipo E (nota de crédito) se requiere cfdi_relacionado_uuid (UUID SAT del CFDI de ingreso)" }, 400);
     }
 
+    // Scoping por clínica: el check de rol admin arriba es global (user_roles),
+    // así que un admin de la clínica A podía timbrar CFDI a nombre de la clínica B
+    // con solo cambiar clinic_id en el body. Igual patrón que
+    // provision-users-from-queue/index.ts: is_global_admin bypassa, si no,
+    // exigir membership activa en ESA clínica.
+    const { data: isGlobalAdmin, error: isGlobalErr } = await svc.rpc("is_global_admin", {
+      _user_id: userData.user.id,
+    });
+    if (isGlobalErr) {
+      console.error("[cfdi-timbrar] is_global_admin error:", isGlobalErr.message);
+      return json({ error: "Error interno al verificar permisos" }, 500);
+    }
+    if (!isGlobalAdmin) {
+      const { data: membership, error: memErr } = await svc
+        .from("clinic_memberships")
+        .select("clinic_id")
+        .eq("user_id", userData.user.id)
+        .eq("clinic_id", clinic_id)
+        .eq("status", "active")
+        .maybeSingle();
+      if (memErr) {
+        console.error("[cfdi-timbrar] membership check error:", memErr.message);
+        return json({ error: "Error interno al verificar permisos" }, 500);
+      }
+      if (!membership) return json({ error: "Forbidden: no eres admin de esta clínica" }, 403);
+    }
+
     // Gating de módulo: la función corre con service role (bypassa RLS), así que el
     // gate de suscripción debe aplicarse aquí explícitamente.
     const { data: hasModulo, error: moduloErr } = await svc.rpc("clinic_has_modulo_access", {
