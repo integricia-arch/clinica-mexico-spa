@@ -169,14 +169,32 @@ puntual. Construir el botón "Ver trámite" correctamente requiere primero const
 esas páginas/rutas de detalle — alcance nuevo, no el "cableado de botones en
 pantallas que ya existen" que asumía la sección 3.2.
 
-**No se construyó Fase 2/3 en esta sesión** (2026-07-21) por este hallazgo + costo de
-sesión. Antes de retomar, decidir con Pablo:
-1. ¿Vale la pena construir rutas `:id` de detalle solo para este caso, o hay un uso
-   más amplio que las justifique (ej. compartir link directo a una cita)?
-2. Alternativa más barata: en vez de ruta nueva, la lista existente acepta
-   `?highlight=<id>` y hace scroll+resalta la fila — cubre el caso de uso sin
-   construir una página nueva, pero es menos "trámite completo" que lo que pedía
-   el plan original.
+**Decisión tomada:** en vez de rutas nuevas, se usó `?highlight=<id>` sobre las listas
+existentes (scroll + resalta la fila). Construido y commiteado en la misma sesión —
+ver sección 10.
+
+## 10. Fases 2/3 — Hecho (2026-07-21)
+
+**Fase 2:** `libro_diario()` ahora regresa `reference_id` (migración
+`20260721150000_libro_diario_add_reference_id.sql`, también corrigió drift de
+`uuid_cfdi`/`reference_type`/`cuenta_tipo` que ya vivían en prod sin migración
+commiteada). `PolizaDetalleDialog.tsx` agrega botón "Ver trámite" (label según
+`reference_type`: "Ver cita"/"Ver venta"/"Ver compra") que navega a
+`/citas`, `/farmacia` o `/compras` con `?highlight=<reference_id>`.
+
+**Fase 3:** RPC `poliza_detalle(poliza_id)` (migración
+`20260721160000_poliza_detalle_por_id.sql`) + componente compartido
+`VerAsientoContableButton.tsx` — resuelve `contab_resolver_asiento`, abre
+`PolizaDetalleDialog` si hay póliza, tarjeta simple de solo lectura si solo hay
+`movimiento_contable`, o "Sin asiento contable" si no hay nada. Cableado en:
+- `Citas.tsx`: botones "Ver cobro" / "Ver honorario" + resaltado.
+- `Farmacia.tsx`: tab "Historial" nuevo (no existía listado de ventas cableado
+  en la pantalla) + botón + resaltado.
+- `src/features/compras/FacturasProveedor.tsx` (no `Compras.tsx`): botón + resaltado.
+
+`tsc --noEmit` limpio en las 4 tandas de commits. **No verificado con clic real en
+browser** — pendiente para la próxima sesión (login admin, clic en cada botón
+contra un registro real con póliza ya generada).
 
 ## Relaciones
 
