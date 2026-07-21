@@ -36,15 +36,13 @@ Cerrado sesión anterior (puntos 3-6, TODOS resueltos):
   real, "Administrador" en header es solo texto default) — cuenta QA quedó
   deshabilitada de nuevo al terminar.
 
-PENDIENTE #2 (único pendiente real que queda) — Commit `2786c18` está local, NO pusheado a origin/main. Decidir
-con Pablo si pushear (dispara deploy Cloudflare vía GitHub Actions).
+PENDIENTE #2 — HECHO. Commit `2786c18` pusheado a origin/main.
 
-DEUDA — `update_journey_progress(uuid)` tiene el mismo bug que tenía
-`crear_poliza()` antes del fix: exige `auth.uid()` real, sin bypass
-service_role/cron. No es bloqueante hoy (solo se llama desde el cliente
-autenticado), pero si algún día un cron/Edge Function necesita cerrar un
-journey sin sesión de usuario, va a fallar igual. Revisar si aplica el mismo
-fix.
+DEUDA — HECHA. `update_journey_progress(uuid)` tenía el mismo bug que
+`crear_poliza()`: exigía `auth.uid()` real, sin bypass service_role/cron.
+Fix aplicado a prod (migración `20260721220000_fix_update_journey_progress_bypass_service_role.sql`,
+commit `7ca1ddb`) — mismo patrón: chequeo de membership/admin solo corre
+si `auth.uid()` no es NULL. `get_advisors(security)` sin hallazgos nuevos.
 
 Menor: dual-write de aprendizajes a AGENTS.md del proyecto sigue sin hacerse
 (solo CLAUDE.md) — por costo, no por decisión.
