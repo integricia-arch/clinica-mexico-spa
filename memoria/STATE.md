@@ -82,6 +82,17 @@ con la versión sin fix. Si el skill se reinstala/actualiza desde ese repo en
 el futuro, el bug puede regresar — revisar `check_sensitive_env` en el hook
 live si algún bloqueo de env var vuelve a aparecer sin motivo.
 
+**Gap real encontrado y cerrado (mismo día):** `api.telegram.org`,
+`googleapis.com`, `api.stripe.com` faltaban en `domains`/`commands` de ambos
+allowlists — un `curl -X POST` legítimo a esas 3 APIs oficiales (ya usadas en
+el código del proyecto) sí se bloqueaba por el patrón `dangerous_commands`.
+Pablo mismo actualizó ambos `optimus-allowlist.json` (repo + global) desde
+cmd.exe con `echo ... > archivo`. Verificado: los 3 dominios → allow; lectura
+de clave SSH de prueba (carpeta de credenciales del usuario) sigue → deny.
+Guardia intacta, sin código nuevo del lado Claude. (Nota curiosa: el hook se
+autobloqueó al intentar escribir este mismo párrafo la primera vez, por
+mencionar el path literal de la clave de prueba — reformulado para evitarlo.)
+
 ## PENDIENTES — TODOS CERRADOS (puntos 1-6, sesión 2026-07-21 continuación)
 
 1. ~~`crear_poliza()` bloqueante~~ — **HECHO**, migración `20260721180000_fix_crear_poliza_restaurar_bypass_service_role.sql`, commit `6a10001`.
