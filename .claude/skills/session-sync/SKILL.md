@@ -16,7 +16,8 @@ No correr `git status`, `graphify query` ni explorar código todavía — STATE.
 2. `git log origin/main..HEAD --oneline` — ¿hay commits locales sin push? Confirmar con Pablo antes de pushear (dispara deploy Cloudflare vía GitHub Actions).
 3. Si se tocó código: `graphify update .` (AST-only, sin costo de API) para que `graphify-out/` no quede desincronizado.
 4. Actualizar `memoria/STATE.md`: mover completados a su sección, dejar solo pendientes reales. No dejar pendientes ya resueltos (pasó en sesión 41: push y `docs/app` ya resueltos pero STATE.md seguía diciendo "pendiente").
-5. Commitear `memoria/STATE.md` + `CLAUDE.md` si cambiaron.
+5. **Escribir el bloque "TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN"** al principio de `memoria/STATE.md` (reemplaza el bloque anterior, no lo apila) — un párrafo listo para copiar/pegar que resume: qué se cerró esta sesión, qué queda pendiente real (con next-step concreto, no solo el nombre), commits locales sin push, y cualquier deuda nueva encontrada. Hacer esto siempre, sin que Pablo lo pida — es la razón de ser de este paso del checklist, no un extra opcional.
+6. Commitear `memoria/STATE.md` + `CLAUDE.md` si cambiaron.
 
 ## Red flags — señal de desincronización
 - STATE.md dice "pendiente" algo que `git log` ya muestra resuelto.
