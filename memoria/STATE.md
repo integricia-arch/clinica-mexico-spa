@@ -13,12 +13,28 @@ a escala (Pro + WhatsApp + n8n); decisión N2 = híbrido (tiers self-serve +
 add-ons de catalogo_modulos como venta asistida — catálogo YA tenía precios y
 stripe_price_ids activos, no estaba en ceros); N4 confirmado con gaps.
 
-SIGUIENTE (Sonnet, acciones del doc de decisión):
-1. cfdi-timbrar Edge Function: agregar check clinic_has_modulo_access(clinic_id,
-   'facturacion_cfdi') al inicio del handler — hoy corre con service role y
-   bypassa el RLS gating (gap severidad alta).
-2. Gate de módulo BI en RPC kpis_dashboard (o documentar aceptación de riesgo).
-3. Cosmético: marcar 'agenda' como core-incluido en catalogo_modulos.
+SIGUIENTE (Sonnet):
+1. cfdi-timbrar: scoping de admin POR CLÍNICA. El check actual de user_roles es
+   global — admin de clínica A puede timbrar a nombre de clínica B. Patrón ya
+   ubicado: igual que provision-users-from-queue/index.ts:50-56 —
+   rpc is_global_admin(_user_id) y si no, clinic_memberships con
+   user_id + clinic_id + status='active'. Insertar el check después de validar
+   clinic_id en el body. Deploy vía CLI (supabase functions deploy cfdi-timbrar)
+   + commit.
+2. Gate de módulo BI: NO hay slug 'bi' en catalogo_modulos → no se puede gatear
+   con clinic_has_modulo_access sin ampliar catálogo. Decidir: aceptar como
+   feature soft (documentar) o agregar slug. Recomendación Fable: aceptar soft.
+3. Cosmético: marcar 'agenda' como core-incluido (columna descripcion en
+   catalogo_modulos existe; basta UPDATE con nota en migración).
+4. #6 del plan: U1 farmacia responsive (plan 11 tasks en
+   docs/superpowers/plans/2026-06-09-farmacia-responsive.md, empezar Task 1).
+
+HECHO en sesión Fable (sexta+séptima parte 2026-07-21):
+- Gap alta N4 CERRADO: cfdi-timbrar ahora valida
+  clinic_has_modulo_access(clinic_id,'facturacion_cfdi') — deployado + commit
+  3311788. Verificado: 0 CFDIs históricos en prod, ninguna clínica tiene el
+  módulo otorgado aún (gate devuelve false para las 5 — correcto, sin PAC).
+- vitest en CI verificado local (151/151) y pusheado (c6ba384, venía de sesión móvil).
 
 Bloqueantes de negocio (Pablo, no código): contratar PAC de timbrado (NO hay
 proveedor — CFDI/Profesional no vendible hasta entonces; Facturama = cero

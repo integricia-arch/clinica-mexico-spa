@@ -1930,8 +1930,8 @@
     "semantic_hash": "a15e5ece7ac6a68376a8cc612ca73ee2"
   },
   "supabase/functions/cfdi-timbrar/index.ts": {
-    "mtime": 1784654366.5849636,
-    "ast_hash": "d38c56c28e9a62f292660176cd9d15d1",
+    "mtime": 1784658028.8377075,
+    "ast_hash": "850eb724aee2400299b6deeef960ff10",
     "semantic_hash": ""
   },
   "supabase/functions/confirmar-cita/clinic-access.test.ts": {
@@ -3380,8 +3380,8 @@
     "semantic_hash": "d94db8b1f83c2e232ddb4b3abb3237e0"
   },
   ".github/workflows/typecheck.yml": {
-    "mtime": 1784219216.2605083,
-    "ast_hash": "c3137fc28260504400fd08595a517ba3",
+    "mtime": 1784657230.4380753,
+    "ast_hash": "f806f3823f01fd8e006ed5cc329472f1",
     "semantic_hash": ""
   },
   ".lovable/plan.md": {
@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784654824.7497275,
-    "ast_hash": "e550f9bb37f57bd9602c10605cdec84d",
+    "mtime": 1784657971.2554746,
+    "ast_hash": "5f4e0acb1dd32f538a18f3b393f25d52",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
