@@ -71,6 +71,13 @@ Deno.serve(async (req) => {
     const adminEmail = clinic.pending_admin_email as string;
     const moduloIds = (clinic.pending_modulo_ids ?? []) as string[];
 
+    // Código correcto y vigente: quemarlo de inmediato. Evita reuso/replay y
+    // reduce el blast radius de la fuga de `clinics` (RLS USING(true), ver H1).
+    await admin
+      .from("clinics")
+      .update({ verification_code: null, verification_code_expires_at: null })
+      .eq("id", clinicId);
+
     const { data: modulos, error: modulosErr } = await admin
       .from("catalogo_modulos")
       .select("id, stripe_price_id")
