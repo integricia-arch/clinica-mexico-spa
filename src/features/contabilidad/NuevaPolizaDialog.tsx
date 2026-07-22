@@ -10,9 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { untypedTable } from "@/lib/untypedTable";
 import { friendlyError } from "@/lib/errors";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
+import { calcularTotales, polizaCuadra, lineasValidas as validarLineas, construirPartidas, type LineaDraft } from "./polizaValidation";
 
 interface CuentaOption { id: string; codigo: string; nombre: string }
-interface LineaDraft { cuentaId: string; lado: "cargo" | "abono"; monto: string }
 
 const TIPOS = [
   { value: "diario", label: "Diario" },
@@ -49,10 +49,9 @@ export function NuevaPolizaDialog({ open, onOpenChange, onCreated }: {
   const updateLinea = (idx: number, patch: Partial<LineaDraft>) =>
     setLineas((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
 
-  const totalCargo = lineas.reduce((s, l) => s + (l.lado === "cargo" ? Number(l.monto) || 0 : 0), 0);
-  const totalAbono = lineas.reduce((s, l) => s + (l.lado === "abono" ? Number(l.monto) || 0 : 0), 0);
-  const cuadra = totalCargo > 0 && totalCargo === totalAbono;
-  const lineasValidas = lineas.every((l) => l.cuentaId && Number(l.monto) > 0);
+  const { totalCargo, totalAbono } = calcularTotales(lineas);
+  const cuadra = polizaCuadra(totalCargo, totalAbono);
+  const lineasSonValidas = validarLineas(lineas);
 
   const reset = () => {
     setConcepto("");
@@ -60,13 +59,9 @@ export function NuevaPolizaDialog({ open, onOpenChange, onCreated }: {
   };
 
   const handleGuardar = async () => {
-    if (!activeClinicId || !concepto.trim() || !lineasValidas || !cuadra) return;
+    if (!activeClinicId || !concepto.trim() || !lineasSonValidas || !cuadra) return;
     setSaving(true);
-    const partidas = lineas.map((l) => ({
-      cuenta_id: l.cuentaId,
-      debe_centavos: l.lado === "cargo" ? Math.round(Number(l.monto) * 100) : 0,
-      haber_centavos: l.lado === "abono" ? Math.round(Number(l.monto) * 100) : 0,
-    }));
+    const partidas = construirPartidas(lineas);
     const { error } = await (supabase as any).rpc("crear_poliza", {
       p_payload: { clinic_id: activeClinicId, tipo, fecha, concepto: concepto.trim(), partidas },
     });
@@ -136,7 +131,7 @@ export function NuevaPolizaDialog({ open, onOpenChange, onCreated }: {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleGuardar} disabled={saving || !cuadra || !lineasValidas || !concepto.trim()}>
+          <Button onClick={handleGuardar} disabled={saving || !cuadra || !lineasSonValidas || !concepto.trim()}>
             {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Guardar póliza
           </Button>
         </DialogFooter>

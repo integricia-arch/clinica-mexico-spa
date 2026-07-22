@@ -6,9 +6,25 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión cerrada (duodécima parte, 2026-07-21, costo ~$13/$14). 1 commit local
-sin push (ad5945e) — pedir confirmación a Pablo antes de pushear (dispara
-deploy GH Actions).
+Sesión en curso (decimotercera parte, 2026-07-21). 1 commit local sin push
+de la parte anterior (ad5945e) + cambios sin commitear de esta parte —
+pedir confirmación a Pablo antes de pushear (dispara deploy GH Actions).
+
+- #5 E1 tests RPC contables: avance parcial — extraído `polizaValidation.ts`
+  de `NuevaPolizaDialog.tsx`, 9 tests nuevos cubren la regla dura de
+  `crear_poliza()` (Σdebe=Σhaber, redondeo centavos). Suite 160/160 verde.
+  `contab_generar_poliza_evento` sigue sin test (solo triggers la llaman,
+  requiere pgTAP/Supabase local en CI — no montado, no fabricado).
+- #15 E6 activos fijos DESBLOQUEADO: investigación LISR Art. 34 (mobiliario/
+  equipo oficina 10%, cómputo 30%, equipo médico sin fracción explícita →
+  10% residual, criterio de clasificación documentado con fuentes, no vacío
+  legal). Migración `20260722030000_activos_fijos_tasas_depreciacion.sql`
+  aplicada en prod (verificada vía execute_sql: 4 filas correctas). Catálogo
+  editable solo por admin, UI en tab Activos Fijos (`ActivosFijosTab.tsx`)
+  con la fuente visible por categoría. `registrar_activo_fijo()` congela
+  tasa vigente como snapshot al alta. Advisors security: solo WARN genéricos
+  de exposición GraphQL (mismo patrón ya aceptado que `cuentas_contables`),
+  nada nuevo crítico.
 
 - Auditoría del plan: #9 (M2 SEO) y #11 (U2 chat ayuda humano) resultaron
   YA HECHOS en sesiones previas — el plan y CLAUDE.md decían "pendiente",

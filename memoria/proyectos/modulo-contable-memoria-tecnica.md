@@ -698,8 +698,16 @@ consumibles). Investigación (no implementado):
   1-a-muchos a `activos_fijos_mantenimientos` (no construir todavía).
 - Etiquetado: QR + folio impreso, no hay norma mexicana obligatoria, es práctica de
   mercado libre.
-- **No implementado.** Requiere decisión de negocio (confirmar tasa fiscal de equipo
-  médico con el contador) antes de escribir migración.
+- **DESBLOQUEADO 2026-07-21** — migración `20260722030000_activos_fijos_tasas_depreciacion.sql`
+  crea catálogo global editable `activos_fijos_tasas` (categoria PK, tasa_depreciacion_fiscal_pct,
+  fuente, updated_at/by), sembrado con la investigación (ver §12.5 y sección de arriba):
+  mobiliario_equipo 10%, equipo_medico 10% (sin fracción explícita, criterio de clasificación —
+  no vacío legal de tasa), equipo_computo 30%, otro 10%. Editable solo por admin (RLS +
+  `has_role`), UI en `ActivosFijosTab.tsx` (nueva card "Tasas de depreciación fiscal", abierta,
+  con la fuente visible junto a cada input). `registrar_activo_fijo()` ahora congela la tasa
+  vigente en `activos_fijos.tasa_depreciacion_fiscal_pct` al momento del alta (snapshot, no
+  recalcula si el catálogo cambia después). Ya no bloquea — si el contador confirma una fracción
+  distinta para equipo médico, se corrige el % desde la UI, sin migración nueva.
 
 ## Pendiente — alta de cuenta al vuelo desde NuevaPolizaDialog (registrado 2026-07-20)
 

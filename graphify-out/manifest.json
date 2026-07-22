@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784683859.9705522,
-    "ast_hash": "9507040f236cd511c43e06b56ac8e948",
+    "mtime": 1784688657.5649898,
+    "ast_hash": "a4c220d83f790e9ca52bcd0b7244b8ba",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -4620,8 +4620,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/modulo-contable-memoria-tecnica.md": {
-    "mtime": 1784580534.3921764,
-    "ast_hash": "8fb0cdab5f687b29594fa42bb3656916",
+    "mtime": 1784688634.1513207,
+    "ast_hash": "5fc477ad097c59b92bbb43f1208cfad6",
     "semantic_hash": ""
   },
   "memoria/referencias/contabilidad-marco-legal-mx.md": {
@@ -4735,13 +4735,13 @@
     "semantic_hash": ""
   },
   "src/features/contabilidad/ActivosFijosTab.tsx": {
-    "mtime": 1784565298.85844,
-    "ast_hash": "4aaba6c8f11d28cd8aeb35e3592452e5",
+    "mtime": 1784688493.3232467,
+    "ast_hash": "931a3475445ce8f78eaaee355d4e32f4",
     "semantic_hash": ""
   },
   "src/features/contabilidad/NuevaPolizaDialog.tsx": {
-    "mtime": 1784565298.862745,
-    "ast_hash": "da7cee33fd748160851dd6a9bd76d5ec",
+    "mtime": 1784688051.6622932,
+    "ast_hash": "1fe08ca223e98d59af771494b17cab89",
     "semantic_hash": ""
   },
   "supabase/migrations/20260719190000_libro_diario_uuid_cfdi.sql": {
@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784687677.9801025,
-    "ast_hash": "bae7f84dafe6ca9aa659fe64d1eb2aea",
+    "mtime": 1784688641.7419693,
+    "ast_hash": "f67d94a16825d5981721c0e3c46964e0",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5352,6 +5352,21 @@
   "supabase/migrations/20260722010000_e5_fk_indexes.sql": {
     "mtime": 1784687554.1217136,
     "ast_hash": "32d8bfa10d7262df65d9f4e4a2a3b298",
+    "semantic_hash": ""
+  },
+  "src/features/contabilidad/polizaValidation.ts": {
+    "mtime": 1784688029.598356,
+    "ast_hash": "5932c2e79242c60c41346b95d41a7058",
+    "semantic_hash": ""
+  },
+  "src/test/contabilidad/polizaValidation.test.ts": {
+    "mtime": 1784688062.821818,
+    "ast_hash": "c3d63f73f0d2f400b9057041872bd6c7",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260722030000_activos_fijos_tasas_depreciacion.sql": {
+    "mtime": 1784688330.1411529,
+    "ast_hash": "5f18c1cc88f07a91fcf52f59c5d98b87",
     "semantic_hash": ""
   }
 }
