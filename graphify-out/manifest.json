@@ -3410,8 +3410,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784652861.896252,
-    "ast_hash": "db8805c270b26858aa3f0f900f5e95a6",
+    "mtime": 1784684005.3475058,
+    "ast_hash": "afda2016e902b98eecf118e3c75d638e",
     "semantic_hash": ""
   },
   "DEPLOY.md": {
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784680901.1265125,
-    "ast_hash": "0059cc318481e262b5ecb9b2179b2fda",
+    "mtime": 1784683859.9705522,
+    "ast_hash": "9507040f236cd511c43e06b56ac8e948",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784683744.7974527,
-    "ast_hash": "7aa389b15a2888fed99072ab4fcee95a",
+    "mtime": 1784687677.9801025,
+    "ast_hash": "bae7f84dafe6ca9aa659fe64d1eb2aea",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5347,6 +5347,11 @@
   "scripts/check-migration-drift.ps1": {
     "mtime": 1784683656.2128808,
     "ast_hash": "084c29363a327883ee4e43ba718c1cf4",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260722010000_e5_fk_indexes.sql": {
+    "mtime": 1784687554.1217136,
+    "ast_hash": "32d8bfa10d7262df65d9f4e4a2a3b298",
     "semantic_hash": ""
   }
 }

@@ -6,42 +6,39 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión cerrada por decisión (costo ~$13.58, cortada tras cerrar 3 tareas cortas).
-#9(M1), #10(S2+S3), #12(E4) HECHOS esta sesión (undécima parte, 2026-07-21),
-pusheados a main (commits 40b0eaf, d4ac456, 277908f — deploy automático GH Actions,
-verificar integrika.mx tras el deploy).
+Sesión cerrada (duodécima parte, 2026-07-21, costo ~$13/$14). 1 commit local
+sin push (ad5945e) — pedir confirmación a Pablo antes de pushear (dispara
+deploy GH Actions).
 
-- #9 M1 caso de estudio: sin piloto real (negocio nuevo), Pablo pidió usar
-  benchmarks de industria en vez de inventar datos. Agregado como 4to
-  "escenario ilustrativo" en pitchShared.tsx (mismo patrón legal ya validado
-  en N1: "no son testimonios de clientes", fuente citada) — ahorro de horas
-  admin al unificar contabilidad+Excel+citas sueltas en un sistema. Grid
-  3→4 columnas en desktop.
-- #10 S2+S3: `npm audit fix` (2 vulns high → 0). Advisors: 3 fixes triviales
-  en prod vía apply_migration — DROP INDEX duplicado en notas_consulta,
-  profiles 4→3 policies (una era duplicado exacto), auth_rls_initplan
-  arreglado en policy `multiclinic_access_restrictive` (17 tablas, wrap
-  auth.uid() en (select auth.uid())). Verificado con advisors post-fix.
-  PENDIENTE no trivial: auditar 106 SECURITY DEFINER callables por
-  authenticated contra la regla del CLAUDE.md (search_path+REVOKE/GRANT),
-  leaked password protection (toggle dashboard Auth Settings), pg_net fuera
-  de schema public, resto de auth_rls_initplan/multiple_permissive_policies.
-- #12 E4: `scripts/check-migration-drift.ps1` nuevo — parsea
-  `supabase migration list --linked`, exit 1 si hay remoto sin local.
-  Agregado a session-sync SKILL paso 1b. Confirma 18 migrations en drift
-  (17 ya conocidas + una nueva: la propia migración S2 de esta sesión vía
-  MCP apply_migration — el MCP también genera drift, no solo Lovable).
-  NO reparado — requiere sesión dedicada revisando cada versión.
-- Nueva tarea agregada a la cola (#16): white-label multi-clínica
-  (`logo_url`+`nombre` en `clinics`, reemplazar `Logo.tsx` hardcoded,
-  wired en header/sidebar/PDFs/CFDI) — pedido de Pablo, no construido aún,
-  media/grande, requiere sesión dedicada (toca recibos y CFDI).
+- Auditoría del plan: #9 (M2 SEO) y #11 (U2 chat ayuda humano) resultaron
+  YA HECHOS en sesiones previas — el plan y CLAUDE.md decían "pendiente",
+  quedó corregido. No repetir la pregunta de si "falta UI" para el chat de
+  ayuda: HelpChatWidget.tsx + AyudaInterna.tsx + edge function help-chat-ai
+  ya están completos y en producción.
+- #14 E5 índices BD: HECHO. 167 FK sin índice (get_advisors performance)
+  resueltas en una sola migración `20260722010000_e5_fk_indexes.sql`
+  (CREATE INDEX IF NOT EXISTS). Aplicada vía apply_migration MCP (CLI
+  bloqueado por drift ya conocido). Verificado: 0 unindexed_foreign_keys
+  post-fix. Commit ad5945e (SIN PUSH todavía).
+- Drift de migraciones: ahora 19 (18 conocidas + `20260722023332`, la
+  aplicada hoy por apply_migration MCP para E5 — mismo patrón de siempre,
+  el MCP genera su propio timestamp distinto al del archivo local
+  `20260722010000`). NO reparado, deuda acumulada, requiere sesión
+  dedicada revisando cada versión antes de `migration repair`.
+- Quedaron mapeados pero SIN tocar: 121 índices "unused" en advisors
+  (no dropear a ciegas — varios son de features recientes sin tráfico
+  real, ej. contable/journeys/fidelización), 79 `multiple_permissive_policies`
+  y 31 `auth_rls_initplan` restantes (WARN, no INFO — más prioritarios que
+  los índices si se retoma performance).
 
-SIGUIENTE en la cola por orden del plan: #11 U2 chat ayuda humano (media —
-tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes` ya existen, falta TODA
-la UI) — se saltó a propósito por costo, ir por #13 (U3 deep-links, U5 a11y,
-U6 empty states — cortas) y #14 (E5 índices BD — corta) primero si se
-quiere seguir barato, o directo a U2 si hay presupuesto para tarea media.
+SIGUIENTE en la cola — 2 tareas reales pendientes, el resto del plan visto
+hoy ya estaba hecho o es deuda no trivial (ver arriba):
+- #16 white-label multi-clínica (media/grande): `clinics.logo_url`+`name`
+  YA EXISTEN en BD, pero nada del frontend los usa — `Logo.tsx` sigue
+  hardcoded. Falta wirear en header/sidebar/PDFs/CFDI. Toca recibos y CFDI,
+  sesión dedicada.
+- #5 E1 tests RPC contables (corta/media): faltan tests de `crear_poliza`
+  y `contab_generar_poliza_evento` — no existen aún, vitest ya corre en CI.
 
 --- histórico ---
 #8 y #9(M2) HECHOS sesión previa (décima parte), pusheados y desplegados.
