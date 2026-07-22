@@ -63,7 +63,7 @@ a:focus-visible{outline:2px solid #0891B2;outline-offset:2px;border-radius:2px;}
   .pr-flow-h{display:flex!important;}
   .pr-flow-v{display:none!important;}
   .pr-tech-grid{grid-template-columns:1fr 1fr!important;}
-  .pr-testi-grid{grid-template-columns:repeat(3,1fr)!important;}
+  .pr-testi-grid{grid-template-columns:repeat(4,1fr)!important;}
   .pr-roi-grid{grid-template-columns:1fr 1fr!important;}
   .pr-comp-scroll{overflow-x:visible!important;}
 }
@@ -256,6 +256,12 @@ export const escenarios = [
     title: "Caja bajo control",
     quote: "El corte de caja con conteo ciego está diseñado para detectar diferencias desde el primer mes — una sola diferencia de $3,200 encontrada a tiempo paga el sistema.",
     base: "Basado en el diseño de conteo ciego y 3-Way Match del módulo de caja y compras.",
+  },
+  {
+    icon: Clock,
+    title: "De 3 sistemas sueltos a uno solo",
+    quote: "Una clínica que hoy lleva contabilidad en un sistema aparte, citas en otro y todo lo demás en Excel puede recuperar entre 3 y 8 horas administrativas a la semana al unificar todo en una sola plataforma.",
+    base: "Basado en encuestas de la industria sobre ahorro de tiempo administrativo al adoptar software de gestión de consultorios (rango típico reportado: 3-12 horas/semana).",
   },
 ];
 

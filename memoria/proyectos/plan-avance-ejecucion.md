@@ -25,6 +25,7 @@ Convención modelos: **Haiku 4.5** mecánico/copy · **Sonnet** dev principal ·
 | 13 | U3 deep-links, U5 a11y, U6 empty states | Sonnet / Haiku | pendiente (cortas) |
 | 14 | E5 índices BD | Sonnet | pendiente (corta) |
 | 15 | E6 activos fijos | BLOQUEADO (contador) | ⛔ esperar tasa fiscal de Pablo |
+| 16 | White-label multi-clínica: `logo_url`+`nombre` en `clinics`, wired en header/sidebar/PDFs/CFDI (reemplaza `Logo.tsx` hardcoded) | Sonnet | pendiente (media — tocar recibos y CFDI, requiere sesión dedicada) |
 
 ## Bloqueos humanos (Pablo)
 - N1 testimonios → resuelto (ilustrativos).
