@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784729021.4434848,
-    "ast_hash": "607be8860335008ab52546b88fda4494",
+    "mtime": 1784729440.739434,
+    "ast_hash": "bbefcba0c94a87a7971724da20ab80bf",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5377,6 +5377,11 @@
   "supabase/migrations/20260722040000_clinic_logos_bucket.sql": {
     "mtime": 1784690713.6852477,
     "ast_hash": "66d124331dff6bac2bb3da689b6528ae",
+    "semantic_hash": ""
+  },
+  "supabase/scripts/test_contab_generar_poliza_evento_MANUAL.sql": {
+    "mtime": 1784729427.5845451,
+    "ast_hash": "5b90be78197583f787fd7fa890d19e88",
     "semantic_hash": ""
   }
 }

@@ -6,8 +6,67 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión decimotercera parte, 2026-07-21 — CERRADA. Todo commiteado y
-pusheado (30cd5bb), sin commits pendientes.
+Sesión decimocuarta parte, 2026-07-22 — CERRADA. 4 commits locales SIN PUSH
+(23d0d60, c935543, ff28843, d51fe48) — confirmar con Pablo antes de pushear
+(dispara deploy Cloudflare vía GitHub Actions).
+
+- #13 U3/U5/U6 — CERRADO (commit 23d0d60). U3 deep-links ya estaba
+  (`/cita/:id` real en `Citas.tsx:315`, `?highlight=` fallback) — plan
+  desactualizado, sin cambios de código. U5 a11y (revisión manual, sin
+  dependencia nueva): labels asociados a inputs en `Citas.tsx`, fila de
+  tabla navegable por teclado (tabIndex/role=button/onKeyDown/focus-ring),
+  aria-pressed en toggles de status, aria-label en botones icon-only del
+  carrito POS (`PuntoDeVenta.tsx`) y buscador (`DashboardFilters.tsx`).
+  U6 empty states: CTA "Nueva cita" en Citas, CTA a `/ajustes` en
+  médicos/consultorios vacíos de `AdminDashboard.tsx`.
+- #16 white-label multi-clínica — CERRADO (commits c935543 + ff28843).
+  `Logo.tsx` recibe `logoUrl`/`name`/`subtitle`, `AppLayout` usa la clínica
+  activa en sidebar. Nueva página `/configuracion/consultorio`
+  (`ConfiguracionConsultorio.tsx`): admin sube logo (bucket `clinic-logos`,
+  RLS por `clinic_memberships`, escritura solo admin de esa clínica) y edita
+  nombre. Ticket POS (`TicketInterno.tsx`) ya tomaba `activeClinic.name`,
+  sin cambios ahí — CFDI/XML no lleva logo visual (dato, no imagen), fuera
+  de alcance. Migración `20260722040000_clinic_logos_bucket.sql` aplicada
+  en prod vía MCP `apply_migration`, advisors sin hallazgos nuevos.
+- #5 E1 tests RPC contables — CERRADO otra vez, con enfoque distinto al de
+  la sesión trece (commit d51fe48). Decisión explícita: NO montar
+  pgTAP/Supabase-local en CI (infra grande para una sola función SQL sin
+  lógica cliente que extraer). En su lugar: script versionado
+  `supabase/scripts/test_contab_generar_poliza_evento_MANUAL.sql`
+  (BEGIN/ROLLBACK, nunca commitea) corrido vía MCP `execute_sql` contra
+  prod. Cubre: split de 3 líneas cuando la cuenta de abono tiene
+  `iva_tratamiento='tasa_general'` (fase 9), balance debe=haber, monto
+  total 11600, IVA trasladado exacto 1600 centavos. Verde, rollback
+  confirmado sin dejar rastro (`SELECT count(*)` post-ejecución = 0).
+  Limitación documentada en el script: corre como rol postgres/service
+  (MCP), NO reproduce el bug conocido de `crear_poliza()` bajo
+  `authenticated`/`auth.uid()` real. Re-correr a mano tras cualquier
+  cambio a `contab_generar_poliza_evento`/`crear_poliza`/
+  `contab_resolver_regla`. Smoke E2E sigue sin hacerse (costo de sesión).
+
+SIGUIENTE en la cola — 1 tarea real pendiente del plan de avance:
+- #8 E2/E3 code-splitting — CASI CERRADO, falta solo `AdminUsuarios.tsx`
+  (2037 líneas, saltado a propósito — componente monolítico sensible,
+  requiere sesión dedicada). Resto de E2/E3 ya hecho (ver
+  `memoria/proyectos/plan-avance-ejecucion.md` #8).
+
+Bloqueos humanos (Pablo, no técnico, sin cambio esta sesión):
+- E6 tasa depreciación equipo médico → confirmar con contador.
+- M1 datos del piloto real → para caso de estudio.
+- N2/N4 decisión final pricing → sesión de negocio.
+
+Drift de migraciones: ahora 22 (subió de 19 — nuevas entradas de hoy por
+`apply_migration` MCP en #16 y #5-histórico). NO reparado, deuda
+acumulada, requiere sesión dedicada revisando cada versión antes de
+`migration repair`. `scripts/check-migration-drift.ps1` sigue verde
+(exit 0, solo reporta).
+
+Plan de avance-ejecución (`memoria/proyectos/plan-avance-ejecucion.md`):
+de 16 tareas originales, quedan solo #8 (parcial, arriba) y los 3
+bloqueos humanos. Todo lo demás ✅ HECHO.
+
+--- histórico (sesión decimotercera parte, 2026-07-21) ---
+Todo commiteado y pusheado (30cd5bb), sin commits pendientes.
 
 - #5 E1 tests RPC contables — CERRADO. `polizaValidation.ts` extraído de
   `NuevaPolizaDialog.tsx`, 9 tests unitarios cubren la regla dura de
