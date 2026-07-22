@@ -2,109 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useActiveClinic } from "@/hooks/useActiveClinic";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { ShieldCheck, UserPlus, Lock, HeartPulse, Stethoscope, Users as UsersIcon } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ShieldCheck, Search, Users as UsersIcon, UserPlus, Pencil, KeyRound,
-  Trash2, ShieldAlert, Lock, Unlock, Stethoscope, Link2, Unlink, CheckCircle2, AlertCircle, Plus,
-  HeartPulse, CalendarDays, ClipboardList, Loader2,
-} from "lucide-react";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
-type AppRole = "admin" | "manager" | "receptionist" | "doctor" | "nurse" | "patient" | "cajero";
-
-const ROLE_OPTIONS: AppRole[] = ["admin", "manager", "receptionist", "doctor", "nurse", "patient", "cajero"];
-
-const ROLE_LABELS: Record<AppRole, string> = {
-  admin: "Administrador",
-  manager: "Gerente",
-  receptionist: "Recepción",
-  doctor: "Médico",
-  nurse: "Enfermería",
-  patient: "Paciente",
-  cajero: "Cajero",
-};
-
-const ROLE_BADGE: Record<AppRole, string> = {
-  admin: "bg-primary text-primary-foreground",
-  manager: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
-  receptionist: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
-  doctor: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  nurse: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  patient: "bg-muted text-muted-foreground",
-  cajero: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300",
-};
-
-interface UsuarioRow {
-  id: string;
-  email: string | null;
-  created_at: string | null;
-  last_sign_in_at: string | null;
-  roles: AppRole[];
-  is_permanent_admin?: boolean;
-  banned?: boolean;
-}
-
-interface DoctorRow {
-  id: string;
-  nombre: string;
-  apellidos: string;
-  especialidad: string;
-  cedula_profesional: string | null;
-  telefono: string | null;
-  activo: boolean;
-  user_id: string | null;
-  user_email?: string | null;
-  horario_inicio?: string;
-  horario_fin?: string;
-  duracion_cita_min?: number;
-  modo_cobro?: "clinica" | "directo";
-}
-
-type NurseCategoria = "licenciada" | "tecnica" | "auxiliar";
-
-const NURSE_CATEGORIA_LABELS: Record<NurseCategoria, string> = {
-  licenciada: "Licenciada",
-  tecnica: "Técnica",
-  auxiliar: "Auxiliar",
-};
-
-interface NurseRow {
-  id: string;
-  nombre: string;
-  apellidos: string;
-  categoria: NurseCategoria;
-  especialidad: string | null;
-  cedula_profesional: string | null;
-  telefono: string | null;
-  activo: boolean;
-  user_id: string | null;
-  user_email?: string | null;
-  horario_inicio?: string;
-  horario_fin?: string;
-}
-
-// Typed envelope returned by the admin-users edge function
-interface AdminUsersPayload {
-  error?: string;
-  users?: UsuarioRow[];
-  user_id?: string;
-  updated?: number;
-  skipped?: number;
-}
+  AppRole, AdminUsersPayload, DoctorForm, DoctorRow, NurseForm, NurseRow,
+  ROLE_LABELS, ServicioCatalog, UnlinkedDoctorRow, UsuarioRow,
+} from "./adminUsuarios/types";
+import { UsersTab } from "./adminUsuarios/UsersTab";
+import { DoctorsTab } from "./adminUsuarios/DoctorsTab";
+import { NursesTab } from "./adminUsuarios/NursesTab";
+import { UserDialogs } from "./adminUsuarios/UserDialogs";
+import { DoctorDialogs } from "./adminUsuarios/DoctorDialogs";
+import { NurseDialogs } from "./adminUsuarios/NurseDialogs";
 
 export default function AdminUsuarios() {
   const { activeClinicId } = useActiveClinic();
@@ -149,7 +59,6 @@ export default function AdminUsuarios() {
   const [doctorCalendars, setDoctorCalendars] = useState<Record<string, string>>({});
 
   // Servicios por doctor
-  type ServicioCatalog = { id: string; nombre: string; especialidad: string; duracion_minutos: number; precio_centavos: number };
   const [serviciosDialog, setServiciosDialog] = useState<{ doctor: DoctorRow } | null>(null);
   const [catalogoServicios, setCatalogoServicios] = useState<ServicioCatalog[]>([]);
   const [asignadosIds, setAsignadosIds] = useState<Set<string>>(new Set());
@@ -304,10 +213,6 @@ export default function AdminUsuarios() {
   }, [nurses]);
 
   // Filas virtuales para médicos/enfermeras sin cuenta vinculada (para que aparezcan en la pestaña de usuarios)
-  type UnlinkedDoctorRow = UsuarioRow & {
-    _unlinkedDoctor?: DoctorRow; _linkedDoctor?: DoctorRow;
-    _unlinkedNurse?: NurseRow; _linkedNurse?: NurseRow;
-  };
   const unlinkedDoctorRows = useMemo<UnlinkedDoctorRow[]>(() => {
     return doctors
       .filter((d) => !d.user_id && d.activo)
@@ -539,6 +444,22 @@ export default function AdminUsuarios() {
     setBaseOpen(false); setBasePw("");
   };
 
+  const handleSavePin = async () => {
+    if (!pinUser) return;
+    if (!pinValue) { toast.error("Ingresa un PIN"); return; }
+    if (!/^\d{4,6}$/.test(pinValue)) { toast.error("PIN debe ser 4-6 dígitos"); return; }
+    if (pinValue !== pinConfirm) { toast.error("Los PINs no coinciden"); return; }
+    setSavingPin(true);
+    const { error } = await (supabase as any).rpc("set_supervisor_pin", {
+      p_user_id: pinUser.id,
+      p_pin: pinValue,
+    } as never);
+    setSavingPin(false);
+    if (error) { toast.error(error.message || "No se pudo guardar el PIN"); return; }
+    toast.success("PIN actualizado");
+    setPinUser(null);
+  };
+
   // ---- Vinculación de médicos ----
   const [linkDoctor, setLinkDoctor] = useState<DoctorRow | null>(null);
   const [linkEmail, setLinkEmail] = useState("");
@@ -601,19 +522,6 @@ export default function AdminUsuarios() {
   };
 
   // ---- CRUD de médicos ----
-  type DoctorForm = {
-    nombre: string;
-    apellidos: string;
-    email: string;
-    especialidad: string;
-    cedula_profesional: string;
-    telefono: string;
-    horario_inicio: string;
-    horario_fin: string;
-    duracion_cita_min: number;
-    activo: boolean;
-    modo_cobro: "clinica" | "directo";
-  };
   const emptyDoctor: DoctorForm = {
     nombre: "", apellidos: "", email: "", especialidad: "", cedula_profesional: "",
     telefono: "", horario_inicio: "08:00", horario_fin: "18:00",
@@ -802,18 +710,6 @@ export default function AdminUsuarios() {
   };
 
   // ---- CRUD de enfermeras ----
-  type NurseForm = {
-    nombre: string;
-    apellidos: string;
-    email: string;
-    categoria: NurseCategoria;
-    especialidad: string;
-    cedula_profesional: string;
-    telefono: string;
-    horario_inicio: string;
-    horario_fin: string;
-    activo: boolean;
-  };
   const emptyNurse: NurseForm = {
     nombre: "", apellidos: "", email: "", categoria: "auxiliar", especialidad: "", cedula_profesional: "",
     telefono: "", horario_inicio: "08:00", horario_fin: "18:00", activo: true,
@@ -988,1050 +884,174 @@ export default function AdminUsuarios() {
           </TabsTrigger>
         </TabsList>
 
-        {/* TAB: Usuarios */}
-        <TabsContent value="usuarios" className="space-y-4 mt-4">
-          {pendingAccessCount > 0 && (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>
-                  {pendingAccessCount} cuenta{pendingAccessCount === 1 ? "" : "s"} confirmada
-                  {pendingAccessCount === 1 ? "" : "s"} sin ningún rol asignado — entraron a la app
-                  pero no tienen acceso a nada hasta que se les asigne un rol.
-                </span>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setRoleFilter("patient")}>
-                Ver cuentas sin rol
-              </Button>
-            </div>
-          )}
-          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por correo o ID…"
-                className="pl-9"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(["all", "admin", "manager", "receptionist", "doctor", "nurse", "patient", "cajero"] as const).map((r) => (
-                <Button
-                  key={r}
-                  size="sm"
-                  variant={roleFilter === r ? "default" : "outline"}
-                  onClick={() => setRoleFilter(r)}
-                  className="h-7 text-xs"
-                >
-                  {r === "all" ? "Todos" : ROLE_LABELS[r]} ({roleCounts[r] ?? 0})
-                </Button>
-              ))}
-            </div>
-          </div>
+        <UsersTab
+          loading={loading}
+          filtered={filtered}
+          users={users}
+          query={query}
+          setQuery={setQuery}
+          roleFilter={roleFilter}
+          setRoleFilter={setRoleFilter}
+          roleCounts={roleCounts}
+          pendingAccessCount={pendingAccessCount}
+          busyUser={busyUser}
+          busyBan={busyBan}
+          fmt={fmt}
+          toggleRole={toggleRole}
+          handleToggleBan={handleToggleBan}
+          openLinkDoctor={openLinkDoctor}
+          openLinkNurse={openLinkNurse}
+          setEditUser={setEditUser}
+          setEditEmail={setEditEmail}
+          setPwUser={setPwUser}
+          setPwValue={setPwValue}
+          setDelUser={setDelUser}
+          setPinUser={setPinUser}
+          setPinValue={setPinValue}
+          setPinConfirm={setPinConfirm}
+        />
 
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium">Usuario</th>
-                    <th className="text-left px-4 py-3 font-medium">Roles</th>
-                    <th className="text-left px-4 py-3 font-medium">Último acceso</th>
-                    <th className="text-left px-4 py-3 font-medium">Asignar / Remover</th>
-                    <th className="text-right px-4 py-3 font-medium">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="border-t border-border">
-                      <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-8 w-64" /></td>
-                      <td className="px-4 py-3"><Skeleton className="h-8 w-32" /></td>
-                    </tr>
-                  ))}
+        <DoctorsTab
+          doctorsEnriched={doctorsEnriched}
+          loadingDoctors={loadingDoctors}
+          doctorCalendars={doctorCalendars}
+          googleClientIdPublic={GOOGLE_CLIENT_ID_PUBLIC}
+          generateGoogleOAuthUrl={generateGoogleOAuthUrl}
+          openDoctorNew={openDoctorNew}
+          openDoctorEdit={openDoctorEdit}
+          openServiciosDialog={openServiciosDialog}
+          setUnlinkDoctor={setUnlinkDoctor}
+          openLinkDoctor={openLinkDoctor}
+          setDoctorDel={setDoctorDel}
+        />
 
-                  {!loading && filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
-                        <UsersIcon className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                        Sin usuarios para mostrar
-                      </td>
-                    </tr>
-                  )}
-
-                  {!loading && filtered.map((u) => {
-                    const unlinked = u._unlinkedDoctor;
-                    const unlinkedN = u._unlinkedNurse;
-                    if (unlinked || unlinkedN) {
-                      const prefix = unlinked ? "Dr(a)." : "Enf.";
-                      const persona = unlinked ?? unlinkedN!;
-                      const role = unlinked ? "doctor" : "nurse";
-                      return (
-                        <tr key={u.id} className="border-t border-border align-top bg-amber-500/5">
-                          <td className="px-4 py-3">
-                            <div className="font-medium flex items-center gap-1.5">
-                              {prefix} {persona.nombre} {persona.apellidos}
-                              <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-300">
-                                <AlertCircle className="h-3 w-3" /> Sin cuenta
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {unlinked ? unlinked.especialidad : NURSE_CATEGORIA_LABELS[unlinkedN!.categoria]}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge className={ROLE_BADGE[role]}>{ROLE_LABELS[role]}</Badge>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground text-xs">—</td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">
-                            Sin cuenta de acceso. Crea una cuenta para asignar roles.
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-end gap-1">
-                              <Button size="sm" onClick={() => unlinked ? openLinkDoctor(unlinked) : openLinkNurse(unlinkedN!)}>
-                                <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }
-                    return (
-                    <tr key={u.id} className="border-t border-border align-top">
-                      <td className="px-4 py-3">
-                        <div className="font-medium flex items-center gap-1.5 flex-wrap">
-                          {u._linkedDoctor ? (
-                            <>
-                              <Stethoscope className="h-3.5 w-3.5 text-emerald-600" />
-                              Dr(a). {u._linkedDoctor.nombre} {u._linkedDoctor.apellidos}
-                            </>
-                          ) : u._linkedNurse ? (
-                            <>
-                              <HeartPulse className="h-3.5 w-3.5 text-amber-600" />
-                              Enf. {u._linkedNurse.nombre} {u._linkedNurse.apellidos}
-                            </>
-                          ) : (
-                            u.email ?? "(sin correo)"
-                          )}
-                          {u.is_permanent_admin && (
-                            <Badge variant="outline" className="gap-1 text-[10px]">
-                              <ShieldAlert className="h-3 w-3" /> Permanente
-                            </Badge>
-                          )}
-                          {u.banned && (
-                            <Badge variant="outline" className="gap-1 text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-300">
-                              <Lock className="h-3 w-3" /> Deshabilitada
-                            </Badge>
-                          )}
-                        </div>
-                        {u._linkedDoctor && (
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {u._linkedDoctor.especialidad} · {u.email}
-                          </div>
-                        )}
-                        {u._linkedNurse && (
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {NURSE_CATEGORIA_LABELS[u._linkedNurse.categoria]} · {u.email}
-                          </div>
-                        )}
-                        {!u._linkedDoctor && !u._linkedNurse && (
-                          <div className="text-xs text-muted-foreground font-mono mt-0.5">{u.id.slice(0, 8)}…</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {u.roles.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">Sin rol</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5 items-center">
-                            {u.roles.map((r) => (
-                              <Badge key={r} className={ROLE_BADGE[r as AppRole]}>
-                                {ROLE_LABELS[r as AppRole] ?? r}
-                              </Badge>
-                            ))}
-                            {(u.roles.includes("admin") || u.roles.includes("manager")) && (
-                              <button
-                                onClick={() => { setPinUser(u); setPinValue(""); setPinConfirm(""); }}
-                                className="inline-flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 underline ml-1"
-                              >
-                                <KeyRound className="h-3 w-3" /> PIN
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{fmt(u.last_sign_in_at)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1.5">
-                          {ROLE_OPTIONS.map((role) => {
-                            const has = u.roles.includes(role);
-                            return (
-                              <Button
-                                key={role}
-                                size="sm"
-                                variant={has ? "default" : "outline"}
-                                disabled={busyUser === u.id}
-                                onClick={() => toggleRole(u, role)}
-                                className="h-7 text-xs"
-                              >
-                                {has ? "✓ " : "+ "}{ROLE_LABELS[role]}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title={u.banned ? "Habilitar acceso" : "Deshabilitar acceso (no elimina la cuenta)"}
-                            className={u.banned ? "text-amber-600 hover:text-amber-700" : ""}
-                            disabled={u.is_permanent_admin || busyBan === u.id}
-                            onClick={() => handleToggleBan(u)}
-                          >
-                            {u.banned ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setEditUser(u); setEditEmail(u.email ?? ""); }}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setPwUser(u); setPwValue(""); }}>
-                            <KeyRound className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            disabled={u.is_permanent_admin}
-                            onClick={() => setDelUser(u)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* TAB: Médicos del registro clínico */}
-        <TabsContent value="medicos" className="space-y-4 mt-4">
-          <div className="rounded-xl border border-border bg-card p-4 flex items-start justify-between gap-3 flex-wrap">
-            <p className="text-sm text-muted-foreground max-w-2xl">
-              Lista de todos los médicos registrados. Edita los datos (cédula, horario, especialidad…)
-              o crea uno nuevo. Si un médico no tiene cuenta vinculada, no podrá iniciar sesión ni firmar recetas.
-            </p>
-            <Button onClick={openDoctorNew}>
-              <Plus className="h-4 w-4 mr-1.5" /> Nuevo médico
-            </Button>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium">Médico</th>
-                    <th className="text-left px-4 py-3 font-medium">Especialidad</th>
-                    <th className="text-left px-4 py-3 font-medium">Cédula</th>
-                    <th className="text-left px-4 py-3 font-medium">Horario / Cita</th>
-                    <th className="text-left px-4 py-3 font-medium">Cuenta</th>
-                    <th className="text-left px-4 py-3 font-medium">Google Calendar</th>
-                    <th className="text-right px-4 py-3 font-medium">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingDoctors && Array.from({ length: 3 }).map((_, i) => (
-                    <tr key={i} className="border-t border-border">
-                      <td className="px-4 py-3" colSpan={7}><Skeleton className="h-6 w-full" /></td>
-                    </tr>
-                  ))}
-                  {!loadingDoctors && doctorsEnriched.length === 0 && (
-                    <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                      <Stethoscope className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                      Sin médicos registrados
-                    </td></tr>
-                  )}
-                  {!loadingDoctors && doctorsEnriched.map((d) => (
-                    <tr key={d.id} className="border-t border-border align-top">
-                      <td className="px-4 py-3">
-                        <div className="font-medium">Dr(a). {d.nombre} {d.apellidos}</div>
-                        {d.telefono && <div className="text-xs text-muted-foreground">{d.telefono}</div>}
-                        {!d.activo && <Badge variant="outline" className="text-[10px] mt-0.5">Inactivo</Badge>}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{d.especialidad}</td>
-                      <td className="px-4 py-3 font-mono text-xs">{d.cedula_profesional ?? "—"}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {(d.horario_inicio ?? "").slice(0, 5)}–{(d.horario_fin ?? "").slice(0, 5)}
-                        <div>{d.duracion_cita_min ?? 30} min</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {d.user_id ? (
-                          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
-                            <CheckCircle2 className="h-4 w-4" />
-                            <span className="text-xs">{d.user_email ?? d.user_id.slice(0, 8) + "…"}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
-                            <AlertCircle className="h-4 w-4" />
-                            <span className="text-xs">Sin cuenta</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {doctorCalendars[d.id] ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
-                            <span className="text-xs text-muted-foreground truncate max-w-[140px]" title={doctorCalendars[d.id]}>
-                              {doctorCalendars[d.id]}
-                            </span>
-                          </div>
-                        ) : GOOGLE_CLIENT_ID_PUBLIC ? (
-                          <button
-                            onClick={() => window.open(generateGoogleOAuthUrl(d.id), "_blank", "width=600,height=700")}
-                            className="flex items-center gap-1 text-xs text-primary hover:underline"
-                          >
-                            <CalendarDays className="h-3.5 w-3.5" />
-                            Conectar
-                          </button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1 flex-wrap">
-                          <Button size="sm" variant="ghost" onClick={() => openDoctorEdit(d)} title="Editar datos">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => openServiciosDialog(d)} title="Servicios">
-                            <ClipboardList className="h-3.5 w-3.5" />
-                          </Button>
-                          {d.user_id ? (
-                            <Button size="sm" variant="outline" onClick={() => setUnlinkDoctor(d)}>
-                              <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
-                            </Button>
-                          ) : (
-                            <Button size="sm" onClick={() => openLinkDoctor(d)}>
-                              <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setDoctorDel(d)}
-                            title="Eliminar"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* TAB: Enfermeras del registro clínico */}
-        <TabsContent value="enfermeras" className="space-y-4 mt-4">
-          <div className="rounded-xl border border-border bg-card p-4 flex items-start justify-between gap-3 flex-wrap">
-            <p className="text-sm text-muted-foreground max-w-2xl">
-              Lista de todas las enfermeras registradas. Edita los datos (cédula, categoría, horario…)
-              o crea una nueva. Si una enfermera no tiene cuenta vinculada, no podrá iniciar sesión.
-            </p>
-            <Button onClick={openNurseNew}>
-              <Plus className="h-4 w-4 mr-1.5" /> Nueva enfermera
-            </Button>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium">Enfermera</th>
-                    <th className="text-left px-4 py-3 font-medium">Categoría</th>
-                    <th className="text-left px-4 py-3 font-medium">Cédula</th>
-                    <th className="text-left px-4 py-3 font-medium">Horario</th>
-                    <th className="text-left px-4 py-3 font-medium">Cuenta</th>
-                    <th className="text-right px-4 py-3 font-medium">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingNurses && Array.from({ length: 3 }).map((_, i) => (
-                    <tr key={i} className="border-t border-border">
-                      <td className="px-4 py-3" colSpan={6}><Skeleton className="h-6 w-full" /></td>
-                    </tr>
-                  ))}
-                  {!loadingNurses && nursesEnriched.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                      <HeartPulse className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                      Sin enfermeras registradas
-                    </td></tr>
-                  )}
-                  {!loadingNurses && nursesEnriched.map((n) => (
-                    <tr key={n.id} className="border-t border-border align-top">
-                      <td className="px-4 py-3">
-                        <div className="font-medium">Enf. {n.nombre} {n.apellidos}</div>
-                        {n.telefono && <div className="text-xs text-muted-foreground">{n.telefono}</div>}
-                        {!n.activo && <Badge variant="outline" className="text-[10px] mt-0.5">Inactiva</Badge>}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{NURSE_CATEGORIA_LABELS[n.categoria]}</td>
-                      <td className="px-4 py-3 font-mono text-xs">{n.cedula_profesional ?? "—"}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {(n.horario_inicio ?? "").slice(0, 5)}–{(n.horario_fin ?? "").slice(0, 5)}
-                      </td>
-                      <td className="px-4 py-3">
-                        {n.user_id ? (
-                          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
-                            <CheckCircle2 className="h-4 w-4" />
-                            <span className="text-xs">{n.user_email ?? n.user_id.slice(0, 8) + "…"}</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
-                            <AlertCircle className="h-4 w-4" />
-                            <span className="text-xs">Sin cuenta</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1 flex-wrap">
-                          <Button size="sm" variant="ghost" onClick={() => openNurseEdit(n)} title="Editar datos">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          {n.user_id ? (
-                            <Button size="sm" variant="outline" onClick={() => setUnlinkNurse(n)}>
-                              <Unlink className="h-3.5 w-3.5 mr-1" /> Desvincular
-                            </Button>
-                          ) : (
-                            <Button size="sm" onClick={() => openLinkNurse(n)}>
-                              <Link2 className="h-3.5 w-3.5 mr-1" /> Crear y vincular
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setNurseDel(n)}
-                            title="Eliminar"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
+        <NursesTab
+          nursesEnriched={nursesEnriched}
+          loadingNurses={loadingNurses}
+          openNurseNew={openNurseNew}
+          openNurseEdit={openNurseEdit}
+          setUnlinkNurse={setUnlinkNurse}
+          openLinkNurse={openLinkNurse}
+          setNurseDel={setNurseDel}
+        />
       </Tabs>
 
-      {/* Dialog: Crear / Editar médico */}
-      <Dialog open={doctorDialogOpen} onOpenChange={setDoctorDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{doctorEdit ? "Editar médico" : "Nuevo médico"}</DialogTitle>
-            <DialogDescription>
-              {doctorEdit
-                ? `Actualiza los datos de Dr(a). ${doctorEdit.nombre} ${doctorEdit.apellidos}.`
-                : "Registra un nuevo médico en el sistema clínico."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label>Nombre(s) *</Label>
-              <Input value={doctorForm.nombre} maxLength={80}
-                onChange={(e) => setDoctorForm({ ...doctorForm, nombre: e.target.value })} />
-            </div>
-            <div>
-              <Label>Apellidos *</Label>
-              <Input value={doctorForm.apellidos} maxLength={80}
-                onChange={(e) => setDoctorForm({ ...doctorForm, apellidos: e.target.value })} />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Especialidad *</Label>
-              <Input value={doctorForm.especialidad} maxLength={100} placeholder="Ej. Medicina General, Pediatría…"
-                onChange={(e) => setDoctorForm({ ...doctorForm, especialidad: e.target.value })} />
-            </div>
-            <div>
-              <Label>Cédula profesional</Label>
-              <Input value={doctorForm.cedula_profesional} maxLength={20} placeholder="Ej. 12345678"
-                onChange={(e) => setDoctorForm({ ...doctorForm, cedula_profesional: e.target.value })} />
-              <p className="text-[11px] text-muted-foreground mt-1">SEP / DGP. Solo letras, números y guiones.</p>
-            </div>
-            <div>
-              <Label>Teléfono</Label>
-              <Input value={doctorForm.telefono} maxLength={20} placeholder="+52 55 1234 5678"
-                onChange={(e) => setDoctorForm({ ...doctorForm, telefono: e.target.value })} />
-            </div>
-            <div>
-              <Label>Horario de inicio *</Label>
-              <Input type="time" value={doctorForm.horario_inicio}
-                onChange={(e) => setDoctorForm({ ...doctorForm, horario_inicio: e.target.value })} />
-            </div>
-            <div>
-              <Label>Horario de fin *</Label>
-              <Input type="time" value={doctorForm.horario_fin}
-                onChange={(e) => setDoctorForm({ ...doctorForm, horario_fin: e.target.value })} />
-            </div>
-            <div>
-              <Label>Duración de cita (min) *</Label>
-              <Input type="number" min={5} max={240} value={doctorForm.duracion_cita_min}
-                onChange={(e) => setDoctorForm({ ...doctorForm, duracion_cita_min: Number(e.target.value) })} />
-            </div>
-            <div>
-              <Label>Modelo de cobro *</Label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={doctorForm.modo_cobro}
-                onChange={(e) => setDoctorForm({ ...doctorForm, modo_cobro: e.target.value as "clinica" | "directo" })}
-              >
-                <option value="clinica">A la clínica (paga honorarios al doctor)</option>
-                <option value="directo">Directo al doctor (fuera de caja de la clínica)</option>
-              </select>
-              <p className="text-[11px] text-muted-foreground mt-1">
-                "Directo": el paciente le paga al doctor, no se genera ingreso/póliza en la clínica. Los insumos consumidos sí se registran igual.
-              </p>
-            </div>
-            <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={doctorForm.activo}
-                  onChange={(e) => setDoctorForm({ ...doctorForm, activo: e.target.checked })} />
-                Médico activo
-              </label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDoctorDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveDoctor} disabled={savingDoctor}>
-              {savingDoctor ? "Guardando…" : doctorEdit ? "Guardar cambios" : "Crear médico"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DoctorDialogs
+        doctorDialogOpen={doctorDialogOpen}
+        setDoctorDialogOpen={setDoctorDialogOpen}
+        doctorEdit={doctorEdit}
+        doctorForm={doctorForm}
+        setDoctorForm={setDoctorForm}
+        savingDoctor={savingDoctor}
+        handleSaveDoctor={handleSaveDoctor}
+        serviciosDialog={serviciosDialog}
+        setServiciosDialog={setServiciosDialog}
+        loadingServicios={loadingServicios}
+        catalogoServicios={catalogoServicios}
+        asignadosIds={asignadosIds}
+        toggleServicio={toggleServicio}
+        savingServicios={savingServicios}
+        saveServicios={saveServicios}
+        doctorDel={doctorDel}
+        setDoctorDel={setDoctorDel}
+        deletingDoctor={deletingDoctor}
+        handleDeleteDoctor={handleDeleteDoctor}
+        unlinkDoctor={unlinkDoctor}
+        setUnlinkDoctor={setUnlinkDoctor}
+        unlinking={unlinking}
+        handleUnlinkDoctor={handleUnlinkDoctor}
+        linkDoctor={linkDoctor}
+        setLinkDoctor={setLinkDoctor}
+        linkMode={linkMode}
+        setLinkMode={setLinkMode}
+        linkEmail={linkEmail}
+        setLinkEmail={setLinkEmail}
+        linkPassword={linkPassword}
+        setLinkPassword={setLinkPassword}
+        linkExistingUserId={linkExistingUserId}
+        setLinkExistingUserId={setLinkExistingUserId}
+        linking={linking}
+        handleLinkDoctor={handleLinkDoctor}
+        users={users}
+      />
 
-      {/* Dialog: Servicios del médico */}
-      <Dialog open={!!serviciosDialog} onOpenChange={(o) => !o && setServiciosDialog(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Servicios — Dr(a). {serviciosDialog?.doctor.nombre} {serviciosDialog?.doctor.apellidos}</DialogTitle>
-            <DialogDescription>Selecciona los servicios que ofrece este médico.</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-80 overflow-y-auto space-y-1 py-2">
-            {loadingServicios ? (
-              <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
-            ) : catalogoServicios.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground text-center">Sin servicios en el catálogo. Agrégalos en Ajustes → Servicios.</p>
-            ) : catalogoServicios.map((s) => (
-              <label key={s.id} className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-muted cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={asignadosIds.has(s.id)}
-                  onChange={() => toggleServicio(s.id)}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <span className="flex-1 text-sm font-medium">{s.nombre}</span>
-                <span className="text-xs text-muted-foreground">{s.duracion_minutos} min</span>
-                {s.precio_centavos > 0 && (
-                  <span className="text-xs text-muted-foreground">${(s.precio_centavos / 100).toLocaleString("es-MX")}</span>
-                )}
-              </label>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setServiciosDialog(null)} disabled={savingServicios}>Cancelar</Button>
-            <Button onClick={saveServicios} disabled={savingServicios || loadingServicios}>
-              {savingServicios ? "Guardando…" : "Guardar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NurseDialogs
+        nurseDialogOpen={nurseDialogOpen}
+        setNurseDialogOpen={setNurseDialogOpen}
+        nurseEdit={nurseEdit}
+        nurseForm={nurseForm}
+        setNurseForm={setNurseForm}
+        savingNurse={savingNurse}
+        handleSaveNurse={handleSaveNurse}
+        nurseDel={nurseDel}
+        setNurseDel={setNurseDel}
+        deletingNurse={deletingNurse}
+        handleDeleteNurse={handleDeleteNurse}
+        unlinkNurse={unlinkNurse}
+        setUnlinkNurse={setUnlinkNurse}
+        unlinkingNurse={unlinkingNurse}
+        handleUnlinkNurse={handleUnlinkNurse}
+        linkNurse={linkNurse}
+        setLinkNurse={setLinkNurse}
+        linkNurseMode={linkNurseMode}
+        setLinkNurseMode={setLinkNurseMode}
+        linkNurseEmail={linkNurseEmail}
+        setLinkNurseEmail={setLinkNurseEmail}
+        linkNursePassword={linkNursePassword}
+        setLinkNursePassword={setLinkNursePassword}
+        linkNurseExistingUserId={linkNurseExistingUserId}
+        setLinkNurseExistingUserId={setLinkNurseExistingUserId}
+        linkingNurse={linkingNurse}
+        handleLinkNurse={handleLinkNurse}
+        users={users}
+      />
 
-      {/* Confirmar eliminación de médico */}
-      <AlertDialog open={!!doctorDel} onOpenChange={(o) => !o && setDoctorDel(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar a Dr(a). {doctorDel?.nombre} {doctorDel?.apellidos}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción es permanente. Si el médico tiene citas, recetas o expedientes asociados,
-              no podrá eliminarse — en ese caso márcalo como <strong>Inactivo</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingDoctor}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteDoctor} disabled={deletingDoctor} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deletingDoctor ? "Eliminando…" : "Eliminar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Confirmar desvincular médico */}
-      <AlertDialog open={!!unlinkDoctor} onOpenChange={(o) => !o && setUnlinkDoctor(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Desvincular cuenta de Dr(a). {unlinkDoctor?.nombre} {unlinkDoctor?.apellidos}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              La cuenta de usuario no se elimina. El médico quedará sin acceso al sistema hasta que se vincule otra cuenta.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={unlinking}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleUnlinkDoctor} disabled={unlinking} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {unlinking ? "Desvinculando…" : "Desvincular"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Dialog: Vincular médico */}
-      <Dialog open={!!linkDoctor} onOpenChange={(o) => !o && setLinkDoctor(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Vincular cuenta a médico</DialogTitle>
-            <DialogDescription>
-              Dr(a). {linkDoctor?.nombre} {linkDoctor?.apellidos}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex gap-1.5">
-              <Button size="sm" variant={linkMode === "new" ? "default" : "outline"} onClick={() => setLinkMode("new")}>
-                Crear cuenta nueva
-              </Button>
-              <Button size="sm" variant={linkMode === "existing" ? "default" : "outline"} onClick={() => setLinkMode("existing")}>
-                Usar cuenta existente
-              </Button>
-            </div>
-            {linkMode === "new" ? (
-              <>
-                <div>
-                  <Label>Correo</Label>
-                  <Input type="email" value={linkEmail} onChange={(e) => setLinkEmail(e.target.value)} placeholder="medico@clinica.mx" />
-                </div>
-                <div>
-                  <Label>Contraseña inicial</Label>
-                  <Input type="password" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="mínimo 12 caracteres" />
-                </div>
-              </>
-            ) : (
-              <div>
-                <Label>Usuario existente</Label>
-                <select
-                  className="w-full mt-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={linkExistingUserId}
-                  onChange={(e) => setLinkExistingUserId(e.target.value)}
-                >
-                  <option value="">Selecciona…</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.email}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLinkDoctor(null)}>Cancelar</Button>
-            <Button onClick={handleLinkDoctor} disabled={linking}>{linking ? "Vinculando…" : "Vincular"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog: Crear / Editar enfermera */}
-      <Dialog open={nurseDialogOpen} onOpenChange={setNurseDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{nurseEdit ? "Editar enfermera" : "Nueva enfermera"}</DialogTitle>
-            <DialogDescription>
-              {nurseEdit
-                ? `Actualiza los datos de Enf. ${nurseEdit.nombre} ${nurseEdit.apellidos}.`
-                : "Registra una nueva enfermera en el sistema clínico."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label>Nombre(s) *</Label>
-              <Input value={nurseForm.nombre} maxLength={80}
-                onChange={(e) => setNurseForm({ ...nurseForm, nombre: e.target.value })} />
-            </div>
-            <div>
-              <Label>Apellidos *</Label>
-              <Input value={nurseForm.apellidos} maxLength={80}
-                onChange={(e) => setNurseForm({ ...nurseForm, apellidos: e.target.value })} />
-            </div>
-            <div>
-              <Label>Categoría *</Label>
-              <Select value={nurseForm.categoria} onValueChange={(v) => setNurseForm({ ...nurseForm, categoria: v as NurseCategoria })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(NURSE_CATEGORIA_LABELS) as NurseCategoria[]).map((c) => (
-                    <SelectItem key={c} value={c}>{NURSE_CATEGORIA_LABELS[c]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground mt-1">NOM-019-SSA3-2013: identificación por categoría/competencia.</p>
-            </div>
-            <div>
-              <Label>Especialidad</Label>
-              <Input value={nurseForm.especialidad} maxLength={100} placeholder="Ej. Quirúrgica, Pediátrica… (opcional)"
-                onChange={(e) => setNurseForm({ ...nurseForm, especialidad: e.target.value })} />
-            </div>
-            <div>
-              <Label>Cédula profesional</Label>
-              <Input value={nurseForm.cedula_profesional} maxLength={20} placeholder="Ej. 12345678"
-                onChange={(e) => setNurseForm({ ...nurseForm, cedula_profesional: e.target.value })} />
-              <p className="text-[11px] text-muted-foreground mt-1">SEP / DGP. Solo letras, números y guiones.</p>
-            </div>
-            <div>
-              <Label>Teléfono</Label>
-              <Input value={nurseForm.telefono} maxLength={20} placeholder="+52 55 1234 5678"
-                onChange={(e) => setNurseForm({ ...nurseForm, telefono: e.target.value })} />
-            </div>
-            <div>
-              <Label>Horario de inicio *</Label>
-              <Input type="time" value={nurseForm.horario_inicio}
-                onChange={(e) => setNurseForm({ ...nurseForm, horario_inicio: e.target.value })} />
-            </div>
-            <div>
-              <Label>Horario de fin *</Label>
-              <Input type="time" value={nurseForm.horario_fin}
-                onChange={(e) => setNurseForm({ ...nurseForm, horario_fin: e.target.value })} />
-            </div>
-            <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={nurseForm.activo}
-                  onChange={(e) => setNurseForm({ ...nurseForm, activo: e.target.checked })} />
-                Enfermera activa
-              </label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNurseDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveNurse} disabled={savingNurse}>
-              {savingNurse ? "Guardando…" : nurseEdit ? "Guardar cambios" : "Crear enfermera"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmar eliminación de enfermera */}
-      <AlertDialog open={!!nurseDel} onOpenChange={(o) => !o && setNurseDel(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar a Enf. {nurseDel?.nombre} {nurseDel?.apellidos}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción es permanente. Si la enfermera tiene citas o registros asociados,
-              no podrá eliminarse — en ese caso márcala como <strong>Inactiva</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingNurse}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteNurse} disabled={deletingNurse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deletingNurse ? "Eliminando…" : "Eliminar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Confirmar desvincular enfermera */}
-      <AlertDialog open={!!unlinkNurse} onOpenChange={(o) => !o && setUnlinkNurse(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Desvincular cuenta de Enf. {unlinkNurse?.nombre} {unlinkNurse?.apellidos}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              La cuenta de usuario no se elimina. La enfermera quedará sin acceso al sistema hasta que se vincule otra cuenta.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={unlinkingNurse}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleUnlinkNurse} disabled={unlinkingNurse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {unlinkingNurse ? "Desvinculando…" : "Desvincular"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Dialog: Vincular enfermera */}
-      <Dialog open={!!linkNurse} onOpenChange={(o) => !o && setLinkNurse(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Vincular cuenta a enfermera</DialogTitle>
-            <DialogDescription>
-              Enf. {linkNurse?.nombre} {linkNurse?.apellidos}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex gap-1.5">
-              <Button size="sm" variant={linkNurseMode === "new" ? "default" : "outline"} onClick={() => setLinkNurseMode("new")}>
-                Crear cuenta nueva
-              </Button>
-              <Button size="sm" variant={linkNurseMode === "existing" ? "default" : "outline"} onClick={() => setLinkNurseMode("existing")}>
-                Usar cuenta existente
-              </Button>
-            </div>
-            {linkNurseMode === "new" ? (
-              <>
-                <div>
-                  <Label>Correo</Label>
-                  <Input type="email" value={linkNurseEmail} onChange={(e) => setLinkNurseEmail(e.target.value)} placeholder="enfermera@clinica.mx" />
-                </div>
-                <div>
-                  <Label>Contraseña inicial</Label>
-                  <Input type="password" value={linkNursePassword} onChange={(e) => setLinkNursePassword(e.target.value)} placeholder="mínimo 12 caracteres" />
-                </div>
-              </>
-            ) : (
-              <div>
-                <Label>Usuario existente</Label>
-                <select
-                  className="w-full mt-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={linkNurseExistingUserId}
-                  onChange={(e) => setLinkNurseExistingUserId(e.target.value)}
-                >
-                  <option value="">Selecciona…</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.email}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLinkNurse(null)}>Cancelar</Button>
-            <Button onClick={handleLinkNurse} disabled={linkingNurse}>{linkingNurse ? "Vinculando…" : "Vincular"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Crear usuario */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nuevo usuario</DialogTitle>
-            <DialogDescription>Se creará confirmado y podrá iniciar sesión de inmediato.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Correo</Label>
-              <Input type="email" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} placeholder="correo@clinica.mx" />
-            </div>
-            <div>
-              <Label>Contraseña inicial</Label>
-              <Input type="password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="mínimo 12 caracteres" />
-            </div>
-            <div>
-              <Label>Rol</Label>
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {ROLE_OPTIONS.map((r) => (
-                  <Button
-                    key={r}
-                    type="button"
-                    size="sm"
-                    variant={createRole === r ? "default" : "outline"}
-                    onClick={() => setCreateRole(r)}
-                  >
-                    {ROLE_LABELS[r]}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            {["admin", "manager"].includes(createRole) && (
-              <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="create-pin">
-                    PIN de autorización <span className="text-destructive">*</span>
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Requerido para admin/gerente. Se usará para autorizar cierres de turno con diferencia.
-                  </p>
-                  <Input
-                    id="create-pin"
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="4-6 dígitos"
-                    value={createPin}
-                    onChange={(e) => setCreatePin(e.target.value.replace(/\D/g, ""))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="create-pin-confirm">Confirmar PIN</Label>
-                  <Input
-                    id="create-pin-confirm"
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="Repite el PIN"
-                    value={createPinConfirm}
-                    onChange={(e) => setCreatePinConfirm(e.target.value.replace(/\D/g, ""))}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={creating}>{creating ? "Creando…" : "Crear"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Editar correo */}
-      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar usuario</DialogTitle>
-            <DialogDescription>Actualiza el correo del usuario.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Correo</Label>
-              <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
-            <Button onClick={handleEdit} disabled={savingEdit}>{savingEdit ? "Guardando…" : "Guardar"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cambiar contraseña individual */}
-      <Dialog open={!!pwUser} onOpenChange={(o) => !o && setPwUser(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cambiar contraseña</DialogTitle>
-            <DialogDescription>{pwUser?.email}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Nueva contraseña</Label>
-              <Input type="password" value={pwValue} onChange={(e) => setPwValue(e.target.value)} placeholder="mínimo 12 caracteres" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPwUser(null)}>Cancelar</Button>
-            <Button onClick={handleSetPassword} disabled={savingPw}>{savingPw ? "Aplicando…" : "Cambiar"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Contraseña base masiva */}
-      <Dialog open={baseOpen} onOpenChange={setBaseOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Asignar contraseña base</DialogTitle>
-            <DialogDescription>
-              Se aplicará a <strong>todos los usuarios</strong> excepto los administradores permanentes.
-              Comunícala de forma segura y pide a cada usuario cambiarla al iniciar sesión.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Contraseña base</Label>
-              <Input type="password" value={basePw} onChange={(e) => setBasePw(e.target.value)} placeholder="mínimo 12 caracteres" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBaseOpen(false)}>Cancelar</Button>
-            <Button onClick={handleApplyBase} disabled={applyingBase}>
-              {applyingBase ? "Aplicando…" : "Aplicar a todos"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmar eliminación */}
-      <AlertDialog open={!!delUser} onOpenChange={(o) => !o && setDelUser(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar a {delUser?.email}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción es permanente y eliminará el acceso del usuario al sistema.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleting ? "Eliminando…" : "Eliminar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Set supervisor PIN */}
-      <Dialog open={!!pinUser} onOpenChange={(v) => !v && setPinUser(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4" /> PIN de autorización
-            </DialogTitle>
-            <DialogDescription>
-              Configura el PIN para <strong>{pinUser?.email}</strong>.
-              Déjalo vacío para conservar el PIN actual.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-1">
-            <div className="space-y-1.5">
-              <Label htmlFor="set-pin">Nuevo PIN (4-6 dígitos)</Label>
-              <Input
-                id="set-pin"
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="4-6 dígitos numéricos"
-                value={pinValue}
-                onChange={(e) => setPinValue(e.target.value.replace(/\D/g, ""))}
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="set-pin-confirm">Confirmar PIN</Label>
-              <Input
-                id="set-pin-confirm"
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="Repite el PIN"
-                value={pinConfirm}
-                onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPinUser(null)}>Cancelar</Button>
-            <Button
-              disabled={savingPin}
-              onClick={async () => {
-                if (!pinUser) return;
-                if (!pinValue) { toast.error("Ingresa un PIN"); return; }
-                if (!/^\d{4,6}$/.test(pinValue)) { toast.error("PIN debe ser 4-6 dígitos"); return; }
-                if (pinValue !== pinConfirm) { toast.error("Los PINs no coinciden"); return; }
-                setSavingPin(true);
-                const { error } = await (supabase as any).rpc("set_supervisor_pin", {
-                  p_user_id: pinUser.id,
-                  p_pin: pinValue,
-                } as never);
-                setSavingPin(false);
-                if (error) { toast.error(error.message || "No se pudo guardar el PIN"); return; }
-                toast.success("PIN actualizado");
-                setPinUser(null);
-              }}
-            >
-              {savingPin ? "Guardando…" : "Guardar PIN"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UserDialogs
+        createOpen={createOpen}
+        setCreateOpen={setCreateOpen}
+        createEmail={createEmail}
+        setCreateEmail={setCreateEmail}
+        createPassword={createPassword}
+        setCreatePassword={setCreatePassword}
+        createRole={createRole}
+        setCreateRole={setCreateRole}
+        createPin={createPin}
+        setCreatePin={setCreatePin}
+        createPinConfirm={createPinConfirm}
+        setCreatePinConfirm={setCreatePinConfirm}
+        creating={creating}
+        handleCreate={handleCreate}
+        editUser={editUser}
+        setEditUser={setEditUser}
+        editEmail={editEmail}
+        setEditEmail={setEditEmail}
+        savingEdit={savingEdit}
+        handleEdit={handleEdit}
+        pwUser={pwUser}
+        setPwUser={setPwUser}
+        pwValue={pwValue}
+        setPwValue={setPwValue}
+        savingPw={savingPw}
+        handleSetPassword={handleSetPassword}
+        baseOpen={baseOpen}
+        setBaseOpen={setBaseOpen}
+        basePw={basePw}
+        setBasePw={setBasePw}
+        applyingBase={applyingBase}
+        handleApplyBase={handleApplyBase}
+        delUser={delUser}
+        setDelUser={setDelUser}
+        deleting={deleting}
+        handleDelete={handleDelete}
+        pinUser={pinUser}
+        setPinUser={setPinUser}
+        pinValue={pinValue}
+        setPinValue={setPinValue}
+        pinConfirm={pinConfirm}
+        setPinConfirm={setPinConfirm}
+        savingPin={savingPin}
+        handleSavePin={handleSavePin}
+      />
     </div>
   );
 }
