@@ -21,7 +21,7 @@ Convención modelos: **Haiku 4.5** mecánico/copy · **Sonnet** dev principal ·
 | 9 | M2 SEO + M1 caso de estudio | Sonnet setup / Haiku copy | pendiente (2 cortas) |
 | 10 | S2 warnings advisors + S3 deps | Sonnet / Haiku | ✅ HECHO (2026-07-21) — S3: `npm audit fix` (brace-expansion + js-yaml, 2 high→0). S2: 3 fixes triviales en prod vía `apply_migration` (duplicate_index en notas_consulta, profiles dedup 4→3 policies, auth_rls_initplan en `multiclinic_access_restrictive` ×17 tablas). Verificado con advisors post-fix. Pendiente NO trivial (fuera de esta sesión): auditar 106 SECURITY DEFINER que tocan dinero contra la regla del CLAUDE.md, leaked password protection (toggle dashboard), pg_net fuera de public, resto de auth_rls_initplan/multiple_permissive_policies |
 | 11 | U2 chat ayuda humano | Sonnet | pendiente (media) |
-| 12 | E4 script drift migraciones | Sonnet | pendiente (corta) |
+| 12 | E4 script drift migraciones | Sonnet | ✅ HECHO (2026-07-21) — `scripts/check-migration-drift.ps1` (parsea `supabase migration list --linked`, exit 1 si hay remoto sin local), agregado a session-sync SKILL paso 1b. Probado contra estado real: detecta 18 drift (17 conocidas + `20260722005346` de la migración S2 de hoy vía MCP `apply_migration` — confirma que el MCP también genera drift, no solo Lovable) |
 | 13 | U3 deep-links, U5 a11y, U6 empty states | Sonnet / Haiku | pendiente (cortas) |
 | 14 | E5 índices BD | Sonnet | pendiente (corta) |
 | 15 | E6 activos fijos | BLOQUEADO (contador) | ⛔ esperar tasa fiscal de Pablo |

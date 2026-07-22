@@ -13,6 +13,7 @@ No correr `git status`, `graphify query` ni explorar código todavía — STATE.
 
 ## Al cerrar sesión (checklist, en este orden)
 1. `git status` — ¿hay cambios sin commitear que STATE.md no menciona? Decidir commit u omitir explícitamente.
+1b. `pwsh -File scripts/check-migration-drift.ps1` — si falla (exit 1), hay migrations aplicadas en remoto (Lovable o `apply_migration` vía MCP) sin archivo local. Anotar en STATE.md como deuda, no reparar a ciegas dentro del cierre de sesión (ver histórico: requiere revisar cada versión antes de `migration repair --status reverted`).
 2. `git log origin/main..HEAD --oneline` — ¿hay commits locales sin push? Confirmar con Pablo antes de pushear (dispara deploy Cloudflare vía GitHub Actions).
 3. Si se tocó código: `graphify update .` (AST-only, sin costo de API) para que `graphify-out/` no quede desincronizado.
 4. Actualizar `memoria/STATE.md`: mover completados a su sección, dejar solo pendientes reales. No dejar pendientes ya resueltos (pasó en sesión 41: push y `docs/app` ya resueltos pero STATE.md seguía diciendo "pendiente").
