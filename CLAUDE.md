@@ -181,7 +181,7 @@ Dos capas, una sola fuente de contenido (`docs/manual-usuario/*.md`):
 2. Insertar fila en `manual_paginas` (ruta, slug, titulo, modulo) — esto activa el botón "?" automáticamente.
 3. En `manual-site/src/components/HomepageFeatures/index.tsx`, cambiar `ready: false → true` para ese slug (si no, el build de Docusaurus falla por link roto a un doc inexistente).
 
-**Chat de ayuda ("hablar con humano"):** tablas `ayuda_chat_sesiones` / `ayuda_chat_mensajes` ya existen (estado por defecto `escalada`, sin IA conectada). UI pendiente. La columna `rol: asistente_ia` en `ayuda_chat_mensajes` queda lista para cuando se decida hosting de un modelo (Ollama requiere VM/servidor propio — Cloudflare Workers/Supabase Edge Functions no pueden correr un proceso persistente con modelo cargado); decisión pospuesta a propósito.
+**Chat de ayuda ("hablar con humano"):** IMPLEMENTADO completo (verificado 2026-07-21). `HelpChatWidget.tsx` (usuario, montado global en `AppLayout.tsx`) + `AyudaInterna.tsx` en `/ayuda-interna` (staff: panel sesiones tomar/cerrar/responder + base de conocimiento FAQ con candidatos aprendidos) + edge function `help-chat-ai` (Claude Haiku vía API, 3 tiers: saludo hardcoded → FAQ DB → Claude, auto-escala a humano por keyword/máx-3-mensajes-IA/error, rate-limited 30/h·user). Tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes` en uso real, no solo esquema.
 
 ### Regla general post-Lovable
 
