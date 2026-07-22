@@ -6,35 +6,51 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión decimoctava parte, 2026-07-22 — CERRADA por costo ($47+ USD). M1 caso de
-estudio (Pitch.tsx) YA HECHO y commiteado (a443327) esta misma sesión — no
-repetir. SIGUIENTE: ejecutar el plan de trazabilidad contable-administrativa,
-ya diseñado y guardado, arrancar directo con subagent-driven-development:
+Sesión decimonovena parte, 2026-07-22 — Trazabilidad contable-administrativa
+TERMINADA, 6/6 tasks, PR abierto: https://github.com/integricia-arch/clinica-mexico-spa/pull/20
+(branch `worktree-trazabilidad-contable`, worktree vivo en
+`.claude/worktrees/trazabilidad-contable` para iterar sobre feedback del PR
+— NO mergeado a main todavía, NO borrar el worktree).
 
-**1. Trazabilidad contable-administrativa (PRIORIDAD, arrancar aquí):**
-- Spec: `docs/superpowers/specs/2026-07-22-trazabilidad-contable-design.md`
-  (commit 252002f) — árbol de 13 tipos de nodo, dos troncos (compras→pagos,
-  ingresos), formato de nodo JSON, gaps documentados (pharmacy_sale sin FK a
-  póliza, limitación conocida, no bug).
-- Plan: `docs/superpowers/plans/2026-07-22-trazabilidad-contable.md` — 6 tasks
-  con código SQL/TSX completo, TDD, self-review ya hecho. Orden: Task 1 (RPC
-  sube la cadena) → Task 2 (RPC baja el árbol + contab_trazar) → Task 3
-  (contab_trazar_proveedor) → Task 4 (harness manual transaccional) → Task 5
-  (TrazabilidadTab buscar por evento) → Task 6 (buscar por proveedor + tab en
-  Contabilidad.tsx).
-- Ejecución elegida: **subagent-driven-development** (Pablo confirmó pese al
-  costo). Worktree YA CREADO: `.claude/worktrees/trazabilidad-contable`,
-  branch `worktree-trazabilidad-contable`, `.env` copiado, `npm install` hecho,
-  baseline de tests verde (22 archivos, 160 tests, todos pasan). Reentrar con
-  `EnterWorktree(path=".claude/worktrees/trazabilidad-contable")`, NO crear
-  worktree nuevo.
-- Nada de las 6 tasks se implementó todavía — sesión se cortó justo antes de
-  dispatchear el primer implementer. Empezar limpio en Task 1.
+**Trazabilidad contable-administrativa — CERRADA, esperando review/merge del PR:**
+- Ejecutado con subagent-driven-development: 6 tasks, cada uno implementer +
+  task-reviewer independiente, más revisión final de rama completa (opus).
+- RPCs en prod (`kyfkvdyxpvpiacyymldc`): `contab_trazar(p_tipo,p_id)`,
+  `contab_trazar_proveedor(p_proveedor_id)`, más los helpers internos
+  `_contab_trazar_raiz`/`_contab_trazar_nodo`/`_contab_trazar_usuario`.
+- Tab nueva "Trazabilidad" en `/contabilidad` (`TrazabilidadTab.tsx`) — buscar
+  por evento o por proveedor.
+- Harness manual transaccional: `supabase/scripts/test-trazabilidad-manual.sql`.
+- 162/162 tests, tsc limpio, build limpio.
+- **Hallazgo de seguridad Critical (Task 1, arreglado mismo día):** este
+  proyecto Supabase otorga EXECUTE a `anon` vía `ALTER DEFAULT PRIVILEGES`,
+  lo que evade `REVOKE EXECUTE FROM PUBLIC` — toda función `SECURITY DEFINER`
+  nueva en este proyecto necesita TAMBIÉN `REVOKE EXECUTE ... FROM anon`
+  explícito. **Agregar esta regla a CLAUDE.md junto al checklist de
+  SECURITY DEFINER existente — no se hizo todavía, pendiente.**
+- Hallazgo Important (revisión final, arreglado): `_contab_trazar_raiz` no
+  seguía la cadena de flujo de compra directa (orden sin solicitud previa) —
+  ahora hace fallback a `orden_id` cuando `facturas_proveedor.solicitud_id`
+  es NULL.
+- Migraciones nuevas: `20260723100000_trazabilidad_raiz.sql`,
+  `20260723110000_trazabilidad_nodo.sql`,
+  `20260723120000_trazabilidad_proveedor.sql`,
+  `20260723130000_trazabilidad_raiz_orden_fallback.sql`.
 
-**2. Después de trazabilidad: plan de actualización de /pitch** con las
-funcionalidades nuevas que vaya dejando la trazabilidad (Pablo lo pidió en
-paralelo, no se alcanzó a hacer esta sesión — brainstorm/spec desde cero,
-no requiere tocar BD, sesión barata).
+**SIGUIENTE:**
+1. Revisar/mergear PR #20 cuando Pablo lo autorice (o pedir merge local si
+   cambia de opinión).
+2. **Agregar la regla `REVOKE EXECUTE FROM anon` al checklist de
+   `CLAUDE.md`** — pendiente de esta sesión, no se hizo aún.
+3. Después de trazabilidad: plan de actualización de `/pitch` con las
+   funcionalidades nuevas que deja la trazabilidad (brainstorm/spec desde
+   cero, no toca BD, sesión barata).
+
+--- histórico (sesión decimoctava parte, 2026-07-22) ---
+CERRADA por costo ($47+ USD) justo antes de dispatchear el primer implementer
+de trazabilidad. M1 caso de estudio (Pitch.tsx) hecho y commiteado (a443327).
+Worktree/plan/spec dejados listos — ver sesión decimonovena arriba, ya
+ejecutado completo.
 
 --- histórico (sesión decimoséptima parte, 2026-07-22) ---
 M1 caso de estudio (`src/pages/Pitch.tsx`) HECHO — sección "Escenarios" (4
