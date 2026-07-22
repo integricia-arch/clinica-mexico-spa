@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   PITCH_STYLES, ScrollProgress, TEAL, GREEN, reveal, navLinks, stats,
-  modules, competitors, flow, pricing, escenarios, CellVal, PricingCard,
+  modules, competitors, flow, pricing, casoEstudio, CellVal, PricingCard,
   DashboardMockup, AnimatedCounter,
 } from "./pitch/pitchShared";
 import RoiCalculatorSection from "./pitch/RoiCalculatorSection";
@@ -529,36 +529,63 @@ export default function Pitch() {
         </div>
       </section>
 
-      {/* ESCENARIOS ILUSTRATIVOS */}
+      {/* CASO DE ESTUDIO ILUSTRATIVO */}
       <section style={{ padding: "96px 0", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
-          <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ textAlign: "center", maxWidth: 560, margin: "0 auto 52px" }}>
-            <div className="pr-label" style={{ marginBottom: 14 }}>Escenarios</div>
+          <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 52px" }}>
+            <div className="pr-label" style={{ marginBottom: 14 }}>Caso de estudio</div>
             <h2 className="pr-h" style={{ fontSize: "clamp(26px,4vw,40px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, color: "#0f172a" }}>
-              Resultados que buscamos para tu clínica.
+              Lo que buscamos resolver, en una clínica tipo.
             </h2>
             <p style={{ marginTop: 12, fontSize: 13, color: SLATE }}>
-              Escenarios ilustrativos basados en el diseño de la plataforma y datos públicos del sector — no son testimonios de clientes.
+              Escenario ilustrativo, no es un testimonio de cliente real — ver base al pie.
             </p>
           </motion.div>
-          <div className="pr-testi-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
-            {escenarios.map((e, i) => (
-              <motion.div key={e.title} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i}>
-                <div className="pr-card" style={{ padding: 26, height: "100%", display: "flex", flexDirection: "column" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 10, background: `${TEAL}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <e.icon size={19} color={TEAL} />
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{e.title}</div>
-                  </div>
-                  <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.75, flex: 1 }}>{e.quote}</p>
-                  <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid #f1f5f9", fontSize: 11, color: SLATE }}>
-                    {e.base}
-                  </div>
+          <motion.div variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }}>
+            <div className="pr-card pr-caso-grid" style={{ padding: 0, display: "grid", gridTemplateColumns: "1fr", overflow: "hidden" }}>
+              <div style={{ position: "relative", minHeight: 220 }}>
+                <img
+                  src={casoEstudio.fotoUrl}
+                  alt={casoEstudio.fotoAlt}
+                  style={{ width: "100%", height: "100%", minHeight: 220, objectFit: "cover", display: "block" }}
+                  loading="lazy"
+                />
+              </div>
+              <div style={{ padding: 28 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: TEAL, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 14 }}>
+                  {casoEstudio.clinica}
                 </div>
-              </motion.div>
-            ))}
-          </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Problema</div>
+                  <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.7 }}>{casoEstudio.problema}</p>
+                </div>
+
+                <div style={{ marginBottom: 22 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: GREEN, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Implementación</div>
+                  <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.7 }}>{casoEstudio.implementacion}</p>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10, marginBottom: 18 }}>
+                  {casoEstudio.metricas.map((m) => (
+                    <div key={m.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, background: "#f0fdff", border: "1px solid #e2e8f0" }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: `${TEAL}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <m.icon size={17} color={TEAL} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{m.label}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{m.antes} → <strong style={{ color: GREEN }}>{m.despues}</strong></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ paddingTop: 14, borderTop: "1px solid #f1f5f9", fontSize: 11, color: SLATE }}>
+                  {casoEstudio.base}
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 

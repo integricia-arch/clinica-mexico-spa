@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useInView } from "motion/react";
 import {
   MessageCircle, Calendar, Bell, Users,
-  Receipt, Inbox as InboxIcon, ClipboardCheck, Bot, Clock,
+  Inbox as InboxIcon, ClipboardCheck, Bot, Clock,
   CheckCircle2, Sparkles,
   UserCheck,
   ShoppingCart, BarChart3, Package, FileText, CreditCard,
@@ -63,7 +63,7 @@ a:focus-visible{outline:2px solid #0891B2;outline-offset:2px;border-radius:2px;}
   .pr-flow-h{display:flex!important;}
   .pr-flow-v{display:none!important;}
   .pr-tech-grid{grid-template-columns:1fr 1fr!important;}
-  .pr-testi-grid{grid-template-columns:repeat(4,1fr)!important;}
+  .pr-caso-grid{grid-template-columns:1fr 1.2fr!important;}
   .pr-roi-grid{grid-template-columns:1fr 1fr!important;}
   .pr-comp-scroll{overflow-x:visible!important;}
 }
@@ -238,32 +238,19 @@ export const pricing = [
   },
 ];
 
-export const escenarios = [
-  {
-    icon: Bell,
-    title: "Menos citas perdidas",
-    quote: "Una clínica que pierde 8-10 citas a la semana por no-shows puede bajar a 2 o menos con recordatorios automáticos y un bot que confirma de noche y en domingo.",
-    base: "Basado en tasas de no-show reportadas del 22-35% en consultorios sin recordatorios.",
-  },
-  {
-    icon: Receipt,
-    title: "Facturación sin contador extra",
-    quote: "RFC, CURP y CFDI 4.0 integrados desde el día uno: una clínica puede estar operando y timbrando en 48 horas, sin pagar aparte por cada factura.",
-    base: "Basado en el flujo de onboarding y el módulo CFDI nativo de la plataforma.",
-  },
-  {
-    icon: Banknote,
-    title: "Caja bajo control",
-    quote: "El corte de caja con conteo ciego está diseñado para detectar diferencias desde el primer mes — una sola diferencia de $3,200 encontrada a tiempo paga el sistema.",
-    base: "Basado en el diseño de conteo ciego y 3-Way Match del módulo de caja y compras.",
-  },
-  {
-    icon: Clock,
-    title: "De 3 sistemas sueltos a uno solo",
-    quote: "Una clínica que hoy lleva contabilidad en un sistema aparte, citas en otro y todo lo demás en Excel puede recuperar entre 3 y 8 horas administrativas a la semana al unificar todo en una sola plataforma.",
-    base: "Basado en encuestas de la industria sobre ahorro de tiempo administrativo al adoptar software de gestión de consultorios (rango típico reportado: 3-12 horas/semana).",
-  },
-];
+export const casoEstudio = {
+  fotoUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop",
+  fotoAlt: "Doctor genérico, foto de banco de imágenes — no representa a un cliente real",
+  clinica: "Clínica tipo: consultorio general, 2 doctores, ~35 consultas/día",
+  problema: "Recepción saturada con WhatsApp personal, citas perdidas por no contestar de noche, diferencias de caja detectadas hasta el corte mensual y facturación manual dependiente del contador.",
+  implementacion: "Bot IA por Telegram agenda y confirma 24/7 validando disponibilidad real en BD. Recordatorios automáticos T-24h/T-2h. Corte de caja con conteo ciego antes de mostrar el esperado. CFDI 4.0 timbrado directo desde el sistema.",
+  metricas: [
+    { icon: Bell, label: "No-shows", antes: "22–35%", despues: "< 5%" },
+    { icon: Banknote, label: "Diferencia de caja detectada", antes: "hasta el corte mensual", despues: "mismo turno" },
+    { icon: Clock, label: "Horas admin ahorradas", antes: "—", despues: "3–8 h/semana" },
+  ],
+  base: "Escenario ilustrativo basado en el diseño de la plataforma y datos públicos del sector (tasas de no-show 22-35%, ahorro administrativo 3-12 h/semana reportado en encuestas de software de gestión de consultorios) — no es un testimonio de cliente real.",
+};
 
 export const mockAppointments = [
   { initials: "LP", name: "Laura Pérez", time: "09:00", status: "Confirmada" },
