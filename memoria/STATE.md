@@ -6,21 +6,44 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-#8 COMPLETO — E2+E3 cerrados 100% (décima parte, 2026-07-21). Último pendiente
-del plan (AdminUsuarios.tsx, 2037 líneas) resuelto: split a
-src/pages/adminUsuarios/ (types.ts + UsersTab/DoctorsTab/NursesTab +
-UserDialogs/DoctorDialogs/NurseDialogs, 7 archivos nuevos, ninguno >290
-líneas). Main file 2037→1057 líneas — handlers de estado quedan ahí a
-propósito (acoplados a múltiples dialogs vía props, mismo patrón que
-Expedientes.tsx; 1057 excede la guía de 800 pero está justificado por el
-acoplamiento, no se forzó una extracción de hooks adicional por riesgo/costo
-en superficie sensible usuarios/roles). Sin cambio de lógica/JSX. tsc + build
-limpios, chunk confirmado lazy-loaded (AdminUsuarios-*.js 61.52 kB gzip
-13.98 kB). Commit 9a2d3d7, pusheado a main (deploy automático GH Actions).
+Sesión cerrada por costo alto (~$26+, subiendo). #8 y #9(M2) HECHOS esta
+sesión, ambos pusheados y desplegados.
 
-SIGUIENTE EN LA COLA por orden del plan: #9 M2 SEO + M1 caso de estudio
-(bloqueado parcialmente — falta que Pablo dé datos reales del piloto),
-luego #10 S2 advisors + S3 deps (corta).
+#9 M2 SEO — CERRADO (décima parte, 2026-07-21). Auditoría manual (curl +
+lectura directa, sin el orchestrator multi-agente completo — más barato,
+mismo resultado para lo que hacía falta):
+- index.html: fix marca "ClínicaMX"→"IntegriKa" en title/meta/og/twitter
+  (el schema.org Organization ya decía IntegriKa, quedaba inconsistente).
+  Agregado <link rel=canonical> + og:url (faltaban). schema.org
+  SoftwareApplication: +description +offers (precio $2,499 MXN/mes). Commit
+  dfda65d.
+- Blog nuevo en /manual/blog (Docusaurus, plugin blog habilitado — estaba
+  blog:false). Pre-renderiza cada post a HTML estático con
+  title/canonical/JSON-LD BlogPosting propios (a diferencia del SPA
+  principal en Vite que es 100% client-rendered y comparte el mismo
+  index.html/meta en todas las rutas — verificado con curl). 6 artículos
+  long-tail escritos (software clínica México, corte de caja farmacia,
+  CFDI 4.0 consultorio, expediente NOM-004, bot Telegram/WhatsApp
+  no-shows, multi-clínica RLS). manual-site/docusaurus.config.ts también
+  tenía el bug "ClínicaMX", corregido de paso. sitemap.xml actualizado con
+  las 7 URLs nuevas (/manual/blog + 6 posts). build:all verificado, commit
+  efc3eab, pusheado.
+- PENDIENTE de Pablo (no es código): robots.txt bloquea GPTBot/
+  Google-Extended/ClaudeBot vía Cloudflare "AI Crawl Control" — el bloqueo
+  se inyecta en el edge, NO viene del repo (public/robots.txt local ya
+  permite todo). Pablo dijo que quiere permitirlos → cambio pendiente en
+  dashboard Cloudflare (Websites → integrika.mx → AI Crawl Control /
+  Bots → Content Signals), no lo puedo hacer yo sin acceso al dashboard.
+- Deuda menor anotada, no resuelta: manual-site (Docusaurus) branding — ya
+  arreglado en docusaurus.config.ts (arriba). El manual de usuario (no el
+  blog) usa el mismo config, ya queda consistente.
+
+SIGUIENTE EN LA COLA por orden del plan: #9 M1 caso de estudio — BLOQUEADO,
+necesito de Pablo: (1) problema inicial del piloto (qué usaba antes:
+Excel/papel/otro sistema), (2) 3 métricas antes/después (no-shows %,
+diferencia de caja, horas admin ahorradas/semana), (3) si puedo usar
+nombre real de la clínica o "clínica piloto en México" genérico. Después:
+#10 S2 advisors + S3 deps (corta).
 
 --- histórico E2/E3 ---
 #8 E3+E2 — CERRADO (novena parte, 2026-07-21). E3 ya estaba completo desde
