@@ -6,15 +6,20 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión cerrada por costo alto ($15.46, subió rápido durante split de
-Expedientes.tsx) — no crítico, cierre normal preventivo. Nada roto ni a
+Sesión cerrada por costo alto ($41.07, siguió subiendo tras el split de
+Expedientes.tsx — mayormente overhead de conversación larga, no trabajo
+nuevo). No crítico, cierre preventivo explícito de Pablo. Nada roto ni a
 medias: git status limpio, todo commiteado y pusheado a main (incluye
-resync de graphify-out, commit 7eaa2b1).
+resync de graphify-out, commit cbbda33).
 
-Plan de avance: #1-#7 HECHAS, #8 E2+E3 CERRADO (solo queda AdminUsuarios.tsx
-pendiente a propósito, ver detalle abajo). Siguiente en la cola: sesión
-dedicada para AdminUsuarios.tsx, o pasar a #9 (M2 SEO + M1 caso de estudio)
-— ver plan-avance-ejecucion.md.
+Plan de avance (memoria/proyectos/plan-avance-ejecucion.md): #1-#7 HECHAS,
+#8 E2+E3 CASI CERRADO (solo queda AdminUsuarios.tsx). SIGUIENTE EN LA COLA
+por orden del plan: #8 AdminUsuarios.tsx — EN SESIÓN NUEVA Y FRESCA
+(2037 líneas, superficie sensible usuarios/roles, plan mismo dice
+"sesión dedicada, no apurarse" — por eso se cortó aquí en vez de forzarlo
+sobre esta sesión ya cara). Después de #8: #9 M2 SEO + M1 caso de estudio
+(bloqueado parcialmente — falta que Pablo dé datos reales del piloto),
+luego #10 S2 advisors + S3 deps (corta).
 
 #8 E3+E2 — CERRADO (novena parte, 2026-07-21). E3 ya estaba completo desde
 la sesión anterior (bundle 3.38MB → 676KB, commit bd3a2ed). E2 terminado
