@@ -6,64 +6,57 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión decimocuarta parte, 2026-07-22 — CERRADA. 4 commits locales SIN PUSH
-(23d0d60, c935543, ff28843, d51fe48) — confirmar con Pablo antes de pushear
-(dispara deploy Cloudflare vía GitHub Actions).
+Sesión decimoquinta parte, 2026-07-22 — CERRADA. Sin commits locales pendientes
+de push (los 4 de la sesión anterior ya están en origin/main). Esta sesión NO
+tocó código, solo verificación + limpieza de memoria desactualizada.
 
-- #13 U3/U5/U6 — CERRADO (commit 23d0d60). U3 deep-links ya estaba
-  (`/cita/:id` real en `Citas.tsx:315`, `?highlight=` fallback) — plan
-  desactualizado, sin cambios de código. U5 a11y (revisión manual, sin
-  dependencia nueva): labels asociados a inputs en `Citas.tsx`, fila de
-  tabla navegable por teclado (tabIndex/role=button/onKeyDown/focus-ring),
-  aria-pressed en toggles de status, aria-label en botones icon-only del
-  carrito POS (`PuntoDeVenta.tsx`) y buscador (`DashboardFilters.tsx`).
-  U6 empty states: CTA "Nueva cita" en Citas, CTA a `/ajustes` en
-  médicos/consultorios vacíos de `AdminDashboard.tsx`.
-- #16 white-label multi-clínica — CERRADO (commits c935543 + ff28843).
-  `Logo.tsx` recibe `logoUrl`/`name`/`subtitle`, `AppLayout` usa la clínica
-  activa en sidebar. Nueva página `/configuracion/consultorio`
-  (`ConfiguracionConsultorio.tsx`): admin sube logo (bucket `clinic-logos`,
-  RLS por `clinic_memberships`, escritura solo admin de esa clínica) y edita
-  nombre. Ticket POS (`TicketInterno.tsx`) ya tomaba `activeClinic.name`,
-  sin cambios ahí — CFDI/XML no lleva logo visual (dato, no imagen), fuera
-  de alcance. Migración `20260722040000_clinic_logos_bucket.sql` aplicada
-  en prod vía MCP `apply_migration`, advisors sin hallazgos nuevos.
-- #5 E1 tests RPC contables — CERRADO otra vez, con enfoque distinto al de
-  la sesión trece (commit d51fe48). Decisión explícita: NO montar
-  pgTAP/Supabase-local en CI (infra grande para una sola función SQL sin
-  lógica cliente que extraer). En su lugar: script versionado
-  `supabase/scripts/test_contab_generar_poliza_evento_MANUAL.sql`
-  (BEGIN/ROLLBACK, nunca commitea) corrido vía MCP `execute_sql` contra
-  prod. Cubre: split de 3 líneas cuando la cuenta de abono tiene
-  `iva_tratamiento='tasa_general'` (fase 9), balance debe=haber, monto
-  total 11600, IVA trasladado exacto 1600 centavos. Verde, rollback
-  confirmado sin dejar rastro (`SELECT count(*)` post-ejecución = 0).
-  Limitación documentada en el script: corre como rol postgres/service
-  (MCP), NO reproduce el bug conocido de `crear_poliza()` bajo
-  `authenticated`/`auth.uid()` real. Re-correr a mano tras cualquier
-  cambio a `contab_generar_poliza_evento`/`crear_poliza`/
-  `contab_resolver_regla`. Smoke E2E sigue sin hacerse (costo de sesión).
+- #8 E2/E3 code-splitting — CONFIRMADO 100% CERRADO (ya no queda pendiente).
+  `AdminUsuarios.tsx` SÍ se había partido en la sesión anterior sin que
+  STATE.md/plan lo reflejara: commit `9a2d3d7` (2026-07-21 18:25) lo bajó de
+  2038→1057 líneas, split en `src/pages/adminUsuarios/` (UsersTab,
+  DoctorsTab, NursesTab, DoctorDialogs, NurseDialogs, UserDialogs, types.ts).
+  Plan de avance actualizado.
+- Auditoría dirigida: ~35 de 47 funciones `SECURITY DEFINER` que tocan
+  dinero, revisadas contra checklist CLAUDE.md (search_path, sin grant a
+  anon/PUBLIC, check de tenant/rol como primera operación). Resultado:
+  limpio, sin hallazgos nuevos. 0 de 135 `SECURITY DEFINER` en `public`
+  expuestas a `anon` (verificado por query agregada, no solo la muestra).
+- Encontrado y corregido: la nota "`crear_poliza()` perdió el bypass
+  service_role/cron — bloqueante, sin arreglar" en CLAUDE.md estaba
+  desactualizada. El bug ya se había arreglado el mismo día documentado
+  (migraciones `20260721180000`/`20260721220000`, commit `6a10001`,
+  verificado leyendo el body actual de `crear_poliza`/`cancelar_poliza` en
+  prod: el bypass `auth.uid() IS NOT NULL AND NOT EXISTS(...)` está
+  presente). CLAUDE.md corregido para no repetir el falso pendiente.
 
-SIGUIENTE en la cola — 1 tarea real pendiente del plan de avance:
-- #8 E2/E3 code-splitting — CASI CERRADO, falta solo `AdminUsuarios.tsx`
-  (2037 líneas, saltado a propósito — componente monolítico sensible,
-  requiere sesión dedicada). Resto de E2/E3 ya hecho (ver
-  `memoria/proyectos/plan-avance-ejecucion.md` #8).
+SIGUIENTE en la cola: ninguna tarea de código real pendiente. Plan de
+avance (`memoria/proyectos/plan-avance-ejecucion.md`) 16/16 ✅ HECHO,
+sin sub-pendientes sueltos.
 
 Bloqueos humanos (Pablo, no técnico, sin cambio esta sesión):
 - E6 tasa depreciación equipo médico → confirmar con contador.
 - M1 datos del piloto real → para caso de estudio.
 - N2/N4 decisión final pricing → sesión de negocio.
+- Twilio (NO autorizado), textos legales (Aviso Privacidad/ToS/DPA),
+  oficial protección de datos, `VITE_GOOGLE_CLIENT_ID` → todo externo.
 
-Drift de migraciones: ahora 22 (subió de 19 — nuevas entradas de hoy por
-`apply_migration` MCP en #16 y #5-histórico). NO reparado, deuda
-acumulada, requiere sesión dedicada revisando cada versión antes de
-`migration repair`. `scripts/check-migration-drift.ps1` sigue verde
-(exit 0, solo reporta).
+Drift de migraciones: ahora 22 (subió de 22 anterior a mismo número —
+sin cambio real, ya estable; venía de `apply_migration` MCP en sesiones
+E5/E6/white-label del 21-22 jul). NO reparado, deuda acumulada conocida,
+requiere sesión dedicada revisando cada versión antes de
+`migration repair`. `scripts/check-migration-drift.ps1` reporta exit 1
+(hay drift) — comportamiento esperado, no es un fallo nuevo.
 
-Plan de avance-ejecución (`memoria/proyectos/plan-avance-ejecucion.md`):
-de 16 tareas originales, quedan solo #8 (parcial, arriba) y los 3
-bloqueos humanos. Todo lo demás ✅ HECHO.
+Si se quiere seguir con algo no bloqueado por humano: no queda nada del
+plan Fable. Próximo trabajo real sería deuda técnica opcional (auditoría
+`as any`/`as never`, revisión línea por línea de edge functions) o lo que
+Pablo traiga de nuevo.
+
+--- histórico (sesión decimocuarta parte, 2026-07-22) ---
+4 commits: 23d0d60 (#13 U3/U5/U6), c935543+ff28843 (#16 white-label),
+d51fe48 (#5 E1 tests RPC contables, script manual transaccional). Detalle
+completo en el diff de esta nota (git log -p memoria/STATE.md si se
+necesita el texto exacto).
 
 --- histórico (sesión decimotercera parte, 2026-07-21) ---
 Todo commiteado y pusheado (30cd5bb), sin commits pendientes.
