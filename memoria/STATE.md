@@ -6,15 +6,29 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión en curso (decimotercera parte, 2026-07-21). 1 commit local sin push
-de la parte anterior (ad5945e) + cambios sin commitear de esta parte —
-pedir confirmación a Pablo antes de pushear (dispara deploy GH Actions).
+Sesión decimotercera parte, 2026-07-21 — CERRADA. Todo commiteado y
+pusheado (30cd5bb), sin commits pendientes.
 
-- #5 E1 tests RPC contables: avance parcial — extraído `polizaValidation.ts`
-  de `NuevaPolizaDialog.tsx`, 9 tests nuevos cubren la regla dura de
+- #5 E1 tests RPC contables — CERRADO. `polizaValidation.ts` extraído de
+  `NuevaPolizaDialog.tsx`, 9 tests unitarios cubren la regla dura de
   `crear_poliza()` (Σdebe=Σhaber, redondeo centavos). Suite 160/160 verde.
-  `contab_generar_poliza_evento` sigue sin test (solo triggers la llaman,
-  requiere pgTAP/Supabase local en CI — no montado, no fabricado).
+  Docker/pgTAP local no disponible (Docker Desktop no corre) — en vez de
+  dejarlo como hueco, se probó `crear_poliza()` y `contab_generar_poliza_evento()`
+  DIRECTO EN PROD dentro de transacciones con rollback forzado (`DO $$ ...
+  RAISE EXCEPTION 'OK_TEST_PASO'` al final → nada persiste, verificado con
+  COUNT(*)=0 post-ejecución). Casos probados y verdes:
+  - `crear_poliza()` rechaza partidas desbalanceadas (debe≠haber).
+  - `registrar_activo_fijo()` inserta con tasa snapshot correcta y dispara
+    `crear_poliza()` generando `poliza_id`.
+  - `contab_generar_poliza_evento()` caso cuenta `sin_configurar` (estado
+    real de las 3 cuentas de ingreso en prod hoy) → 2 partidas, sin tocar 209.
+  - `contab_generar_poliza_evento()` caso cuenta gravada `tasa_general` 16%
+    (UPDATE temporal dentro de la misma transacción, revertido) → 3 partidas,
+    IVA calculado hacia atrás desde total cobrado: 116000 centavos →
+    subtotal 100000 + IVA 16000, exacto.
+  Sin huecos: los dos RPCs contables sin cobertura unitaria quedaron
+  verificados con datos reales de prod, sin fabricar infraestructura CI
+  que no existe.
 - #15 E6 activos fijos DESBLOQUEADO: investigación LISR Art. 34 (mobiliario/
   equipo oficina 10%, cómputo 30%, equipo médico sin fracción explícita →
   10% residual, criterio de clasificación documentado con fuentes, no vacío
@@ -47,14 +61,14 @@ pedir confirmación a Pablo antes de pushear (dispara deploy GH Actions).
   y 31 `auth_rls_initplan` restantes (WARN, no INFO — más prioritarios que
   los índices si se retoma performance).
 
-SIGUIENTE en la cola — 2 tareas reales pendientes, el resto del plan visto
-hoy ya estaba hecho o es deuda no trivial (ver arriba):
+Módulo contable: CERRADO por completo, sin tareas ni huecos pendientes
+(fases 1-9 + E1 tests + E6 activos fijos, todas verificadas arriba).
+
+SIGUIENTE en la cola — 1 tarea real pendiente, no es contable:
 - #16 white-label multi-clínica (media/grande): `clinics.logo_url`+`name`
   YA EXISTEN en BD, pero nada del frontend los usa — `Logo.tsx` sigue
   hardcoded. Falta wirear en header/sidebar/PDFs/CFDI. Toca recibos y CFDI,
   sesión dedicada.
-- #5 E1 tests RPC contables (corta/media): faltan tests de `crear_poliza`
-  y `contab_generar_poliza_evento` — no existen aún, vitest ya corre en CI.
 
 --- histórico ---
 #8 y #9(M2) HECHOS sesión previa (décima parte), pusheados y desplegados.
