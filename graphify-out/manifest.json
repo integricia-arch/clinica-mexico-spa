@@ -10,9 +10,9 @@
     "semantic_hash": "8d0786950d5a84d8965fc15033db60df"
   },
   "manual-site/docusaurus.config.ts": {
-    "mtime": 1781627656.9902277,
-    "ast_hash": "f999468217c61da42641552a0e3f9e87",
-    "semantic_hash": "f999468217c61da42641552a0e3f9e87"
+    "mtime": 1784680602.0786774,
+    "ast_hash": "5bdee10d9c5e9231e9b263e8669aae88",
+    "semantic_hash": ""
   },
   "manual-site/package.json": {
     "mtime": 1781627808.699891,
@@ -1415,8 +1415,8 @@
     "semantic_hash": "8a6636ed553c5a8c7b850bbc534f0765"
   },
   "src/pages/AdminUsuarios.tsx": {
-    "mtime": 1784565388.786751,
-    "ast_hash": "8c8aea50da65970726ee15780fda42f8",
+    "mtime": 1784679895.9723291,
+    "ast_hash": "d35dc31564f89d29daa1b6b0bedb79c7",
     "semantic_hash": ""
   },
   "src/pages/Agenda.tsx": {
@@ -4005,9 +4005,9 @@
     "semantic_hash": "3fd43aee929472123eda054f0fa2dd0c"
   },
   "index.html": {
-    "mtime": 1783274591.3227017,
-    "ast_hash": "8bdf30923b454995200343391833129d",
-    "semantic_hash": "8bdf30923b454995200343391833129d"
+    "mtime": 1784680264.2052133,
+    "ast_hash": "02047fee7b897938dfec75d0be846b49",
+    "semantic_hash": ""
   },
   "integrica compracion/integrica comparacion.md": {
     "mtime": 1781975928.7606914,
@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784677768.0630696,
-    "ast_hash": "1bc2bc8d079c6f8accab640b4c334e11",
+    "mtime": 1784680901.1265125,
+    "ast_hash": "0059cc318481e262b5ecb9b2179b2fda",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -5272,6 +5272,76 @@
   "src/pages/expedientes/types.ts": {
     "mtime": 1784677509.92894,
     "ast_hash": "605d13ba63a3ebe1e764b6408d60dd7b",
+    "semantic_hash": ""
+  },
+  "src/pages/adminUsuarios/DoctorDialogs.tsx": {
+    "mtime": 1784679703.7748034,
+    "ast_hash": "025bc89ff5dc9db6f851e340d1fd1181",
+    "semantic_hash": ""
+  },
+  "src/pages/adminUsuarios/DoctorsTab.tsx": {
+    "mtime": 1784679643.552666,
+    "ast_hash": "bf86efaa17764f0bbefccbdf61564faf",
+    "semantic_hash": ""
+  },
+  "src/pages/adminUsuarios/NurseDialogs.tsx": {
+    "mtime": 1784679734.7793207,
+    "ast_hash": "ac5d88f61bbb68a8475f7eea04a3e860",
+    "semantic_hash": ""
+  },
+  "src/pages/adminUsuarios/NursesTab.tsx": {
+    "mtime": 1784679660.8211725,
+    "ast_hash": "b3016adfd3b935a62bd5385a7a10d13b",
+    "semantic_hash": ""
+  },
+  "src/pages/adminUsuarios/UserDialogs.tsx": {
+    "mtime": 1784679765.9952319,
+    "ast_hash": "69a0797577941f1cb07f4783f4c73102",
+    "semantic_hash": ""
+  },
+  "src/pages/adminUsuarios/UsersTab.tsx": {
+    "mtime": 1784679622.5425682,
+    "ast_hash": "354ef539378e1dc3d421831f6a318f04",
+    "semantic_hash": ""
+  },
+  "src/pages/adminUsuarios/types.ts": {
+    "mtime": 1784679589.2950974,
+    "ast_hash": "0419ac1f261755d3bdcd6443ec9c5e16",
+    "semantic_hash": ""
+  },
+  "manual-site/blog/2026-07-21-bot-whatsapp-telegram-citas-clinica/index.md": {
+    "mtime": 1784680779.5314484,
+    "ast_hash": "4df8ddc23732dc9253a4f478d9977dff",
+    "semantic_hash": ""
+  },
+  "manual-site/blog/2026-07-21-cfdi-4-0-consultorio-medico/index.md": {
+    "mtime": 1784680779.591714,
+    "ast_hash": "caa28df1da00624e90a802f6c0c01d69",
+    "semantic_hash": ""
+  },
+  "manual-site/blog/2026-07-21-corte-de-caja-farmacia/index.md": {
+    "mtime": 1784680779.650368,
+    "ast_hash": "8bde0dbe6ab113587b00b02fdcb0684b",
+    "semantic_hash": ""
+  },
+  "manual-site/blog/2026-07-21-expediente-clinico-nom-004/index.md": {
+    "mtime": 1784680779.7051082,
+    "ast_hash": "d88bec7be53daff7062e7fc8ea67102a",
+    "semantic_hash": ""
+  },
+  "manual-site/blog/2026-07-21-software-multi-clinica-multi-sede/index.md": {
+    "mtime": 1784680779.7633836,
+    "ast_hash": "b1afb5034630bf70ddcc0d9c1186c205",
+    "semantic_hash": ""
+  },
+  "manual-site/blog/2026-07-21-software-para-clinica-en-mexico/index.md": {
+    "mtime": 1784680779.8205245,
+    "ast_hash": "07edd50662ca90ed5e3ab8b008f48b69",
+    "semantic_hash": ""
+  },
+  "manual-site/blog/authors.yml": {
+    "mtime": 1784680811.3672006,
+    "ast_hash": "46b505b759c9deacea10b81a22802cf0",
     "semantic_hash": ""
   }
 }
