@@ -6,25 +6,28 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión cerrada por costo alto ($41.07, siguió subiendo tras el split de
-Expedientes.tsx — mayormente overhead de conversación larga, no trabajo
-nuevo). No crítico, cierre preventivo explícito de Pablo. Nada roto ni a
-medias: git status limpio, todo commiteado y pusheado a main (incluye
-resync de graphify-out, commit cbbda33).
+#8 COMPLETO — E2+E3 cerrados 100% (décima parte, 2026-07-21). Último pendiente
+del plan (AdminUsuarios.tsx, 2037 líneas) resuelto: split a
+src/pages/adminUsuarios/ (types.ts + UsersTab/DoctorsTab/NursesTab +
+UserDialogs/DoctorDialogs/NurseDialogs, 7 archivos nuevos, ninguno >290
+líneas). Main file 2037→1057 líneas — handlers de estado quedan ahí a
+propósito (acoplados a múltiples dialogs vía props, mismo patrón que
+Expedientes.tsx; 1057 excede la guía de 800 pero está justificado por el
+acoplamiento, no se forzó una extracción de hooks adicional por riesgo/costo
+en superficie sensible usuarios/roles). Sin cambio de lógica/JSX. tsc + build
+limpios, chunk confirmado lazy-loaded (AdminUsuarios-*.js 61.52 kB gzip
+13.98 kB). Commit 9a2d3d7, pusheado a main (deploy automático GH Actions).
 
-Plan de avance (memoria/proyectos/plan-avance-ejecucion.md): #1-#7 HECHAS,
-#8 E2+E3 CASI CERRADO (solo queda AdminUsuarios.tsx). SIGUIENTE EN LA COLA
-por orden del plan: #8 AdminUsuarios.tsx — EN SESIÓN NUEVA Y FRESCA
-(2037 líneas, superficie sensible usuarios/roles, plan mismo dice
-"sesión dedicada, no apurarse" — por eso se cortó aquí en vez de forzarlo
-sobre esta sesión ya cara). Después de #8: #9 M2 SEO + M1 caso de estudio
+SIGUIENTE EN LA COLA por orden del plan: #9 M2 SEO + M1 caso de estudio
 (bloqueado parcialmente — falta que Pablo dé datos reales del piloto),
 luego #10 S2 advisors + S3 deps (corta).
 
+--- histórico E2/E3 ---
 #8 E3+E2 — CERRADO (novena parte, 2026-07-21). E3 ya estaba completo desde
 la sesión anterior (bundle 3.38MB → 676KB, commit bd3a2ed). E2 terminado
-esta sesión en los 3 archivos grandes restantes, todos <800 líneas, sin
-cambio de lógica/JSX, tsc+build limpios en cada uno:
+esa sesión en los 3 archivos grandes restantes (más AdminUsuarios.tsx
+cerrado en la décima parte, arriba), todos <800 líneas salvo el caso ya
+justificado, sin cambio de lógica/JSX, tsc+build limpios en cada uno:
 - CaminoPaciente.tsx 1148→253 líneas (commit dac30ba) — 8 subcomponentes
   (paneles, sheet, dialogs) a src/pages/configuracion/caminoPaciente/.
 - CajaTurno.tsx 971→271 líneas (commit bb8213b) — dialogs + HistorialTurnos
@@ -35,11 +38,7 @@ cambio de lógica/JSX, tsc+build limpios en cada uno:
   dialogs, helpers de estudios y tipos a src/pages/expedientes/. Handlers
   de estado quedan en el archivo principal a propósito (acoplados a
   múltiples dialogs vía props).
-
-Pendiente (única cosa que falta del plan #8):
-- AdminUsuarios.tsx (2037 líneas) — SALTADO A PROPÓSITO: es un solo
-  componente monolítico (no varias funciones separables), superficie
-  sensible (gestión usuarios/roles). Requiere sesión dedicada, no apurarse.
+- AdminUsuarios.tsx 2037→1057 líneas (commit 9a2d3d7) — ver arriba.
 
 #7 U4 onboarding primer uso — CERRADO 2026-07-21 (octava parte): checklist de
 activación en AdminDashboard (doctor → servicio → primera cita), derivado de
