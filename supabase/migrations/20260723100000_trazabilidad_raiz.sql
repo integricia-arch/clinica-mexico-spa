@@ -16,6 +16,8 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public._contab_trazar_usuario(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public._contab_trazar_usuario(uuid) TO authenticated;
+-- ALTER DEFAULT PRIVILEGES en este proyecto otorga EXECUTE directo a anon (no via PUBLIC) — revoke explícito requerido.
+REVOKE EXECUTE ON FUNCTION public._contab_trazar_usuario(uuid) FROM anon;
 
 CREATE OR REPLACE FUNCTION public._contab_trazar_raiz(p_tipo text, p_id uuid)
 RETURNS TABLE(tipo text, id uuid, clinic_id uuid)
@@ -97,3 +99,5 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public._contab_trazar_raiz(text, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public._contab_trazar_raiz(text, uuid) TO authenticated;
+-- ALTER DEFAULT PRIVILEGES en este proyecto otorga EXECUTE directo a anon (no via PUBLIC) — revoke explícito requerido.
+REVOKE EXECUTE ON FUNCTION public._contab_trazar_raiz(text, uuid) FROM anon;
