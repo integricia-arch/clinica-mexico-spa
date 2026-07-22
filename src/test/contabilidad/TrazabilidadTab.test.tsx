@@ -43,4 +43,30 @@ describe("TrazabilidadTab", () => {
       expect(screen.getByText(/Sin cotizaciones registradas aún/i)).toBeInTheDocument();
     });
   });
+
+  it("busca por proveedor y renderiza cada árbol devuelto", async () => {
+    (supabase.rpc as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [
+        {
+          tipo: "solicitud_compra", id: "sc-1", folio: "SC-004", fecha: "2026-07-12",
+          monto_centavos: null, estado: "aprobada",
+          creado_por: { user_id: "u1", nombre: "Ana" }, autorizado_por: null,
+          hijos: [],
+        },
+      ],
+      error: null,
+    });
+
+    render(<TrazabilidadTab />);
+
+    // ponytail: Radix TabsTrigger activates on mousedown/keydown/focus, not click — jsdom fireEvent.click alone never switches tabs.
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /por proveedor/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /por proveedor/i }));
+    fireEvent.change(screen.getByLabelText(/id de proveedor/i), { target: { value: "prov-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /buscar cadenas/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("SC-004")).toBeInTheDocument();
+    });
+  });
 });
