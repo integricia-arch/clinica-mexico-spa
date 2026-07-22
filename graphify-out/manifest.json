@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784678826.5105665,
-    "ast_hash": "258baa8233650d6b8ba390d865d6eccb",
+    "mtime": 1784681287.635591,
+    "ast_hash": "405da68760eef69eb5281db6c4732d27",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5130,8 +5130,8 @@
     "semantic_hash": ""
   },
   "src/pages/pitch/pitchShared.tsx": {
-    "mtime": 1784659357.237637,
-    "ast_hash": "84d3adcf0ee762628978f911f2f5d100",
+    "mtime": 1784681243.0380218,
+    "ast_hash": "b44c17f5316cafd915aad760d364542a",
     "semantic_hash": ""
   },
   "src/pages/configuracion/caminoPaciente/CatalogsPanel.tsx": {

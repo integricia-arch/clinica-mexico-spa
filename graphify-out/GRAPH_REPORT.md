@@ -1,7 +1,7 @@
 # Graph Report - clinica-mexico-spa  (2026-07-21)
 
 ## Corpus Check
-- 1038 files · ~1,138,504 words
+- 1038 files · ~1,138,606 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e5ce42f7`
+- Built from commit: `40b0eaf1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -3272,7 +3272,7 @@ Nodes (14): agrupar(), fmtMXN(), MovimientoSimple, VerAsientoContableButton(), C
   public/placeholder.svg · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **4588 isolated node(s):** `TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN`, `PRÓXIMA ACCIÓN: tarea #4 (N2/N3/N4 pricing) CERRADA 2026-07-21 (Fable 5). Decisión y unit economics en `memoria/proyectos/N2-N3-N4-decision-unit-economics.md`. Siguiente para Sonnet: check de módulo en `cfdi-timbrar` (gap alta), gate BI en `kpis_dashboard`, marcar agenda como core en catálogo. Bloqueante de negocio: contratar PAC de timbrado antes de vender CFDI.`, `PRÓXIMA ACCIÓN (histórica): sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).`, `PRÓXIMA ACCIÓN (sesión anterior, 2026-07-21 original): sesión cerrada 2026-07-21. Trazabilidad reporte↔trámite COMPLETA Y VERIFICADA EN BROWSER (Fases 0-3). Corrector de huecos contables construido y verificado. **Bug bloqueante de `crear_poliza()` (perdió bypass service_role en fase 7) ENCONTRADO Y ARREGLADO** — migración `20260721180000`, commit `6a10001`. **Los 5 honorarios devengados sin póliza desde junio YA SE APLICARON** (movimientos↔pólizas 7=7, sin duplicados, verificado por SQL). Quedan puntos 3-6 (ver abajo) para sesión nueva. **Costo sesión 2026-07-21: ~$650+ — por MUCHO el más caro del proyecto (anterior récord ~$244), casi 3x. Causa: se mezcló verificación+feature nueva+auditoría+feature grande+3 subagentes+debugging en vivo+fix de bug crítico en una sola sesión, ignorando 10+ avisos de costo crítico del hook. Próxima sesión: cortar por tema DE VERDAD — un hook de costo crítico repetido es señal de parar la sesión, no de seguir con más agentes. Aprendizajes guardados en memoria (`~/.claude/projects/.../memory/`), 4 lessons + 1 project nuevas fechadas 2026-07-21.**`, `Sesión 2026-07-21 (tercera parte) — Optimus/mcp-sentinel verificado, sin código nuevo` (+4583 more)
+- **4588 isolated node(s):** `Orden de ejecución + estado`, `Bloqueos humanos (Pablo)`, `Detalle tarea #3 (siguiente) — S1 rate limiting · Opus 4.8`, `mockAppointments`, `TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN` (+4583 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **875 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -3289,7 +3289,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **Why does `qrcode` connect `entregaTurnoHelpers.ts` to `package`?**
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
-- **What connects `TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN`, `PRÓXIMA ACCIÓN: tarea #4 (N2/N3/N4 pricing) CERRADA 2026-07-21 (Fable 5). Decisión y unit economics en `memoria/proyectos/N2-N3-N4-decision-unit-economics.md`. Siguiente para Sonnet: check de módulo en `cfdi-timbrar` (gap alta), gate BI en `kpis_dashboard`, marcar agenda como core en catálogo. Bloqueante de negocio: contratar PAC de timbrado antes de vender CFDI.`, `PRÓXIMA ACCIÓN (histórica): sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).` to the rest of the system?**
+- **What connects `Orden de ejecución + estado`, `Bloqueos humanos (Pablo)`, `Detalle tarea #3 (siguiente) — S1 rate limiting · Opus 4.8` to the rest of the system?**
   _4588 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `src/features/facturacion` be split into smaller, more focused modules?**
   _Cohesion score 0.05084745762711865 - nodes in this community are weakly interconnected._

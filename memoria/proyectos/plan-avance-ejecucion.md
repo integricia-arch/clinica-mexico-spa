@@ -19,7 +19,7 @@ Convención modelos: **Haiku 4.5** mecánico/copy · **Sonnet** dev principal ·
 | 7 | U4 onboarding primer uso | Sonnet | ✅ HECHO (2026-07-21) — checklist derivado de datos reales (doctors/servicios/appointments), commit e85f3cc, pusheado (deploy auto vía GitHub Actions) |
 | 8 | E3 code-splitting + E2 partir archivos | Sonnet / Haiku | 🟡 CASI CERRADO (2026-07-21, novena parte) — E3 HECHO: todas las rutas lazy-loaded, bundle inicial 3.38MB→676KB (commit bd3a2ed). E2 HECHO en CaminoPaciente (1148→253, dac30ba), CajaTurno (971→271, bb8213b), BI (954→148, 214a0da), Expedientes (934→514, 1fb1969), Pitch (1387→723, 0dd610e). Solo pendiente: AdminUsuarios.tsx (2037, saltado a propósito — componente monolítico sensible, requiere sesión dedicada) |
 | 9 | M2 SEO + M1 caso de estudio | Sonnet setup / Haiku copy | pendiente (2 cortas) |
-| 10 | S2 warnings advisors + S3 deps | Sonnet / Haiku | pendiente (corta) |
+| 10 | S2 warnings advisors + S3 deps | Sonnet / Haiku | ✅ HECHO (2026-07-21) — S3: `npm audit fix` (brace-expansion + js-yaml, 2 high→0). S2: 3 fixes triviales en prod vía `apply_migration` (duplicate_index en notas_consulta, profiles dedup 4→3 policies, auth_rls_initplan en `multiclinic_access_restrictive` ×17 tablas). Verificado con advisors post-fix. Pendiente NO trivial (fuera de esta sesión): auditar 106 SECURITY DEFINER que tocan dinero contra la regla del CLAUDE.md, leaked password protection (toggle dashboard), pg_net fuera de public, resto de auth_rls_initplan/multiple_permissive_policies |
 | 11 | U2 chat ayuda humano | Sonnet | pendiente (media) |
 | 12 | E4 script drift migraciones | Sonnet | pendiente (corta) |
 | 13 | U3 deep-links, U5 a11y, U6 empty states | Sonnet / Haiku | pendiente (cortas) |
