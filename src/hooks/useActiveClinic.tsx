@@ -14,6 +14,7 @@ export interface ClinicLite {
   id: string;
   code: string;
   name: string;
+  logo_url: string | null;
   timezone: string | null;
   country: string | null;
   status: string;
@@ -86,7 +87,7 @@ export function ActiveClinicProvider({ children }: { children: ReactNode }) {
       // Cargar memberships activas + datos de clinic + rol por clínica
       const { data: memberships, error: mErr } = await supabase
         .from("clinic_memberships")
-        .select("clinic_id, role, clinics:clinic_id(id, code, name, timezone, country, status, subscription_status, grace_period_ends_at)")
+        .select("clinic_id, role, clinics:clinic_id(id, code, name, logo_url, timezone, country, status, subscription_status, grace_period_ends_at)")
         .eq("user_id", user.id)
         .eq("status", "active");
 
@@ -118,7 +119,7 @@ export function ActiveClinicProvider({ children }: { children: ReactNode }) {
       if (finalList.length === 0 && isGlobalAdmin) {
         const { data: def } = await supabase
           .from("clinics")
-          .select("id, code, name, timezone, country, status, subscription_status, grace_period_ends_at")
+          .select("id, code, name, logo_url, timezone, country, status, subscription_status, grace_period_ends_at")
           .eq("code", DEFAULT_CODE)
           .maybeSingle();
         if (def) finalList = [def as ClinicLite];

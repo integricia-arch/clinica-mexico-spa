@@ -31,6 +31,7 @@ const MachoteReceta = React.lazy(() => import("@/pages/configuracion/MachoteRece
 const ConfiguracionCFDI = React.lazy(() => import("@/pages/configuracion/ConfiguracionCFDI"));
 const ConfiguracionPagos = React.lazy(() => import("@/pages/configuracion/ConfiguracionPagos"));
 const ConfiguracionEmail = React.lazy(() => import("@/pages/configuracion/ConfiguracionEmail"));
+const ConfiguracionConsultorio = React.lazy(() => import("@/pages/configuracion/ConfiguracionConsultorio"));
 const ConfiguracionNotificaciones = React.lazy(() => import("@/pages/configuracion/ConfiguracionNotificaciones"));
 const RecetaImprimir = React.lazy(() => import("@/pages/RecetaImprimir"));
 const RecetaBitacora = React.lazy(() => import("@/pages/RecetaBitacora"));
@@ -136,6 +137,7 @@ const App = () => (
                           <Route path="/configuracion/facturacion" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracionCFDI /></ProtectedRoute>} />
                           <Route path="/configuracion/pagos" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracionPagos /></ProtectedRoute>} />
                           <Route path="/configuracion/email" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracionEmail /></ProtectedRoute>} />
+                          <Route path="/configuracion/consultorio" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracionConsultorio /></ProtectedRoute>} />
                           <Route path="/configuracion/notificaciones" element={<ProtectedRoute allowedRoles={["admin"]}><ConfiguracionNotificaciones /></ProtectedRoute>} />
                           <Route path="/caja/turno" element={<ProtectedRoute allowedRoles={["admin","manager","cajero"]}><CajaTurno /></ProtectedRoute>} />
                           <Route path="/caja" element={<ProtectedRoute allowedRoles={["admin","manager","cajero","receptionist"]}><TurnoGuard cajaFilter="general"><Caja /></TurnoGuard></ProtectedRoute>} />

@@ -80,8 +80,8 @@
     "semantic_hash": "9965bb421dab910f32dbf9e2cf859e4a"
   },
   "src/App.tsx": {
-    "mtime": 1784659088.1560254,
-    "ast_hash": "784f2ed9e993f3fe11901c73a1379623",
+    "mtime": 1784690816.19817,
+    "ast_hash": "dea63b8cf88c8ad5d54e5daa3655d8f8",
     "semantic_hash": ""
   },
   "src/assets/lottie/online-health-report.json": {
@@ -90,8 +90,8 @@
     "semantic_hash": "0b6bd020793aeb9a2ed53d8cbe5a46b9"
   },
   "src/components/AppLayout.tsx": {
-    "mtime": 1784436759.3183136,
-    "ast_hash": "c214207d76929979868c7dc577e4854e",
+    "mtime": 1784690774.8467479,
+    "ast_hash": "c2f026f54527c0708e589e3891bae073",
     "semantic_hash": ""
   },
   "src/components/ErrorBoundary.tsx": {
@@ -110,9 +110,9 @@
     "semantic_hash": "baa58b93e9e174d6a29b4effa1a0ee8d"
   },
   "src/components/Logo.tsx": {
-    "mtime": 1783274591.3438582,
-    "ast_hash": "bd04f7693d3cab8939942da5433d677f",
-    "semantic_hash": "bd04f7693d3cab8939942da5433d677f"
+    "mtime": 1784690761.9417295,
+    "ast_hash": "c73a60fe725e74bd864bbba1baef0470",
+    "semantic_hash": ""
   },
   "src/components/ManualButton.tsx": {
     "mtime": 1783363386.793224,
@@ -695,9 +695,9 @@
     "semantic_hash": "de1fbcd5cad13801bf6cc0b7d3911ddb"
   },
   "src/features/centro-control/components/DashboardFilters.tsx": {
-    "mtime": 1779975703.6496863,
-    "ast_hash": "8cfeb7b8cae4b8dec1d90b3606076299",
-    "semantic_hash": "8cfeb7b8cae4b8dec1d90b3606076299"
+    "mtime": 1784728882.64034,
+    "ast_hash": "9c8f407ee22821e5142f85b6da39758a",
+    "semantic_hash": ""
   },
   "src/features/centro-control/components/DoctorLoadCard.tsx": {
     "mtime": 1779975703.6512136,
@@ -935,8 +935,8 @@
     "semantic_hash": "600088b43af802d18ccf5ec063546750"
   },
   "src/features/farmacia/PuntoDeVenta.tsx": {
-    "mtime": 1784247235.3849144,
-    "ast_hash": "3e2412f9ea644a24104909a4dbbfb20e",
+    "mtime": 1784728839.381218,
+    "ast_hash": "63b9e4bbfd5d5c4a87269f184b840929",
     "semantic_hash": ""
   },
   "src/features/farmacia/RecetaValidacionModal.tsx": {
@@ -1150,8 +1150,8 @@
     "semantic_hash": "b11daea29977597a85e1da32dbd6c32d"
   },
   "src/hooks/useActiveClinic.tsx": {
-    "mtime": 1784597316.1981435,
-    "ast_hash": "6be33cb8dce0ee4566dd8dba8ae7174c",
+    "mtime": 1784690738.4824092,
+    "ast_hash": "074fab56e307282787575739efe1f82b",
     "semantic_hash": ""
   },
   "src/hooks/useAuditLog.ts": {
@@ -1390,8 +1390,8 @@
     "semantic_hash": "b74912e670fda595662ecdea8f05a4a5"
   },
   "src/pages/AdminDashboard.tsx": {
-    "mtime": 1784658863.8870044,
-    "ast_hash": "ff3164218e6af13610ce4516c1af89af",
+    "mtime": 1784728943.6161454,
+    "ast_hash": "c8c52b48e34a22da841e8ceea6430ddd",
     "semantic_hash": ""
   },
   "src/pages/AdminDiagnosticoMulticlinica.tsx": {
@@ -1475,8 +1475,8 @@
     "semantic_hash": ""
   },
   "src/pages/Citas.tsx": {
-    "mtime": 1784617718.091156,
-    "ast_hash": "ff88406d35885a5c678d638193c76bc9",
+    "mtime": 1784728918.7954469,
+    "ast_hash": "35dd3f7d705a7af9b5e3f8d9fa1834d6",
     "semantic_hash": ""
   },
   "src/pages/Compras.tsx": {
@@ -1485,8 +1485,8 @@
     "semantic_hash": "1510e19ffb08a7b224048e491f001e1d"
   },
   "src/pages/Configuracion.tsx": {
-    "mtime": 1784565388.7887502,
-    "ast_hash": "e5bc41fecade5614dc71c9cbd8fb407c",
+    "mtime": 1784690821.591791,
+    "ast_hash": "a3a43f4b3d1b0e712e9ca04f9916ce6d",
     "semantic_hash": ""
   },
   "src/pages/Dashboard.tsx": {
@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784688641.7419693,
-    "ast_hash": "f67d94a16825d5981721c0e3c46964e0",
+    "mtime": 1784729021.4434848,
+    "ast_hash": "607be8860335008ab52546b88fda4494",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5367,6 +5367,16 @@
   "supabase/migrations/20260722030000_activos_fijos_tasas_depreciacion.sql": {
     "mtime": 1784688330.1411529,
     "ast_hash": "5f18c1cc88f07a91fcf52f59c5d98b87",
+    "semantic_hash": ""
+  },
+  "src/pages/configuracion/ConfiguracionConsultorio.tsx": {
+    "mtime": 1784690798.3242826,
+    "ast_hash": "b7c8c574035541c894d616ea71bcd291",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260722040000_clinic_logos_bucket.sql": {
+    "mtime": 1784690713.6852477,
+    "ast_hash": "66d124331dff6bac2bb3da689b6528ae",
     "semantic_hash": ""
   }
 }

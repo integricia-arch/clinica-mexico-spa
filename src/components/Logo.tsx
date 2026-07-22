@@ -12,6 +12,12 @@ export interface LogoProps {
   imgClassName?: string;
   /** Override default alt text. */
   alt?: string;
+  /** White-label: logo de la clínica activa (clinics.logo_url). Null/undefined = logo IntegriKa. */
+  logoUrl?: string | null;
+  /** White-label: nombre de la clínica activa (clinics.name). Null/undefined = wordmark IntegriKa. */
+  name?: string | null;
+  /** White-label: subtítulo bajo el nombre. Default "Sistema Operativo de Clínica". */
+  subtitle?: string | null;
 }
 
 const sizeMap = {
@@ -27,8 +33,15 @@ export function Logo({
   variant = "icon",
   className,
   imgClassName,
-  alt = "IntegriKa",
+  alt,
+  logoUrl,
+  name,
+  subtitle,
 }: LogoProps) {
+  const src = logoUrl || integrikaLogo;
+  const displayAlt = alt ?? name ?? "IntegriKa";
+  const displayName = name || "IntegriKa";
+  const displaySubtitle = subtitle || "Sistema Operativo de Clínica";
   const px = sizeMap[size];
   const radius = size === "xs" ? 6 : size === "sm" ? 8 : size === "md" ? 10 : size === "lg" ? 14 : 18;
   const shadow =
@@ -39,8 +52,8 @@ export function Logo({
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
       <img
-        src={integrikaLogo}
-        alt={alt}
+        src={src}
+        alt={displayAlt}
         width={px}
         height={px}
         className={cn(
@@ -52,8 +65,8 @@ export function Logo({
       />
       {variant === "wordmark" && (
         <div className="min-w-0">
-          <span className="font-display font-semibold text-sm tracking-tight text-white/90">IntegriKa</span>
-          <span className="block text-[10px] tracking-wide text-white/40">Sistema Operativo de Clínica</span>
+          <span className="font-display font-semibold text-sm tracking-tight text-white/90 truncate">{displayName}</span>
+          <span className="block text-[10px] tracking-wide text-white/40 truncate">{displaySubtitle}</span>
         </div>
       )}
     </div>

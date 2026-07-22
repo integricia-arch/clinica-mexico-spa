@@ -22,7 +22,7 @@ const secciones: Seccion[] = [
   { icon: Users, titulo: "Usuarios y roles", descripcion: "Administrar cuentas: Administrador, Recepción, Médico, Enfermería, Farmacia, Caja/Facturación.", to: "/admin/usuarios", adminOnly: true },
   { icon: ShieldCheck, titulo: "Auditoría", descripcion: "Historial de accesos y cambios en agenda, expedientes, farmacia y caja. Seguimientos y errores POS.", to: "/auditoria", adminOnly: true },
   { icon: SlidersHorizontal, titulo: "Configuración avanzada (demo)", descripcion: "Vista previa del centro de control: horarios, citas, recordatorios, facturación CFDI, inventario, permisos y más. Maqueta visual, sin persistencia.", to: "/ajustes" },
-  { icon: Building2, titulo: "Datos del consultorio", descripcion: "Nombre, dirección, teléfono, logotipo y datos fiscales del establecimiento." },
+  { icon: Building2, titulo: "Datos del consultorio", descripcion: "Nombre y logotipo de la clínica, visibles en menú, encabezado y pantalla de acceso.", to: "/configuracion/consultorio", adminOnly: true },
   { icon: Shield, titulo: "Permisos y seguridad", descripcion: "Control de acceso por rol, sesiones activas y políticas de contraseña." },
   { icon: Bell, titulo: "Notificaciones por rol", descripcion: "Qué rol recibe cada tipo de aviso (asignación de enfermera, vencimientos, usuarios nuevos) y por qué canal: Telegram o email.", to: "/configuracion/notificaciones", adminOnly: true },
   { icon: Globe, titulo: "Localización", descripcion: "Zona horaria (Ciudad de México), formato de fecha (dd/mm/aaaa), moneda (MXN), idioma (Español)." },

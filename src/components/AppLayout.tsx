@@ -210,7 +210,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           {/* Logo */}
           <div className={`flex h-16 items-center border-b border-sidebar-border shrink-0 ${isCollapsed ? "justify-center px-3" : "gap-2.5 px-5"}`}>
-            <Logo variant={isCollapsed ? "icon" : "wordmark"} size="md" />
+            <Logo
+              variant={isCollapsed ? "icon" : "wordmark"}
+              size="md"
+              logoUrl={activeClinic?.logo_url}
+              name={activeClinic?.name}
+            />
             {/* Mobile close button */}
             <button
               onClick={closeSidebar}
