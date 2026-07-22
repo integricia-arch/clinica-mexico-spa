@@ -7,10 +7,6 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: { rpc: vi.fn() },
 }));
 
-vi.mock("@/hooks/useActiveClinic", () => ({
-  useActiveClinic: () => ({ activeClinicId: "clinic-1" }),
-}));
-
 describe("TrazabilidadTab", () => {
   it("busca por tipo+id y renderiza el árbol con hijos anidados", async () => {
     (supabase.rpc as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({

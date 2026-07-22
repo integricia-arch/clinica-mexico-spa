@@ -17,7 +17,6 @@ DECLARE
   v_pago_id uuid;
   v_poliza_id uuid;
   v_arbol jsonb;
-  v_niveles int;
 BEGIN
   -- Necesitamos una clínica y un usuario con membresía real en ella, para que
   -- auth.uid() (simulado vía request.jwt.claims) pase el check de acceso
