@@ -163,17 +163,17 @@ export default function Citas() {
       {/* Filtros */}
       <div className="rounded-xl border border-border bg-card p-4 grid gap-3 md:grid-cols-4">
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Desde</label>
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <label htmlFor="citas-filtro-desde" className="text-xs font-medium text-muted-foreground">Desde</label>
+          <Input id="citas-filtro-desde" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Hasta</label>
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <label htmlFor="citas-filtro-hasta" className="text-xs font-medium text-muted-foreground">Hasta</label>
+          <Input id="citas-filtro-hasta" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Médico</label>
+          <label id="citas-filtro-medico-label" className="text-xs font-medium text-muted-foreground">Médico</label>
           <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger aria-labelledby="citas-filtro-medico-label"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {doctors.map((d) => (
@@ -183,13 +183,15 @@ export default function Citas() {
           </Select>
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Status</label>
-          <div className="flex flex-wrap gap-1 pt-1">
+          <span id="citas-filtro-status-label" className="text-xs font-medium text-muted-foreground">Status</span>
+          <div role="group" aria-labelledby="citas-filtro-status-label" className="flex flex-wrap gap-1 pt-1">
             {STATUSES.map((s) => {
               const active = statusFilter.has(s);
               return (
                 <button
                   key={s}
+                  type="button"
+                  aria-pressed={active}
                   onClick={() => toggleStatus(s)}
                   className={cn(
                     "text-[11px] px-2 py-1 rounded-full border transition-colors",
@@ -224,7 +226,14 @@ export default function Citas() {
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Cargando…</td></tr>
               )}
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Sin citas en el rango seleccionado</td></tr>
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                    <p className="mb-3">Sin citas en el rango seleccionado</p>
+                    <Button size="sm" variant="outline" onClick={() => setShowNueva(true)} className="gap-2">
+                      <Plus className="h-4 w-4" /> Nueva cita
+                    </Button>
+                  </td>
+                </tr>
               )}
               {filtered.map((c) => {
                 const O = ORIGEN_META[c.origen] ?? { Icon: Globe, cls: "text-muted-foreground" };
@@ -233,8 +242,12 @@ export default function Citas() {
                     key={c.id}
                     ref={(el) => { if (el) rowRefs.current.set(c.id, el); else rowRefs.current.delete(c.id); }}
                     onClick={() => setSelected(c)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(c); } }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Ver detalle de cita de ${c.patients ? `${c.patients.nombre} ${c.patients.apellidos}` : "paciente"}`}
                     className={cn(
-                      "border-t border-border hover:bg-muted/40 cursor-pointer",
+                      "border-t border-border hover:bg-muted/40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
                       highlightId === c.id && "ring-2 ring-primary ring-inset",
                     )}
                   >

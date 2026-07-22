@@ -113,6 +113,7 @@ export default function DashboardFilters({ value, onChange, onReload, onNewAppoi
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar paciente..."
+            aria-label="Buscar paciente"
             className="pl-9"
             value={value.search}
             onChange={(e) => onChange({ search: e.target.value })}

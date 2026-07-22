@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -270,7 +271,10 @@ export default function AdminDashboard() {
         <div className="space-y-3">
           <h2 className="text-display font-semibold text-foreground">Médicos y carga operativa</h2>
           {doctorLoads.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin médicos activos registrados</p>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>Sin médicos activos registrados</p>
+              <Button size="sm" variant="outline" onClick={() => navigate("/ajustes")}>Dar de alta un médico</Button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {doctorLoads.map((d) => <DoctorLoadCard key={d.doctor.id} load={d} />)}
@@ -280,7 +284,10 @@ export default function AdminDashboard() {
         <div className="space-y-3">
           <h2 className="text-display font-semibold text-foreground">Consultorios</h2>
           {roomStatuses.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin consultorios registrados</p>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>Sin consultorios registrados</p>
+              <Button size="sm" variant="outline" onClick={() => navigate("/ajustes")}>Dar de alta un consultorio</Button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {roomStatuses.map((r) => <RoomStatusCard key={r.room.id} status={r} />)}

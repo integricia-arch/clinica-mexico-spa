@@ -940,11 +940,11 @@ export default function PuntoDeVenta({
                         </details>
                       )}
                       <div className="flex items-center gap-2 pt-1 flex-wrap">
-                        <Button size="icon" variant="outline" className="h-10 w-10" onClick={() => updateQty(i, -1)}>
+                        <Button size="icon" variant="outline" className="h-10 w-10" onClick={() => updateQty(i, -1)} aria-label={`Quitar una unidad de ${c.med.nombre}`}>
                           <Minus className="h-4 w-4" />
                         </Button>
                         <span className="min-w-[2ch] text-center text-sm font-semibold">{c.quantity}</span>
-                        <Button size="icon" variant="outline" className="h-10 w-10" onClick={() => updateQty(i, 1)}>
+                        <Button size="icon" variant="outline" className="h-10 w-10" onClick={() => updateQty(i, 1)} aria-label={`Agregar una unidad de ${c.med.nombre}`}>
                           <Plus className="h-4 w-4" />
                         </Button>
                         <span className="text-xs text-muted-foreground ml-1">{formatMXN(c.unit_price)} c/u</span>
@@ -964,7 +964,7 @@ export default function PuntoDeVenta({
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <p className="font-semibold">{formatMXN(c.quantity * c.unit_price)}</p>
-                      <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => removeItem(i)}>
+                      <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => removeItem(i)} aria-label={`Quitar ${c.med.nombre} del carrito`}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
