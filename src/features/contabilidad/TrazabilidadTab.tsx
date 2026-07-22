@@ -52,12 +52,15 @@ function NodoCard({ nodo, nivel }: { nodo: TrazaNodo; nivel: number }) {
     <div style={{ marginLeft: nivel * 20 }} className="space-y-2">
       <Card>
         <CardContent className="p-3 text-sm">
-          <div className="font-semibold">{nodo.tipo}{nodo.folio ? ` — ${nodo.folio}` : ""}</div>
+          <div className="font-semibold">
+            {nodo.tipo}
+            {nodo.folio ? <> — <span>{nodo.folio}</span></> : null}
+          </div>
           <div className="text-muted-foreground">
             {nodo.fecha ?? ""} {nodo.estado ? `· ${nodo.estado}` : ""} {fmtMXN(nodo.monto_centavos)}
           </div>
-          {nodo.creado_por && <div>Creó: {nodo.creado_por.nombre}</div>}
-          {nodo.autorizado_por && <div>Autorizó: {nodo.autorizado_por.nombre}</div>}
+          {nodo.creado_por && <div>Creó: <span>{nodo.creado_por.nombre}</span></div>}
+          {nodo.autorizado_por && <div>Autorizó: <span>{nodo.autorizado_por.nombre}</span></div>}
         </CardContent>
       </Card>
       {(nodo.hijos ?? []).map((hijo, i) => (
