@@ -61,6 +61,20 @@ en el mismo archivo:
 2. `REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC;` explícito, seguido de
    `GRANT EXECUTE ... TO <rol mínimo necesario>` (`authenticated`, o `service_role`
    si solo la llaman Edge Functions — nunca dejar el grant default implícito).
+2b. **`REVOKE EXECUTE ON FUNCTION ... FROM anon;` explícito, SIEMPRE, además del
+   REVOKE de PUBLIC** (learned 2026-07-22, módulo trazabilidad contable). Este
+   proyecto tiene `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON
+   FUNCTIONS TO anon, authenticated, service_role` configurado a nivel de rol —
+   funciones nuevas reciben EXECUTE otorgado DIRECTO a `anon`, no vía el
+   pseudo-rol PUBLIC, así que `REVOKE ... FROM PUBLIC` solo NO lo quita. Sin este
+   REVOKE adicional la función queda llamable por cualquier usuario sin login vía
+   la anon key pública — mismo patrón de bug que causó el incidente de
+   2026-07-04. Verificar siempre con:
+   ```sql
+   SELECT grantee, privilege_type FROM information_schema.routine_privileges
+   WHERE routine_name = 'nombre_funcion';
+   ```
+   Confirmar que no aparece `anon`, solo `authenticated`/`postgres`/`service_role`.
 3. Si la función toca datos multi-tenant: check de `clinic_memberships`/`auth.uid()`
    como PRIMERA operación del body, antes de cualquier lectura/escritura.
 4. Vistas nuevas sobre datos multi-tenant: `security_invoker = on` por default.
@@ -69,7 +83,10 @@ en el mismo archivo:
 
 Correr `mcp__supabase__get_advisors(type="security")` después de cualquier tanda
 de migraciones nuevas — ya es recomendación oficial de Supabase MCP, formalizado
-aquí como hábito de este proyecto.
+aquí como hábito de este proyecto. Nota: `get_advisors` NO detecta el grant a
+`anon` vía default privileges (probado en la sesión de trazabilidad) — la
+query de `routine_privileges` de arriba es la única forma confiable de
+verificarlo, no basta con correr advisors.
 
 ## Vault secrets — regla de seguridad (learned 2026-06-21)
 
