@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Manual de Usuario — ClínicaMX',
+  title: 'IntegriKa — Manual de Usuario',
   tagline: 'Cómo operar el sistema, módulo por módulo',
   favicon: 'img/favicon.ico',
 
@@ -39,7 +39,20 @@ const config: Config = {
           exclude: ['_TEMPLATE.md', 'README.md'],
           editUrl: 'https://github.com/integricia-arch/clinica-mexico-spa/tree/main/docs/manual-usuario/',
         },
-        blog: false,
+        blog: {
+          path: 'blog',
+          routeBasePath: 'blog',
+          blogTitle: 'Blog IntegriKa',
+          blogDescription: 'Guías y artículos sobre gestión de clínicas y consultorios en México: agenda, CFDI, farmacia, corte de caja, expediente clínico.',
+          showReadingTime: true,
+          postsPerPage: 10,
+          blogSidebarTitle: 'Artículos recientes',
+          blogSidebarCount: 10,
+          feedOptions: {
+            type: ['rss', 'atom'],
+            title: 'Blog IntegriKa',
+          },
+        },
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -55,7 +68,7 @@ const config: Config = {
     navbar: {
       title: 'Manual de Usuario',
       logo: {
-        alt: 'ClínicaMX',
+        alt: 'IntegriKa',
         src: 'img/logo.svg',
       },
       items: [
@@ -64,6 +77,11 @@ const config: Config = {
           sidebarId: 'tutorialSidebar',
           position: 'left',
           label: 'Módulos',
+        },
+        {
+          to: '/blog',
+          label: 'Blog',
+          position: 'left',
         },
         {
           href: 'https://integrika.mx',
@@ -75,7 +93,7 @@ const config: Config = {
     footer: {
       style: 'dark',
       links: [],
-      copyright: `Manual de Usuario — ClínicaMX · ${new Date().getFullYear()}`,
+      copyright: `IntegriKa · Manual de Usuario y Blog · ${new Date().getFullYear()}`,
     },
     prism: {
       theme: prismThemes.github,
@@ -90,7 +108,7 @@ const config: Config = {
         hashed: true,
         language: ['es', 'en'],
         indexDocs: true,
-        indexBlog: false,
+        indexBlog: true,
         indexPages: false,
       },
     ],
