@@ -1,7 +1,7 @@
 # Graph Report - clinica-mexico-spa  (2026-07-22)
 
 ## Corpus Check
-- 1048 files · ~1,149,843 words
+- 1048 files · ~1,150,037 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d0ca3d81`
+- Built from commit: `1935ae09`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1627,7 +1627,7 @@ Nodes (14): public.appointment_resources, public.appointments, public.audit_logs
 
 ### Community 56 - "package"
 Cohesion: 0.13
-Nodes (15): embla-carousel-react, lottie-react, dependencies, embla-carousel-react, lottie-react, qrcode.react, @radix-ui/react-avatar, @radix-ui/react-dropdown-menu (+7 more)
+Nodes (15): class-variance-authority, embla-carousel-react, dependencies, class-variance-authority, embla-carousel-react, qrcode.react, @radix-ui/react-avatar, @radix-ui/react-dropdown-menu (+7 more)
 
 ### Community 57 - "C:/Users"
 Cohesion: 0.20
@@ -1698,12 +1698,12 @@ Cohesion: 0.11
 Nodes (23): ActivosFijosTab(), fmtMXN(), BancosTab(), fmtMXN(), CierreTab(), centavosToPesos(), exportContabilidadCsv(), fmtMXN() (+15 more)
 
 ### Community 75 - "src/features/compras"
-Cohesion: 0.13
-Nodes (13): Separator, useLoyaltyConfig(), LoyaltyMiembros(), MemberDrawerProps, SortDir, SortKey, Antecedentes, calcEdad() (+5 more)
+Cohesion: 0.08
+Nodes (24): ConversationActionPanel(), LastAttempt, LatestAppt, Props, Channel, DoctorCallDialog(), Props, Result (+16 more)
 
 ### Community 76 - "src/features/recetas"
-Cohesion: 0.06
-Nodes (45): EMPTY, Props, EMPTY_FORM, FormState, PacienteModal(), Patient, Props, SheetContent (+37 more)
+Cohesion: 0.05
+Nodes (51): EMPTY, Props, EMPTY_FORM, FormState, PacienteModal(), Patient, Props, Separator (+43 more)
 
 ### Community 77 - "src/pages/Expedientes"
 Cohesion: 0.14
@@ -1866,8 +1866,8 @@ Cohesion: 0.33
 Nodes (5): 2026-07-07 — Fase A: panel de clientes SaaS, Aprendizajes guardados (vía /aprende), Costo de sesión, Resumen, Siguiente sesión
 
 ### Community 125 - "src/types/subscription"
-Cohesion: 0.04
-Nodes (56): JourneyStep, JourneyVersion, CheckoutInput, CheckoutResult, CheckoutType, FollowupInput, addPrescriptionItem(), createPrescriptionFromConsultation() (+48 more)
+Cohesion: 0.05
+Nodes (39): JourneyStep, JourneyVersion, CheckoutInput, CheckoutResult, CheckoutType, FollowupInput, addPrescriptionItem(), createPrescriptionFromConsultation() (+31 more)
 
 ### Community 126 - "src/features/camino-paciente"
 Cohesion: 0.07
@@ -1918,8 +1918,8 @@ Cohesion: 0.12
 Nodes (25): InsumosCitaSection(), Insumo, InsumoInput, InsumoRow, toInsumo(), toRow(), useInsumos(), cleanItems() (+17 more)
 
 ### Community 142 - "src/components/PasswordStrengthMeter"
-Cohesion: 0.24
-Nodes (10): CLAVES_PROD_SERV, Concepto, FacturaGlobalDialog(), fmt(), MESES, MESES_LABEL, newConcepto(), PERIODICIDADES (+2 more)
+Cohesion: 0.20
+Nodes (10): CLAVES_PROD_SERV, ConceptoForm, EMPTY_RECEPTOR, FORMAS_PAGO, newConcepto(), Props, ReceptorForm, REGIMENES_RECEPTOR (+2 more)
 
 ### Community 143 - "src/components/turno"
 Cohesion: 0.25
@@ -2271,7 +2271,7 @@ Nodes (7): AlertasCxpPanel(), SEVERIDAD_BADGE, TIPO_LABEL, AlertaRow, CxpAlerta,
 
 ### Community 319 - "navigation-menu.tsx"
 Cohesion: 0.07
-Nodes (32): CfdiDoc, EnviarEmailCFDIDialog(), fmt(), Props, TIPO_LABEL, CLAVES_PROD_SERV, ConceptoForm, fmt() (+24 more)
+Nodes (32): CfdiDoc, EnviarEmailCFDIDialog(), fmt(), Props, TIPO_LABEL, CLAVES_PROD_SERV, Concepto, FacturaGlobalDialog() (+24 more)
 
 ### Community 321 - "package"
 Cohesion: 0.17
@@ -3298,7 +3298,7 @@ Nodes (3): 6.1 Ejemplo: Verificar Ingresos de Julio 2026, 6.2 Ejemplo: Rastrear 
   public/placeholder.svg · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **4567 isolated node(s):** `supabase`, `$schema`, `style`, `rsc`, `tsx` (+4562 more)
+- **4567 isolated node(s):** `TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN`, `PRÓXIMA ACCIÓN: tarea #4 (N2/N3/N4 pricing) CERRADA 2026-07-21 (Fable 5). Decisión y unit economics en `memoria/proyectos/N2-N3-N4-decision-unit-economics.md`. Siguiente para Sonnet: check de módulo en `cfdi-timbrar` (gap alta), gate BI en `kpis_dashboard`, marcar agenda como core en catálogo. Bloqueante de negocio: contratar PAC de timbrado antes de vender CFDI.`, `PRÓXIMA ACCIÓN (histórica): sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).`, `PRÓXIMA ACCIÓN (sesión anterior, 2026-07-21 original): sesión cerrada 2026-07-21. Trazabilidad reporte↔trámite COMPLETA Y VERIFICADA EN BROWSER (Fases 0-3). Corrector de huecos contables construido y verificado. **Bug bloqueante de `crear_poliza()` (perdió bypass service_role en fase 7) ENCONTRADO Y ARREGLADO** — migración `20260721180000`, commit `6a10001`. **Los 5 honorarios devengados sin póliza desde junio YA SE APLICARON** (movimientos↔pólizas 7=7, sin duplicados, verificado por SQL). Quedan puntos 3-6 (ver abajo) para sesión nueva. **Costo sesión 2026-07-21: ~$650+ — por MUCHO el más caro del proyecto (anterior récord ~$244), casi 3x. Causa: se mezcló verificación+feature nueva+auditoría+feature grande+3 subagentes+debugging en vivo+fix de bug crítico en una sola sesión, ignorando 10+ avisos de costo crítico del hook. Próxima sesión: cortar por tema DE VERDAD — un hook de costo crítico repetido es señal de parar la sesión, no de seguir con más agentes. Aprendizajes guardados en memoria (`~/.claude/projects/.../memory/`), 4 lessons + 1 project nuevas fechadas 2026-07-21.**`, `Sesión 2026-07-21 (tercera parte) — Optimus/mcp-sentinel verificado, sin código nuevo` (+4562 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **876 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -3312,10 +3312,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `placeholder.svg — imagen placeholder genérica` and `testimonio-1.jpg — foto de testimonio de paciente/cliente`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **Why does `dependencies` connect `package` to `lucide-react`, `@radix-ui/react-accordion`, `react-dom`, `tailwindcss-animate`, `package`, `package`, `package`, `CardContent`, `package`, `DashboardFilters.tsx`, `src/components/ManualButton`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `package`, `vaul`, `package`, `react-dom`, `package`, `package`, `package`, `VerAsientoContableButton.tsx`, `package`, `package`, `package`, `package`, `package`, `package`, `@radix-ui/react-tabs`, `package`, `toggle-group.tsx`, `package`, `DoctorPatientQueue.tsx`, `@radix-ui/react-toggle`, `@radix-ui/react-toggle-group`, `react-day-picker`, `@radix-ui/react-switch`, `@radix-ui/react-context-menu`, `@radix-ui/react-toast`, `react-router-dom`, `@radix-ui/react-progress`, `react`, `recharts`, `tailwind-merge`, `@sentry/react`, `@tanstack/react-query`, `package`, `@hookform/resolvers`, `@radix-ui/react-menubar`, `sonner`, `@supabase/supabase-js`, `@types/qrcode`, `exportReporteCsv.ts`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Why does `qrcode` connect `src/components/ManualButton` to `package`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
-- **What connects `supabase`, `$schema`, `style` to the rest of the system?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+- **What connects `TEXTO PARA PEGAR AL INICIAR LA SIGUIENTE SESIÓN`, `PRÓXIMA ACCIÓN: tarea #4 (N2/N3/N4 pricing) CERRADA 2026-07-21 (Fable 5). Decisión y unit economics en `memoria/proyectos/N2-N3-N4-decision-unit-economics.md`. Siguiente para Sonnet: check de módulo en `cfdi-timbrar` (gap alta), gate BI en `kpis_dashboard`, marcar agenda como core en catálogo. Bloqueante de negocio: contratar PAC de timbrado antes de vender CFDI.`, `PRÓXIMA ACCIÓN (histórica): sesión cerrada 2026-07-21 (continuación). Puntos 3-6 pendientes de la sesión anterior TODOS CERRADOS — ver sección "PENDIENTES" abajo para detalle de cada uno. Sin pendientes contables abiertos por ahora salvo la deuda nueva anotada (bug de `update_journey_progress` sin bypass service_role, mismo patrón que tenía `crear_poliza()`).` to the rest of the system?**
   _4567 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `src/features/facturacion` be split into smaller, more focused modules?**
   _Cohesion score 0.04704532415375789 - nodes in this community are weakly interconnected._

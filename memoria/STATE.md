@@ -6,8 +6,27 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión decimosexta parte, 2026-07-22 — CERRADA. Deuda técnica: advisors
-performance WARN resueltos por completo.
+Sesión decimoséptima parte, 2026-07-22 — CERRADA por costo (sesión llegó a
+$56 USD, corte preventivo). SIGUIENTE tarea ya decidida, arrancar directo ahí:
+
+**M1 caso de estudio** (`src/pages/Pitch.tsx`, sección testimonios ya existe
+ahí — buscar "ilustrativ"/"testimonio"). Criterio confirmado por Pablo esta
+sesión, no volver a preguntar:
+- Cifras: ESTIMADAS/ilustrativas está bien, etiquetadas explícitamente como
+  "escenario ilustrativo" + base declarada (ej. "estimado sobre clínica tipo,
+  N consultas/día"). Ya es el patrón que dejó CLAUDE.md tras el fix de N1.
+- Fotos: SOLO banco de imágenes genérico (stock), sin nombre ni atribución a
+  cliente específico. NUNCA foto + nombre + cifra atribuida a "Dr. X, cliente
+  real" si no lo es — eso es publicidad engañosa (PROFECO), ya fue el problema
+  original de N1 que se corrigió. Pablo pidió explícitamente "que se le vea la
+  cara como doctores" en las fotos — ok mientras sea stock genérico sin
+  atribución de identidad, se lo advertí y lo confirmó.
+Formato ya definido en `memoria/proyectos/analisis-integral-2026-07-21.md`
+línea ~153 (M1): problema → implementación → 3 métricas (no-shows, diferencia
+de caja, horas admin ahorradas).
+
+--- histórico (sesión decimosexta parte, 2026-07-22) ---
+Deuda técnica: advisors performance WARN resueltos por completo.
 - `auth_rls_initplan`: 32→0. Migración `20260722120000_fix_auth_rls_initplan.sql`
   — envuelve `auth.uid()`/`auth.email()` en `(select ...)` en 32 policies de 20
   tablas (incluye tablas contables: polizas, poliza_partidas, movimientos_contables,
