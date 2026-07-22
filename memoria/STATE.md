@@ -6,8 +6,45 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión cerrada por costo alto (~$26+, subiendo). #8 y #9(M2) HECHOS esta
-sesión, ambos pusheados y desplegados.
+Sesión cerrada por decisión (costo ~$13.58, cortada tras cerrar 3 tareas cortas).
+#9(M1), #10(S2+S3), #12(E4) HECHOS esta sesión (undécima parte, 2026-07-21),
+pusheados a main (commits 40b0eaf, d4ac456, 277908f — deploy automático GH Actions,
+verificar integrika.mx tras el deploy).
+
+- #9 M1 caso de estudio: sin piloto real (negocio nuevo), Pablo pidió usar
+  benchmarks de industria en vez de inventar datos. Agregado como 4to
+  "escenario ilustrativo" en pitchShared.tsx (mismo patrón legal ya validado
+  en N1: "no son testimonios de clientes", fuente citada) — ahorro de horas
+  admin al unificar contabilidad+Excel+citas sueltas en un sistema. Grid
+  3→4 columnas en desktop.
+- #10 S2+S3: `npm audit fix` (2 vulns high → 0). Advisors: 3 fixes triviales
+  en prod vía apply_migration — DROP INDEX duplicado en notas_consulta,
+  profiles 4→3 policies (una era duplicado exacto), auth_rls_initplan
+  arreglado en policy `multiclinic_access_restrictive` (17 tablas, wrap
+  auth.uid() en (select auth.uid())). Verificado con advisors post-fix.
+  PENDIENTE no trivial: auditar 106 SECURITY DEFINER callables por
+  authenticated contra la regla del CLAUDE.md (search_path+REVOKE/GRANT),
+  leaked password protection (toggle dashboard Auth Settings), pg_net fuera
+  de schema public, resto de auth_rls_initplan/multiple_permissive_policies.
+- #12 E4: `scripts/check-migration-drift.ps1` nuevo — parsea
+  `supabase migration list --linked`, exit 1 si hay remoto sin local.
+  Agregado a session-sync SKILL paso 1b. Confirma 18 migrations en drift
+  (17 ya conocidas + una nueva: la propia migración S2 de esta sesión vía
+  MCP apply_migration — el MCP también genera drift, no solo Lovable).
+  NO reparado — requiere sesión dedicada revisando cada versión.
+- Nueva tarea agregada a la cola (#16): white-label multi-clínica
+  (`logo_url`+`nombre` en `clinics`, reemplazar `Logo.tsx` hardcoded,
+  wired en header/sidebar/PDFs/CFDI) — pedido de Pablo, no construido aún,
+  media/grande, requiere sesión dedicada (toca recibos y CFDI).
+
+SIGUIENTE en la cola por orden del plan: #11 U2 chat ayuda humano (media —
+tablas `ayuda_chat_sesiones`/`ayuda_chat_mensajes` ya existen, falta TODA
+la UI) — se saltó a propósito por costo, ir por #13 (U3 deep-links, U5 a11y,
+U6 empty states — cortas) y #14 (E5 índices BD — corta) primero si se
+quiere seguir barato, o directo a U2 si hay presupuesto para tarea media.
+
+--- histórico ---
+#8 y #9(M2) HECHOS sesión previa (décima parte), pusheados y desplegados.
 
 #9 M2 SEO — CERRADO (décima parte, 2026-07-21). Auditoría manual (curl +
 lectura directa, sin el orchestrator multi-agente completo — más barato,

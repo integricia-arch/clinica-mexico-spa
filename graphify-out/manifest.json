@@ -4420,8 +4420,8 @@
     "semantic_hash": ""
   },
   ".claude/skills/session-sync/SKILL.md": {
-    "mtime": 1784649100.1243637,
-    "ast_hash": "a76d5e8b9fa2b733f62c78e3803a5f19",
+    "mtime": 1784683737.9734814,
+    "ast_hash": "3bd82f2b224aef172d8f7b84bc3baed8",
     "semantic_hash": ""
   },
   ".github/workflows/migrations-check.yml": {
@@ -5065,8 +5065,8 @@
     "semantic_hash": ""
   },
   "memoria/proyectos/plan-avance-ejecucion.md": {
-    "mtime": 1784681287.635591,
-    "ast_hash": "405da68760eef69eb5281db6c4732d27",
+    "mtime": 1784683744.7974527,
+    "ast_hash": "7aa389b15a2888fed99072ab4fcee95a",
     "semantic_hash": ""
   },
   "memoria/proyectos/S1-rate-limiting-diseno.md": {
@@ -5342,6 +5342,11 @@
   "manual-site/blog/authors.yml": {
     "mtime": 1784680811.3672006,
     "ast_hash": "46b505b759c9deacea10b81a22802cf0",
+    "semantic_hash": ""
+  },
+  "scripts/check-migration-drift.ps1": {
+    "mtime": 1784683656.2128808,
+    "ast_hash": "084c29363a327883ee4e43ba718c1cf4",
     "semantic_hash": ""
   }
 }
