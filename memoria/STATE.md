@@ -6,8 +6,34 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión decimoquinta parte, 2026-07-22 — CERRADA. Sin commits locales pendientes
-de push (los 4 de la sesión anterior ya están en origin/main). Esta sesión NO
+Sesión decimosexta parte, 2026-07-22 — CERRADA. Deuda técnica: advisors
+performance WARN resueltos por completo.
+- `auth_rls_initplan`: 32→0. Migración `20260722120000_fix_auth_rls_initplan.sql`
+  — envuelve `auth.uid()`/`auth.email()` en `(select ...)` en 32 policies de 20
+  tablas (incluye tablas contables: polizas, poliza_partidas, movimientos_contables,
+  cuentas_contables, contab_*). Mismo comportamiento, solo evita re-evaluar la
+  función por cada fila.
+- `multiple_permissive_policies`: 79→0 (30 combos tabla/acción). Migración
+  `20260722130000_fix_multiple_permissive_policies.sql` — fusiona policies
+  permisivas del mismo cmd con OR (semánticamente idéntico, Postgres ya las
+  combina con OR) y divide policies `FOR ALL` en INSERT/UPDATE/DELETE explícitos
+  para no duplicar el SELECT. Cubre tablas de dinero (payment_transactions,
+  cfdi_documentos, cfdi_receptores, prescriptions/prescription_items) y PHI
+  (phi_access_log). Verificado con `get_advisors(security)` post-fix: los 12
+  `rls_enabled_no_policy` restantes son tablas preexistentes NO tocadas por esta
+  migración (bot_conversations, telegram_updates, etc. — service-role only,
+  esperado). Ambas migraciones aplicadas vía `apply_migration` MCP (CLI bloqueado
+  por drift ya conocido).
+- Quedan de la auditoría original: 288 `unused_index` (no dropear a ciegas, hay
+  features recientes sin tráfico real) y 1 `duplicate_index` — no tocados, bajo
+  impacto/riesgo distinto, sesión aparte si se retoma.
+- graphify update . corrido, graph.json/GRAPH_REPORT.md sincronizados.
+- PENDIENTE: 2 migraciones sin commit todavía (ver git status), pendiente de
+  `git add` + commit al cierre de esta sesión.
+
+--- histórico (sesión decimoquinta parte, 2026-07-22) ---
+Sin commits locales pendientes de push (los 4 de la sesión anterior ya están en
+origin/main). Esta sesión NO
 tocó código, solo verificación + limpieza de memoria desactualizada.
 
 - #8 E2/E3 code-splitting — CONFIRMADO 100% CERRADO (ya no queda pendiente).

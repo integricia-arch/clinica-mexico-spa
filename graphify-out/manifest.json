@@ -4020,8 +4020,8 @@
     "semantic_hash": "266b0180bdf387f67aff3a47f45c732d"
   },
   "memoria/STATE.md": {
-    "mtime": 1784729594.7542393,
-    "ast_hash": "593ef3a82a94624e6c5da0e59883464e",
+    "mtime": 1784731167.2785344,
+    "ast_hash": "d50dd4b2c765fcc81ffa99629db98490",
     "semantic_hash": ""
   },
   "memoria/conceptos/arqueo-caja-analisis-profundo.md": {
@@ -5382,6 +5382,16 @@
   "supabase/scripts/test_contab_generar_poliza_evento_MANUAL.sql": {
     "mtime": 1784729427.5845451,
     "ast_hash": "5b90be78197583f787fd7fa890d19e88",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260722120000_fix_auth_rls_initplan.sql": {
+    "mtime": 1784732662.7474484,
+    "ast_hash": "71ab02b8f366f5d591842b4826fe0da0",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260722130000_fix_multiple_permissive_policies.sql": {
+    "mtime": 1784733171.6616445,
+    "ast_hash": "69244e2ce724a7ebd09daf9bcc997d7f",
     "semantic_hash": ""
   }
 }
