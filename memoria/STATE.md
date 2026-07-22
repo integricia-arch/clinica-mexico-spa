@@ -6,24 +6,43 @@
 Sigo con clinica-mexico-spa (Supabase ref kyfkvdyxpvpiacyymldc — valida MCP antes
 de tocar). Lee memoria/STATE.md + memoria/proyectos/plan-avance-ejecucion.md.
 
-Sesión decimoséptima parte, 2026-07-22 — CERRADA por costo (sesión llegó a
-$56 USD, corte preventivo). SIGUIENTE tarea ya decidida, arrancar directo ahí:
+Sesión decimoctava parte, 2026-07-22 — CERRADA por costo ($47+ USD). M1 caso de
+estudio (Pitch.tsx) YA HECHO y commiteado (a443327) esta misma sesión — no
+repetir. SIGUIENTE: ejecutar el plan de trazabilidad contable-administrativa,
+ya diseñado y guardado, arrancar directo con subagent-driven-development:
 
-**M1 caso de estudio** (`src/pages/Pitch.tsx`, sección testimonios ya existe
-ahí — buscar "ilustrativ"/"testimonio"). Criterio confirmado por Pablo esta
-sesión, no volver a preguntar:
-- Cifras: ESTIMADAS/ilustrativas está bien, etiquetadas explícitamente como
-  "escenario ilustrativo" + base declarada (ej. "estimado sobre clínica tipo,
-  N consultas/día"). Ya es el patrón que dejó CLAUDE.md tras el fix de N1.
-- Fotos: SOLO banco de imágenes genérico (stock), sin nombre ni atribución a
-  cliente específico. NUNCA foto + nombre + cifra atribuida a "Dr. X, cliente
-  real" si no lo es — eso es publicidad engañosa (PROFECO), ya fue el problema
-  original de N1 que se corrigió. Pablo pidió explícitamente "que se le vea la
-  cara como doctores" en las fotos — ok mientras sea stock genérico sin
-  atribución de identidad, se lo advertí y lo confirmó.
-Formato ya definido en `memoria/proyectos/analisis-integral-2026-07-21.md`
-línea ~153 (M1): problema → implementación → 3 métricas (no-shows, diferencia
-de caja, horas admin ahorradas).
+**1. Trazabilidad contable-administrativa (PRIORIDAD, arrancar aquí):**
+- Spec: `docs/superpowers/specs/2026-07-22-trazabilidad-contable-design.md`
+  (commit 252002f) — árbol de 13 tipos de nodo, dos troncos (compras→pagos,
+  ingresos), formato de nodo JSON, gaps documentados (pharmacy_sale sin FK a
+  póliza, limitación conocida, no bug).
+- Plan: `docs/superpowers/plans/2026-07-22-trazabilidad-contable.md` — 6 tasks
+  con código SQL/TSX completo, TDD, self-review ya hecho. Orden: Task 1 (RPC
+  sube la cadena) → Task 2 (RPC baja el árbol + contab_trazar) → Task 3
+  (contab_trazar_proveedor) → Task 4 (harness manual transaccional) → Task 5
+  (TrazabilidadTab buscar por evento) → Task 6 (buscar por proveedor + tab en
+  Contabilidad.tsx).
+- Ejecución elegida: **subagent-driven-development** (Pablo confirmó pese al
+  costo). Worktree YA CREADO: `.claude/worktrees/trazabilidad-contable`,
+  branch `worktree-trazabilidad-contable`, `.env` copiado, `npm install` hecho,
+  baseline de tests verde (22 archivos, 160 tests, todos pasan). Reentrar con
+  `EnterWorktree(path=".claude/worktrees/trazabilidad-contable")`, NO crear
+  worktree nuevo.
+- Nada de las 6 tasks se implementó todavía — sesión se cortó justo antes de
+  dispatchear el primer implementer. Empezar limpio en Task 1.
+
+**2. Después de trazabilidad: plan de actualización de /pitch** con las
+funcionalidades nuevas que vaya dejando la trazabilidad (Pablo lo pidió en
+paralelo, no se alcanzó a hacer esta sesión — brainstorm/spec desde cero,
+no requiere tocar BD, sesión barata).
+
+--- histórico (sesión decimoséptima parte, 2026-07-22) ---
+M1 caso de estudio (`src/pages/Pitch.tsx`) HECHO — sección "Escenarios" (4
+cards genéricas) reemplazada por "Caso de estudio" único: foto stock Unsplash
+sin atribución + formato problema→implementación→3 métricas (no-shows,
+diferencia de caja, horas admin ahorradas), disclaimer ilustrativo mantenido.
+Nuevo export `casoEstudio` en `pitchShared.tsx` (reemplaza `escenarios`).
+Build + typecheck limpios. Commit `a443327`.
 
 --- histórico (sesión decimosexta parte, 2026-07-22) ---
 Deuda técnica: advisors performance WARN resueltos por completo.
