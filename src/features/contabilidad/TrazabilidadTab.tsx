@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +71,13 @@ function NodoCard({ nodo, nivel }: { nodo: TrazaNodo; nivel: number }) {
   );
 }
 
+interface TramiteReciente {
+  id: string;
+  folio: string | null;
+  fecha: string | null;
+  estado: string | null;
+}
+
 export function TrazabilidadTab() {
   const [tipo, setTipo] = useState("solicitud_compra");
   const [idInput, setIdInput] = useState("");
@@ -78,26 +85,68 @@ export function TrazabilidadTab() {
   const [proveedorId, setProveedorId] = useState("");
   const [arboles, setArboles] = useState<TrazaNodo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [recientes, setRecientes] = useState<TramiteReciente[]>([]);
+  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+  const [recientesProveedor, setRecientesProveedor] = useState<TramiteReciente[]>([]);
+  const [mostrarSugerenciasProveedor, setMostrarSugerenciasProveedor] = useState(false);
 
-  const buscarEvento = async () => {
-    if (!idInput.trim()) return;
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const { data, error } = await (supabase as any).rpc("contab_trazar_recientes", { p_tipo: tipo });
+      if (cancelado) return;
+      if (error) { setRecientes([]); return; }
+      setRecientes(Array.isArray(data) ? (data as TramiteReciente[]) : []);
+    })();
+    return () => { cancelado = true; };
+  }, [tipo]);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const { data, error } = await (supabase as any).rpc("contab_trazar_proveedores_recientes");
+      if (cancelado) return;
+      if (error) { setRecientesProveedor([]); return; }
+      setRecientesProveedor(Array.isArray(data) ? (data as TramiteReciente[]) : []);
+    })();
+    return () => { cancelado = true; };
+  }, []);
+
+  const sugerencias = recientes.filter((r) =>
+    !idInput.trim() || (r.folio ?? "").toLowerCase().includes(idInput.trim().toLowerCase())
+  );
+
+  const sugerenciasProveedor = recientesProveedor.filter((r) =>
+    !proveedorId.trim()
+    || (r.folio ?? "").toLowerCase().includes(proveedorId.trim().toLowerCase())
+    || (r.estado ?? "").toLowerCase().includes(proveedorId.trim().toLowerCase())
+  );
+
+  const ejecutarBusqueda = async (valor: string) => {
+    if (!valor.trim()) return;
+    setMostrarSugerencias(false);
     setLoading(true);
     setArbol(null);
-    const { data, error } = await (supabase as any).rpc("contab_trazar", { p_tipo: tipo, p_id: idInput.trim() });
+    const { data, error } = await (supabase as any).rpc("contab_trazar", { p_tipo: tipo, p_id: valor.trim() });
     setLoading(false);
     if (error) { toast.error(friendlyError(error)); return; }
     setArbol(data as TrazaNodo);
   };
 
-  const buscarProveedor = async () => {
-    if (!proveedorId.trim()) return;
+  const buscarEvento = () => ejecutarBusqueda(idInput);
+
+  const ejecutarBusquedaProveedor = async (valor: string) => {
+    if (!valor.trim()) return;
+    setMostrarSugerenciasProveedor(false);
     setLoading(true);
     setArboles([]);
-    const { data, error } = await (supabase as any).rpc("contab_trazar_proveedor", { p_proveedor_id: proveedorId.trim() });
+    const { data, error } = await (supabase as any).rpc("contab_trazar_proveedor", { p_proveedor_id: valor.trim() });
     setLoading(false);
     if (error) { toast.error(friendlyError(error)); return; }
     setArboles(Array.isArray(data) ? (data as TrazaNodo[]) : [data as TrazaNodo]);
   };
+
+  const buscarProveedor = () => ejecutarBusquedaProveedor(proveedorId);
 
   return (
     <Tabs defaultValue="evento">
@@ -120,9 +169,34 @@ export function TrazabilidadTab() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 min-w-[240px]">
-              <Label htmlFor="traza-id">Id o folio</Label>
-              <Input id="traza-id" aria-label="Id o folio" value={idInput} onChange={(e) => setIdInput(e.target.value)} placeholder="uuid del registro" />
+            <div className="flex-1 min-w-[240px] relative">
+              <Label htmlFor="traza-id">Id, folio o número consecutivo</Label>
+              <Input
+                id="traza-id" aria-label="Id, folio o número consecutivo"
+                value={idInput}
+                onChange={(e) => setIdInput(e.target.value)}
+                onFocus={() => setMostrarSugerencias(true)}
+                onBlur={() => setTimeout(() => setMostrarSugerencias(false), 150)}
+                placeholder="ej. 12, o folio, o uuid"
+                autoComplete="off"
+              />
+              {mostrarSugerencias && sugerencias.length > 0 && (
+                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover shadow-md">
+                  {sugerencias.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+                      onMouseDown={() => { setIdInput(r.folio ?? ""); ejecutarBusqueda(r.folio ?? ""); }}
+                    >
+                      <span className="font-medium">{r.folio ?? "—"}</span>
+                      <span className="text-muted-foreground">
+                        {r.fecha ? new Date(r.fecha).toLocaleDateString("es-MX") : ""} {r.estado ? `· ${r.estado}` : ""}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <Button onClick={buscarEvento} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
@@ -135,9 +209,32 @@ export function TrazabilidadTab() {
       <TabsContent value="proveedor" className="space-y-4">
         <Card>
           <CardContent className="flex flex-wrap items-end gap-3 p-4">
-            <div className="flex-1 min-w-[240px]">
-              <Label htmlFor="traza-proveedor">Id de proveedor</Label>
-              <Input id="traza-proveedor" aria-label="Id de proveedor" value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} placeholder="uuid del proveedor" />
+            <div className="flex-1 min-w-[240px] relative">
+              <Label htmlFor="traza-proveedor">Proveedor (número, RFC o uuid)</Label>
+              <Input
+                id="traza-proveedor" aria-label="Proveedor (número, RFC o uuid)"
+                value={proveedorId}
+                onChange={(e) => setProveedorId(e.target.value)}
+                onFocus={() => setMostrarSugerenciasProveedor(true)}
+                onBlur={() => setTimeout(() => setMostrarSugerenciasProveedor(false), 150)}
+                placeholder="ej. 1, o RFC, o uuid"
+                autoComplete="off"
+              />
+              {mostrarSugerenciasProveedor && sugerenciasProveedor.length > 0 && (
+                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover shadow-md">
+                  {sugerenciasProveedor.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+                      onMouseDown={() => { setProveedorId(r.folio ?? ""); ejecutarBusquedaProveedor(r.folio ?? ""); }}
+                    >
+                      <span className="font-medium">#{r.folio ?? "—"}</span>
+                      <span className="text-muted-foreground">{r.estado ?? ""}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <Button onClick={buscarProveedor} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar cadenas"}
