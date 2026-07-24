@@ -178,11 +178,11 @@ export function TrazabilidadTab() {
             </div>
             <div>
               <Label htmlFor="traza-desde">Desde</Label>
-              <Input id="traza-desde" type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} className="w-40" />
+              <Input id="traza-desde" type="date" value={fechaDesde} onChange={(e) => { setFechaDesde(e.target.value); setArbol(null); }} className="w-40" />
             </div>
             <div>
               <Label htmlFor="traza-hasta">Hasta</Label>
-              <Input id="traza-hasta" type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} className="w-40" />
+              <Input id="traza-hasta" type="date" value={fechaHasta} onChange={(e) => { setFechaHasta(e.target.value); setArbol(null); }} className="w-40" />
             </div>
             <div className="flex-1 min-w-[240px] relative">
               <Label htmlFor="traza-id">Id, folio o número consecutivo</Label>
@@ -218,6 +218,31 @@ export function TrazabilidadTab() {
             </Button>
           </CardContent>
         </Card>
+        {(fechaDesde || fechaHasta) && !arbol && (
+          <Card>
+            <CardContent className="p-4 space-y-1">
+              <div className="text-sm font-semibold mb-2">
+                {recientes.length} trámite{recientes.length === 1 ? "" : "s"} de {tipo} en el rango
+              </div>
+              {recientes.length === 0 && (
+                <div className="text-sm text-muted-foreground">Sin resultados en ese rango de fechas.</div>
+              )}
+              {recientes.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+                  onClick={() => ejecutarBusqueda(r.folio ?? "")}
+                >
+                  <span className="font-medium">#{r.consecutivo ?? "—"} — {r.folio ?? "—"}</span>
+                  <span className="text-muted-foreground">
+                    {r.fecha ? new Date(r.fecha).toLocaleDateString("es-MX") : ""} {r.estado ? `· ${r.estado}` : ""}
+                  </span>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
         {arbol && <NodoCard nodo={arbol} nivel={0} />}
       </TabsContent>
 
