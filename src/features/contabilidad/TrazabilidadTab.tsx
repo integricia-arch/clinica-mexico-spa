@@ -74,6 +74,7 @@ function NodoCard({ nodo, nivel }: { nodo: TrazaNodo; nivel: number }) {
 interface TramiteReciente {
   id: string;
   folio: string | null;
+  consecutivo?: number | null;
   fecha: string | null;
   estado: string | null;
 }
@@ -89,17 +90,21 @@ export function TrazabilidadTab() {
   const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
   const [recientesProveedor, setRecientesProveedor] = useState<TramiteReciente[]>([]);
   const [mostrarSugerenciasProveedor, setMostrarSugerenciasProveedor] = useState(false);
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
 
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const { data, error } = await (supabase as any).rpc("contab_trazar_recientes", { p_tipo: tipo });
+      const { data, error } = await (supabase as any).rpc("contab_trazar_recientes", {
+        p_tipo: tipo, p_desde: fechaDesde || null, p_hasta: fechaHasta || null,
+      });
       if (cancelado) return;
       if (error) { setRecientes([]); return; }
       setRecientes(Array.isArray(data) ? (data as TramiteReciente[]) : []);
     })();
     return () => { cancelado = true; };
-  }, [tipo]);
+  }, [tipo, fechaDesde, fechaHasta]);
 
   useEffect(() => {
     let cancelado = false;
@@ -112,9 +117,11 @@ export function TrazabilidadTab() {
     return () => { cancelado = true; };
   }, []);
 
-  const sugerencias = recientes.filter((r) =>
-    !idInput.trim() || (r.folio ?? "").toLowerCase().includes(idInput.trim().toLowerCase())
-  );
+  const sugerencias = recientes.filter((r) => {
+    const q = idInput.trim().toLowerCase();
+    if (!q) return true;
+    return (r.folio ?? "").toLowerCase().includes(q) || String(r.consecutivo ?? "") === q;
+  });
 
   const sugerenciasProveedor = recientesProveedor.filter((r) =>
     !proveedorId.trim()
@@ -169,6 +176,14 @@ export function TrazabilidadTab() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="traza-desde">Desde</Label>
+              <Input id="traza-desde" type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} className="w-40" />
+            </div>
+            <div>
+              <Label htmlFor="traza-hasta">Hasta</Label>
+              <Input id="traza-hasta" type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} className="w-40" />
+            </div>
             <div className="flex-1 min-w-[240px] relative">
               <Label htmlFor="traza-id">Id, folio o número consecutivo</Label>
               <Input
@@ -189,7 +204,7 @@ export function TrazabilidadTab() {
                       className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
                       onMouseDown={() => { setIdInput(r.folio ?? ""); ejecutarBusqueda(r.folio ?? ""); }}
                     >
-                      <span className="font-medium">{r.folio ?? "—"}</span>
+                      <span className="font-medium">#{r.consecutivo ?? "—"} — {r.folio ?? "—"}</span>
                       <span className="text-muted-foreground">
                         {r.fecha ? new Date(r.fecha).toLocaleDateString("es-MX") : ""} {r.estado ? `· ${r.estado}` : ""}
                       </span>
